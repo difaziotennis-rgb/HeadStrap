@@ -15,9 +15,21 @@ export async function POST(request: Request) {
       );
     }
 
+    // Determine if using sandbox or production based on client ID
+    // Sandbox client IDs typically start with "Ae" or "AQ", production with "AY" or "AR"
+    // Or use environment variable to explicitly set mode
+    const isSandbox = process.env.PAYPAL_ENVIRONMENT === "sandbox" || 
+                      clientId.startsWith("Ae") || 
+                      clientId.startsWith("AQ") ||
+                      clientId.includes("sandbox");
+    
+    const apiUrl = isSandbox 
+      ? "https://api.sandbox.paypal.com"
+      : "https://api.paypal.com";
+
     // Verify payment with PayPal
     const response = await fetch(
-      `https://api.sandbox.paypal.com/v2/checkout/orders/${paymentId}`,
+      `${apiUrl}/v2/checkout/orders/${paymentId}`,
       {
         method: "GET",
         headers: {
