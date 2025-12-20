@@ -141,6 +141,15 @@ export default function BookPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center text-earth-600 text-sm mb-6">
             <p>Rhinebeck Tennis Club • Rhinebeck, NY</p>
+            <p className="mt-2">
+              <a href="mailto:difaziotennis@gmail.com" className="text-primary-700 hover:text-primary-800 hover:underline">
+                difaziotennis@gmail.com
+              </a>
+              {" • "}
+              <a href="tel:6319015220" className="text-primary-700 hover:text-primary-800 hover:underline">
+                631-901-5220
+              </a>
+            </p>
             <p className="mt-2">© {new Date().getFullYear()} DiFazio Tennis</p>
           </div>
 
