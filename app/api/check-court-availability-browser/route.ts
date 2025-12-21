@@ -17,23 +17,14 @@ export async function GET(request: Request) {
       );
     }
 
-    // Dynamic import to avoid loading in serverless if not needed
-    let puppeteer: any;
-    let chromium: any;
-    
-    try {
-      puppeteer = await import("puppeteer-core");
-      chromium = await import("@sparticus/chromium");
-    } catch (error) {
-      console.error("Puppeteer not available:", error);
-      // Fallback to simple check
-      return NextResponse.json({
-        available: true,
-        error: "Browser automation not configured",
-        date,
-        hour: parseInt(hour),
-      });
-    }
+    // Browser automation requires Browserless.io or similar service
+    // This route is not used - we use Browserless.io API instead
+    return NextResponse.json({
+      available: true,
+      error: "Use /api/check-court-availability-browserless instead",
+      date,
+      hour: parseInt(hour),
+    });
 
     const browser = await puppeteer.launch({
       args: chromium.args,
