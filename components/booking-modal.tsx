@@ -113,7 +113,6 @@ export function BookingModal({ slot, isOpen, onClose, onBookingComplete }: Booki
         // Send email notification (only for non-Stripe, Stripe will trigger after redirect)
         // Fire and forget - don't await to avoid blocking
         const notificationEmail = "difaziotennis@gmail.com";
-        // NO AWAIT - fire and forget
         fetch("/api/send-email", {
           method: "POST",
           headers: {
