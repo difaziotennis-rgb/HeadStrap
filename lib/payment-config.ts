@@ -4,9 +4,8 @@
  */
 
 export const PAYMENT_CONFIG = {
-  // Venmo - Update this with your actual Venmo handle or phone number
-  // Examples: "@your-username" or "6319015220" (phone number)
-  venmoHandle: "", // TODO: Add your Venmo handle here
+  // Venmo - Phone number format
+  venmoHandle: "6319015220",
   
   // Bank Account (for display/reference)
   bankAccountName: "Derek DiFazio",
