@@ -67,15 +67,16 @@ export function StripePaymentButton({ booking, onSuccess, onError }: {
 }) {
   const handleClick = async () => {
     try {
-      // For Stripe, we need to create the booking BEFORE redirecting
-      // because Stripe will redirect back to the success page
-      // Call onSuccess first to create the booking, then redirect to Stripe
+      // For Stripe, create the booking BEFORE redirecting to Stripe
+      // This ensures the booking exists when Stripe redirects back
+      // onSuccess creates the booking (but doesn't redirect for Stripe)
       onSuccess();
       
       // Small delay to ensure booking is saved before redirect
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 200));
       
       // Now redirect to Stripe checkout
+      // Stripe will redirect back to /booking-success?id={bookingId}&payment=success
       await createStripeCheckout(booking);
     } catch (error: any) {
       onError(error.message || "Payment failed");

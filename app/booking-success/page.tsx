@@ -39,16 +39,46 @@ function BookingSuccessContent() {
       
       if (found) {
         setBooking(found);
-        // If payment was successful via Stripe redirect, update payment status
-        if (paymentStatus === "success") {
-          // Payment already completed via Stripe
+        // If payment was successful via Stripe redirect, update payment status and mark slot as booked
+        if (paymentStatus === "success" && found.paymentStatus === "pending") {
+          // Payment completed via Stripe - update booking and mark slot as booked
           found.paymentStatus = "paid";
           found.status = "confirmed";
           bookings.set(bookingId, found);
+          
           // Update in sessionStorage
           if (typeof window !== "undefined") {
             sessionStorage.setItem(`booking_${bookingId}`, JSON.stringify(found));
+            
+            // Mark time slot as booked
+            const slotId = `${found.date}-${found.hour}`;
+            const slotStorage = sessionStorage.getItem(`slot_${slotId}`);
+            if (slotStorage) {
+              try {
+                const slot = JSON.parse(slotStorage);
+                slot.booked = true;
+                slot.bookedBy = found.clientName;
+                slot.bookedEmail = found.clientEmail;
+                slot.bookedPhone = found.clientPhone;
+                sessionStorage.setItem(`slot_${slotId}`, JSON.stringify(slot));
+              } catch (e) {
+                console.error("Error updating slot:", e);
+              }
+            }
+            
+            // Send email notification
+            fetch("/api/send-email", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                booking: found,
+                notificationEmail: "difaziotennis@gmail.com",
+              }),
+            }).catch(err => console.error("Email error:", err));
           }
+          
           console.log("✅ Stripe payment confirmed for booking:", bookingId);
         }
       } else {

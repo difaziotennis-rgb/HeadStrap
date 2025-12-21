@@ -158,7 +158,16 @@ export function PaymentModal({ booking, isOpen, onClose, onPaymentSuccess }: Pay
                   <h3 className="font-semibold text-primary-800 mb-4">Pay with Card</h3>
                   <StripePaymentButton
                     booking={booking}
-                    onSuccess={onPaymentSuccess}
+                    onSuccess={() => {
+                      // Pass a flag to indicate this is a Stripe payment
+                      // This prevents immediate redirect (Stripe will redirect)
+                      if (typeof (onPaymentSuccess as any) === 'function') {
+                        // Check if handlePaymentSuccess accepts a parameter
+                        (onPaymentSuccess as (isStripe?: boolean) => void)(true);
+                      } else {
+                        onPaymentSuccess();
+                      }
+                    }}
                     onError={handlePaymentError}
                   />
                 </div>

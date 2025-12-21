@@ -72,67 +72,76 @@ export function BookingModal({ slot, isOpen, onClose, onBookingComplete }: Booki
     }
   };
 
-  const handlePaymentSuccess = () => {
+  const handlePaymentSuccess = (isStripePayment: boolean = false) => {
     if (!tempBooking) return;
 
     try {
-      // Payment successful - now create the booking and mark slot as booked
-      tempBooking.status = "confirmed";
-      tempBooking.paymentStatus = "paid";
+      // For Stripe, create booking with "pending" status (will be confirmed after Stripe redirect)
+      // For other payments, mark as "confirmed" and "paid" immediately
+      if (isStripePayment) {
+        tempBooking.status = "pending";
+        tempBooking.paymentStatus = "pending";
+      } else {
+        tempBooking.status = "confirmed";
+        tempBooking.paymentStatus = "paid";
+      }
 
       // Save booking to Map
       bookings.set(tempBooking.id, tempBooking);
       
       // Also save to sessionStorage
       sessionStorage.setItem(`booking_${tempBooking.id}`, JSON.stringify(tempBooking));
-      console.log("✅ Booking created after payment:", tempBooking.id, tempBooking);
+      console.log("✅ Booking created:", tempBooking.id, tempBooking);
 
-      // Update time slot - mark as booked
-      const updatedSlot: TimeSlot = {
-        ...slot,
-        booked: true,
-        bookedBy: tempBooking.clientName,
-        bookedEmail: tempBooking.clientEmail,
-        bookedPhone: tempBooking.clientPhone,
-      };
-      timeSlots.set(slot.id, updatedSlot);
-      
-      // Save updated slot to sessionStorage
-      sessionStorage.setItem(`slot_${slot.id}`, JSON.stringify(updatedSlot));
-      console.log("✅ Time slot updated:", slot.id, updatedSlot);
+      // For non-Stripe payments, mark slot as booked immediately
+      // For Stripe, slot will be marked booked after payment confirmation
+      if (!isStripePayment) {
+        // Update time slot - mark as booked
+        const updatedSlot: TimeSlot = {
+          ...slot,
+          booked: true,
+          bookedBy: tempBooking.clientName,
+          bookedEmail: tempBooking.clientEmail,
+          bookedPhone: tempBooking.clientPhone,
+        };
+        timeSlots.set(slot.id, updatedSlot);
+        
+        // Save updated slot to sessionStorage
+        sessionStorage.setItem(`slot_${slot.id}`, JSON.stringify(updatedSlot));
+        console.log("✅ Time slot updated:", slot.id, updatedSlot);
 
-      // Send email notification
-      try {
-        // Get notification email from hardcoded config
-        const notificationEmail = "difaziotennis@gmail.com";
+        // Send email notification (only for non-Stripe, Stripe will trigger after redirect)
+        try {
+          const notificationEmail = "difaziotennis@gmail.com";
+          fetch("/api/send-email", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              booking: tempBooking,
+              notificationEmail,
+            }),
+          }).catch(err => console.error("Email error:", err));
+        } catch (emailError) {
+          console.error("⚠️ Failed to send email notification:", emailError);
+        }
 
-        // Send email notification
-        await fetch("/api/send-email", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            booking: tempBooking,
-            notificationEmail,
-          }),
-        });
-        console.log("✅ Email notification sent to:", notificationEmail);
-      } catch (emailError) {
-        console.error("⚠️ Failed to send email notification:", emailError);
-        // Don't block the booking flow if email fails
+        // Reset form and close modals
+        setFormData({ name: "", email: "", phone: "" });
+        setShowPayment(false);
+        setTempBooking(null);
+        
+        // Redirect to success page
+        window.location.href = `/booking-success?id=${tempBooking.id}&payment=success`;
+      } else {
+        // For Stripe, don't redirect yet - Stripe will handle the redirect
+        // Just close the payment modal, Stripe redirect will happen next
+        console.log("✅ Booking created for Stripe payment, waiting for Stripe redirect...");
       }
-
-      // Reset form and close modals
-      setFormData({ name: "", email: "", phone: "" });
-      setShowPayment(false);
-      setTempBooking(null);
-      
-      // Redirect to success page
-      window.location.href = `/booking-success?id=${tempBooking.id}&payment=success`;
     } catch (err) {
-      console.error("❌ Error finalizing booking:", err);
-      setError("Payment successful but failed to confirm booking. Please contact support.");
+      console.error("❌ Error creating booking:", err);
+      setError("Failed to create booking. Please try again.");
     }
   };
 
