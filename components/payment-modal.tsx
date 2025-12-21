@@ -11,7 +11,7 @@ interface PaymentModalProps {
   booking: Booking;
   isOpen: boolean;
   onClose: () => void;
-  onPaymentSuccess: () => void;
+  onPaymentSuccess: (isStripe?: boolean) => void;
 }
 
 export function PaymentModal({ booking, isOpen, onClose, onPaymentSuccess }: PaymentModalProps) {
