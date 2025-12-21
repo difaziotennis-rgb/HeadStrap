@@ -32,7 +32,7 @@ export function initializeMockData() {
           id,
           date: dateStr,
           hour,
-          available: hour === 9, // 9 AM available by default, others unavailable
+          available: false, // All slots unavailable by default
           booked: false,
         });
       }

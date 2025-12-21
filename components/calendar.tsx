@@ -102,15 +102,10 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
           id,
           date: dateStr,
           hour,
-          available: hour === 9, // 9 AM available by default
+          available: false, // All slots unavailable by default
           booked: false,
         };
         timeSlots.set(id, slot);
-      } else {
-        // Ensure 9 AM is available if slot exists but is not booked
-        if (hour === 9 && !slot.booked && !slot.available) {
-          slot.available = true;
-        }
       }
       
       // Only show slots that are available or booked (hide unavailable ones)
@@ -140,19 +135,11 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
           id,
           date: dateStr,
           hour,
-          available: hour === 9, // 9 AM available by default
+          available: false, // All slots unavailable by default
           booked: false,
         });
         slotsChanged = true;
-        console.log(`✅ Created slot: ${id}, available: ${hour === 9}`);
-      } else {
-        // If slot exists but 9 AM is not available, ensure it is
-        const existingSlot = timeSlots.get(id);
-        if (hour === 9 && existingSlot && !existingSlot.available && !existingSlot.booked) {
-          existingSlot.available = true;
-          slotsChanged = true;
-          console.log(`✅ Updated 9 AM slot to available: ${id}`);
-        }
+        console.log(`✅ Created slot: ${id}, available: false`);
       }
     }
     console.log("🔄 Setting selected date state:", date);
@@ -345,12 +332,8 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
             });
             // If slots exist and one is available, return true
             if (existingAvailable) return true;
-            // If no slots exist yet, assume 9 AM will be available (default) - including Sundays
-            const hasAnySlots = Array.from({ length: 11 }, (_, i) => i + 9).some(hour => {
-              return timeSlots.has(`${dateStr}-${hour}`);
-            });
-            // If no slots exist, this is a future date that will have 9 AM available by default
-            return !hasAnySlots;
+            // If no slots exist yet, they will all be unavailable by default
+            return false;
           })();
 
           return (
