@@ -103,11 +103,8 @@ export function BookingModal({ slot, isOpen, onClose, onBookingComplete }: Booki
 
       // Send email notification
       try {
-        // Get notification email from settings
-        const saved = localStorage.getItem("paymentSettings");
-        const notificationEmail = saved 
-          ? JSON.parse(saved).notificationEmail || "difaziotennis@gmail.com"
-          : "difaziotennis@gmail.com";
+        // Get notification email from hardcoded config
+        const notificationEmail = "difaziotennis@gmail.com";
 
         // Send email notification
         await fetch("/api/send-email", {

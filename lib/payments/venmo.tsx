@@ -2,6 +2,7 @@
 
 import { ExternalLink } from "lucide-react";
 import { Booking } from "@/lib/types";
+import { getVenmoHandle } from "@/lib/payment-config";
 
 interface VenmoPaymentProps {
   booking: Booking;
@@ -9,28 +10,13 @@ interface VenmoPaymentProps {
 }
 
 export function VenmoPayment({ booking, onSuccess }: VenmoPaymentProps) {
-  // Get Venmo handle from payment settings
-  const getVenmoHandle = (): string | null => {
-    if (typeof window === "undefined") return null;
-    
-    try {
-      const saved = localStorage.getItem("paymentSettings");
-      if (saved) {
-        const settings = JSON.parse(saved);
-        return settings.venmoHandle || null;
-      }
-    } catch (e) {
-      console.error("Error loading Venmo handle:", e);
-    }
-    return null;
-  };
-
+  // Get Venmo handle from hardcoded config (with localStorage fallback)
   const venmoHandle = getVenmoHandle();
 
   if (!venmoHandle) {
     return (
       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-yellow-800">
-        Venmo handle not configured. Please add your Venmo username in Payment Settings.
+        Venmo handle not configured. Please contact support.
       </div>
     );
   }
