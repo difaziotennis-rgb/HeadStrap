@@ -14,6 +14,15 @@ interface PayPalPersonalPaymentProps {
  * Uses PayPal.me links or email-based payment links
  */
 export function PayPalPersonalPayment({ booking, onSuccess }: PayPalPersonalPaymentProps) {
+  // Verify PayPal is configured
+  if (!PAYMENT_CONFIG.paypalMeUsername && !PAYMENT_CONFIG.paypalEmail) {
+    return (
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-yellow-800">
+        PayPal is not configured. Please add your PayPal.me username or email to the payment config.
+      </div>
+    );
+  }
+
   const amount = booking.amount.toFixed(2);
   const note = `Tennis Lesson - ${new Date(booking.date + "T12:00:00").toLocaleDateString("en-US", {
     month: "short",
@@ -27,11 +36,18 @@ export function PayPalPersonalPayment({ booking, onSuccess }: PayPalPersonalPaym
     // Use PayPal.me link (e.g., paypal.me/derek-difazio/160)
     const cleanUsername = PAYMENT_CONFIG.paypalMeUsername.replace(/^@/, "").replace(/^paypal\.me\//, "");
     paypalUrl = `https://paypal.me/${cleanUsername}/${amount}?locale.x=en_US`;
-  } else {
+  } else if (PAYMENT_CONFIG.paypalEmail) {
     // Use email-based payment link
     const encodedNote = encodeURIComponent(note);
     const encodedEmail = encodeURIComponent(PAYMENT_CONFIG.paypalEmail);
     paypalUrl = `https://www.paypal.com/send?amount=${amount}&currencyCode=USD&recipient=${encodedEmail}&note=${encodedNote}`;
+  } else {
+    // Should not reach here due to check above, but just in case
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-800">
+        PayPal configuration error. Please contact support.
+      </div>
+    );
   }
 
   const handlePayPalClick = () => {
