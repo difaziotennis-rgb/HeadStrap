@@ -35,22 +35,34 @@ export function VenmoPayment({ booking, onSuccess }: VenmoPaymentProps) {
     );
   }
 
-  // Clean the handle (remove @ if present, remove spaces)
-  const cleanHandle = venmoHandle.replace(/^@/, "").replace(/\s+/g, "");
+  // Clean the handle (remove @ if present, remove spaces, handle phone numbers)
+  let cleanHandle = venmoHandle.replace(/^@/, "").replace(/\s+/g, "").replace(/[()-]/g, "");
+  
+  // If it's a phone number (digits only), format it differently
+  const isPhoneNumber = /^\d+$/.test(cleanHandle);
   
   // Create Venmo payment link
-  // Format: venmo.com/{username}?amount={amount}&note={note}
+  // Format: venmo.com/pay/{username}/{amount}/{note} or venmo.com/{username}?txn=pay&amount={amount}&note={note}
   const amount = booking.amount.toFixed(2);
   const note = `Tennis Lesson - ${new Date(booking.date + "T12:00:00").toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
   })} at ${booking.hour}:00`;
   
-  // Encode the note for URL
-  const encodedNote = encodeURIComponent(note);
+  // Encode the note for URL (replace spaces with dashes for cleaner URL)
+  const cleanNote = note.replace(/\s+/g, "-").replace(/[^a-zA-Z0-9-]/g, "");
   
-  // Venmo link format
-  const venmoUrl = `https://venmo.com/${cleanHandle}?amount=${amount}&note=${encodedNote}`;
+  // Venmo payment link format - try the /pay/ format first
+  // If phone number, use query params format
+  let venmoUrl: string;
+  if (isPhoneNumber) {
+    // For phone numbers, use query params
+    const encodedNote = encodeURIComponent(note);
+    venmoUrl = `https://venmo.com/?txn=pay&recipients=${cleanHandle}&amount=${amount}&note=${encodedNote}`;
+  } else {
+    // For usernames, use /pay/ format
+    venmoUrl = `https://venmo.com/${cleanHandle}?txn=pay&amount=${amount}&note=${encodeURIComponent(note)}`;
+  }
 
   const handleVenmoClick = () => {
     // Open Venmo in new tab
@@ -97,4 +109,5 @@ export function VenmoPayment({ booking, onSuccess }: VenmoPaymentProps) {
     </div>
   );
 }
+
 
