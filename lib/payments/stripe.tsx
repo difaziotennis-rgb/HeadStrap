@@ -86,10 +86,22 @@ export function StripePaymentButton({ booking, onSuccess, onError }: {
 
   const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
 
+  // Debug logging
+  if (typeof window !== "undefined") {
+    console.log("🔍 Stripe Debug:", {
+      hasKey: !!publishableKey,
+      keyPrefix: publishableKey ? publishableKey.substring(0, 10) + "..." : "none",
+      component: "StripePaymentButton",
+    });
+  }
+
   if (!publishableKey) {
     return (
       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-yellow-800">
-        Stripe is not configured. Please add NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY to your environment variables.
+        <p className="font-semibold mb-2">⚠️ Stripe Not Configured</p>
+        <p className="mb-2">Please add <code className="bg-yellow-100 px-1 rounded">NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</code> to your Vercel environment variables.</p>
+        <p className="text-xs mt-2">Go to: Vercel Dashboard → Settings → Environment Variables</p>
+        <p className="text-xs">The key should start with <code className="bg-yellow-100 px-1 rounded">pk_test_</code> or <code className="bg-yellow-100 px-1 rounded">pk_live_</code></p>
       </div>
     );
   }

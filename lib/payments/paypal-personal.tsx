@@ -21,6 +21,16 @@ export function PayPalPersonalPayment({ booking, onSuccess }: PayPalPersonalPaym
   const paypalMeUsername = PAYMENT_CONFIG.paypalMeUsername?.trim() || "";
   const paypalEmail = PAYMENT_CONFIG.paypalEmail?.trim() || "";
   
+  // Debug logging (only in development)
+  if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
+    console.log("🔍 PayPalPersonalPayment Debug:", {
+      paypalMeUsername,
+      paypalEmail,
+      hasConfig: !!(paypalMeUsername || paypalEmail),
+      component: "PayPalPersonalPayment",
+    });
+  }
+  
   // Verify PayPal is configured
   if (!paypalMeUsername && !paypalEmail) {
     return (
@@ -30,6 +40,7 @@ export function PayPalPersonalPayment({ booking, onSuccess }: PayPalPersonalPaym
         <p className="mb-1">PayPal.me username: <strong>{paypalMeUsername || "Not set"}</strong></p>
         <p>PayPal email: <strong>{paypalEmail || "Not set"}</strong></p>
         <p className="mt-2 text-xs">Please check lib/payment-config.ts</p>
+        <p className="mt-2 text-xs font-mono">Component: PayPalPersonalPayment (correct)</p>
       </div>
     );
   }
