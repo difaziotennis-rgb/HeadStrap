@@ -234,11 +234,6 @@ export function BookingModal({ slot, isOpen, onClose, onBookingComplete }: Booki
               </div>
             )}
 
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-yellow-800">
-              <p className="font-semibold mb-1">⚠️ Payment Required</p>
-              <p>Your time slot will be reserved only after payment is completed. The slot remains available until payment is confirmed.</p>
-            </div>
-
             <div className="flex gap-3 pt-4">
               <button
                 type="button"
