@@ -111,21 +111,18 @@ export function BookingModal({ slot, isOpen, onClose, onBookingComplete }: Booki
         console.log("✅ Time slot updated:", slot.id, updatedSlot);
 
         // Send email notification (only for non-Stripe, Stripe will trigger after redirect)
-        try {
-          const notificationEmail = "difaziotennis@gmail.com";
-          fetch("/api/send-email", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              booking: tempBooking,
-              notificationEmail,
-            }),
-          }).catch(err => console.error("Email error:", err));
-        } catch (emailError) {
-          console.error("⚠️ Failed to send email notification:", emailError);
-        }
+        // Fire and forget - don't await to avoid blocking
+        const notificationEmail = "difaziotennis@gmail.com";
+        fetch("/api/send-email", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            booking: tempBooking,
+            notificationEmail,
+          }),
+        }).catch(err => console.error("Email error:", err));
 
         // Reset form and close modals
         setFormData({ name: "", email: "", phone: "" });
