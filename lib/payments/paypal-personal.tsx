@@ -17,17 +17,22 @@ interface PayPalPersonalPaymentProps {
  * It uses hardcoded PayPal.me username from payment-config.ts
  */
 export function PayPalPersonalPayment({ booking, onSuccess }: PayPalPersonalPaymentProps) {
+  // VERSION: 2.0 - This component does NOT require NEXT_PUBLIC_PAYPAL_CLIENT_ID
+  // If you see an error about NEXT_PUBLIC_PAYPAL_CLIENT_ID, you're using OLD cached code!
+  
   // Get PayPal configuration
   const paypalMeUsername = PAYMENT_CONFIG.paypalMeUsername?.trim() || "";
   const paypalEmail = PAYMENT_CONFIG.paypalEmail?.trim() || "";
   
-  // Debug logging (only in development)
-  if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
-    console.log("🔍 PayPalPersonalPayment Debug:", {
+  // Debug logging - ALWAYS log in production to help debug
+  if (typeof window !== "undefined") {
+    console.log("🔍 PayPalPersonalPayment v2.0:", {
       paypalMeUsername,
       paypalEmail,
       hasConfig: !!(paypalMeUsername || paypalEmail),
       component: "PayPalPersonalPayment",
+      version: "2.0",
+      requiresApiKey: false,
     });
   }
   

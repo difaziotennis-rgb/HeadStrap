@@ -146,6 +146,7 @@ export function PaymentModal({ booking, isOpen, onClose, onPaymentSuccess }: Pay
               {selectedMethod === "paypal" && (
                 <div>
                   <h3 className="font-semibold text-primary-800 mb-4">Pay with PayPal</h3>
+                  {/* VERSION 2.0: Using PayPalPersonalPayment - NO API keys required */}
                   <PayPalPersonalPayment
                     booking={booking}
                     onSuccess={handlePaymentSuccess}
