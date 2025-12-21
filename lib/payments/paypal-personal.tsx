@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Wallet } from "lucide-react";
 import { Booking } from "@/lib/types";
 import { PAYMENT_CONFIG } from "@/lib/payment-config";
 
@@ -108,10 +108,11 @@ export function PayPalPersonalPayment({ booking, onSuccess }: PayPalPersonalPaym
 
       <button
         onClick={handlePayPalClick}
-        className="w-full bg-[#0070BA] hover:bg-[#005ea6] text-white font-semibold py-4 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
+        className="w-full bg-[#0070BA] hover:bg-[#005ea6] text-white font-bold py-5 px-6 rounded-xl transition-all flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
         style={{ backgroundColor: "#0070BA" }}
       >
-        <span>Pay with PayPal</span>
+        <Wallet className="h-6 w-6" />
+        <span className="text-lg">Pay with PayPal</span>
         <ExternalLink className="h-5 w-5" />
       </button>
 

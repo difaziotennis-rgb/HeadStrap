@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Smartphone } from "lucide-react";
 import { Booking } from "@/lib/types";
 import { getVenmoHandle } from "@/lib/payment-config";
 
@@ -73,10 +73,11 @@ export function VenmoPayment({ booking, onSuccess }: VenmoPaymentProps) {
 
       <button
         onClick={handleVenmoClick}
-        className="w-full bg-[#3D95CE] hover:bg-[#2d7fb8] text-white font-semibold py-4 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
+        className="w-full bg-[#3D95CE] hover:bg-[#2d7fb8] text-white font-bold py-5 px-6 rounded-xl transition-all flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
         style={{ backgroundColor: "#3D95CE" }}
       >
-        <span>Pay with Venmo</span>
+        <Smartphone className="h-6 w-6" />
+        <span className="text-lg">Pay with Venmo</span>
         <ExternalLink className="h-5 w-5" />
       </button>
 

@@ -87,35 +87,44 @@ export function PaymentModal({ booking, isOpen, onClose, onPaymentSuccess }: Pay
               
               <button
                 onClick={() => setSelectedMethod("venmo")}
-                className="w-full p-4 border-2 border-primary-300 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-all flex items-center gap-3"
+                className="w-full p-5 border-2 border-[#3D95CE]/30 rounded-xl hover:border-[#3D95CE] hover:bg-[#3D95CE]/5 transition-all flex items-center gap-4 shadow-sm hover:shadow-md"
               >
-                <Smartphone className="h-6 w-6 text-[#3D95CE]" />
-                <div className="flex-1 text-left">
-                  <div className="font-semibold text-primary-800">Venmo</div>
-                  <div className="text-sm text-earth-600">Pay directly with Venmo</div>
+                <div className="p-2 bg-[#3D95CE]/10 rounded-lg">
+                  <Smartphone className="h-7 w-7 text-[#3D95CE]" />
                 </div>
+                <div className="flex-1 text-left">
+                  <div className="font-bold text-primary-800 text-lg">Venmo</div>
+                  <div className="text-sm text-earth-600">Fast & secure mobile payment</div>
+                </div>
+                <div className="text-primary-400">→</div>
               </button>
 
               <button
                 onClick={() => setSelectedMethod("paypal")}
-                className="w-full p-4 border-2 border-primary-300 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-all flex items-center gap-3"
+                className="w-full p-5 border-2 border-[#0070BA]/30 rounded-xl hover:border-[#0070BA] hover:bg-[#0070BA]/5 transition-all flex items-center gap-4 shadow-sm hover:shadow-md"
               >
-                <Wallet className="h-6 w-6 text-primary-700" />
-                <div className="flex-1 text-left">
-                  <div className="font-semibold text-primary-800">PayPal</div>
-                  <div className="text-sm text-earth-600">Pay with PayPal account</div>
+                <div className="p-2 bg-[#0070BA]/10 rounded-lg">
+                  <Wallet className="h-7 w-7 text-[#0070BA]" />
                 </div>
+                <div className="flex-1 text-left">
+                  <div className="font-bold text-primary-800 text-lg">PayPal</div>
+                  <div className="text-sm text-earth-600">Pay with PayPal or card</div>
+                </div>
+                <div className="text-primary-400">→</div>
               </button>
 
               <button
                 onClick={() => setSelectedMethod("stripe")}
-                className="w-full p-4 border-2 border-primary-300 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-all flex items-center gap-3"
+                className="w-full p-5 border-2 border-[#635BFF]/30 rounded-xl hover:border-[#635BFF] hover:bg-[#635BFF]/5 transition-all flex items-center gap-4 shadow-sm hover:shadow-md"
               >
-                <CreditCard className="h-6 w-6 text-primary-700" />
+                <div className="p-2 bg-[#635BFF]/10 rounded-lg">
+                  <CreditCard className="h-7 w-7 text-[#635BFF]" />
+                </div>
                 <div className="flex-1 text-left">
-                  <div className="font-semibold text-primary-800">Credit or Debit Card</div>
+                  <div className="font-bold text-primary-800 text-lg">Credit or Debit Card</div>
                   <div className="text-sm text-earth-600">Visa, Mastercard, Amex, Discover</div>
                 </div>
+                <div className="text-primary-400">→</div>
               </button>
             </div>
           ) : (
