@@ -65,6 +65,8 @@ function PayPalButton({ booking, onSuccess, onError }: PayPalPaymentProps) {
 export function PayPalPayment({ booking, onSuccess, onError }: PayPalPaymentProps) {
   // This component should NOT be used anymore
   // If you see this error, the site is using cached/old code
+  // This component should NOT be used anymore
+  // If you see this error, the site is using cached/old code
   return (
     <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-800">
       <p className="font-semibold mb-2">⚠️ Old PayPal Component Detected</p>
@@ -76,20 +78,6 @@ export function PayPalPayment({ booking, onSuccess, onError }: PayPalPaymentProp
       </ol>
       <p className="text-xs mt-2">The new PayPal component (PayPalPersonalPayment) should be used instead.</p>
     </div>
-  );
-
-  return (
-    <PayPalScriptProvider
-      options={{
-        clientId,
-        currency: "USD",
-        intent: "capture",
-        // Enable Venmo
-        "enable-funding": "venmo",
-      }}
-    >
-      <PayPalButton booking={booking} onSuccess={onSuccess} onError={onError} />
-    </PayPalScriptProvider>
   );
 }
 

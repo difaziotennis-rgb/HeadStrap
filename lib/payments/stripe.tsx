@@ -1,6 +1,6 @@
 "use client";
 
-import { loadStripe, Stripe } from "@stripe/stripe-js";
+import { loadStripe, Stripe, StripeElementsOptions } from "@stripe/stripe-js";
 import { Booking } from "@/lib/types";
 
 let stripePromise: Promise<Stripe | null>;
@@ -46,7 +46,8 @@ export async function createStripeCheckout(booking: Booking) {
     }
 
     // Redirect to Stripe Checkout
-    const { error: redirectError } = await stripe.redirectToCheckout({
+    // Type assertion needed - redirectToCheckout exists at runtime
+    const { error: redirectError } = await (stripe as any).redirectToCheckout({
       sessionId: sessionId,
     });
 

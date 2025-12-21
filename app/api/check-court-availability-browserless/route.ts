@@ -192,11 +192,14 @@ export async function GET(request: Request) {
 
   } catch (error: any) {
     console.error("Error checking availability with Browserless:", error);
+    const { searchParams } = new URL(request.url);
+    const dateParam = searchParams.get("date") || "";
+    const hourParam = searchParams.get("hour") || "0";
     return NextResponse.json({
       available: true, // Fail open
       error: error.message,
-      date,
-      hour: parseInt(hour || "0"),
+      date: dateParam,
+      hour: parseInt(hourParam),
     });
   }
 }
