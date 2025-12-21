@@ -34,15 +34,25 @@ export async function createStripeCheckout(booking: Booking) {
       }),
     });
 
-    const { sessionId } = await response.json();
+    const { sessionId, error } = await response.json();
+
+    if (error) {
+      throw new Error(error);
+    }
 
     const stripe = await getStripe();
     if (!stripe) {
       throw new Error("Stripe is not configured");
     }
 
-    // Use window.location for redirect since redirectToCheckout doesn't exist on Stripe type
-    window.location.href = `https://checkout.stripe.com/pay/${sessionId}`;
+    // Redirect to Stripe Checkout
+    const { error: redirectError } = await stripe.redirectToCheckout({
+      sessionId: sessionId,
+    });
+
+    if (redirectError) {
+      throw new Error(redirectError.message);
+    }
   } catch (error: any) {
     console.error("Error creating Stripe checkout:", error);
     throw error;
