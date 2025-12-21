@@ -9,6 +9,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const date = searchParams.get("date"); // YYYY-MM-DD format
     const hour = searchParams.get("hour"); // 9-19
+    const onlyIfAvailable = searchParams.get("onlyIfAvailable") === "true"; // Only check if available on your site
 
     if (!date || !hour) {
       return NextResponse.json(
@@ -16,6 +17,10 @@ export async function GET(request: Request) {
         { status: 400 }
       );
     }
+
+    // If onlyIfAvailable is true, first check if this slot is available on YOUR site
+    // We can't directly access timeSlots Map from here, so we'll check via a different method
+    // For now, we'll always check - but the calendar component will handle filtering
 
     // For Vercel serverless, we'll use a simpler approach
     // Try to find the booking widget's API endpoint or use a service

@@ -28,6 +28,7 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
   }, []);
 
   // Sync court availability when a date is selected
+  // Only checks times that are marked as available on YOUR site
   useEffect(() => {
     if (selectedDateState) {
       const dateStr = format(selectedDateState, 'yyyy-MM-dd');
@@ -39,23 +40,25 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
             const slotId = `${dateStr}-${hour}`;
             const slot = timeSlots.get(slotId);
             
-            // Only check if slot exists and isn't booked
-            if (slot && !slot.booked) {
+            // Only check if slot exists, is marked as available on YOUR site, and isn't booked
+            // This way we only verify availability for times you've already set as available
+            if (slot && slot.available && !slot.booked) {
               try {
                 const response = await fetch(
                   `/api/check-court-availability?date=${dateStr}&hour=${hour}`
                 );
                 if (response.ok) {
                   const data = await response.json();
-                  // Update slot availability based on external check
-                  if (slot.available !== data.available) {
-                    slot.available = data.available;
+                  // If external site says it's NOT available, mark it as unavailable on your site
+                  if (data.available === false) {
+                    slot.available = false;
                     timeSlots.set(slotId, slot);
                     if (typeof window !== "undefined") {
                       sessionStorage.setItem(`slot_${slotId}`, JSON.stringify(slot));
                     }
                     // Force re-render
                     setRefreshKey(prev => prev + 1);
+                    console.log(`⚠️ Time slot ${dateStr} ${hour}:00 marked unavailable (not available on rhinebecktennis.com)`);
                   }
                 }
               } catch (error) {
