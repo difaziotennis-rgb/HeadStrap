@@ -60,16 +60,14 @@ function PayPalButton({ booking, onSuccess, onError }: PayPalPaymentProps) {
 }
 
 // Main PayPal Payment Component
+// DEPRECATED: This component is no longer used. Use PayPalPersonalPayment instead.
 export function PayPalPayment({ booking, onSuccess, onError }: PayPalPaymentProps) {
-  const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || "";
-
-  if (!clientId) {
-    return (
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-yellow-800">
-        PayPal is not configured. Please add NEXT_PUBLIC_PAYPAL_CLIENT_ID to your environment variables.
-      </div>
-    );
-  }
+  // Redirect to the new PayPal component
+  console.warn("Old PayPal component is being used. This should not happen. Using PayPalPersonalPayment instead.");
+  
+  // Import and use the new component instead
+  const { PayPalPersonalPayment } = require("./paypal-personal");
+  return <PayPalPersonalPayment booking={booking} onSuccess={() => onSuccess("")} />;
 
   return (
     <PayPalScriptProvider
