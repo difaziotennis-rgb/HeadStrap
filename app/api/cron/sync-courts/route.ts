@@ -8,7 +8,10 @@ import { format, addDays } from "date-fns";
 export async function GET(request: Request) {
   // Verify this is a cron request (Vercel adds a header)
   const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  const cronSecret = process.env.CRON_SECRET;
+  
+  // Only check auth if CRON_SECRET is set
+  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
