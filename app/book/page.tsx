@@ -78,7 +78,7 @@ export default function BookPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-50">
+    <div className="min-h-screen" style={{ backgroundColor: '#ff1493' }}>
       {/* Admin Header (only shown when logged in) */}
       {isAdminMode && (
         <header className="bg-white/80 backdrop-blur-sm border-b border-primary-100 sticky top-0 z-40">

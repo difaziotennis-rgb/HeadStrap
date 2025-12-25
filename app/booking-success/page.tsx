@@ -96,7 +96,7 @@ function BookingSuccessContent() {
 
   if (!booking) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-50 flex items-center justify-center p-4">
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: '#ff1493' }}>
         <div className="text-center">
           <p className="text-earth-600 mb-4">Loading booking details...</p>
         </div>
@@ -107,7 +107,7 @@ function BookingSuccessContent() {
   const date = new Date(booking.date + "T12:00:00");
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-50 flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: '#ff1493' }}>
       <div className="bg-white rounded-2xl shadow-2xl border border-primary-100 p-8 sm:p-12 max-w-2xl w-full">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full mb-4">
