@@ -164,9 +164,30 @@ export function PaymentModal({ booking, isOpen, onClose, onPaymentSuccess }: Pay
               )}
 
               {selectedMethod === "stripe" && (
-                <div className="w-full" style={{ position: 'relative', zIndex: 9999 }}>
-                  <h3 className="font-semibold text-primary-800 mb-4">Pay with Credit or Debit Card</h3>
-                  <div style={{ position: 'relative', zIndex: 9999, width: '100%' }}>
+                <div 
+                  className="w-full" 
+                  style={{ 
+                    position: 'relative', 
+                    zIndex: 9999,
+                    display: 'block',
+                    visibility: 'visible',
+                    width: '100%',
+                    padding: '0',
+                    margin: '0'
+                  }}
+                >
+                  <h3 className="font-semibold text-primary-800 mb-4" style={{ display: 'block', visibility: 'visible' }}>
+                    Pay with Credit or Debit Card
+                  </h3>
+                  <div 
+                    style={{ 
+                      position: 'relative', 
+                      zIndex: 9999, 
+                      width: '100%',
+                      display: 'block',
+                      visibility: 'visible'
+                    }}
+                  >
                     <StripePaymentButton
                       booking={booking}
                       onSuccess={() => {

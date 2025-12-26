@@ -37,31 +37,51 @@ export function StripePaymentButton({ booking, onSuccess, onError }: StripePayme
   };
 
   return (
-    <div className="w-full">
+    <div 
+      className="w-full"
+      style={{
+        display: 'block',
+        visibility: 'visible',
+        opacity: 1,
+        position: 'relative',
+        zIndex: 9999,
+        width: '100%'
+      }}
+    >
       <button
         type="button"
         onClick={handlePayment}
         disabled={isLoading}
         className="w-full px-6 py-4 bg-[#635BFF] hover:bg-[#5851EA] text-white font-bold rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
         style={{
+          display: 'flex',
+          visibility: 'visible',
+          opacity: isLoading ? 0.5 : 1,
           minHeight: '56px',
           zIndex: 9999,
-          position: 'relative'
+          position: 'relative',
+          width: '100%',
+          cursor: 'pointer',
+          border: 'none',
+          outline: 'none'
         }}
       >
         {isLoading ? (
           <>
-            <Loader2 className="h-5 w-5 animate-spin" />
-            <span>Processing...</span>
+            <Loader2 className="h-5 w-5 animate-spin" style={{ display: 'inline-block' }} />
+            <span style={{ display: 'inline-block' }}>Processing...</span>
           </>
         ) : (
           <>
-            <CreditCard className="h-5 w-5" />
-            <span>Pay with Card</span>
+            <CreditCard className="h-5 w-5" style={{ display: 'inline-block' }} />
+            <span style={{ display: 'inline-block', fontSize: '18px', fontWeight: 'bold' }}>Pay with Card</span>
           </>
         )}
       </button>
-      <p className="text-xs text-gray-500 text-center mt-2">
+      <p 
+        className="text-xs text-gray-500 text-center mt-2"
+        style={{ display: 'block', visibility: 'visible' }}
+      >
         Secure payment via Stripe
       </p>
     </div>
