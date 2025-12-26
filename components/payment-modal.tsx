@@ -166,15 +166,20 @@ export function PaymentModal({ booking, isOpen, onClose, onPaymentSuccess }: Pay
               {selectedMethod === "stripe" && (
                 <div>
                   <h3 className="font-semibold text-primary-800 mb-4">Pay with Card</h3>
-                  <StripePaymentButton
-                    booking={booking}
-                    onSuccess={() => {
-                      // For Stripe, call onPaymentSuccess to create booking
-                      // Stripe will handle the redirect after payment
-                      onPaymentSuccess();
-                    }}
-                    onError={handlePaymentError}
-                  />
+                  <div className="space-y-4">
+                    <StripePaymentButton
+                      booking={booking}
+                      onSuccess={() => {
+                        // For Stripe, call onPaymentSuccess to create booking
+                        // Stripe will handle the redirect after payment
+                        onPaymentSuccess();
+                      }}
+                      onError={handlePaymentError}
+                    />
+                    <p className="text-xs text-earth-600 text-center">
+                      Secure payment powered by Stripe
+                    </p>
+                  </div>
                 </div>
               )}
             </div>

@@ -120,7 +120,10 @@ export function StripePaymentButton({ booking, onSuccess, onError }: {
     }
   };
 
-  const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+  // Get publishable key - check both env var and window (for debugging)
+  const publishableKey = typeof window !== "undefined" 
+    ? (process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || (window as any).__STRIPE_PUBLISHABLE_KEY__)
+    : process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
 
   // Debug logging
   if (typeof window !== "undefined") {
@@ -128,6 +131,7 @@ export function StripePaymentButton({ booking, onSuccess, onError }: {
       hasKey: !!publishableKey,
       keyPrefix: publishableKey ? publishableKey.substring(0, 10) + "..." : "none",
       component: "StripePaymentButton",
+      envCheck: typeof process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
     });
   }
 
@@ -138,6 +142,7 @@ export function StripePaymentButton({ booking, onSuccess, onError }: {
         <p className="mb-2">Please add <code className="bg-yellow-100 px-1 rounded">NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</code> to your Vercel environment variables.</p>
         <p className="text-xs mt-2">Go to: Vercel Dashboard → Settings → Environment Variables</p>
         <p className="text-xs">The key should start with <code className="bg-yellow-100 px-1 rounded">pk_test_</code> or <code className="bg-yellow-100 px-1 rounded">pk_live_</code></p>
+        <p className="text-xs mt-2 font-semibold">After adding the key, you must redeploy your site for it to take effect.</p>
       </div>
     );
   }
