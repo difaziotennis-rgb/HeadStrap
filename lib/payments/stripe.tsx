@@ -71,12 +71,13 @@ export function StripePaymentButton({ booking, onSuccess, onError }: {
 
   // ALWAYS RENDER THE BUTTON - NO CONDITIONALS
   return (
-    <div className="w-full space-y-3">
+    <div className="w-full space-y-3 relative z-10">
       <button
         onClick={handleClick}
         disabled={isLoading}
         type="button"
-        className="w-full px-6 py-5 bg-[#635BFF] text-white rounded-xl font-bold hover:bg-[#5851EA] transition-all flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+        className="w-full px-6 py-5 bg-[#635BFF] text-white rounded-xl font-bold hover:bg-[#5851EA] transition-all flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 relative z-10"
+        style={{ position: 'relative', zIndex: 10 }}
       >
         {isLoading ? (
           <>

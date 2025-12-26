@@ -52,7 +52,7 @@ export function PaymentModal({ booking, isOpen, onClose, onPaymentSuccess }: Pay
         </div>
 
         {/* Content */}
-        <div className="px-6 py-6">
+        <div className="px-6 py-6 relative z-10" style={{ position: 'relative', zIndex: 10 }}>
           {/* Booking Summary */}
           <div className="bg-primary-50 rounded-lg p-4 mb-6">
             <div className="space-y-2">
@@ -164,15 +164,17 @@ export function PaymentModal({ booking, isOpen, onClose, onPaymentSuccess }: Pay
               )}
 
               {selectedMethod === "stripe" && (
-                <div className="w-full">
+                <div className="w-full relative z-10" style={{ position: 'relative', zIndex: 10 }}>
                   <h3 className="font-semibold text-primary-800 mb-4">Pay with Card</h3>
-                  <StripePaymentButton
-                    booking={booking}
-                    onSuccess={() => {
-                      onPaymentSuccess();
-                    }}
-                    onError={handlePaymentError}
-                  />
+                  <div className="relative z-10" style={{ position: 'relative', zIndex: 10 }}>
+                    <StripePaymentButton
+                      booking={booking}
+                      onSuccess={() => {
+                        onPaymentSuccess();
+                      }}
+                      onError={handlePaymentError}
+                    />
+                  </div>
                 </div>
               )}
             </div>
