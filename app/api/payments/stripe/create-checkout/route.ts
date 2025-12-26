@@ -13,12 +13,21 @@ export async function POST(request: Request) {
   try {
     const { bookingId, amount, date, hour, clientName, clientEmail } = await request.json();
 
+    console.log("📝 Creating Stripe checkout session:", { bookingId, amount, date, hour });
+
     if (!stripe) {
+      console.error("❌ Stripe not configured - missing STRIPE_SECRET_KEY");
       return NextResponse.json(
         { error: "Stripe is not configured. Please add STRIPE_SECRET_KEY to your environment variables." },
         { status: 500 }
       );
     }
+
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    const successUrl = `${baseUrl}/booking-success?id=${bookingId}&payment=success`;
+    const cancelUrl = `${baseUrl}/book?payment=cancelled`;
+
+    console.log("🔗 URLs:", { successUrl, cancelUrl });
 
     // Create Stripe checkout session
     const session = await stripe.checkout.sessions.create({
@@ -37,21 +46,24 @@ export async function POST(request: Request) {
         },
       ],
       mode: "payment",
-      success_url: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/booking-success?id=${bookingId}&payment=success`,
-      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/book?payment=cancelled`,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
       customer_email: clientEmail || undefined,
       metadata: {
         bookingId,
         date,
-        hour,
+        hour: hour.toString(),
         clientName,
       },
     });
 
+    console.log("✅ Stripe session created:", { sessionId: session.id, url: session.url });
+
     return NextResponse.json({ sessionId: session.id });
   } catch (error: any) {
+    console.error("❌ Error creating Stripe checkout session:", error);
     return NextResponse.json(
-      { error: error.message },
+      { error: error.message || "Failed to create checkout session" },
       { status: 500 }
     );
   }

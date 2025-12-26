@@ -20,6 +20,8 @@ const getStripe = () => {
 // Create Stripe checkout session
 export async function createStripeCheckout(booking: Booking) {
   try {
+    console.log("🔄 Creating Stripe checkout session...", { bookingId: booking.id });
+    
     const response = await fetch("/api/payments/stripe/create-checkout", {
       method: "POST",
       headers: {
@@ -35,10 +37,21 @@ export async function createStripeCheckout(booking: Booking) {
       }),
     });
 
-    const { sessionId, error } = await response.json();
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("❌ API Error:", errorData);
+      throw new Error(errorData.error || "Failed to create checkout session");
+    }
 
-    if (error) {
-      throw new Error(error);
+    const data = await response.json();
+    console.log("✅ Checkout session created:", { sessionId: data.sessionId });
+
+    if (data.error) {
+      throw new Error(data.error);
+    }
+
+    if (!data.sessionId) {
+      throw new Error("No session ID returned from server");
     }
 
     const stripe = await getStripe();
@@ -46,17 +59,22 @@ export async function createStripeCheckout(booking: Booking) {
       throw new Error("Stripe is not configured");
     }
 
+    console.log("🔄 Redirecting to Stripe Checkout...");
+    
     // Redirect to Stripe Checkout
     // Type assertion needed - redirectToCheckout exists at runtime
     const { error: redirectError } = await (stripe as any).redirectToCheckout({
-      sessionId: sessionId,
+      sessionId: data.sessionId,
     });
 
     if (redirectError) {
-      throw new Error(redirectError.message);
+      console.error("❌ Redirect error:", redirectError);
+      throw new Error(redirectError.message || "Failed to redirect to checkout");
     }
+    
+    console.log("✅ Redirect initiated successfully");
   } catch (error: any) {
-    console.error("Error creating Stripe checkout:", error);
+    console.error("❌ Error creating Stripe checkout:", error);
     throw error;
   }
 }
@@ -69,6 +87,8 @@ export function StripePaymentButton({ booking, onSuccess, onError }: {
 }) {
   const handleClick = async () => {
     try {
+      console.log("🖱️ Stripe payment button clicked");
+      
       // For Stripe, create the booking BEFORE redirecting to Stripe
       // This ensures the booking exists when Stripe redirects back
       // onSuccess creates the booking (but doesn't redirect for Stripe)
@@ -81,7 +101,8 @@ export function StripePaymentButton({ booking, onSuccess, onError }: {
       // Stripe will redirect back to /booking-success?id={bookingId}&payment=success
       await createStripeCheckout(booking);
     } catch (error: any) {
-      onError(error.message || "Payment failed");
+      console.error("❌ Stripe payment error:", error);
+      onError(error.message || "Payment failed. Please check the console for details.");
     }
   };
 
