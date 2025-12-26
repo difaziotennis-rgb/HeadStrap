@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { loadStripe, Stripe, StripeElementsOptions } from "@stripe/stripe-js";
-import { CreditCard } from "lucide-react";
+import { CreditCard, Loader2 } from "lucide-react";
 import { Booking } from "@/lib/types";
 
 let stripePromise: Promise<Stripe | null>;
@@ -92,8 +93,13 @@ export function StripePaymentButton({ booking, onSuccess, onError }: {
   onSuccess: () => void;
   onError: (error: string) => void;
 }) {
+  const [isLoading, setIsLoading] = useState(false);
+
   const handleClick = async () => {
+    if (isLoading) return; // Prevent double clicks
+    
     try {
+      setIsLoading(true);
       console.log("🖱️ Stripe payment button clicked");
       
       // For Stripe, create the booking BEFORE redirecting to Stripe
@@ -108,6 +114,7 @@ export function StripePaymentButton({ booking, onSuccess, onError }: {
       // Stripe will redirect back to /booking-success?id={bookingId}&payment=success
       await createStripeCheckout(booking);
     } catch (error: any) {
+      setIsLoading(false);
       console.error("❌ Stripe payment error:", error);
       onError(error.message || "Payment failed. Please check the console for details.");
     }
@@ -138,13 +145,23 @@ export function StripePaymentButton({ booking, onSuccess, onError }: {
   return (
     <button
       onClick={handleClick}
-      className="w-full px-6 py-5 bg-[#635BFF] text-white rounded-xl font-bold hover:bg-[#5851EA] transition-all flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
+      disabled={isLoading}
+      className="w-full px-6 py-5 bg-[#635BFF] text-white rounded-xl font-bold hover:bg-[#5851EA] transition-all flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
     >
-      <CreditCard className="h-6 w-6" />
-      <span className="text-lg">Pay with Card</span>
-      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 2.81 1.769 4.415 4.699 5.557 2.172.806 3.356 1.426 3.356 2.409 0 .98-.84 1.545-2.354 1.545-1.905 0-4.515-.858-6.09-1.631L2.098 21.5c1.997.902 4.9 1.5 8.067 1.5 2.498 0 4.576-.654 6.09-1.872 1.545-1.275 2.348-3.147 2.348-5.373 0-2.81-1.769-4.415-4.699-5.557z"/>
-      </svg>
+      {isLoading ? (
+        <>
+          <Loader2 className="h-6 w-6 animate-spin" />
+          <span className="text-lg">Processing...</span>
+        </>
+      ) : (
+        <>
+          <CreditCard className="h-6 w-6" />
+          <span className="text-lg">Pay with Card</span>
+          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 2.81 1.769 4.415 4.699 5.557 2.172.806 3.356 1.426 3.356 2.409 0 .98-.84 1.545-2.354 1.545-1.905 0-4.515-.858-6.09-1.631L2.098 21.5c1.997.902 4.9 1.5 8.067 1.5 2.498 0 4.576-.654 6.09-1.872 1.545-1.275 2.348-3.147 2.348-5.373 0-2.81-1.769-4.415-4.699-5.557z"/>
+          </svg>
+        </>
+      )}
     </button>
   );
 }
