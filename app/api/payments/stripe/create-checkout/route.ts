@@ -59,7 +59,11 @@ export async function POST(request: Request) {
 
     console.log("✅ Stripe session created:", { sessionId: session.id, url: session.url });
 
-    return NextResponse.json({ sessionId: session.id });
+    // Return both sessionId and url for flexibility
+    return NextResponse.json({ 
+      sessionId: session.id,
+      url: session.url 
+    });
   } catch (error: any) {
     console.error("❌ Error creating Stripe checkout session:", error);
     return NextResponse.json(

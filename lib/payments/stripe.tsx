@@ -44,14 +44,22 @@ export async function createStripeCheckout(booking: Booking) {
     }
 
     const data = await response.json();
-    console.log("✅ Checkout session created:", { sessionId: data.sessionId });
+    console.log("✅ Checkout session created:", { sessionId: data.sessionId, url: data.url });
 
     if (data.error) {
       throw new Error(data.error);
     }
 
+    // Use the session URL directly for more reliable redirect
+    if (data.url) {
+      console.log("🔄 Redirecting to Stripe Checkout URL:", data.url);
+      window.location.href = data.url;
+      return; // Exit early after redirect
+    }
+
+    // Fallback to redirectToCheckout if URL not available
     if (!data.sessionId) {
-      throw new Error("No session ID returned from server");
+      throw new Error("No session ID or URL returned from server");
     }
 
     const stripe = await getStripe();
@@ -59,10 +67,9 @@ export async function createStripeCheckout(booking: Booking) {
       throw new Error("Stripe is not configured");
     }
 
-    console.log("🔄 Redirecting to Stripe Checkout...");
+    console.log("🔄 Using redirectToCheckout fallback...");
     
-    // Redirect to Stripe Checkout
-    // Type assertion needed - redirectToCheckout exists at runtime
+    // Redirect to Stripe Checkout using sessionId
     const { error: redirectError } = await (stripe as any).redirectToCheckout({
       sessionId: data.sessionId,
     });
