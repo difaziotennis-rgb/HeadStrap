@@ -200,7 +200,7 @@ export default function LadderPage() {
                     Loading clubs...
                   </div>
                 ) : clubs.length > 0 ? (
-                  <div className="space-y-2">
+                  <div className="space-y-2 relative z-10">
                     <Label>Quick Select (All Clubs)</Label>
                     <Select
                       value={selectedClubId}
@@ -209,7 +209,7 @@ export default function LadderPage() {
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select a club to go directly..." />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="z-[100]">
                         {clubs.map((club) => (
                           <SelectItem key={club.id} value={club.id}>
                             {club.name}
@@ -217,7 +217,7 @@ export default function LadderPage() {
                         ))}
                       </SelectContent>
                     </Select>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground mt-2">
                       Or enter club name below
                     </p>
                     <div className="text-xs text-muted-foreground">
