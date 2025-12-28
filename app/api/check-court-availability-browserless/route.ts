@@ -62,7 +62,7 @@ export async function GET(request: Request) {
         },
         signal: controller.signal,
         body: JSON.stringify({
-          code: `async (page) => {
+          code: `module.exports = async (page) => {
   // Navigate to booking page
   await page.goto('https://rhinebecktennis.com/book-online', {
     waitUntil: 'networkidle2',
@@ -157,7 +157,7 @@ export async function GET(request: Request) {
     pageTitle: await page.title(),
     url: page.url()
   });
-}`,
+};`,
         }),
     });
       clearTimeout(timeoutId);
