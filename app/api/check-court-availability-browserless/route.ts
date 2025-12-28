@@ -288,7 +288,9 @@ export async function GET(request: Request) {
       availableTimes: timeSlots,
       checkedAt: new Date().toISOString(),
       source: "rhinebecktennis.com (Browserless.io)",
-      debug: debugInfo, // Include debug info to help troubleshoot
+      debug: debugInfo || {}, // Include debug info to help troubleshoot
+      pageTitle: responseData.pageTitle || 'unknown',
+      pageUrl: responseData.url || 'unknown'
     });
 
   } catch (error: any) {
