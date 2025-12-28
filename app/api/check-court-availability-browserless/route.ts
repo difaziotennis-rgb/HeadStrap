@@ -51,7 +51,7 @@ export async function GET(request: Request) {
     // Use Browserless.io to automate the browser
     // Browserless.io uses /function endpoint for custom Puppeteer code
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout for Browserless
+    const timeoutId = setTimeout(() => controller.abort(), 45000); // 45 second timeout for Browserless
     
     let browserlessResponse;
     try {
@@ -64,12 +64,12 @@ export async function GET(request: Request) {
         body: `export default async function ({ page }) {
   // Navigate to booking page
   await page.goto('https://rhinebecktennis.com/book-online', {
-    waitUntil: 'networkidle2',
-    timeout: 30000
+    waitUntil: 'domcontentloaded',
+    timeout: 15000
   });
   
   // Wait for page to load
-  await new Promise(resolve => setTimeout(resolve, 3000));
+  await new Promise(resolve => setTimeout(resolve, 2000));
   
   // Try to find and click "Book Now" button using evaluate for more reliability
   let bookNowClicked = false;
@@ -90,15 +90,18 @@ export async function GET(request: Request) {
     });
     
     if (bookNowClicked) {
-      // Wait for calendar/modal to appear
-      await new Promise(resolve => setTimeout(resolve, 4000));
+      // Wait for calendar/modal to appear - try to wait for a calendar element
+      try {
+        await page.waitForSelector('[class*="calendar"], [class*="date"], iframe', { timeout: 5000 }).catch(() => {});
+      } catch (e) {}
+      await new Promise(resolve => setTimeout(resolve, 2000));
     }
   } catch (e) {
     console.log('Could not find Book Now button, continuing...');
   }
   
-  // Wait a bit more for calendar to appear
-  await new Promise(resolve => setTimeout(resolve, 2000));
+  // Wait a bit for calendar to appear (reduced)
+  await new Promise(resolve => setTimeout(resolve, 1000));
   
   // Try to click on the date (day ${dayOfMonth})
   // We need to find and click the date in the calendar to see time slots
@@ -130,7 +133,7 @@ export async function GET(request: Request) {
         const dateButton = await targetFrame.$(selector);
         if (dateButton) {
           await dateButton.click();
-          await new Promise(resolve => setTimeout(resolve, 3000));
+          await new Promise(resolve => setTimeout(resolve, 2000));
           dateClicked = true;
           break;
         }
@@ -167,7 +170,11 @@ export async function GET(request: Request) {
       }, ${dayOfMonth}, "${date}");
       
       if (clicked) {
-        await new Promise(resolve => setTimeout(resolve, 4000)); // Wait for time slots to load
+        // Wait for time slots to load - try to wait for time slot elements
+        try {
+          await targetFrame.waitForSelector('[class*="time"], [class*="slot"], button', { timeout: 3000 }).catch(() => {});
+        } catch (e) {}
+        await new Promise(resolve => setTimeout(resolve, 2000));
         dateClicked = true;
       }
     }
