@@ -223,12 +223,6 @@ export default function LadderPage() {
                         ))}
                       </SelectContent>
                     </Select>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Or enter club name below
-                    </p>
-                    <div className="text-xs text-muted-foreground">
-                      Found {clubs.length} club{clubs.length !== 1 ? 's' : ''}
-                    </div>
                   </div>
                 ) : (
                   <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md text-sm text-yellow-800">
