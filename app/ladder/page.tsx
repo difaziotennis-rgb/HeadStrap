@@ -214,7 +214,7 @@ export default function LadderPage() {
                         align="start"
                         position="popper"
                         sideOffset={4}
-                        className="z-[9999] w-full"
+                        className="z-[99999] w-full bg-white"
                       >
                         {clubs.map((club) => (
                           <SelectItem key={club.id} value={club.id}>
