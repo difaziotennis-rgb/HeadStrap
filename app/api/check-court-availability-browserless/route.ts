@@ -151,13 +151,15 @@ export async function GET(request: Request) {
     return [...new Set(slots)]; // Remove duplicates
   });
   
-  return JSON.stringify({
-    timeSlots: timeSlots,
-    pageTitle: await page.title(),
-    url: page.url()
-  });
-};`,
-        }),
+  return {
+    data: {
+      timeSlots: timeSlots,
+      pageTitle: await page.title(),
+      url: page.url()
+    },
+    type: "application/json"
+  };
+}`,
     });
       clearTimeout(timeoutId);
     } catch (fetchError: any) {
@@ -204,15 +206,9 @@ export async function GET(request: Request) {
     }
 
     const result = await browserlessResponse.json();
-    let timeSlots: string[] = [];
-    
-    try {
-      const parsed = JSON.parse(result.text || result);
-      timeSlots = parsed.timeSlots || [];
-    } catch (e) {
-      // If result is already an object
-      timeSlots = result.timeSlots || [];
-    }
+    // Browserless returns { data: {...}, type: "..." }
+    const responseData = result.data || result;
+    const timeSlots: string[] = responseData.timeSlots || [];
 
     // Check if our time is in the list
     const isAvailable = timeSlots.some(slot => {

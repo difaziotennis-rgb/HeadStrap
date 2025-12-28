@@ -42,12 +42,9 @@ export async function GET() {
     const testResponse = await fetch(`${BROWSERLESS_URL}/function?token=${BROWSERLESS_API_KEY}`, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
-      },
-      signal: controller.signal,
-      headers: {
         "Content-Type": "application/javascript",
       },
+      signal: controller.signal,
       body: `export default async function ({ page }) {
   return {
     data: {
