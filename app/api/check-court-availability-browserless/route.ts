@@ -176,7 +176,7 @@ export async function GET(request: Request) {
   // Also check if we're in an iframe
   const extractionResult = await page.evaluate(() => {
     const slots = [];
-    const debugInfo: any = {
+    const debugInfo = {
       pageTitle: document.title,
       url: window.location.href,
       foundElements: [],
