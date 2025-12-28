@@ -25,12 +25,34 @@ export async function GET(request: Request) {
       .select('*')
       .order('name', { ascending: true })
 
-    if (error) throw error
+    if (error) {
+      console.error('Supabase error:', error)
+      return NextResponse.json(
+        { 
+          error: 'Failed to fetch clubs',
+          details: error.message,
+          code: error.code,
+          env: {
+            hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+            hasKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+          }
+        },
+        { status: 500 }
+      )
+    }
 
-    return NextResponse.json(data)
-  } catch (error) {
+    return NextResponse.json(data || [])
+  } catch (error: any) {
+    console.error('Clubs API error:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch clubs' },
+      { 
+        error: 'Failed to fetch clubs',
+        details: error.message,
+        env: {
+          hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+          hasKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+        }
+      },
       { status: 500 }
     )
   }
