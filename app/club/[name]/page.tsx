@@ -80,13 +80,13 @@ export default function ClubPage() {
             </p>
           </div>
 
-          {/* Admin Link - Mobile Friendly */}
-          <div className="mb-6 flex justify-center sm:justify-end">
-            <ClubAdminLoginModal clubId={club.id} clubSlug={clubSlug} />
-          </div>
-
           {/* Leaderboard */}
           <Leaderboard clubId={club.id} />
+
+          {/* Admin Link - Below Leaderboard */}
+          <div className="mt-6 flex justify-center sm:justify-end">
+            <ClubAdminLoginModal clubId={club.id} clubSlug={clubSlug} />
+          </div>
 
           {/* Home Link */}
           <HomeLink />
