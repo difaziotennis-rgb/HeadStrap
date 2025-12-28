@@ -45,7 +45,7 @@ export function ClubAdminLoginModal({ clubId, clubSlug }: { clubId: string; club
       setPassword('')
       // Small delay to ensure cookie is set before redirect
       setTimeout(() => {
-        window.location.href = `/club/${clubSlug}/admin`
+        window.location.href = `/club/${clubSlug}/ladder-admin`
       }, 100)
     } catch (error: any) {
       setError(error.message || 'Login failed')

@@ -47,7 +47,7 @@ export default function ClubAdminPage() {
       
       // Redirect to correct case if needed
       if (data.slug && data.slug !== clubSlug) {
-        router.replace(`/club/${data.slug}/admin`)
+        router.replace(`/club/${data.slug}/ladder-admin`)
       }
     } catch (error) {
       console.error('Failed to fetch club:', error)
@@ -60,7 +60,13 @@ export default function ClubAdminPage() {
     if (!club) return
     
     try {
-      const response = await fetch(`/api/auth/club-admin/check?club_id=${club.id}`)
+      // Add a small delay to ensure cookies are available
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
+      const response = await fetch(`/api/auth/club-admin/check?club_id=${club.id}`, {
+        credentials: 'include', // Ensure cookies are sent
+        cache: 'no-store', // Don't cache the auth check
+      })
       const data = await response.json()
       setIsAuthenticated(data.authenticated || false)
       
@@ -69,6 +75,7 @@ export default function ClubAdminPage() {
         router.push(`/club/${clubSlug}`)
       }
     } catch (error) {
+      console.error('Auth check error:', error)
       router.push(`/club/${clubSlug}`)
     } finally {
       setCheckingAuth(false)
