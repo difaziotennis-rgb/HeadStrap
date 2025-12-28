@@ -40,11 +40,13 @@ export function ClubAdminLoginModal({ clubId, clubSlug }: { clubId: string; club
         throw new Error(data.error || 'Login failed')
       }
 
-      // Success - redirect to admin page
+      // Success - redirect to admin page after a brief delay to ensure cookie is set
       setOpen(false)
       setPassword('')
-      router.push(`/club/${clubSlug}/admin`)
-      router.refresh()
+      // Small delay to ensure cookie is set before redirect
+      setTimeout(() => {
+        window.location.href = `/club/${clubSlug}/admin`
+      }, 100)
     } catch (error: any) {
       setError(error.message || 'Login failed')
     } finally {
