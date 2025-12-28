@@ -7,9 +7,11 @@ import { BookingModal } from "@/components/booking-modal";
 import { AdminCalendar } from "@/components/admin-calendar";
 import { TimeSlot } from "@/lib/types";
 import { initializeMockData } from "@/lib/mock-data";
-import { LogOut, Lock } from "lucide-react";
+import { LogOut, Lock, Trophy } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function BookPage() {
+  const router = useRouter();
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -75,17 +77,20 @@ export default function BookPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-50">
-      {/* Admin Header (only shown when logged in) */}
-      {isAdminMode && (
-        <header className="bg-white/80 backdrop-blur-sm border-b border-primary-100 sticky top-0 z-40">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div className="flex items-center justify-between">
-              <Link
-                href="/"
-                className="text-primary-700 hover:text-primary-800 font-medium text-sm underline"
+      {/* Top Navigation Bar - Always visible */}
+      <header className="bg-white/80 backdrop-blur-sm border-b border-primary-100 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => router.push('/ladder')}
+                className="flex items-center gap-2 text-primary-700 hover:text-primary-800 font-medium text-sm transition-colors"
               >
-                Homepage
-              </Link>
+                <Trophy className="h-4 w-4" />
+                Tennis Ladder
+              </button>
+            </div>
+            {isAdminMode && (
               <div className="flex items-center gap-4">
                 <Link
                   href="/admin/dashboard"
@@ -107,10 +112,10 @@ export default function BookPage() {
                   Logout
                 </button>
               </div>
-            </div>
+            )}
           </div>
-        </header>
-      )}
+        </div>
+      </header>
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12" role="main">
