@@ -209,7 +209,12 @@ export default function LadderPage() {
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select a club to go directly..." />
                       </SelectTrigger>
-                      <SelectContent className="z-[100]">
+                      <SelectContent 
+                        side="bottom" 
+                        align="start"
+                        position="popper"
+                        className="z-[100] w-full"
+                      >
                         {clubs.map((club) => (
                           <SelectItem key={club.id} value={club.id}>
                             {club.name}
