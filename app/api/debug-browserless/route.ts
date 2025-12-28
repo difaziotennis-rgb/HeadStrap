@@ -46,7 +46,7 @@ export async function GET() {
       },
       signal: controller.signal,
       body: JSON.stringify({
-        code: `module.exports = async (page) => {
+        code: `export default async ({ page }) => {
   return JSON.stringify({
     success: true,
     message: "Browserless connection test successful"

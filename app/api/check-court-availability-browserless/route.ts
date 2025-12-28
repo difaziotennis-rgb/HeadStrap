@@ -62,7 +62,7 @@ export async function GET(request: Request) {
         },
         signal: controller.signal,
         body: JSON.stringify({
-          code: `module.exports = async (page) => {
+          code: `export default async ({ page }) => {
   // Navigate to booking page
   await page.goto('https://rhinebecktennis.com/book-online', {
     waitUntil: 'networkidle2',
