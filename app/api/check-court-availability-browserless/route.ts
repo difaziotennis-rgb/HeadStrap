@@ -225,18 +225,24 @@ export async function GET(request: Request) {
         debugInfo.foundElements.push({ selector, count: elements.length });
         elements.forEach((el) => {
           const text = el.textContent?.trim();
-          // Skip calendar day numbers (days 1-31) - these are not times
-          if (text && /^\\d{1,2}$/.test(text) && parseInt(text) >= 1 && parseInt(text) <= 31) {
-            return; // Skip calendar day numbers
+          if (!text) return;
+          
+          // Skip calendar day numbers (days 1-31) - these are NOT times
+          const isDayNumber = /^\\d{1,2}$/.test(text);
+          if (isDayNumber) {
+            const num = parseInt(text);
+            if (num >= 1 && num <= 31) {
+              return; // Skip calendar day numbers
+            }
           }
           
           // Match actual time patterns: "9:00 AM", "9 AM", "09:00", "2:00 PM", etc.
           // Must include AM/PM or colon to be a time (not just a number)
-          if (text && (
-            text.match(/\\d{1,2}:\\d{2}\\s*(AM|PM)/i) || 
-            text.match(/\\d{1,2}\\s*(AM|PM)/i) ||
-            text.match(/\\d{1,2}:00/)
-          )) {
+          const isTimePattern = text.match(/\\d{1,2}:\\d{2}\\s*(AM|PM)/i) || 
+                               text.match(/\\d{1,2}\\s*(AM|PM)/i) ||
+                               text.match(/\\d{1,2}:00/);
+          
+          if (isTimePattern) {
             // Only add if it looks like a time and element is clickable/enabled
             const isDisabled = el.hasAttribute('disabled') || 
                               el.classList.contains('disabled') ||
