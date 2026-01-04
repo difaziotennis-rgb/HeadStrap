@@ -9,20 +9,6 @@ import { Plus, Calendar as CalendarIcon, Clock, Users, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { getEvents, deleteEvent, initializeData, getMembers, type Event } from '@/lib/club-data'
 
-interface Event {
-  id: string
-  title: string
-  type: 'lesson' | 'clinic'
-  date: string
-  time: string
-  duration: number
-  enrolled: number
-  capacity: number
-  instructor: string
-  price?: number
-  description?: string
-}
-
 export default function CalendarPage() {
   const router = useRouter()
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])

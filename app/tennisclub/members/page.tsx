@@ -10,20 +10,6 @@ import { Badge } from '@/components/ui/badge'
 import { Calendar as CalendarIcon, Clock, Users, CheckCircle2, UserPlus } from 'lucide-react'
 import { getEvents, enrollInEvent, initializeData, type Event } from '@/lib/club-data'
 
-interface Event {
-  id: string
-  title: string
-  type: 'lesson' | 'clinic'
-  date: string
-  time: string
-  duration: number
-  enrolled: number
-  capacity: number
-  instructor: string
-  price?: number
-  description?: string
-}
-
 export default function ClubMembersPage() {
   const [events, setEvents] = useState<Event[]>([])
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
