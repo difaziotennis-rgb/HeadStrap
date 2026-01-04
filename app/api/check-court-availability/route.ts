@@ -72,54 +72,21 @@ export async function GET(request: Request) {
                             html.includes("booking") || 
                             html.includes("calendar");
     
-    // For now, we'll use a heuristic approach:
+    // For now, we'll use a simple approach:
     // If the booking page loads and contains booking functionality,
-    // we'll need to actually interact with it to get real availability
-    // This requires browser automation which is complex in serverless
+    // we'll default to available. Manual availability management can be done via admin panel.
     
-    // Try Browserless.io first if configured
-    const BROWSERLESS_API_KEY = process.env.BROWSERLESS_API_KEY;
-    if (BROWSERLESS_API_KEY) {
-      try {
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || request.url.split('/api')[0];
-        const browserlessUrl = `${baseUrl}/api/check-court-availability-browserless?date=${date}&hour=${hour}`;
-        
-        // Add timeout to prevent hanging
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
-        
-        const browserlessResponse = await fetch(browserlessUrl, {
-          signal: controller.signal,
-        });
-        clearTimeout(timeoutId);
-        
-        if (browserlessResponse.ok) {
-          return browserlessResponse;
-        }
-        
-        // If browserless failed, we'll fall through to the fallback
-        const errorData = await browserlessResponse.json().catch(() => ({}));
-        console.error("Browserless check failed:", browserlessResponse.status, errorData);
-      } catch (error: any) {
-        console.error("Browserless check failed, falling back:", error.message);
-        // Continue to fallback
-      }
-    }
-    
-    // Fallback: Return available by default if Browserless not configured
     // Only log in development
     if (process.env.NODE_ENV === "development") {
       console.log(`Checking availability for ${date} at ${hour}:00 (${timeStr12})`);
-      console.log("Browserless API key not configured - defaulting to available");
     }
     
     return NextResponse.json({
-      available: true, // Default to available until Browserless is configured
+      available: true, // Default to available
       date,
       hour: parseInt(hour),
       checkedAt: new Date().toISOString(),
       source: "rhinebecktennis.com",
-      note: "Browserless.io not configured - add BROWSERLESS_API_KEY to enable automatic checking",
     });
 
   } catch (error: any) {

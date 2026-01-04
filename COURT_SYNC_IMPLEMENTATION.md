@@ -17,23 +17,7 @@ This requires browser automation (like Puppeteer), which is complex in serverles
 
 ## Solutions
 
-### Option 1: Browserless.io (Recommended - Easiest)
-
-**Browserless.io** is a service that provides browser automation as a service:
-
-1. **Sign up**: https://browserless.io (free tier available)
-2. **Get API key**
-3. **Update the API route** to use Browserless instead of local Puppeteer
-
-**Pros**: 
-- Works perfectly in serverless
-- No setup complexity
-- Reliable
-
-**Cons**: 
-- Requires external service (but has free tier)
-
-### Option 2: Find Wix Bookings API
+### Option 1: Find Wix Bookings API
 
 Wix Bookings might have an API endpoint we can call directly:
 
@@ -49,7 +33,7 @@ Wix Bookings might have an API endpoint we can call directly:
 - Requires finding the API endpoint
 - May require authentication
 
-### Option 3: Manual Sync (Temporary)
+### Option 2: Manual Sync (Recommended)
 
 For now, you can manually sync availability:
 
@@ -67,25 +51,23 @@ For now, you can manually sync availability:
 
 ## Next Steps
 
-**I recommend Option 1 (Browserless.io)** - it's the easiest and most reliable.
+**I recommend Option 2 (Manual Sync)** - it's the most reliable and doesn't require external services.
 
 Would you like me to:
-1. Set up Browserless.io integration?
-2. Help you find the Wix API endpoint?
-3. Set up a manual sync process?
+1. Help you find the Wix API endpoint?
+2. Set up a manual sync process?
 
 Let me know which option you prefer!
 
 ## Current Implementation
 
-The code is ready - it just needs the browser automation piece. The API routes are set up at:
+The API routes are set up at:
 - `/api/check-court-availability` - Simple check (currently defaults to available)
-- `/api/check-court-availability-browser` - Browser-based check (needs Puppeteer setup)
 
-Once we add browser automation, it will automatically:
-- Check rhinebecktennis.com every 5 minutes
-- Update your time slots accordingly
-- Hide unavailable times from users
+You can manually manage availability via the admin panel:
+- Go to `/book` page
+- Click "Admin Login"
+- Toggle time slots to available/unavailable
 
 
 

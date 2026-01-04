@@ -26,10 +26,6 @@
 3. Check: Production, Preview, Development
 4. Redeploy
 
-### Error: "BROWSERLESS_API_KEY is not defined"
-**Fix**: This is optional, but if it's required:
-1. Add `BROWSERLESS_API_KEY` to Vercel environment variables
-2. Or: The code should handle missing keys gracefully
 
 ### Error: "Type error" or TypeScript error
 **Fix**: Share the exact error and I'll fix the type issue
@@ -51,7 +47,6 @@
 
 **Add these (if missing):**
 - `CRON_SECRET` = `your-random-secret-key` (any string)
-- `BROWSERLESS_API_KEY` = (optional, only if you have one)
 - `NEXT_PUBLIC_BASE_URL` = `https://difaziotennis.com`
 - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` = (your Stripe key)
 - `STRIPE_SECRET_KEY` = (your Stripe key)

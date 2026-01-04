@@ -42,7 +42,7 @@ Vercel deployments are failing and sending you emails. I need to see the **exact
 
 ### Error: "Environment variable is missing"
 - **Cause**: Required env var not set in Vercel
-- **Example**: `BROWSERLESS_API_KEY is not defined`
+- **Example**: `CRON_SECRET is not defined`
 - **Fix**: Add missing environment variables in Vercel
 
 ### Error: "Build timeout"

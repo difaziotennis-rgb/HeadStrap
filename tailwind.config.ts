@@ -10,38 +10,51 @@ const config = {
     extend: {
       colors: {
         brightPink: '#ff1493',
-        // Hudson Valley theme - natural, elegant colors
+        // Hamptons Country Club - Elegant, upscale palette
         primary: {
-          50: '#f0f7f4',
-          100: '#dceee5',
-          200: '#bddccb',
-          300: '#92c3a8',
-          400: '#62a37f',
-          500: '#3d8561', // Main green
-          600: '#2d6b4d',
-          700: '#255640',
-          800: '#204535',
-          900: '#1b392d',
+          50: '#f0f4f8',
+          100: '#d9e2ec',
+          200: '#bcccdc',
+          300: '#9fb3c8',
+          400: '#829ab1',
+          500: '#627d98', // Main navy blue
+          600: '#486581', // Deep navy
+          700: '#334e68', // Dark navy
+          800: '#243b53', // Very dark navy
+          900: '#102a43', // Almost black navy
         },
         accent: {
-          50: '#faf8f4',
-          100: '#f4efe6',
-          200: '#e7dcc8',
-          300: '#d6c2a3',
-          400: '#c2a57a',
-          500: '#b08d5a', // Warm accent
-          600: '#9a7548',
-          700: '#7d5d3c',
-          800: '#684e35',
-          900: '#57432f',
+          50: '#fef9f0',
+          100: '#fcf2e0',
+          200: '#f8e4c1',
+          300: '#f4d6a2',
+          400: '#f0c883',
+          500: '#ecba64', // Gold accent
+          600: '#d4a558',
+          700: '#b8904c',
+          800: '#9c7b40',
+          900: '#806634',
         },
+        cream: {
+          50: '#fefcf9',
+          100: '#fdf8f0',
+          200: '#faf1e1',
+          300: '#f7ead2',
+          400: '#f4e3c3',
+          500: '#f1dcb4', // Cream
+          600: '#d9c6a2',
+          700: '#c1b090',
+          800: '#a99a7e',
+          900: '#91846c',
+        },
+        // Keep original colors for main booking site compatibility
         earth: {
           50: '#f7f5f2',
           100: '#ebe7df',
           200: '#d5cdbf',
           300: '#b8ab96',
           400: '#9a8a70',
-          500: '#7d6d57', // Earth tone
+          500: '#7d6d57',
           600: '#66584a',
           700: '#54483e',
           800: '#463d35',
@@ -51,6 +64,11 @@ const config = {
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
         serif: ['Playfair Display', 'serif'],
+        elegant: ['Cormorant Garamond', 'Playfair Display', 'serif'],
+      },
+      letterSpacing: {
+        'elegant': '0.02em',
+        'refined': '0.05em',
       },
     },
   },
