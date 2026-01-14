@@ -37,6 +37,13 @@ const nextConfig = {
   // Skip static generation for admin dashboard to avoid Firebase build errors
   experimental: {
     missingSuspenseWithCSRBailout: false,
+    // Exclude ClubManagement and art-portfolio from output file tracing
+    outputFileTracingExcludes: {
+      '*': [
+        './ClubManagement/**/*',
+        './art-portfolio/**/*',
+      ],
+    },
   },
   // Exclude ClubManagement and art-portfolio directories from build
   webpack: (config) => {
