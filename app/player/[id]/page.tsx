@@ -102,9 +102,9 @@ export default function PlayerProfile() {
           <Card>
             <CardHeader>
               <div className="flex items-center gap-6">
-                <Avatar className="w-24 h-24">
+                <Avatar className="w-36 h-36">
                   <AvatarImage src={player.profile_picture_url || undefined} alt={player.name} />
-                  <AvatarFallback className="text-2xl bg-green-100 text-green-700">
+                  <AvatarFallback className="text-4xl bg-green-100 text-green-700">
                     {player.name.charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
