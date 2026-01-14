@@ -38,6 +38,19 @@ const nextConfig = {
   experimental: {
     missingSuspenseWithCSRBailout: false,
   },
+  // Exclude ClubManagement and art-portfolio directories from build
+  webpack: (config) => {
+    // Exclude ClubManagement and art-portfolio from webpack compilation
+    config.watchOptions = {
+      ...config.watchOptions,
+      ignored: [
+        ...(Array.isArray(config.watchOptions?.ignored) ? config.watchOptions.ignored : []),
+        '**/ClubManagement/**',
+        '**/art-portfolio/**',
+      ],
+    }
+    return config
+  },
 }
 
 module.exports = nextConfig
