@@ -22,7 +22,7 @@ export default function ClubNotFound() {
           </CardHeader>
           <CardContent className="space-y-4">
             <Button
-              onClick={() => router.push('/ladder')}
+              onClick={() => router.push('/club/rhinebeck-tennis-club')}
               className="w-full"
               size="lg"
             >

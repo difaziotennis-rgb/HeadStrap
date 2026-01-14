@@ -56,7 +56,7 @@ export default function PlayerProfile() {
       <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 flex items-center justify-center">
         <div className="text-center">
           <p className="text-muted-foreground mb-4">Player not found</p>
-          <Button onClick={() => router.push('/ladder')}>Back to Leaderboard</Button>
+          <Button onClick={() => router.push('/club/rhinebeck-tennis-club')}>Back to Leaderboard</Button>
         </div>
       </div>
     )
@@ -74,7 +74,7 @@ export default function PlayerProfile() {
                 try {
                   const res = await fetch(`/api/clubs?id=${player.club_id}`)
                   if (!res.ok) {
-                    router.push('/ladder')
+                    router.push('/club/rhinebeck-tennis-club')
                     return
                   }
                   const club = await res.json()
@@ -83,13 +83,13 @@ export default function PlayerProfile() {
                     const slug = club.slug || createSlug(club.name)
                     router.push(`/club/${slug}`)
                   } else {
-                    router.push('/ladder')
+                    router.push('/club/rhinebeck-tennis-club')
                   }
                 } catch {
-                  router.push('/ladder')
+                  router.push('/club/rhinebeck-tennis-club')
                 }
               } else {
-                router.push('/ladder')
+                router.push('/club/rhinebeck-tennis-club')
               }
             }}
             className="mb-6"

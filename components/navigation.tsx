@@ -95,9 +95,9 @@ export function Navigation() {
                   Book Lesson
                 </Button>
                 <Button
-                  variant={pathname === '/ladder' ? 'default' : 'ghost'}
+                  variant={pathname?.startsWith('/club/rhinebeck-tennis-club') ? 'default' : 'ghost'}
                   size="sm"
-                  onClick={() => router.push('/ladder')}
+                  onClick={() => router.push('/club/rhinebeck-tennis-club')}
                 >
                   <Trophy className="w-4 h-4 mr-2" />
                   Ladder

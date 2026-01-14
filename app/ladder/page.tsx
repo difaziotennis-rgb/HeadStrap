@@ -1,20 +1,21 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
-import { Building2, ArrowRight } from 'lucide-react'
-import { createSlug } from '@/lib/utils/slug'
-import { SiteAdminLoginModal } from '@/components/site-admin-login-modal'
-import { SiteAdminLogout } from '@/components/site-admin-logout'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Club } from '@/lib/types/database'
 
 export default function LadderPage() {
   const router = useRouter()
+  
+  useEffect(() => {
+    // Redirect directly to Rhinebeck Tennis Club ladder
+    router.replace('/club/rhinebeck-tennis-club')
+  }, [router])
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 flex items-center justify-center">
+      <div className="text-center text-muted-foreground">Redirecting...</div>
+    </div>
+  )
   const [clubName, setClubName] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)

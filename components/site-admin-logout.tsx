@@ -18,7 +18,7 @@ export function SiteAdminLogout({ onLogout }: { onLogout: () => void }) {
 
       if (response.ok) {
         onLogout()
-        router.push('/ladder')
+        router.push('/club/rhinebeck-tennis-club')
       }
     } catch (error) {
       console.error('Logout error:', error)

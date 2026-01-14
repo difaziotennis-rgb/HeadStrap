@@ -1,0 +1,136 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Core Data Model for EliteClub OS
+
+enum MemberStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  PENDING
+}
+
+enum MembershipTier {
+  FULL_GOLF
+  TENNIS_SOCIAL
+  JUNIOR
+  HONORARY
+}
+
+model Member {
+  id                String         @id @default(cuid())
+  firstName         String
+  lastName          String
+  email             String         @unique
+  memberNumber      Int            @unique
+  tier              MembershipTier
+  status            MemberStatus
+  houseAccountLimit Decimal        @default(5000.00)
+
+  // Relationships
+  reservations    Reservation[]
+  posTransactions Transaction[]
+  statements      Statement[]
+  familyMembers   Member[]      @relation("FamilyLink")
+  primaryMember   Member?       @relation("FamilyLink", fields: [primaryMemberId], references: [id])
+  primaryMemberId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+  @@index([memberNumber])
+  @@index([status])
+  @@map("members")
+}
+
+model Reservation {
+  id           String   @id @default(cuid())
+  startTime    DateTime
+  endTime      DateTime
+  resourceType String // "TENNIS_COURT", "DINING_TABLE", "TEE_TIME"
+  resourceId   String // e.g., "Court 4"
+  memberId     String
+  member       Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  guests       Int      @default(0)
+  fee          Decimal  @default(0.00)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([memberId])
+  @@index([startTime])
+  @@index([resourceType, resourceId])
+  @@map("reservations")
+}
+
+model Transaction {
+  id          String   @id @default(cuid())
+  amount      Decimal
+  department  String // "F&B", "PRO_SHOP", "LESSONS"
+  description String
+  isPosted    Boolean  @default(false) // If true, it's locked to a statement
+  memberId    String
+  member      Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@index([memberId])
+  @@index([isPosted])
+  @@index([createdAt])
+  @@map("transactions")
+}
+
+model Statement {
+  id            String   @id @default(cuid())
+  billingPeriod DateTime
+  totalAmount   Decimal
+  isPaid        Boolean  @default(false)
+  memberId      String
+  member        Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([memberId])
+  @@index([billingPeriod])
+  @@index([isPaid])
+  @@map("statements")
+}
+
+// Authentication Models
+model User {
+  id           String      @id @default(cuid())
+  email        String      @unique
+  passwordHash String
+  role         String // "admin" | "member"
+  memberId     String? // Optional link to Member if user is a member
+  adminId      String? // Optional link to AdminUser if user is admin
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  AdminUser    AdminUser[]
+
+  @@index([email])
+  @@map("users")
+}
+
+model AdminUser {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User?    @relation(fields: [userId], references: [id])
+  firstName String
+  lastName  String
+  role      String   @default("admin")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("admin_users")
+}

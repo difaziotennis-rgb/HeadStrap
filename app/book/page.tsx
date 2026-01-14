@@ -83,7 +83,7 @@ export default function BookPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button
-                onClick={() => router.push('/ladder')}
+                onClick={() => router.push('/club/rhinebeck-tennis-club')}
                 className="flex items-center gap-2 text-primary-700 hover:text-primary-800 font-medium text-sm transition-colors"
               >
                 <Trophy className="h-4 w-4" />

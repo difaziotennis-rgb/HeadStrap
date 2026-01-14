@@ -60,7 +60,7 @@ export default function ClubPage() {
       <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 flex items-center justify-center">
         <div className="text-center">
           <p className="text-muted-foreground mb-4">Club not found</p>
-          <Button onClick={() => router.push('/ladder')}>Go Home</Button>
+          <Button onClick={() => router.push('/club/rhinebeck-tennis-club')}>Go Home</Button>
         </div>
       </div>
     )

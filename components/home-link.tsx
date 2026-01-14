@@ -8,7 +8,7 @@ export function HomeLink() {
   const router = useRouter()
 
   const handleGoHome = () => {
-    router.push('/ladder')
+    router.push('/club/rhinebeck-tennis-club')
   }
 
   return (

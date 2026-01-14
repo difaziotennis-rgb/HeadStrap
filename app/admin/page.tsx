@@ -20,10 +20,10 @@ export default function AdminPage() {
       if (data.authenticated) {
         setIsAuthenticated(true)
       } else {
-        router.push('/ladder')
+        router.push('/club/rhinebeck-tennis-club')
       }
     } catch (error) {
-      router.push('/ladder')
+      router.push('/club/rhinebeck-tennis-club')
     } finally {
       setCheckingAuth(false)
     }
