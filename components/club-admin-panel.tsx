@@ -426,9 +426,82 @@ function EditPlayerForm({ player, clubId, onSuccess, onCancel }: { player: Playe
     name: player.name,
     email: player.email || '',
     phone_number: player.phone_number || '',
+    profile_picture_url: player.profile_picture_url || '',
   })
   const [loading, setLoading] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(player.profile_picture_url || null)
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      // Validate file type
+      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
+      if (!validTypes.includes(file.type)) {
+        setError('Invalid file type. Please upload a JPEG, PNG, GIF, or WebP image.')
+        return
+      }
+
+      // Validate file size (max 5MB)
+      const maxSize = 5 * 1024 * 1024 // 5MB
+      if (file.size > maxSize) {
+        setError('File too large. Maximum size is 5MB.')
+        return
+      }
+
+      setSelectedFile(file)
+      setError(null)
+      
+      // Create preview
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setPreviewUrl(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const handleUpload = async () => {
+    if (!selectedFile) return
+
+    setUploading(true)
+    setError(null)
+
+    try {
+      const uploadFormData = new FormData()
+      uploadFormData.append('file', selectedFile)
+      uploadFormData.append('playerId', player.id)
+      uploadFormData.append('clubId', clubId)
+
+      const response = await fetch('/api/upload/profile-picture', {
+        method: 'POST',
+        body: uploadFormData,
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to upload image')
+      }
+
+      const data = await response.json()
+      setFormData({ ...formData, profile_picture_url: data.url })
+      setPreviewUrl(data.url)
+      setSelectedFile(null)
+      setError(null)
+      
+      // Reset file input
+      const fileInput = document.getElementById('edit-profile-picture-file') as HTMLInputElement
+      if (fileInput) {
+        fileInput.value = ''
+      }
+    } catch (error: any) {
+      setError(error.message || 'Failed to upload image')
+    } finally {
+      setUploading(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -449,6 +522,7 @@ function EditPlayerForm({ player, clubId, onSuccess, onCancel }: { player: Playe
           name: formData.name.trim(),
           email: formData.email.trim() || null,
           phone_number: formData.phone_number.trim() || null,
+          profile_picture_url: formData.profile_picture_url.trim() || null,
         }),
       })
 
@@ -503,6 +577,66 @@ function EditPlayerForm({ player, clubId, onSuccess, onCancel }: { player: Playe
           onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
           placeholder="(555) 123-4567"
         />
+      </div>
+
+      <div>
+        <Label htmlFor="edit-profile-picture">Profile Picture (Optional)</Label>
+        
+        {/* File Upload */}
+        <div className="space-y-2 mb-3">
+          <div className="flex items-center gap-2">
+            <Input
+              id="edit-profile-picture-file"
+              type="file"
+              accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+              onChange={handleFileSelect}
+              className="flex-1"
+            />
+            {selectedFile && (
+              <Button
+                type="button"
+                onClick={handleUpload}
+                disabled={uploading}
+                size="sm"
+              >
+                {uploading ? 'Uploading...' : 'Upload'}
+              </Button>
+            )}
+          </div>
+          {selectedFile && (
+            <p className="text-xs text-muted-foreground">
+              Selected: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
+            </p>
+          )}
+        </div>
+
+        {/* Preview */}
+        {previewUrl && (
+          <div className="mb-3">
+            <img
+              src={previewUrl}
+              alt="Profile preview"
+              className="w-24 h-24 rounded-full object-cover border-2 border-gray-200"
+            />
+          </div>
+        )}
+
+        {/* URL Input (Alternative) */}
+        <div className="space-y-2">
+          <Label htmlFor="edit-profile-picture-url" className="text-sm text-muted-foreground">
+            Or enter image URL:
+          </Label>
+          <Input
+            id="edit-profile-picture-url"
+            type="url"
+            value={formData.profile_picture_url}
+            onChange={(e) => {
+              setFormData({ ...formData, profile_picture_url: e.target.value })
+              setPreviewUrl(e.target.value || null)
+            }}
+            placeholder="https://example.com/image.jpg"
+          />
+        </div>
       </div>
 
       <div className="flex gap-2 pt-4">

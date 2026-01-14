@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, Phone, Mail } from 'lucide-react'
 import { HomeLink } from '@/components/home-link'
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 
 type PlayerData = {
   id: string
@@ -14,6 +15,7 @@ type PlayerData = {
   email: string | null
   position: number
   phone_number: string | null
+  profile_picture_url: string | null
   club_id: string
 }
 
@@ -99,7 +101,17 @@ export default function PlayerProfile() {
           {/* Player Info Card */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-3xl">{player.name}</CardTitle>
+              <div className="flex items-center gap-6">
+                <Avatar className="w-24 h-24">
+                  <AvatarImage src={player.profile_picture_url || undefined} alt={player.name} />
+                  <AvatarFallback className="text-2xl bg-green-100 text-green-700">
+                    {player.name.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <CardTitle className="text-3xl">{player.name}</CardTitle>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">

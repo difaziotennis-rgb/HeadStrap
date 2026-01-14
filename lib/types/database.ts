@@ -12,6 +12,7 @@ export type Player = {
   email: string | null
   position: number // Manual rank/position set by admin
   phone_number: string | null
+  profile_picture_url: string | null
   club_id: string
   created_at: string
   updated_at: string

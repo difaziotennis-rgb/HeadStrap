@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge'
 import { Trophy, TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import { LadderEntry } from '@/lib/types/database'
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 
 export function Leaderboard({ clubId }: { clubId: string | null }) {
   const [ladder, setLadder] = useState<LadderEntry[]>([])
@@ -133,12 +134,20 @@ export function Leaderboard({ clubId }: { clubId: string | null }) {
                     <TableCell>
                       <Link
                         href={`/player/${player.id}`}
-                        className="flex flex-col text-left hover:text-primary transition-colors"
+                        className="flex items-center gap-3 hover:text-primary transition-colors"
                       >
-                        <span className="font-medium">{player.name}</span>
-                        {player.email && (
-                          <span className="text-xs text-muted-foreground">{player.email}</span>
-                        )}
+                        <Avatar className="w-10 h-10">
+                          <AvatarImage src={player.profile_picture_url || undefined} alt={player.name} />
+                          <AvatarFallback className="bg-green-100 text-green-700 text-sm">
+                            {player.name.charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{player.name}</span>
+                          {player.email && (
+                            <span className="text-xs text-muted-foreground">{player.email}</span>
+                          )}
+                        </div>
                       </Link>
                     </TableCell>
                     <TableCell>
