@@ -39,21 +39,33 @@ const nextConfig = {
     missingSuspenseWithCSRBailout: false,
   },
   // Exclude ClubManagement and art-portfolio directories from build
-  webpack: (config, { isServer }) => {
-    // Exclude ClubManagement and art-portfolio from webpack compilation
+  webpack: (config) => {
+    // Exclude ClubManagement and art-portfolio from module resolution
+    const originalResolveLoader = config.resolveLoader || {}
+    config.resolveLoader = {
+      ...originalResolveLoader,
+      modules: [
+        ...(originalResolveLoader.modules || ['node_modules']),
+      ],
+    }
+    
+    // Add rule to exclude these directories
     config.module = config.module || {}
     config.module.rules = config.module.rules || []
     
-    // Add rule to ignore these directories
-    config.module.rules.push({
-      test: /\.(tsx?|jsx?)$/,
-      include: (filePath) => {
-        // Exclude ClubManagement and art-portfolio
-        if (filePath.includes('ClubManagement') || filePath.includes('art-portfolio')) {
-          return false
+    // Override the default rule to exclude ClubManagement and art-portfolio
+    config.module.rules = config.module.rules.map((rule) => {
+      if (rule.test && (rule.test.toString().includes('tsx?') || rule.test.toString().includes('jsx?'))) {
+        return {
+          ...rule,
+          exclude: [
+            ...(Array.isArray(rule.exclude) ? rule.exclude : rule.exclude ? [rule.exclude] : []),
+            /ClubManagement/,
+            /art-portfolio/,
+          ],
         }
-        return true
-      },
+      }
+      return rule
     })
     
     return config
