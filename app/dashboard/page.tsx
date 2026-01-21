@@ -155,13 +155,13 @@ export default function Dashboard() {
     }))
   }
 
-  // Intraday hourly chart component with time labels
+  // Intraday chart component with pre-market and after-hours
   const StockChart = ({ data, isPositive }: { data: IntradayDataPoint[], isPositive: boolean }) => {
     if (!data || data.length === 0) return null
 
-    const width = 600
-    const height = 200
-    const padding = { top: 20, right: 40, bottom: 40, left: 50 }
+    const width = 700
+    const height = 220
+    const padding = { top: 25, right: 50, bottom: 50, left: 60 }
     const chartWidth = width - padding.left - padding.right
     const chartHeight = height - padding.top - padding.bottom
 
@@ -172,25 +172,44 @@ export default function Dashboard() {
     const maxPrice = Math.max(...prices)
     const priceRange = maxPrice - minPrice || 1
 
-    // Format time for labels (show every 2-3 hours)
+    // Determine trading periods (ET timezone)
+    const getTradingPeriod = (timestamp: number) => {
+      const date = new Date(timestamp * 1000)
+      // Convert to ET (approximate, for display purposes)
+      const hours = date.getUTCHours() - 5 // EST offset
+      const minutes = date.getUTCMinutes()
+      const totalMinutes = hours * 60 + minutes
+      
+      // Pre-market: 4:00 AM - 9:30 AM ET
+      if (totalMinutes >= 240 && totalMinutes < 570) return 'pre'
+      // Regular hours: 9:30 AM - 4:00 PM ET
+      if (totalMinutes >= 570 && totalMinutes < 960) return 'regular'
+      // After-hours: 4:00 PM - 8:00 PM ET
+      if (totalMinutes >= 960 && totalMinutes < 1200) return 'after'
+      return 'other'
+    }
+
+    // Format time for labels
     const formatTime = (timestamp: number) => {
       const date = new Date(timestamp * 1000)
       const hours = date.getHours()
       const minutes = date.getMinutes()
       const ampm = hours >= 12 ? 'PM' : 'AM'
       const displayHours = hours % 12 || 12
-      return minutes === 0 ? `${displayHours}${ampm}` : `${displayHours}:${minutes.toString().padStart(2, '0')}${ampm}`
+      if (minutes === 0) return `${displayHours}${ampm}`
+      return `${displayHours}:${minutes.toString().padStart(2, '0')}${ampm}`
     }
 
-    // Calculate points for the line
+    // Calculate points for the line with period info
     const points = data
       .map((point, index) => {
         if (point.price === null || isNaN(point.price)) return null
         const x = padding.left + (index / (data.length - 1 || 1)) * chartWidth
         const y = padding.top + chartHeight - ((point.price - minPrice) / priceRange) * chartHeight
-        return { x, y, point }
+        const period = getTradingPeriod(point.timestamp)
+        return { x, y, point, period }
       })
-      .filter(p => p !== null) as Array<{ x: number; y: number; point: IntradayDataPoint }>
+      .filter(p => p !== null) as Array<{ x: number; y: number; point: IntradayDataPoint; period: string }>
 
     const linePoints = points.map(p => `${p.x},${p.y}`).join(' ')
 
@@ -200,11 +219,24 @@ export default function Dashboard() {
       `${width - padding.right},${height - padding.bottom}`
     ].join(' ')
 
-    // Show time labels for every 2-3 hours (or fewer if data is sparse)
-    const labelInterval = Math.max(1, Math.floor(data.length / 6))
+    // Find period boundaries for visual separation
+    const preMarketEnd = points.findIndex(p => p.period === 'regular')
+    const regularEnd = points.findIndex((p, idx) => idx > preMarketEnd && p.period === 'after')
+
+    // Show time labels (every 2-3 hours or key times)
+    const keyTimes = ['4:00 AM', '9:30 AM', '12:00 PM', '4:00 PM', '8:00 PM']
     const timeLabels = data
-      .map((point, index) => ({ point, index }))
-      .filter((_, idx) => idx % labelInterval === 0 || idx === data.length - 1)
+      .map((point, index) => {
+        const timeStr = formatTime(point.timestamp)
+        const isKeyTime = keyTimes.some(kt => timeStr.includes(kt.split(' ')[0]))
+        return { point, index, timeStr, isKeyTime }
+      })
+      .filter((item, idx, arr) => {
+        // Show first, last, and key times, plus every Nth point
+        const labelInterval = Math.max(1, Math.floor(data.length / 8))
+        return idx === 0 || idx === data.length - 1 || item.isKeyTime || idx % labelInterval === 0
+      })
+      .slice(0, 10) // Limit to 10 labels max
 
     return (
       <div className="w-full overflow-x-auto">
@@ -215,6 +247,26 @@ export default function Dashboard() {
               <stop offset="100%" stopColor={isPositive ? 'rgba(34, 197, 94, 0)' : 'rgba(239, 68, 68, 0)'} />
             </linearGradient>
           </defs>
+          
+          {/* Period background zones */}
+          {preMarketEnd > 0 && (
+            <rect
+              x={padding.left}
+              y={padding.top}
+              width={(preMarketEnd / (data.length - 1 || 1)) * chartWidth}
+              height={chartHeight}
+              fill="rgba(99, 102, 241, 0.05)"
+            />
+          )}
+          {regularEnd > preMarketEnd && (
+            <rect
+              x={padding.left + (preMarketEnd / (data.length - 1 || 1)) * chartWidth}
+              y={padding.top}
+              width={((regularEnd - preMarketEnd) / (data.length - 1 || 1)) * chartWidth}
+              height={chartHeight}
+              fill="rgba(34, 197, 94, 0.05)"
+            />
+          )}
           
           {/* Grid lines */}
           {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
@@ -260,6 +312,32 @@ export default function Dashboard() {
             strokeLinejoin="round"
           />
           
+          {/* Period dividers */}
+          {preMarketEnd > 0 && (
+            <line
+              x1={padding.left + (preMarketEnd / (data.length - 1 || 1)) * chartWidth}
+              y1={padding.top}
+              x2={padding.left + (preMarketEnd / (data.length - 1 || 1)) * chartWidth}
+              y2={height - padding.bottom}
+              stroke="#6366f1"
+              strokeWidth="1.5"
+              strokeDasharray="4,2"
+              opacity="0.6"
+            />
+          )}
+          {regularEnd > preMarketEnd && (
+            <line
+              x1={padding.left + (regularEnd / (data.length - 1 || 1)) * chartWidth}
+              y1={padding.top}
+              x2={padding.left + (regularEnd / (data.length - 1 || 1)) * chartWidth}
+              y2={height - padding.bottom}
+              stroke="#6366f1"
+              strokeWidth="1.5"
+              strokeDasharray="4,2"
+              opacity="0.6"
+            />
+          )}
+          
           {/* Time labels on x-axis */}
           {timeLabels.map(({ point, index }) => {
             const x = padding.left + (index / (data.length - 1 || 1)) * chartWidth
@@ -277,7 +355,7 @@ export default function Dashboard() {
                   x={x}
                   y={height - padding.bottom + 18}
                   textAnchor="middle"
-                  fontSize="10"
+                  fontSize="9"
                   fill="#64748b"
                 >
                   {formatTime(point.timestamp)}
@@ -285,6 +363,39 @@ export default function Dashboard() {
               </g>
             )
           })}
+          
+          {/* Period labels */}
+          <text
+            x={padding.left + 10}
+            y={padding.top + 15}
+            fontSize="10"
+            fill="#6366f1"
+            fontWeight="500"
+          >
+            Pre-Market
+          </text>
+          {regularEnd > preMarketEnd && (
+            <text
+              x={padding.left + (preMarketEnd / (data.length - 1 || 1)) * chartWidth + 10}
+              y={padding.top + 15}
+              fontSize="10"
+              fill="#22c55e"
+              fontWeight="500"
+            >
+              Regular Hours
+            </text>
+          )}
+          {regularEnd > 0 && regularEnd < data.length - 1 && (
+            <text
+              x={padding.left + (regularEnd / (data.length - 1 || 1)) * chartWidth + 10}
+              y={padding.top + 15}
+              fontSize="10"
+              fill="#6366f1"
+              fontWeight="500"
+            >
+              After-Hours
+            </text>
+          )}
         </svg>
       </div>
     )
@@ -429,7 +540,7 @@ export default function Dashboard() {
                                 <div className="space-y-4">
                                   {/* Chart */}
                                   <div>
-                                    <p className="text-sm font-semibold text-slate-900 mb-2">Today's Intraday Movement</p>
+                                    <p className="text-sm font-semibold text-slate-900 mb-2">Last Trading Day - Intraday Movement (Pre-Market, Regular Hours & After-Hours)</p>
                                     <div className="bg-white rounded-lg p-3 border border-slate-200">
                                       <StockChart data={stock.intradayData} isPositive={isPositive} />
                                     </div>
@@ -594,74 +705,6 @@ export default function Dashboard() {
                 </div>
               )
             })}
-          </div>
-          )}
-        </section>
-
-        {/* Top News Section */}
-        <section className="mb-4 sm:mb-6">
-          <button
-            onClick={() => toggleSection('news')}
-            className="flex items-center gap-1.5 mb-2 sm:mb-3 w-full text-left hover:opacity-80 transition-opacity"
-          >
-            <Newspaper className="h-4 w-4 sm:h-5 sm:w-5 text-slate-700" />
-            <h2 className="text-base sm:text-lg font-semibold text-slate-900">Top News</h2>
-            {collapsedSections.news ? (
-              <ChevronRight className="h-4 w-4 text-slate-500 ml-auto" />
-            ) : (
-              <ChevronDown className="h-4 w-4 text-slate-500 ml-auto" />
-            )}
-          </button>
-          
-          {!collapsedSections.news && (
-          <div className="space-y-2 sm:space-y-3">
-            {news.length === 0 ? (
-              <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-slate-200 p-3 sm:p-4 text-center">
-                <Newspaper className="h-5 w-5 sm:h-6 sm:w-6 mx-auto mb-2 text-slate-400" />
-                <p className="text-xs sm:text-sm text-slate-600 mb-1 font-medium">News API integration needed</p>
-                <p className="text-[10px] sm:text-xs text-slate-500">Add NEWS_API_KEY to environment variables. Get a free key from <a href="https://newsapi.org/" target="_blank" rel="noopener noreferrer" className="underline">newsapi.org</a></p>
-              </div>
-            ) : (
-              news.map((article) => {
-                const timeAgo = getTimeAgo(new Date(article.publishedAt).getTime() / 1000)
-                
-                return (
-                  <a
-                    key={article.url}
-                    href={article.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block bg-white rounded-lg sm:rounded-xl shadow-sm border border-slate-200 p-3 sm:p-4 hover:shadow-md transition-all hover:border-slate-300"
-                  >
-                    <div className="flex gap-3">
-                      {article.imageUrl && (
-                        <img
-                          src={article.imageUrl}
-                          alt={article.title}
-                          className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg object-cover flex-shrink-0"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).style.display = 'none'
-                          }}
-                        />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
-                          <span className="text-[10px] sm:text-xs text-slate-500 font-medium">{article.source}</span>
-                          <span className="text-[10px] sm:text-xs text-slate-400">·</span>
-                          <span className="text-[10px] sm:text-xs text-slate-400">{timeAgo}</span>
-                        </div>
-                        <h3 className="font-semibold text-xs sm:text-sm text-slate-900 mb-1.5 line-clamp-2">{article.title}</h3>
-                        <p className="text-[10px] sm:text-xs text-slate-600 leading-relaxed line-clamp-2 mb-2">{article.description}</p>
-                        <div className="flex items-center gap-1 text-[10px] sm:text-xs text-slate-500">
-                          <span>Read more</span>
-                          <ExternalLink className="h-3 w-3" />
-                        </div>
-                      </div>
-                    </div>
-                  </a>
-                )
-              })
-            )}
           </div>
           )}
         </section>
