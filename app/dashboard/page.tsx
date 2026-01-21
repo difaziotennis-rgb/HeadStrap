@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { TrendingUp, TrendingDown, RefreshCw, DollarSign, Coins, BarChart3, Newspaper, ExternalLink, ChevronDown, ChevronRight } from 'lucide-react'
+import { TrendingUp, TrendingDown, RefreshCw, DollarSign, Coins, BarChart3, Newspaper, ExternalLink, ChevronDown, ChevronRight, Sparkles } from 'lucide-react'
 
 interface IntradayDataPoint {
   timestamp: number
@@ -48,6 +48,7 @@ export default function Dashboard() {
   const [stocks, setStocks] = useState<Stock[]>([])
   const [cryptos, setCryptos] = useState<Crypto[]>([])
   const [news, setNews] = useState<NewsArticle[]>([])
+  const [dailyThought, setDailyThought] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [refreshing, setRefreshing] = useState(false)
@@ -58,11 +59,12 @@ export default function Dashboard() {
     try {
       setRefreshing(true)
       
-      // Fetch stocks, crypto, and news in parallel
-      const [stocksRes, cryptosRes, newsRes] = await Promise.all([
+      // Fetch stocks, crypto, news, and daily thought in parallel
+      const [stocksRes, cryptosRes, newsRes, thoughtRes] = await Promise.all([
         fetch('/api/markets/stocks'),
         fetch('/api/markets/crypto'),
         fetch('/api/markets/news'),
+        fetch('/api/daily-thought'),
       ])
 
       if (stocksRes.ok) {
@@ -82,6 +84,11 @@ export default function Dashboard() {
       if (newsRes.ok) {
         const newsData = await newsRes.json()
         setNews(newsData.articles || newsData.news || [])
+      }
+
+      if (thoughtRes.ok) {
+        const thoughtData = await thoughtRes.json()
+        setDailyThought(thoughtData.thought || '')
       }
 
       setLastUpdated(new Date())
@@ -415,67 +422,98 @@ export default function Dashboard() {
                             </span>
                           </td>
                         </tr>
-                        {isExpanded && stock.intradayData && stock.intradayData.length > 0 && (
+                        {isExpanded && (
                           <tr key={`${stock.symbol}-chart`} className="bg-slate-50">
                             <td colSpan={6} className="px-2 sm:px-3 py-4 sm:py-6">
-                              <div className="space-y-4">
-                                {/* Chart */}
-                                <div>
-                                  <p className="text-sm font-semibold text-slate-900 mb-2">Today's Intraday Movement</p>
-                                  <div className="bg-white rounded-lg p-3 border border-slate-200">
-                                    <StockChart data={stock.intradayData} isPositive={isPositive} />
+                              {stock.intradayData && stock.intradayData.length > 0 ? (
+                                <div className="space-y-4">
+                                  {/* Chart */}
+                                  <div>
+                                    <p className="text-sm font-semibold text-slate-900 mb-2">Today's Intraday Movement</p>
+                                    <div className="bg-white rounded-lg p-3 border border-slate-200">
+                                      <StockChart data={stock.intradayData} isPositive={isPositive} />
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Detailed Stats */}
+                                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                                    <div className="bg-white rounded-lg p-3 border border-slate-200">
+                                      <p className="text-xs text-slate-500 mb-1">Day High</p>
+                                      <p className="text-base font-bold text-slate-900">
+                                        {formatPrice(Math.max(...stock.intradayData.map(d => d.high || d.price).filter(p => p !== null && !isNaN(p))))}
+                                      </p>
+                                    </div>
+                                    <div className="bg-white rounded-lg p-3 border border-slate-200">
+                                      <p className="text-xs text-slate-500 mb-1">Day Low</p>
+                                      <p className="text-base font-bold text-slate-900">
+                                        {formatPrice(Math.min(...stock.intradayData.map(d => d.low || d.price).filter(p => p !== null && !isNaN(p))))}
+                                      </p>
+                                    </div>
+                                    <div className="bg-white rounded-lg p-3 border border-slate-200">
+                                      <p className="text-xs text-slate-500 mb-1">Open</p>
+                                      <p className="text-base font-bold text-slate-900">
+                                        {stock.intradayData.length > 0 ? formatPrice(stock.intradayData[0].price) : 'N/A'}
+                                      </p>
+                                    </div>
+                                    <div className="bg-white rounded-lg p-3 border border-slate-200">
+                                      <p className="text-xs text-slate-500 mb-1">Current</p>
+                                      <p className={`text-base font-bold ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                                        {formatPrice(stock.price)}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Additional Info */}
+                                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+                                    <div>
+                                      <span className="text-slate-500">Range: </span>
+                                      <span className="font-semibold text-slate-700">
+                                        {formatPrice(Math.max(...stock.intradayData.map(d => d.high || d.price).filter(p => p !== null && !isNaN(p))) - 
+                                          Math.min(...stock.intradayData.map(d => d.low || d.price).filter(p => p !== null && !isNaN(p))))}
+                                      </span>
+                                    </div>
+                                    <div>
+                                      <span className="text-slate-500">Volume: </span>
+                                      <span className="font-semibold text-slate-700">{formatVolume(stock.volume)}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-slate-500">Change: </span>
+                                      <span className={`font-semibold ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                                        {isPositive ? '+' : ''}{stock.changePercent.toFixed(2)}% ({isPositive ? '+' : ''}{formatPrice(stock.change)})
+                                      </span>
+                                    </div>
                                   </div>
                                 </div>
-                                
-                                {/* Detailed Stats */}
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                                  <div className="bg-white rounded-lg p-3 border border-slate-200">
-                                    <p className="text-xs text-slate-500 mb-1">Day High</p>
-                                    <p className="text-base font-bold text-slate-900">
-                                      {formatPrice(Math.max(...stock.intradayData.map(d => d.high || d.price).filter(p => p !== null && !isNaN(p))))}
-                                    </p>
-                                  </div>
-                                  <div className="bg-white rounded-lg p-3 border border-slate-200">
-                                    <p className="text-xs text-slate-500 mb-1">Day Low</p>
-                                    <p className="text-base font-bold text-slate-900">
-                                      {formatPrice(Math.min(...stock.intradayData.map(d => d.low || d.price).filter(p => p !== null && !isNaN(p))))}
-                                    </p>
-                                  </div>
-                                  <div className="bg-white rounded-lg p-3 border border-slate-200">
-                                    <p className="text-xs text-slate-500 mb-1">Open</p>
-                                    <p className="text-base font-bold text-slate-900">
-                                      {stock.intradayData.length > 0 ? formatPrice(stock.intradayData[0].price) : 'N/A'}
-                                    </p>
-                                  </div>
-                                  <div className="bg-white rounded-lg p-3 border border-slate-200">
-                                    <p className="text-xs text-slate-500 mb-1">Current</p>
-                                    <p className={`text-base font-bold ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
-                                      {formatPrice(stock.price)}
-                                    </p>
-                                  </div>
-                                </div>
-                                
-                                {/* Additional Info */}
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
-                                  <div>
-                                    <span className="text-slate-500">Range: </span>
-                                    <span className="font-semibold text-slate-700">
-                                      {formatPrice(Math.max(...stock.intradayData.map(d => d.high || d.price).filter(p => p !== null && !isNaN(p))) - 
-                                        Math.min(...stock.intradayData.map(d => d.low || d.price).filter(p => p !== null && !isNaN(p))))}
-                                    </span>
-                                  </div>
-                                  <div>
-                                    <span className="text-slate-500">Volume: </span>
-                                    <span className="font-semibold text-slate-700">{formatVolume(stock.volume)}</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-slate-500">Change: </span>
-                                    <span className={`font-semibold ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
-                                      {isPositive ? '+' : ''}{stock.changePercent.toFixed(2)}% ({isPositive ? '+' : ''}{formatPrice(stock.change)})
-                                    </span>
+                              ) : (
+                                <div className="bg-white rounded-lg p-4 border border-slate-200 text-center">
+                                  <p className="text-sm text-slate-600 mb-2">Intraday data not available</p>
+                                  <p className="text-xs text-slate-500">
+                                    {stock.marketState === 'REGULAR' 
+                                      ? 'Data is loading or market is currently open. Please refresh.' 
+                                      : 'Market is closed. Intraday data will be available during trading hours.'}
+                                  </p>
+                                  <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                                    <div>
+                                      <span className="text-slate-500">Current Price: </span>
+                                      <span className="font-semibold text-slate-700">{formatPrice(stock.price)}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-slate-500">Previous Close: </span>
+                                      <span className="font-semibold text-slate-700">{formatPrice(stock.previousClose)}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-slate-500">Change: </span>
+                                      <span className={`font-semibold ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                                        {isPositive ? '+' : ''}{stock.changePercent.toFixed(2)}%
+                                      </span>
+                                    </div>
+                                    <div>
+                                      <span className="text-slate-500">Volume: </span>
+                                      <span className="font-semibold text-slate-700">{formatVolume(stock.volume)}</span>
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
+                              )}
                             </td>
                           </tr>
                         )}
@@ -625,6 +663,45 @@ export default function Dashboard() {
               })
             )}
           </div>
+          )}
+        </section>
+
+        {/* Daily Thought Section */}
+        <section className="mb-4 sm:mb-6">
+          <button
+            onClick={() => toggleSection('thought')}
+            className="flex items-center gap-1.5 mb-2 sm:mb-3 w-full text-left hover:opacity-80 transition-opacity"
+          >
+            <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-slate-700" />
+            <h2 className="text-base sm:text-lg font-semibold text-slate-900">Daily Thought</h2>
+            {collapsedSections.thought ? (
+              <ChevronRight className="h-4 w-4 text-slate-500 ml-auto" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-slate-500 ml-auto" />
+            )}
+          </button>
+          
+          {!collapsedSections.thought && (
+            <div className="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-lg sm:rounded-xl shadow-sm border border-indigo-100 p-4 sm:p-5">
+              {dailyThought ? (
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3">
+                    <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 text-indigo-600 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm sm:text-base text-slate-800 leading-relaxed italic font-light">
+                      "{dailyThought}"
+                    </p>
+                  </div>
+                  <div className="pt-2 border-t border-indigo-200">
+                    <p className="text-[10px] sm:text-xs text-indigo-600 font-medium">A moment of reflection for today</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-4">
+                  <Sparkles className="h-6 w-6 sm:h-8 sm:w-8 mx-auto mb-2 text-indigo-400" />
+                  <p className="text-xs sm:text-sm text-indigo-600">Loading today's thought...</p>
+                </div>
+              )}
+            </div>
           )}
         </section>
       </main>
