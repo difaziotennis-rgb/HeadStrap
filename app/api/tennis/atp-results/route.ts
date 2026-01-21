@@ -82,78 +82,119 @@ function parseRSSFeed(xmlText: string): ATPResult[] {
 function extractMatchInfo(title: string, description: string, fullText: string): ATPResult | null {
   const text = `${title} ${description}`
   
-  // More flexible patterns to match ATP results
-  const patterns = [
-    // Pattern 1: "Player1 defeats Player2 Score in Tournament Round"
-    /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+(?:defeats?|beats?|wins?|def\.?)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+([\d\-,\s\(\)]+)\s+(?:in|at|to win|at the)\s+([^,\.]+?)(?:\s+(final|semifinal|quarterfinal|round of \d+))?/i,
-    // Pattern 2: "Tournament: Player1 def. Player2 Score"
-    /([^:]+):\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+(?:def\.?|defeats?|beats?)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+([\d\-,\s\(\)]+)/i,
-    // Pattern 3: "Player1 wins Tournament by defeating Player2 Score"
-    /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+wins?\s+([^,]+?)\s+(?:by|after)\s+(?:defeating?|beating?)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+([\d\-,\s\(\)]+)/i,
-    // Pattern 4: "Player1 claims Tournament title with Score win over Player2"
-    /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+claims?\s+([^,]+?)\s+title\s+(?:with|after)\s+([\d\-,\s\(\)]+)\s+win\s+over\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i,
-    // Pattern 5: Simple "Player1 def. Player2 Score" (try to find tournament in context)
-    /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+(?:def\.?|defeats?|beats?)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+([\d\-,\s\(\)]+)/i,
+  // First, try to find a score pattern - this is the most reliable indicator
+  const scorePattern = /(\d+-\d+(?:\s*\(\d+\))?(?:\s*,\s*\d+-\d+(?:\s*\(\d+\))?)*)/g
+  const scoreMatches = text.match(scorePattern)
+  if (!scoreMatches || scoreMatches.length === 0) {
+    return null // No score found, can't be a match result
+  }
+  
+  const score = scoreMatches[0].trim()
+  
+  // Find player names - look for capitalized words that are likely names
+  // Pattern: Two capitalized words (first and last name) near the score
+  const namePattern = /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/g
+  const allNames: string[] = []
+  let match
+  while ((match = namePattern.exec(text)) !== null) {
+    const name = match[1].trim()
+    // Filter out common non-name words
+    if (!['ATP', 'WTA', 'Open', 'Masters', 'Grand', 'Slam', 'Final', 'Semifinal', 'Quarterfinal', 'Round', 'Champion', 'Defending', 'Australian', 'French', 'Wimbledon', 'Keys', 'Struggled', 'Held'].includes(name)) {
+      allNames.push(name)
+    }
+  }
+  
+  // Look for winner/loser indicators near names and score
+  let winner = ''
+  let loser = ''
+  
+  // Try to find "Player1 defeats/beats/def. Player2 Score" pattern
+  const defeatPatterns = [
+    /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\s+(?:defeats?|beats?|def\.?)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\s+([\d\-,\s\(\)]+)/i,
+    /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\s+([\d\-,\s\(\)]+)\s+(?:defeats?|beats?|def\.?|over)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/i,
   ]
   
-  for (let i = 0; i < patterns.length; i++) {
-    const pattern = patterns[i]
+  for (const pattern of defeatPatterns) {
     const match = text.match(pattern)
     if (match) {
-      let tournament = 'ATP Tournament'
-      let winner = ''
-      let loser = ''
-      let score = ''
-      
-      if (i === 0) {
-        // Pattern 1
-        winner = match[1] || ''
-        loser = match[2] || ''
-        score = match[3] || ''
-        tournament = match[4] || 'ATP Tournament'
-      } else if (i === 1) {
-        // Pattern 2
-        tournament = match[1] || 'ATP Tournament'
-        winner = match[2] || ''
-        loser = match[3] || ''
-        score = match[4] || ''
-      } else if (i === 2) {
-        // Pattern 3
-        winner = match[1] || ''
-        tournament = match[2] || 'ATP Tournament'
-        loser = match[3] || ''
-        score = match[4] || ''
-      } else if (i === 3) {
-        // Pattern 4
-        winner = match[1] || ''
-        tournament = match[2] || 'ATP Tournament'
-        score = match[3] || ''
-        loser = match[4] || ''
-      } else if (i === 4) {
-        // Pattern 5 - try to find tournament in surrounding text
-        winner = match[1] || ''
-        loser = match[2] || ''
-        score = match[3] || ''
-        // Look for tournament name in the full text
-        const tournamentMatch = fullText.match(/(ATP\s+[^,\.]+?|Masters\s+\d+|Grand\s+Slam|[A-Z][a-z]+\s+Open|[A-Z][a-z]+\s+Masters)/i)
-        if (tournamentMatch) {
-          tournament = tournamentMatch[1]
-        }
+      if (pattern === defeatPatterns[0]) {
+        winner = match[1]?.trim() || ''
+        loser = match[2]?.trim() || ''
+      } else {
+        winner = match[1]?.trim() || ''
+        loser = match[3]?.trim() || ''
       }
       
-      const round = extractRound(text)
+      // Validate names are reasonable (at least 3 characters, not common words)
+      if (winner.length >= 3 && loser.length >= 3 && 
+          !['The', 'And', 'But', 'For', 'With', 'From'].includes(winner.split(' ')[0]) &&
+          !['The', 'And', 'But', 'For', 'With', 'From'].includes(loser.split(' ')[0])) {
+        break
+      }
+    }
+  }
+  
+  // If we didn't find winner/loser with patterns, try to find them near the score
+  if (!winner || !loser) {
+    // Find the position of the score
+    const scoreIndex = text.indexOf(score)
+    if (scoreIndex > 0) {
+      // Look for names before and after the score
+      const beforeScore = text.substring(Math.max(0, scoreIndex - 100), scoreIndex)
+      const afterScore = text.substring(scoreIndex + score.length, Math.min(text.length, scoreIndex + score.length + 100))
       
-      // Validate we have the essential info
-      if (winner && loser && score && score.match(/\d/)) {
-        return {
-          tournament: cleanText(tournament),
-          round: round || 'Match',
-          winner: cleanText(winner),
-          loser: cleanText(loser),
-          score: cleanText(score),
-          date: new Date().toISOString().split('T')[0],
-          significance: determineSignificance(tournament, round),
-        }
+      const beforeNames = beforeScore.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/g) || []
+      const afterNames = afterScore.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/g) || []
+      
+      // Take the last name before score as winner, first name after as loser
+      if (beforeNames.length > 0 && !winner) {
+        winner = beforeNames[beforeNames.length - 1].trim()
+      }
+      if (afterNames.length > 0 && !loser) {
+        loser = afterNames[0].trim()
+      }
+    }
+  }
+  
+  // Extract tournament name
+  let tournament = 'ATP Tournament'
+  const tournamentPatterns = [
+    /(Australian\s+Open|French\s+Open|Wimbledon|US\s+Open)/i,
+    /(ATP\s+(?:Masters\s+)?\d+|ATP\s+[A-Z][a-z]+)/i,
+    /([A-Z][a-z]+\s+Open)/i,
+    /([A-Z][a-z]+\s+Masters)/i,
+  ]
+  
+  for (const pattern of tournamentPatterns) {
+    const match = fullText.match(pattern)
+    if (match) {
+      tournament = match[1]
+      break
+    }
+  }
+  
+  // Extract round
+  const round = extractRound(text)
+  
+  // Final validation - must have winner, loser, and valid score
+  if (winner && loser && score && 
+      winner.length >= 3 && loser.length >= 3 &&
+      score.match(/\d+-\d+/)) {
+    // Clean up names - remove common prefixes/suffixes
+    winner = cleanText(winner).replace(/^(the|a|an)\s+/i, '').trim()
+    loser = cleanText(loser).replace(/^(the|a|an)\s+/i, '').trim()
+    
+    // Make sure we have proper names (not single letters or common words)
+    if (winner.split(' ').length >= 1 && loser.split(' ').length >= 1 &&
+        winner.length >= 3 && loser.length >= 3) {
+      return {
+        tournament: cleanText(tournament),
+        round: round || 'Match',
+        winner: winner,
+        loser: loser,
+        score: score,
+        date: new Date().toISOString().split('T')[0],
+        significance: determineSignificance(tournament, round),
       }
     }
   }
