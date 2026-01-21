@@ -3,10 +3,12 @@
 import { useState, useEffect } from 'react'
 import { TrendingUp, TrendingDown, RefreshCw, DollarSign, Coins, BarChart3, Newspaper, ExternalLink, ChevronDown, ChevronRight } from 'lucide-react'
 
-interface HistoricalDataPoint {
+interface IntradayDataPoint {
   timestamp: number
   price: number
   volume: number
+  high?: number
+  low?: number
 }
 
 interface Stock {
@@ -19,7 +21,7 @@ interface Stock {
   volume: number
   marketState: string
   currency: string
-  historicalData?: HistoricalDataPoint[]
+  intradayData?: IntradayDataPoint[]
 }
 
 interface Crypto {
@@ -146,58 +148,136 @@ export default function Dashboard() {
     }))
   }
 
-  // Simple line chart component
-  const StockChart = ({ data, isPositive }: { data: HistoricalDataPoint[], isPositive: boolean }) => {
+  // Intraday hourly chart component with time labels
+  const StockChart = ({ data, isPositive }: { data: IntradayDataPoint[], isPositive: boolean }) => {
     if (!data || data.length === 0) return null
 
-    const width = 300
-    const height = 80
-    const padding = 8
-    const chartWidth = width - padding * 2
-    const chartHeight = height - padding * 2
+    const width = 600
+    const height = 200
+    const padding = { top: 20, right: 40, bottom: 40, left: 50 }
+    const chartWidth = width - padding.left - padding.right
+    const chartHeight = height - padding.top - padding.bottom
 
-    const prices = data.map(d => d.price)
+    const prices = data.map(d => d.price).filter(p => p !== null && !isNaN(p))
+    if (prices.length === 0) return null
+    
     const minPrice = Math.min(...prices)
     const maxPrice = Math.max(...prices)
     const priceRange = maxPrice - minPrice || 1
 
-    const points = data.map((point, index) => {
-      const x = padding + (index / (data.length - 1 || 1)) * chartWidth
-      const y = padding + chartHeight - ((point.price - minPrice) / priceRange) * chartHeight
-      return `${x},${y}`
-    }).join(' ')
+    // Format time for labels (show every 2-3 hours)
+    const formatTime = (timestamp: number) => {
+      const date = new Date(timestamp * 1000)
+      const hours = date.getHours()
+      const minutes = date.getMinutes()
+      const ampm = hours >= 12 ? 'PM' : 'AM'
+      const displayHours = hours % 12 || 12
+      return minutes === 0 ? `${displayHours}${ampm}` : `${displayHours}:${minutes.toString().padStart(2, '0')}${ampm}`
+    }
+
+    // Calculate points for the line
+    const points = data
+      .map((point, index) => {
+        if (point.price === null || isNaN(point.price)) return null
+        const x = padding.left + (index / (data.length - 1 || 1)) * chartWidth
+        const y = padding.top + chartHeight - ((point.price - minPrice) / priceRange) * chartHeight
+        return { x, y, point }
+      })
+      .filter(p => p !== null) as Array<{ x: number; y: number; point: IntradayDataPoint }>
+
+    const linePoints = points.map(p => `${p.x},${p.y}`).join(' ')
 
     const areaPoints = [
-      `${padding},${height - padding}`,
-      ...data.map((point, index) => {
-        const x = padding + (index / (data.length - 1 || 1)) * chartWidth
-        const y = padding + chartHeight - ((point.price - minPrice) / priceRange) * chartHeight
-        return `${x},${y}`
-      }),
-      `${width - padding},${height - padding}`
+      `${padding.left},${height - padding.bottom}`,
+      ...points.map(p => `${p.x},${p.y}`),
+      `${width - padding.right},${height - padding.bottom}`
     ].join(' ')
 
+    // Show time labels for every 2-3 hours (or fewer if data is sparse)
+    const labelInterval = Math.max(1, Math.floor(data.length / 6))
+    const timeLabels = data
+      .map((point, index) => ({ point, index }))
+      .filter((_, idx) => idx % labelInterval === 0 || idx === data.length - 1)
+
     return (
-      <div className="w-full">
-        <svg width={width} height={height} className="w-full max-w-full">
+      <div className="w-full overflow-x-auto">
+        <svg width={width} height={height} className="min-w-full" viewBox={`0 0 ${width} ${height}`}>
           <defs>
             <linearGradient id={`gradient-${isPositive ? 'green' : 'red'}`} x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor={isPositive ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'} />
+              <stop offset="0%" stopColor={isPositive ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)'} />
               <stop offset="100%" stopColor={isPositive ? 'rgba(34, 197, 94, 0)' : 'rgba(239, 68, 68, 0)'} />
             </linearGradient>
           </defs>
+          
+          {/* Grid lines */}
+          {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
+            const y = padding.top + chartHeight - (ratio * chartHeight)
+            const price = minPrice + (ratio * priceRange)
+            return (
+              <g key={ratio}>
+                <line
+                  x1={padding.left}
+                  y1={y}
+                  x2={width - padding.right}
+                  y2={y}
+                  stroke="#e2e8f0"
+                  strokeWidth="1"
+                  strokeDasharray="2,2"
+                />
+                <text
+                  x={padding.left - 10}
+                  y={y + 4}
+                  textAnchor="end"
+                  fontSize="10"
+                  fill="#64748b"
+                >
+                  {formatPrice(price)}
+                </text>
+              </g>
+            )
+          })}
+          
+          {/* Area fill */}
           <polygon
             points={areaPoints}
             fill={`url(#gradient-${isPositive ? 'green' : 'red'})`}
           />
+          
+          {/* Price line */}
           <polyline
-            points={points}
+            points={linePoints}
             fill="none"
             stroke={isPositive ? '#22c55e' : '#ef4444'}
-            strokeWidth="2"
+            strokeWidth="2.5"
             strokeLinecap="round"
             strokeLinejoin="round"
           />
+          
+          {/* Time labels on x-axis */}
+          {timeLabels.map(({ point, index }) => {
+            const x = padding.left + (index / (data.length - 1 || 1)) * chartWidth
+            return (
+              <g key={index}>
+                <line
+                  x1={x}
+                  y1={height - padding.bottom}
+                  x2={x}
+                  y2={height - padding.bottom + 5}
+                  stroke="#64748b"
+                  strokeWidth="1"
+                />
+                <text
+                  x={x}
+                  y={height - padding.bottom + 18}
+                  textAnchor="middle"
+                  fontSize="10"
+                  fill="#64748b"
+                >
+                  {formatTime(point.timestamp)}
+                </text>
+              </g>
+            )
+          })}
         </svg>
       </div>
     )
@@ -335,17 +415,65 @@ export default function Dashboard() {
                             </span>
                           </td>
                         </tr>
-                        {isExpanded && stock.historicalData && stock.historicalData.length > 0 && (
+                        {isExpanded && stock.intradayData && stock.intradayData.length > 0 && (
                           <tr key={`${stock.symbol}-chart`} className="bg-slate-50">
-                            <td colSpan={6} className="px-2 sm:px-3 py-3 sm:py-4">
-                              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-xs text-slate-600 mb-1 font-medium">Daily Chart ({stock.historicalData.length} days)</p>
-                                  <StockChart data={stock.historicalData} isPositive={isPositive} />
+                            <td colSpan={6} className="px-2 sm:px-3 py-4 sm:py-6">
+                              <div className="space-y-4">
+                                {/* Chart */}
+                                <div>
+                                  <p className="text-sm font-semibold text-slate-900 mb-2">Today's Intraday Movement</p>
+                                  <div className="bg-white rounded-lg p-3 border border-slate-200">
+                                    <StockChart data={stock.intradayData} isPositive={isPositive} />
+                                  </div>
                                 </div>
-                                <div className="text-xs text-slate-500 space-y-0.5">
-                                  <div>High: <span className="font-semibold text-slate-700">{formatPrice(Math.max(...stock.historicalData.map(d => d.price)))}</span></div>
-                                  <div>Low: <span className="font-semibold text-slate-700">{formatPrice(Math.min(...stock.historicalData.map(d => d.price)))}</span></div>
+                                
+                                {/* Detailed Stats */}
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                                  <div className="bg-white rounded-lg p-3 border border-slate-200">
+                                    <p className="text-xs text-slate-500 mb-1">Day High</p>
+                                    <p className="text-base font-bold text-slate-900">
+                                      {formatPrice(Math.max(...stock.intradayData.map(d => d.high || d.price).filter(p => p !== null && !isNaN(p))))}
+                                    </p>
+                                  </div>
+                                  <div className="bg-white rounded-lg p-3 border border-slate-200">
+                                    <p className="text-xs text-slate-500 mb-1">Day Low</p>
+                                    <p className="text-base font-bold text-slate-900">
+                                      {formatPrice(Math.min(...stock.intradayData.map(d => d.low || d.price).filter(p => p !== null && !isNaN(p))))}
+                                    </p>
+                                  </div>
+                                  <div className="bg-white rounded-lg p-3 border border-slate-200">
+                                    <p className="text-xs text-slate-500 mb-1">Open</p>
+                                    <p className="text-base font-bold text-slate-900">
+                                      {stock.intradayData.length > 0 ? formatPrice(stock.intradayData[0].price) : 'N/A'}
+                                    </p>
+                                  </div>
+                                  <div className="bg-white rounded-lg p-3 border border-slate-200">
+                                    <p className="text-xs text-slate-500 mb-1">Current</p>
+                                    <p className={`text-base font-bold ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                                      {formatPrice(stock.price)}
+                                    </p>
+                                  </div>
+                                </div>
+                                
+                                {/* Additional Info */}
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+                                  <div>
+                                    <span className="text-slate-500">Range: </span>
+                                    <span className="font-semibold text-slate-700">
+                                      {formatPrice(Math.max(...stock.intradayData.map(d => d.high || d.price).filter(p => p !== null && !isNaN(p))) - 
+                                        Math.min(...stock.intradayData.map(d => d.low || d.price).filter(p => p !== null && !isNaN(p))))}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span className="text-slate-500">Volume: </span>
+                                    <span className="font-semibold text-slate-700">{formatVolume(stock.volume)}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-slate-500">Change: </span>
+                                    <span className={`font-semibold ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                                      {isPositive ? '+' : ''}{stock.changePercent.toFixed(2)}% ({isPositive ? '+' : ''}{formatPrice(stock.change)})
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
                             </td>
@@ -389,36 +517,36 @@ export default function Dashboard() {
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1">
-                        <h3 className="font-semibold text-slate-900 text-xs truncate">{crypto.name}</h3>
-                        <p className="text-[9px] text-slate-500 font-mono flex-shrink-0">{crypto.symbol}</p>
+                        <h3 className="font-semibold text-slate-900 text-xs sm:text-sm truncate">{crypto.name}</h3>
+                        <p className="text-[10px] sm:text-xs text-slate-500 font-mono flex-shrink-0">{crypto.symbol}</p>
                       </div>
                     </div>
                     {isPositive ? (
-                      <TrendingUp className="h-3 w-3 text-green-600 flex-shrink-0 ml-0.5" />
+                      <TrendingUp className="h-3.5 w-3.5 text-green-600 flex-shrink-0 ml-0.5" />
                     ) : (
-                      <TrendingDown className="h-3 w-3 text-red-600 flex-shrink-0 ml-0.5" />
+                      <TrendingDown className="h-3.5 w-3.5 text-red-600 flex-shrink-0 ml-0.5" />
                     )}
                   </div>
                   
                   <div className="space-y-0.5">
                     <div>
-                      <p className="text-xs sm:text-sm font-bold text-slate-900">{formatPrice(crypto.price)}</p>
+                      <p className="text-sm sm:text-base font-bold text-slate-900">{formatPrice(crypto.price)}</p>
                     </div>
                     
                     <div className="flex items-center gap-1">
-                      <span className={`font-semibold text-[9px] sm:text-[10px] ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                      <span className={`font-semibold text-[10px] sm:text-xs ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
                         {isPositive ? '+' : ''}{crypto.change24h.toFixed(2)}%
                       </span>
-                      <span className="text-[9px] text-slate-500">24h</span>
+                      <span className="text-[10px] text-slate-500">24h</span>
                     </div>
                     
                     {crypto.marketCap > 0 && (
                       <div className="pt-0.5 border-t border-slate-200 space-y-0">
-                        <div className="flex justify-between text-[9px]">
+                        <div className="flex justify-between text-[10px] sm:text-xs">
                           <span className="text-slate-500">MCap:</span>
                           <span className="font-medium text-slate-700">{formatMarketCap(crypto.marketCap)}</span>
                         </div>
-                        <div className="flex justify-between text-[9px]">
+                        <div className="flex justify-between text-[10px] sm:text-xs">
                           <span className="text-slate-500">Vol:</span>
                           <span className="font-medium text-slate-700">{formatMarketCap(crypto.volume24h)}</span>
                         </div>
