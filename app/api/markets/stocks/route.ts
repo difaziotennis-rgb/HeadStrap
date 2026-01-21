@@ -6,9 +6,9 @@ const STOCK_SYMBOLS = [
   'AAPL',   // Apple
   'MSFT',   // Microsoft
   'NVDA',   // NVIDIA
-  'META',   // Meta
   'TSLA',   // Tesla
   'MSTR',   // MicroStrategy (always include)
+  'SMCI',   // Super Micro Computer - AI server company, significant mover with newsworthy story
 ]
 
 export async function GET() {
