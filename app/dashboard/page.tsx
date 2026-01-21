@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { TrendingUp, TrendingDown, RefreshCw, DollarSign, Coins, BarChart3, Newspaper, ExternalLink, ChevronDown, ChevronRight, Sparkles, Trophy } from 'lucide-react'
+import { TrendingUp, TrendingDown, RefreshCw, DollarSign, Coins, BarChart3, Newspaper, ExternalLink, ChevronDown, ChevronRight, Sparkles, Trophy, Target } from 'lucide-react'
 
 interface IntradayDataPoint {
   timestamp: number
@@ -55,12 +55,30 @@ interface ATPResult {
   url?: string
 }
 
+interface TennisProTip {
+  teachingFocus: {
+    focus: string
+    tip: string
+    reminder: string
+  }
+  dailyDrill: {
+    name: string
+    description: string
+    focus: string
+    level: string
+    time: string
+    equipment: string
+  }
+  date: string
+}
+
 export default function Dashboard() {
   const [stocks, setStocks] = useState<Stock[]>([])
   const [cryptos, setCryptos] = useState<Crypto[]>([])
   const [news, setNews] = useState<NewsArticle[]>([])
   const [dailyThought, setDailyThought] = useState<string>('')
   const [atpResults, setAtpResults] = useState<ATPResult[]>([])
+  const [tennisProTip, setTennisProTip] = useState<TennisProTip | null>(null)
   const [loading, setLoading] = useState(true)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [refreshing, setRefreshing] = useState(false)
@@ -71,13 +89,14 @@ export default function Dashboard() {
     try {
       setRefreshing(true)
       
-      // Fetch stocks, crypto, news, daily thought, and ATP results in parallel
-      const [stocksRes, cryptosRes, newsRes, thoughtRes, atpRes] = await Promise.all([
+      // Fetch stocks, crypto, news, daily thought, ATP results, and tennis pro tip in parallel
+      const [stocksRes, cryptosRes, newsRes, thoughtRes, atpRes, tennisTipRes] = await Promise.all([
         fetch('/api/markets/stocks'),
         fetch('/api/markets/crypto'),
         fetch('/api/markets/news'),
         fetch('/api/daily-thought'),
         fetch('/api/tennis/atp-results'),
+        fetch('/api/tennis-pro-tip'),
       ])
 
       if (stocksRes.ok) {
@@ -112,6 +131,11 @@ export default function Dashboard() {
         console.error('ATP Results API error:', errorData)
         // Set empty array so it shows the loading message, not an error
         setAtpResults([])
+      }
+
+      if (tennisTipRes.ok) {
+        const tipData = await tennisTipRes.json()
+        setTennisProTip(tipData)
       }
 
       setLastUpdated(new Date())
@@ -802,6 +826,94 @@ export default function Dashboard() {
               )
             })}
           </div>
+          )}
+        </section>
+
+        {/* Tennis Pro Tip Section */}
+        <section className="mb-5 sm:mb-6">
+          <button
+            onClick={() => toggleSection('tennisTip')}
+            className="flex items-center gap-2 mb-3 w-full text-left hover:opacity-80 transition-opacity group"
+          >
+            <div className="p-1.5 bg-mcm-olive-500 rounded-mcm">
+              <Target className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+            </div>
+            <h2 className="text-base sm:text-lg font-display font-semibold text-mcm-charcoal-700">Tennis Pro Tip</h2>
+            {collapsedSections.tennisTip ? (
+              <ChevronRight className="h-4 w-4 text-mcm-charcoal-400 ml-auto group-hover:text-mcm-charcoal-600" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-mcm-charcoal-400 ml-auto group-hover:text-mcm-charcoal-600" />
+            )}
+          </button>
+          
+          {!collapsedSections.tennisTip && (
+            <div className="space-y-4">
+              {tennisProTip ? (
+                <>
+                  {/* Teaching Focus */}
+                  <div className="bg-gradient-to-br from-mcm-olive-50 via-mcm-cream-100 to-mcm-teal-50 rounded-mcm-lg shadow-mcm-lg border-2 border-mcm-olive-300 p-4 sm:p-5">
+                    <div className="flex items-start gap-3 mb-3">
+                      <div className="p-2 bg-mcm-olive-500 rounded-mcm flex-shrink-0">
+                        <Target className="h-5 w-5 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-display font-bold text-mcm-charcoal-800 text-sm sm:text-base mb-1">
+                          Teaching Focus: {tennisProTip.teachingFocus.focus}
+                        </h3>
+                        <p className="text-xs sm:text-sm text-mcm-charcoal-700 font-display leading-relaxed mb-2">
+                          {tennisProTip.teachingFocus.tip}
+                        </p>
+                        <div className="pt-2 border-t-2 border-mcm-olive-300">
+                          <p className="text-[10px] sm:text-xs text-mcm-olive-700 font-display font-semibold italic">
+                            💡 {tennisProTip.teachingFocus.reminder}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Daily Drill */}
+                  <div className="bg-gradient-to-br from-mcm-teal-50 via-mcm-cream-100 to-mcm-olive-50 rounded-mcm-lg shadow-mcm-lg border-2 border-mcm-teal-300 p-4 sm:p-5">
+                    <div className="flex items-start gap-3 mb-3">
+                      <div className="p-2 bg-mcm-teal-500 rounded-mcm flex-shrink-0">
+                        <Trophy className="h-5 w-5 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-display font-bold text-mcm-charcoal-800 text-sm sm:text-base mb-2">
+                          Daily Drill: {tennisProTip.dailyDrill.name}
+                        </h3>
+                        <p className="text-xs sm:text-sm text-mcm-charcoal-700 font-display leading-relaxed mb-3">
+                          {tennisProTip.dailyDrill.description}
+                        </p>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t-2 border-mcm-teal-300">
+                          <div>
+                            <p className="text-[10px] text-mcm-charcoal-500 font-display mb-0.5">Focus</p>
+                            <p className="text-xs font-display font-semibold text-mcm-charcoal-700">{tennisProTip.dailyDrill.focus}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-mcm-charcoal-500 font-display mb-0.5">Level</p>
+                            <p className="text-xs font-display font-semibold text-mcm-charcoal-700">{tennisProTip.dailyDrill.level}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-mcm-charcoal-500 font-display mb-0.5">Time</p>
+                            <p className="text-xs font-display font-semibold text-mcm-charcoal-700">{tennisProTip.dailyDrill.time}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-mcm-charcoal-500 font-display mb-0.5">Equipment</p>
+                            <p className="text-xs font-display font-semibold text-mcm-charcoal-700">{tennisProTip.dailyDrill.equipment}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="bg-mcm-cream-100 rounded-mcm-lg shadow-mcm border-2 border-mcm-charcoal-200 p-4 sm:p-5 text-center">
+                  <Target className="h-6 w-6 sm:h-8 sm:w-8 mx-auto mb-2 text-mcm-olive-500" />
+                  <p className="text-xs sm:text-sm text-mcm-charcoal-600 font-display">Loading today's tennis pro tip...</p>
+                </div>
+              )}
+            </div>
           )}
         </section>
 
