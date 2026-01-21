@@ -206,9 +206,9 @@ export default function Dashboard() {
   const StockChart = ({ data, isPositive }: { data: IntradayDataPoint[], isPositive: boolean }) => {
     if (!data || data.length === 0) return null
 
-    const width = 800
-    const height = 300
-    const padding = { top: 30, right: 60, bottom: 60, left: 70 }
+    const width = 600
+    const height = 220
+    const padding = { top: 25, right: 45, bottom: 50, left: 55 }
     const chartWidth = width - padding.left - padding.right
     const chartHeight = height - padding.top - padding.bottom
 
@@ -658,42 +658,42 @@ export default function Dashboard() {
                                 <div className="space-y-4">
                                   {/* Chart */}
                                   <div>
-                                    <p className="text-sm font-display font-semibold text-mcm-charcoal-700 mb-2">Last Trading Day - Intraday Movement (Pre-Market, Regular Hours & After-Hours)</p>
-                                    <div className="bg-mcm-cream-50 rounded-mcm-lg p-3 border-2 border-mcm-charcoal-200">
+                                    <p className="text-xs sm:text-sm font-display font-semibold text-mcm-charcoal-700 mb-2">Last Trading Day - Intraday Movement (Pre-Market, Regular Hours & After-Hours)</p>
+                                    <div className="bg-mcm-cream-50 rounded-mcm-lg p-2 sm:p-3 border-2 border-mcm-charcoal-200">
                                       <StockChart data={stock.intradayData} isPositive={isPositive} />
                                     </div>
                                   </div>
                                   
                                   {/* Detailed Stats */}
-                                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                                    <div className="bg-mcm-cream-50 rounded-mcm p-3 border-2 border-mcm-teal-300 shadow-mcm">
-                                      <p className="text-xs text-mcm-charcoal-500 mb-1 font-display">Day High</p>
-                                      <p className="text-base font-display font-bold text-mcm-charcoal-800">
+                                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+                                    <div className="bg-mcm-cream-50 rounded-mcm p-2 sm:p-3 border-2 border-mcm-teal-300 shadow-mcm">
+                                      <p className="text-[10px] sm:text-xs text-mcm-charcoal-500 mb-0.5 sm:mb-1 font-display">Day High</p>
+                                      <p className="text-sm sm:text-base font-display font-bold text-mcm-charcoal-800">
                                         {formatPrice(Math.max(...stock.intradayData.map(d => d.high || d.price).filter(p => p !== null && !isNaN(p))))}
                                       </p>
                                     </div>
-                                    <div className="bg-mcm-cream-50 rounded-mcm p-3 border-2 border-mcm-orange-300 shadow-mcm">
-                                      <p className="text-xs text-mcm-charcoal-500 mb-1 font-display">Day Low</p>
-                                      <p className="text-base font-display font-bold text-mcm-charcoal-800">
+                                    <div className="bg-mcm-cream-50 rounded-mcm p-2 sm:p-3 border-2 border-mcm-orange-300 shadow-mcm">
+                                      <p className="text-[10px] sm:text-xs text-mcm-charcoal-500 mb-0.5 sm:mb-1 font-display">Day Low</p>
+                                      <p className="text-sm sm:text-base font-display font-bold text-mcm-charcoal-800">
                                         {formatPrice(Math.min(...stock.intradayData.map(d => d.low || d.price).filter(p => p !== null && !isNaN(p))))}
                                       </p>
                                     </div>
-                                    <div className="bg-mcm-cream-50 rounded-mcm p-3 border-2 border-mcm-mustard-300 shadow-mcm">
-                                      <p className="text-xs text-mcm-charcoal-500 mb-1 font-display">Open</p>
-                                      <p className="text-base font-display font-bold text-mcm-charcoal-800">
+                                    <div className="bg-mcm-cream-50 rounded-mcm p-2 sm:p-3 border-2 border-mcm-mustard-300 shadow-mcm">
+                                      <p className="text-[10px] sm:text-xs text-mcm-charcoal-500 mb-0.5 sm:mb-1 font-display">Open</p>
+                                      <p className="text-sm sm:text-base font-display font-bold text-mcm-charcoal-800">
                                         {stock.intradayData.length > 0 ? formatPrice(stock.intradayData[0].price) : 'N/A'}
                                       </p>
                                     </div>
-                                    <div className={`bg-mcm-cream-50 rounded-mcm p-3 border-2 shadow-mcm ${isPositive ? 'border-mcm-olive-300' : 'border-mcm-orange-300'}`}>
-                                      <p className="text-xs text-mcm-charcoal-500 mb-1 font-display">Current</p>
-                                      <p className={`text-base font-display font-bold ${isPositive ? 'text-mcm-olive-700' : 'text-mcm-orange-700'}`}>
+                                    <div className={`bg-mcm-cream-50 rounded-mcm p-2 sm:p-3 border-2 shadow-mcm ${isPositive ? 'border-mcm-olive-300' : 'border-mcm-orange-300'}`}>
+                                      <p className="text-[10px] sm:text-xs text-mcm-charcoal-500 mb-0.5 sm:mb-1 font-display">Current</p>
+                                      <p className={`text-sm sm:text-base font-display font-bold ${isPositive ? 'text-mcm-olive-700' : 'text-mcm-orange-700'}`}>
                                         {formatPrice(stock.price)}
                                       </p>
                                     </div>
                                   </div>
                                   
                                   {/* Additional Info */}
-                                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs font-display">
+                                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 text-[10px] sm:text-xs font-display">
                                     <div>
                                       <span className="text-mcm-charcoal-500">Range: </span>
                                       <span className="font-semibold text-mcm-charcoal-700">
