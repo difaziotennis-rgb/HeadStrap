@@ -315,10 +315,10 @@ export default function Dashboard() {
           
           <div className="space-y-2 sm:space-y-3">
             {tweets.length === 0 ? (
-              <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6 text-center">
-                <Twitter className="h-6 w-6 sm:h-8 sm:w-8 mx-auto mb-2 text-slate-400" />
-                <p className="text-xs sm:text-sm text-slate-500 mb-1">Twitter API integration needed</p>
-                <p className="text-[10px] sm:text-xs text-slate-400">Add TWITTER_BEARER_TOKEN to environment variables</p>
+              <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-slate-200 p-3 sm:p-4 text-center">
+                <Twitter className="h-5 w-5 sm:h-6 sm:w-6 mx-auto mb-2 text-slate-400" />
+                <p className="text-xs sm:text-sm text-slate-600 mb-1 font-medium">Twitter API requires paid plan</p>
+                <p className="text-[10px] sm:text-xs text-slate-500">The search/recent endpoint requires API credits. Upgrade your Twitter API plan to enable this feature.</p>
               </div>
             ) : (
               tweets.slice(0, 3).map((tweet) => {

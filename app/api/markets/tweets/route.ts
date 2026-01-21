@@ -41,8 +41,27 @@ export async function GET() {
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: 'Unknown error' }))
-      console.error('Twitter API error:', error)
-      return NextResponse.json({ tweets: [] })
+      console.error('Twitter API error:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: error
+      })
+      
+      // Handle specific error cases
+      if (response.status === 402) {
+        return NextResponse.json({ 
+          tweets: [],
+          error: 'Twitter API requires paid plan or credits. The search/recent endpoint is not available on the free tier.',
+          message: 'Upgrade your Twitter API plan or use a different endpoint.'
+        })
+      }
+      
+      // Return error details for debugging
+      return NextResponse.json({ 
+        tweets: [],
+        error: `Twitter API error: ${response.status} ${response.statusText}`,
+        details: error
+      })
     }
 
     const data = await response.json()
