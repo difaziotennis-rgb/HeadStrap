@@ -7,6 +7,7 @@ const STOCK_SYMBOLS = [
   'MSFT',   // Microsoft
   'NVDA',   // NVIDIA
   'TSLA',   // Tesla
+  'QQQ',    // QQQ (always include)
   'MSTR',   // MicroStrategy (always include)
   'SMCI',   // Super Micro Computer - AI server company, significant mover with newsworthy story
 ]
@@ -23,7 +24,7 @@ export async function GET() {
           await new Promise(resolve => setTimeout(resolve, 100))
         }
         
-        const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=2d`
+        const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=5d`
         
         const response = await fetch(url, {
           headers: {
@@ -53,6 +54,7 @@ export async function GET() {
           // Get latest price
           const prices = quotes?.close || []
           const volumes = quotes?.volume || []
+          const timestamps = chartData.timestamp || []
           const currentPrice = meta.regularMarketPrice || meta.previousClose || prices[prices.length - 1]
           const previousClose = meta.previousClose || prices[prices.length - 2] || currentPrice
           
@@ -68,6 +70,13 @@ export async function GET() {
           // Get latest volume
           const latestVolume = volumes[volumes.length - 1] || meta.regularMarketVolume || 0
           
+          // Prepare historical data for chart (last 5 days)
+          const historicalData = timestamps.map((timestamp: number, index: number) => ({
+            timestamp,
+            price: prices[index] || null,
+            volume: volumes[index] || 0,
+          })).filter((point: any) => point.price !== null && !isNaN(point.price))
+          
           stocks.push({
             symbol,
             name: meta.longName || meta.shortName || symbol,
@@ -79,6 +88,7 @@ export async function GET() {
             marketState: meta.marketState || 'CLOSED',
             currency: meta.currency || 'USD',
             timestamp: meta.regularMarketTime || Date.now() / 1000,
+            historicalData, // Include historical data for charts
           })
       } catch (error: any) {
         console.error(`Error fetching ${symbol}:`, error.message)

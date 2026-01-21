@@ -1,7 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { TrendingUp, TrendingDown, RefreshCw, DollarSign, Coins, BarChart3, Newspaper, ExternalLink } from 'lucide-react'
+import { TrendingUp, TrendingDown, RefreshCw, DollarSign, Coins, BarChart3, Newspaper, ExternalLink, ChevronDown, ChevronRight } from 'lucide-react'
+
+interface HistoricalDataPoint {
+  timestamp: number
+  price: number
+  volume: number
+}
 
 interface Stock {
   symbol: string
@@ -13,6 +19,7 @@ interface Stock {
   volume: number
   marketState: string
   currency: string
+  historicalData?: HistoricalDataPoint[]
 }
 
 interface Crypto {
@@ -42,6 +49,8 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [refreshing, setRefreshing] = useState(false)
+  const [collapsedSections, setCollapsedSections] = useState<{ [key: string]: boolean }>({})
+  const [expandedStocks, setExpandedStocks] = useState<{ [key: string]: boolean }>({})
 
   const fetchData = async () => {
     try {
@@ -68,9 +77,9 @@ export default function Dashboard() {
         setCryptos(cryptosData.cryptos || [])
       }
 
-      if (tweetsRes.ok) {
-        const tweetsData = await tweetsRes.json()
-        setTweets(tweetsData.tweets || [])
+      if (newsRes.ok) {
+        const newsData = await newsRes.json()
+        setNews(newsData.articles || newsData.news || [])
       }
 
       setLastUpdated(new Date())
@@ -123,6 +132,77 @@ export default function Dashboard() {
     return `${days}d ago`
   }
 
+  const toggleSection = (section: string) => {
+    setCollapsedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }))
+  }
+
+  const toggleStock = (symbol: string) => {
+    setExpandedStocks(prev => ({
+      ...prev,
+      [symbol]: !prev[symbol]
+    }))
+  }
+
+  // Simple line chart component
+  const StockChart = ({ data, isPositive }: { data: HistoricalDataPoint[], isPositive: boolean }) => {
+    if (!data || data.length === 0) return null
+
+    const width = 300
+    const height = 80
+    const padding = 8
+    const chartWidth = width - padding * 2
+    const chartHeight = height - padding * 2
+
+    const prices = data.map(d => d.price)
+    const minPrice = Math.min(...prices)
+    const maxPrice = Math.max(...prices)
+    const priceRange = maxPrice - minPrice || 1
+
+    const points = data.map((point, index) => {
+      const x = padding + (index / (data.length - 1 || 1)) * chartWidth
+      const y = padding + chartHeight - ((point.price - minPrice) / priceRange) * chartHeight
+      return `${x},${y}`
+    }).join(' ')
+
+    const areaPoints = [
+      `${padding},${height - padding}`,
+      ...data.map((point, index) => {
+        const x = padding + (index / (data.length - 1 || 1)) * chartWidth
+        const y = padding + chartHeight - ((point.price - minPrice) / priceRange) * chartHeight
+        return `${x},${y}`
+      }),
+      `${width - padding},${height - padding}`
+    ].join(' ')
+
+    return (
+      <div className="w-full">
+        <svg width={width} height={height} className="w-full max-w-full">
+          <defs>
+            <linearGradient id={`gradient-${isPositive ? 'green' : 'red'}`} x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor={isPositive ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'} />
+              <stop offset="100%" stopColor={isPositive ? 'rgba(34, 197, 94, 0)' : 'rgba(239, 68, 68, 0)'} />
+            </linearGradient>
+          </defs>
+          <polygon
+            points={areaPoints}
+            fill={`url(#gradient-${isPositive ? 'green' : 'red'})`}
+          />
+          <polyline
+            points={points}
+            fill="none"
+            stroke={isPositive ? '#22c55e' : '#ef4444'}
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </div>
+    )
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 flex items-center justify-center">
@@ -163,11 +243,20 @@ export default function Dashboard() {
       <main className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6">
         {/* Stocks Section */}
         <section className="mb-4 sm:mb-6">
-          <div className="flex items-center gap-1.5 mb-2 sm:mb-3">
+          <button
+            onClick={() => toggleSection('stocks')}
+            className="flex items-center gap-1.5 mb-2 sm:mb-3 w-full text-left hover:opacity-80 transition-opacity"
+          >
             <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-slate-700" />
             <h2 className="text-base sm:text-lg font-semibold text-slate-900">Stocks</h2>
-          </div>
+            {collapsedSections.stocks ? (
+              <ChevronRight className="h-4 w-4 text-slate-500 ml-auto" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-slate-500 ml-auto" />
+            )}
+          </button>
           
+          {!collapsedSections.stocks && (
           <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -193,103 +282,143 @@ export default function Dashboard() {
                     stocks.map((stock) => {
                     const isPositive = stock.change >= 0
                     const isMarketOpen = stock.marketState === 'REGULAR'
+                    const isExpanded = expandedStocks[stock.symbol]
                     
                     return (
-                      <tr key={stock.symbol} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-2 sm:px-3 py-1.5 sm:py-2">
-                          <span className="font-mono font-semibold text-slate-900 text-xs sm:text-sm">{stock.symbol}</span>
-                        </td>
-                        <td className="px-2 sm:px-3 py-1.5 sm:py-2 hidden sm:table-cell">
-                          <span className="text-slate-700 text-xs sm:text-sm truncate max-w-[120px]">{stock.name}</span>
-                        </td>
-                        <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-right">
-                          <span className="font-semibold text-slate-900 text-xs sm:text-sm">{formatPrice(stock.price)}</span>
-                        </td>
-                        <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-right">
-                          <div className="flex items-center justify-end gap-0.5 sm:gap-1">
-                            {isPositive ? (
-                              <TrendingUp className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-green-600" />
-                            ) : (
-                              <TrendingDown className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-red-600" />
-                            )}
-                            <span className={`font-semibold text-xs sm:text-sm ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
-                              {isPositive ? '+' : ''}{stock.changePercent.toFixed(2)}%
+                      <>
+                        <tr 
+                          key={stock.symbol} 
+                          className="hover:bg-slate-50 transition-colors cursor-pointer"
+                          onClick={() => toggleStock(stock.symbol)}
+                        >
+                          <td className="px-2 sm:px-3 py-1.5 sm:py-2">
+                            <div className="flex items-center gap-1">
+                              {isExpanded ? (
+                                <ChevronDown className="h-3 w-3 text-slate-400" />
+                              ) : (
+                                <ChevronRight className="h-3 w-3 text-slate-400" />
+                              )}
+                              <span className="font-mono font-semibold text-slate-900 text-xs sm:text-sm">{stock.symbol}</span>
+                            </div>
+                          </td>
+                          <td className="px-2 sm:px-3 py-1.5 sm:py-2 hidden sm:table-cell">
+                            <span className="text-slate-700 text-xs sm:text-sm truncate max-w-[120px]">{stock.name}</span>
+                          </td>
+                          <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-right">
+                            <span className="font-semibold text-slate-900 text-xs sm:text-sm">{formatPrice(stock.price)}</span>
+                          </td>
+                          <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-right">
+                            <div className="flex items-center justify-end gap-0.5 sm:gap-1">
+                              {isPositive ? (
+                                <TrendingUp className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-green-600" />
+                              ) : (
+                                <TrendingDown className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-red-600" />
+                              )}
+                              <span className={`font-semibold text-xs sm:text-sm ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                                {isPositive ? '+' : ''}{stock.changePercent.toFixed(2)}%
+                              </span>
+                              <span className={`text-[10px] sm:text-xs hidden sm:inline ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                                ({isPositive ? '+' : ''}{formatPrice(stock.change)})
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-right hidden md:table-cell">
+                            <span className="text-slate-600 text-xs">{formatVolume(stock.volume)}</span>
+                          </td>
+                          <td className="px-2 sm:px-3 py-1.5 sm:py-2 hidden lg:table-cell">
+                            <span className={`inline-flex items-center px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-medium ${
+                              isMarketOpen 
+                                ? 'bg-green-100 text-green-800' 
+                                : 'bg-slate-100 text-slate-800'
+                            }`}>
+                              {isMarketOpen ? 'Open' : 'Closed'}
                             </span>
-                            <span className={`text-[10px] sm:text-xs hidden sm:inline ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
-                              ({isPositive ? '+' : ''}{formatPrice(stock.change)})
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-right hidden md:table-cell">
-                          <span className="text-slate-600 text-xs">{formatVolume(stock.volume)}</span>
-                        </td>
-                        <td className="px-2 sm:px-3 py-1.5 sm:py-2 hidden lg:table-cell">
-                          <span className={`inline-flex items-center px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-medium ${
-                            isMarketOpen 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-slate-100 text-slate-800'
-                          }`}>
-                            {isMarketOpen ? 'Open' : 'Closed'}
-                          </span>
-                        </td>
-                      </tr>
+                          </td>
+                        </tr>
+                        {isExpanded && stock.historicalData && stock.historicalData.length > 0 && (
+                          <tr key={`${stock.symbol}-chart`} className="bg-slate-50">
+                            <td colSpan={6} className="px-2 sm:px-3 py-3 sm:py-4">
+                              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs text-slate-600 mb-1 font-medium">Daily Chart ({stock.historicalData.length} days)</p>
+                                  <StockChart data={stock.historicalData} isPositive={isPositive} />
+                                </div>
+                                <div className="text-xs text-slate-500 space-y-0.5">
+                                  <div>High: <span className="font-semibold text-slate-700">{formatPrice(Math.max(...stock.historicalData.map(d => d.price)))}</span></div>
+                                  <div>Low: <span className="font-semibold text-slate-700">{formatPrice(Math.min(...stock.historicalData.map(d => d.price)))}</span></div>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </>
                     )
                   }))}
                 </tbody>
               </table>
             </div>
           </div>
+          )}
         </section>
 
         {/* Crypto Section */}
         <section className="mb-4 sm:mb-6">
-          <div className="flex items-center gap-1.5 mb-2 sm:mb-3">
+          <button
+            onClick={() => toggleSection('crypto')}
+            className="flex items-center gap-1.5 mb-2 w-full text-left hover:opacity-80 transition-opacity"
+          >
             <Coins className="h-4 w-4 sm:h-5 sm:w-5 text-slate-700" />
             <h2 className="text-base sm:text-lg font-semibold text-slate-900">Cryptocurrency</h2>
-          </div>
+            {collapsedSections.crypto ? (
+              <ChevronRight className="h-4 w-4 text-slate-500 ml-auto" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-slate-500 ml-auto" />
+            )}
+          </button>
           
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          {!collapsedSections.crypto && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-1.5 sm:gap-2">
             {cryptos.map((crypto) => {
               const isPositive = crypto.change24h >= 0
               
               return (
                 <div
                   key={crypto.id}
-                  className="bg-white rounded-lg shadow-sm border border-slate-200 p-2.5 sm:p-3 hover:shadow-md transition-shadow"
+                  className="bg-white rounded-lg shadow-sm border border-slate-200 p-2 hover:shadow-md transition-shadow"
                 >
-                  <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center justify-between mb-1">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <h3 className="font-semibold text-slate-900 text-xs sm:text-sm truncate">{crypto.name}</h3>
-                        <p className="text-[10px] sm:text-xs text-slate-500 font-mono flex-shrink-0">{crypto.symbol}</p>
+                      <div className="flex items-center gap-1">
+                        <h3 className="font-semibold text-slate-900 text-xs truncate">{crypto.name}</h3>
+                        <p className="text-[9px] text-slate-500 font-mono flex-shrink-0">{crypto.symbol}</p>
                       </div>
                     </div>
                     {isPositive ? (
-                      <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-600 flex-shrink-0 ml-1" />
+                      <TrendingUp className="h-3 w-3 text-green-600 flex-shrink-0 ml-0.5" />
                     ) : (
-                      <TrendingDown className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-red-600 flex-shrink-0 ml-1" />
+                      <TrendingDown className="h-3 w-3 text-red-600 flex-shrink-0 ml-0.5" />
                     )}
                   </div>
                   
-                  <div className="space-y-1">
+                  <div className="space-y-0.5">
                     <div>
-                      <p className="text-sm sm:text-base font-bold text-slate-900">{formatPrice(crypto.price)}</p>
+                      <p className="text-xs sm:text-sm font-bold text-slate-900">{formatPrice(crypto.price)}</p>
                     </div>
                     
-                    <div className="flex items-center gap-1.5">
-                      <span className={`font-semibold text-[10px] sm:text-xs ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                    <div className="flex items-center gap-1">
+                      <span className={`font-semibold text-[9px] sm:text-[10px] ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
                         {isPositive ? '+' : ''}{crypto.change24h.toFixed(2)}%
                       </span>
-                      <span className="text-[10px] text-slate-500">24h</span>
+                      <span className="text-[9px] text-slate-500">24h</span>
                     </div>
                     
                     {crypto.marketCap > 0 && (
-                      <div className="pt-1 border-t border-slate-200 space-y-0.5">
-                        <div className="flex justify-between text-[10px] sm:text-xs">
+                      <div className="pt-0.5 border-t border-slate-200 space-y-0">
+                        <div className="flex justify-between text-[9px]">
                           <span className="text-slate-500">MCap:</span>
                           <span className="font-medium text-slate-700">{formatMarketCap(crypto.marketCap)}</span>
                         </div>
-                        <div className="flex justify-between text-[10px] sm:text-xs">
+                        <div className="flex justify-between text-[9px]">
                           <span className="text-slate-500">Vol:</span>
                           <span className="font-medium text-slate-700">{formatMarketCap(crypto.volume24h)}</span>
                         </div>
@@ -300,15 +429,25 @@ export default function Dashboard() {
               )
             })}
           </div>
+          )}
         </section>
 
         {/* Top News Section */}
         <section className="mb-4 sm:mb-6">
-          <div className="flex items-center gap-1.5 mb-2 sm:mb-3">
+          <button
+            onClick={() => toggleSection('news')}
+            className="flex items-center gap-1.5 mb-2 sm:mb-3 w-full text-left hover:opacity-80 transition-opacity"
+          >
             <Newspaper className="h-4 w-4 sm:h-5 sm:w-5 text-slate-700" />
             <h2 className="text-base sm:text-lg font-semibold text-slate-900">Top News</h2>
-          </div>
+            {collapsedSections.news ? (
+              <ChevronRight className="h-4 w-4 text-slate-500 ml-auto" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-slate-500 ml-auto" />
+            )}
+          </button>
           
+          {!collapsedSections.news && (
           <div className="space-y-2 sm:space-y-3">
             {news.length === 0 ? (
               <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-slate-200 p-3 sm:p-4 text-center">
@@ -358,6 +497,7 @@ export default function Dashboard() {
               })
             )}
           </div>
+          )}
         </section>
       </main>
     </div>
