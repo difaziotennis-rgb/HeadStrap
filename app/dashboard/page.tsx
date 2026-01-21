@@ -747,6 +747,74 @@ export default function Dashboard() {
             </div>
           )}
         </section>
+
+        {/* Top News Section - Always at the bottom */}
+        <section className="mb-4 sm:mb-6">
+          <button
+            onClick={() => toggleSection('news')}
+            className="flex items-center gap-1.5 mb-2 sm:mb-3 w-full text-left hover:opacity-80 transition-opacity"
+          >
+            <Newspaper className="h-4 w-4 sm:h-5 sm:w-5 text-slate-700" />
+            <h2 className="text-base sm:text-lg font-semibold text-slate-900">Top News</h2>
+            {collapsedSections.news ? (
+              <ChevronRight className="h-4 w-4 text-slate-500 ml-auto" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-slate-500 ml-auto" />
+            )}
+          </button>
+          
+          {!collapsedSections.news && (
+          <div className="space-y-2 sm:space-y-3">
+            {news.length === 0 ? (
+              <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-slate-200 p-3 sm:p-4 text-center">
+                <Newspaper className="h-5 w-5 sm:h-6 sm:w-6 mx-auto mb-2 text-slate-400" />
+                <p className="text-xs sm:text-sm text-slate-600 mb-1 font-medium">News API integration needed</p>
+                <p className="text-[10px] sm:text-xs text-slate-500">Add NEWS_API_KEY to environment variables. Get a free key from <a href="https://newsapi.org/" target="_blank" rel="noopener noreferrer" className="underline">newsapi.org</a></p>
+              </div>
+            ) : (
+              news.map((article) => {
+                const timeAgo = getTimeAgo(new Date(article.publishedAt).getTime() / 1000)
+                
+                return (
+                  <a
+                    key={article.url}
+                    href={article.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block bg-white rounded-lg sm:rounded-xl shadow-sm border border-slate-200 p-3 sm:p-4 hover:shadow-md transition-all hover:border-slate-300"
+                  >
+                    <div className="flex gap-3">
+                      {article.imageUrl && (
+                        <img
+                          src={article.imageUrl}
+                          alt={article.title}
+                          className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg object-cover flex-shrink-0"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none'
+                          }}
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
+                          <span className="text-[10px] sm:text-xs text-slate-500 font-medium">{article.source}</span>
+                          <span className="text-[10px] sm:text-xs text-slate-400">·</span>
+                          <span className="text-[10px] sm:text-xs text-slate-400">{timeAgo}</span>
+                        </div>
+                        <h3 className="font-semibold text-xs sm:text-sm text-slate-900 mb-1.5 line-clamp-2">{article.title}</h3>
+                        <p className="text-[10px] sm:text-xs text-slate-600 leading-relaxed line-clamp-2 mb-2">{article.description}</p>
+                        <div className="flex items-center gap-1 text-[10px] sm:text-xs text-slate-500">
+                          <span>Read more</span>
+                          <ExternalLink className="h-3 w-3" />
+                        </div>
+                      </div>
+                    </div>
+                  </a>
+                )
+              })
+            )}
+          </div>
+          )}
+        </section>
       </main>
     </div>
   )
