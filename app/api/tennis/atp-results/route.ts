@@ -39,11 +39,29 @@ function parseRSSFeed(xmlText: string): ATPResult[] {
       
       // Look for ATP match results in title or description
       const text = `${title} ${description}`.toLowerCase()
+      const fullText = `${title} ${description}`
       
-      // Check if it's about ATP results
-      if (text.includes('atp') || text.includes('tennis') && (text.includes('defeats') || text.includes('beats') || text.includes('wins') || text.includes('final') || text.includes('semifinal'))) {
+      // Check if it's about ATP results - be more flexible with matching
+      const isTennisRelated = text.includes('atp') || 
+                                  text.includes('tennis') || 
+                                  text.includes('wta') ||
+                                  text.includes('grand slam') ||
+                                  text.includes('masters') ||
+                                  text.includes('open')
+      
+      const hasMatchInfo = text.includes('defeats') || 
+                          text.includes('beats') || 
+                          text.includes('wins') || 
+                          text.includes('def.') ||
+                          text.includes('defeated') ||
+                          text.includes('final') || 
+                          text.includes('semifinal') ||
+                          text.includes('quarterfinal') ||
+                          /\d-\d/.test(text) // Has score pattern
+      
+      if (isTennisRelated && hasMatchInfo) {
         // Try to extract match information
-        const matchInfo = extractMatchInfo(title, description)
+        const matchInfo = extractMatchInfo(title, description, fullText)
         if (matchInfo) {
           results.push({
             ...matchInfo,
@@ -61,28 +79,72 @@ function parseRSSFeed(xmlText: string): ATPResult[] {
 }
 
 // Extract match information from text
-function extractMatchInfo(title: string, description: string): ATPResult | null {
+function extractMatchInfo(title: string, description: string, fullText: string): ATPResult | null {
   const text = `${title} ${description}`
   
-  // Patterns to match ATP results
-  // Example: "Djokovic defeats Nadal 6-4, 7-6(5) in ATP Masters final"
+  // More flexible patterns to match ATP results
   const patterns = [
     // Pattern 1: "Player1 defeats Player2 Score in Tournament Round"
-    /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+(?:defeats?|beats?|wins?)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+([\d\-,\s\(\)]+)\s+(?:in|at|to win)\s+([^,]+?)(?:\s+(final|semifinal|quarterfinal|round of \d+))?/i,
+    /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+(?:defeats?|beats?|wins?|def\.?)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+([\d\-,\s\(\)]+)\s+(?:in|at|to win|at the)\s+([^,\.]+?)(?:\s+(final|semifinal|quarterfinal|round of \d+))?/i,
     // Pattern 2: "Tournament: Player1 def. Player2 Score"
-    /([^:]+):\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+(?:def\.?|defeats?)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+([\d\-,\s\(\)]+)/i,
+    /([^:]+):\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+(?:def\.?|defeats?|beats?)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+([\d\-,\s\(\)]+)/i,
+    // Pattern 3: "Player1 wins Tournament by defeating Player2 Score"
+    /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+wins?\s+([^,]+?)\s+(?:by|after)\s+(?:defeating?|beating?)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+([\d\-,\s\(\)]+)/i,
+    // Pattern 4: "Player1 claims Tournament title with Score win over Player2"
+    /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+claims?\s+([^,]+?)\s+title\s+(?:with|after)\s+([\d\-,\s\(\)]+)\s+win\s+over\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i,
+    // Pattern 5: Simple "Player1 def. Player2 Score" (try to find tournament in context)
+    /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+(?:def\.?|defeats?|beats?)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+([\d\-,\s\(\)]+)/i,
   ]
   
-  for (const pattern of patterns) {
+  for (let i = 0; i < patterns.length; i++) {
+    const pattern = patterns[i]
     const match = text.match(pattern)
     if (match) {
-      const tournament = match[4] || match[1] || 'ATP Tournament'
-      const winner = match[1] || match[2] || ''
-      const loser = match[2] || match[3] || ''
-      const score = match[3] || match[4] || ''
+      let tournament = 'ATP Tournament'
+      let winner = ''
+      let loser = ''
+      let score = ''
+      
+      if (i === 0) {
+        // Pattern 1
+        winner = match[1] || ''
+        loser = match[2] || ''
+        score = match[3] || ''
+        tournament = match[4] || 'ATP Tournament'
+      } else if (i === 1) {
+        // Pattern 2
+        tournament = match[1] || 'ATP Tournament'
+        winner = match[2] || ''
+        loser = match[3] || ''
+        score = match[4] || ''
+      } else if (i === 2) {
+        // Pattern 3
+        winner = match[1] || ''
+        tournament = match[2] || 'ATP Tournament'
+        loser = match[3] || ''
+        score = match[4] || ''
+      } else if (i === 3) {
+        // Pattern 4
+        winner = match[1] || ''
+        tournament = match[2] || 'ATP Tournament'
+        score = match[3] || ''
+        loser = match[4] || ''
+      } else if (i === 4) {
+        // Pattern 5 - try to find tournament in surrounding text
+        winner = match[1] || ''
+        loser = match[2] || ''
+        score = match[3] || ''
+        // Look for tournament name in the full text
+        const tournamentMatch = fullText.match(/(ATP\s+[^,\.]+?|Masters\s+\d+|Grand\s+Slam|[A-Z][a-z]+\s+Open|[A-Z][a-z]+\s+Masters)/i)
+        if (tournamentMatch) {
+          tournament = tournamentMatch[1]
+        }
+      }
+      
       const round = extractRound(text)
       
-      if (winner && loser && score) {
+      // Validate we have the essential info
+      if (winner && loser && score && score.match(/\d/)) {
         return {
           tournament: cleanText(tournament),
           round: round || 'Match',
@@ -229,6 +291,7 @@ export async function GET() {
       'https://www.espn.com/espn/rss/tennis/news',
       'https://feeds.bbci.co.uk/sport/tennis/rss.xml',
       'https://www.theguardian.com/sport/tennis/rss',
+      'https://www.tennis.com/feed/',
     ]
     
     for (const feedUrl of rssFeeds) {
