@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { TrendingUp, TrendingDown, RefreshCw, DollarSign, Coins, BarChart3, Newspaper, ExternalLink, ChevronDown, ChevronRight, Sparkles } from 'lucide-react'
+import { TrendingUp, TrendingDown, RefreshCw, DollarSign, Coins, BarChart3, Newspaper, ExternalLink, ChevronDown, ChevronRight, Sparkles, Trophy } from 'lucide-react'
 
 interface IntradayDataPoint {
   timestamp: number
@@ -44,11 +44,23 @@ interface NewsArticle {
   imageUrl?: string
 }
 
+interface ATPResult {
+  tournament: string
+  round: string
+  winner: string
+  loser: string
+  score: string
+  date: string
+  significance?: string
+  url?: string
+}
+
 export default function Dashboard() {
   const [stocks, setStocks] = useState<Stock[]>([])
   const [cryptos, setCryptos] = useState<Crypto[]>([])
   const [news, setNews] = useState<NewsArticle[]>([])
   const [dailyThought, setDailyThought] = useState<string>('')
+  const [atpResults, setAtpResults] = useState<ATPResult[]>([])
   const [loading, setLoading] = useState(true)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [refreshing, setRefreshing] = useState(false)
@@ -59,12 +71,13 @@ export default function Dashboard() {
     try {
       setRefreshing(true)
       
-      // Fetch stocks, crypto, news, and daily thought in parallel
-      const [stocksRes, cryptosRes, newsRes, thoughtRes] = await Promise.all([
+      // Fetch stocks, crypto, news, daily thought, and ATP results in parallel
+      const [stocksRes, cryptosRes, newsRes, thoughtRes, atpRes] = await Promise.all([
         fetch('/api/markets/stocks'),
         fetch('/api/markets/crypto'),
         fetch('/api/markets/news'),
         fetch('/api/daily-thought'),
+        fetch('/api/tennis/atp-results'),
       ])
 
       if (stocksRes.ok) {
@@ -89,6 +102,15 @@ export default function Dashboard() {
       if (thoughtRes.ok) {
         const thoughtData = await thoughtRes.json()
         setDailyThought(thoughtData.thought || '')
+      }
+
+      if (atpRes.ok) {
+        const atpData = await atpRes.json()
+        setAtpResults(atpData.results || [])
+      } else {
+        const errorData = await atpRes.json().catch(() => ({}))
+        console.error('ATP Results API error:', errorData)
+        setAtpResults([])
       }
 
       setLastUpdated(new Date())
@@ -818,6 +840,89 @@ export default function Dashboard() {
                   <Sparkles className="h-6 w-6 sm:h-8 sm:w-8 mx-auto mb-2 text-mcm-orange-500" />
                   <p className="text-xs sm:text-sm text-mcm-orange-700 font-display">Loading today's thought...</p>
                 </div>
+              )}
+            </div>
+          )}
+        </section>
+
+        {/* ATP Tennis Results Section */}
+        <section className="mb-5 sm:mb-6">
+          <button
+            onClick={() => toggleSection('atp')}
+            className="flex items-center gap-2 mb-3 w-full text-left hover:opacity-80 transition-opacity group"
+          >
+            <div className="p-1.5 bg-mcm-teal-500 rounded-mcm">
+              <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+            </div>
+            <h2 className="text-base sm:text-lg font-display font-semibold text-mcm-charcoal-700">ATP Tennis Results</h2>
+            {collapsedSections.atp ? (
+              <ChevronRight className="h-4 w-4 text-mcm-charcoal-400 ml-auto group-hover:text-mcm-charcoal-600" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-mcm-charcoal-400 ml-auto group-hover:text-mcm-charcoal-600" />
+            )}
+          </button>
+          
+          {!collapsedSections.atp && (
+            <div className="space-y-3 sm:space-y-4">
+              {atpResults.length === 0 ? (
+                <div className="bg-mcm-cream-100 rounded-mcm-lg shadow-mcm border-2 border-mcm-charcoal-200 p-4 sm:p-5 text-center">
+                  <Trophy className="h-5 w-5 sm:h-6 sm:w-6 mx-auto mb-2 text-mcm-charcoal-400" />
+                  <p className="text-xs sm:text-sm text-mcm-charcoal-600 mb-1 font-display font-medium">Loading ATP results...</p>
+                  <p className="text-[10px] sm:text-xs text-mcm-charcoal-500 font-display">Recent tournament results will appear here</p>
+                </div>
+              ) : (
+                atpResults.map((result, index) => {
+                  const resultDate = new Date(result.date)
+                  const dateStr = resultDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                  
+                  return (
+                    <div
+                      key={index}
+                      className="bg-mcm-cream-100 rounded-mcm-lg shadow-mcm border-2 border-mcm-charcoal-200 p-4 sm:p-5 hover:shadow-mcm-lg hover:border-mcm-teal-400 transition-all"
+                    >
+                      <div className="flex items-start justify-between gap-3 mb-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Trophy className="h-4 w-4 text-mcm-teal-600 flex-shrink-0" />
+                            <h3 className="font-display font-semibold text-xs sm:text-sm text-mcm-charcoal-800 truncate">
+                              {result.tournament}
+                            </h3>
+                          </div>
+                          <p className="text-[10px] sm:text-xs text-mcm-charcoal-500 font-display mb-2">
+                            {result.round} • {dateStr}
+                          </p>
+                        </div>
+                        {result.significance && (
+                          <span className="px-2 py-1 bg-mcm-mustard-200 text-mcm-charcoal-700 rounded-mcm text-[10px] font-display font-medium flex-shrink-0">
+                            {result.significance}
+                          </span>
+                        )}
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between py-2 border-b border-mcm-charcoal-200">
+                          <div className="flex-1">
+                            <p className="font-display font-semibold text-xs sm:text-sm text-mcm-olive-700">
+                              {result.winner}
+                            </p>
+                            <p className="text-[10px] sm:text-xs text-mcm-charcoal-500 font-display">Winner</p>
+                          </div>
+                          <div className="text-center px-3">
+                            <p className="font-display font-bold text-sm sm:text-base text-mcm-charcoal-800">
+                              {result.score}
+                            </p>
+                          </div>
+                          <div className="flex-1 text-right">
+                            <p className="font-display font-medium text-xs sm:text-sm text-mcm-charcoal-600">
+                              {result.loser}
+                            </p>
+                            <p className="text-[10px] sm:text-xs text-mcm-charcoal-500 font-display">Runner-up</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })
               )}
             </div>
           )}
