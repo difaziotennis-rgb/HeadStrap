@@ -46,6 +46,10 @@ export default function Dashboard() {
       if (stocksRes.ok) {
         const stocksData = await stocksRes.json()
         setStocks(stocksData.stocks || [])
+      } else {
+        const errorData = await stocksRes.json().catch(() => ({}))
+        console.error('Stocks API error:', errorData)
+        setStocks([])
       }
 
       if (cryptosRes.ok) {
@@ -151,7 +155,15 @@ export default function Dashboard() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
-                  {stocks.map((stock) => {
+                  {stocks.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
+                        <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2 text-slate-400" />
+                        <p>Loading stock data...</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    stocks.map((stock) => {
                     const isPositive = stock.change >= 0
                     const isMarketOpen = stock.marketState === 'REGULAR'
                     
@@ -195,7 +207,7 @@ export default function Dashboard() {
                         </td>
                       </tr>
                     )
-                  })}
+                  }))}
                 </tbody>
               </table>
             </div>
