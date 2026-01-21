@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { TrendingUp, TrendingDown, RefreshCw, DollarSign, Coins, BarChart3, Twitter } from 'lucide-react'
+import { TrendingUp, TrendingDown, RefreshCw, DollarSign, Coins, BarChart3, Newspaper, ExternalLink } from 'lucide-react'
 
 interface Stock {
   symbol: string
@@ -26,23 +26,19 @@ interface Crypto {
   priceChange24h: number
 }
 
-interface Tweet {
-  id: string
-  text: string
-  author: string
-  authorHandle: string
-  authorAvatar?: string
-  timestamp: number
-  likes?: number
-  retweets?: number
+interface NewsArticle {
+  title: string
+  description: string
   url: string
-  topic?: string
+  source: string
+  publishedAt: string
+  imageUrl?: string
 }
 
 export default function Dashboard() {
   const [stocks, setStocks] = useState<Stock[]>([])
   const [cryptos, setCryptos] = useState<Crypto[]>([])
-  const [tweets, setTweets] = useState<Tweet[]>([])
+  const [news, setNews] = useState<NewsArticle[]>([])
   const [loading, setLoading] = useState(true)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [refreshing, setRefreshing] = useState(false)
@@ -51,11 +47,11 @@ export default function Dashboard() {
     try {
       setRefreshing(true)
       
-      // Fetch stocks, crypto, and tweets in parallel
-      const [stocksRes, cryptosRes, tweetsRes] = await Promise.all([
+      // Fetch stocks, crypto, and news in parallel
+      const [stocksRes, cryptosRes, newsRes] = await Promise.all([
         fetch('/api/markets/stocks'),
         fetch('/api/markets/crypto'),
-        fetch('/api/markets/tweets'),
+        fetch('/api/markets/news'),
       ])
 
       if (stocksRes.ok) {
@@ -306,62 +302,55 @@ export default function Dashboard() {
           </div>
         </section>
 
-        {/* Top Tweets Section */}
+        {/* Top News Section */}
         <section className="mb-4 sm:mb-6">
           <div className="flex items-center gap-1.5 mb-2 sm:mb-3">
-            <Twitter className="h-4 w-4 sm:h-5 sm:w-5 text-slate-700" />
-            <h2 className="text-base sm:text-lg font-semibold text-slate-900">Top Tweets</h2>
+            <Newspaper className="h-4 w-4 sm:h-5 sm:w-5 text-slate-700" />
+            <h2 className="text-base sm:text-lg font-semibold text-slate-900">Top News</h2>
           </div>
           
           <div className="space-y-2 sm:space-y-3">
-            {tweets.length === 0 ? (
+            {news.length === 0 ? (
               <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-slate-200 p-3 sm:p-4 text-center">
-                <Twitter className="h-5 w-5 sm:h-6 sm:w-6 mx-auto mb-2 text-slate-400" />
-                <p className="text-xs sm:text-sm text-slate-600 mb-1 font-medium">Twitter API requires paid plan</p>
-                <p className="text-[10px] sm:text-xs text-slate-500">The search/recent endpoint requires API credits. Upgrade your Twitter API plan to enable this feature.</p>
+                <Newspaper className="h-5 w-5 sm:h-6 sm:w-6 mx-auto mb-2 text-slate-400" />
+                <p className="text-xs sm:text-sm text-slate-600 mb-1 font-medium">News API integration needed</p>
+                <p className="text-[10px] sm:text-xs text-slate-500">Add NEWS_API_KEY to environment variables. Get a free key from <a href="https://newsapi.org/" target="_blank" rel="noopener noreferrer" className="underline">newsapi.org</a></p>
               </div>
             ) : (
-              tweets.slice(0, 3).map((tweet) => {
-                const timeAgo = getTimeAgo(tweet.timestamp)
+              news.map((article) => {
+                const timeAgo = getTimeAgo(new Date(article.publishedAt).getTime() / 1000)
                 
                 return (
                   <a
-                    key={tweet.id}
-                    href={tweet.url}
+                    key={article.url}
+                    href={article.url}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="block bg-white rounded-lg sm:rounded-xl shadow-sm border border-slate-200 p-3 sm:p-4 hover:shadow-md transition-all hover:border-slate-300"
                   >
-                    <div className="flex items-start gap-2 sm:gap-3">
-                      {tweet.authorAvatar ? (
+                    <div className="flex gap-3">
+                      {article.imageUrl && (
                         <img
-                          src={tweet.authorAvatar}
-                          alt={tweet.author}
-                          className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex-shrink-0"
+                          src={article.imageUrl}
+                          alt={article.title}
+                          className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg object-cover flex-shrink-0"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none'
+                          }}
                         />
-                      ) : (
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0">
-                          <Twitter className="h-4 w-4 sm:h-5 sm:w-5 text-slate-400" />
-                        </div>
                       )}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
-                          <span className="font-semibold text-xs sm:text-sm text-slate-900 truncate">{tweet.author}</span>
-                          <span className="text-[10px] sm:text-xs text-slate-500">@{tweet.authorHandle}</span>
+                          <span className="text-[10px] sm:text-xs text-slate-500 font-medium">{article.source}</span>
                           <span className="text-[10px] sm:text-xs text-slate-400">·</span>
                           <span className="text-[10px] sm:text-xs text-slate-400">{timeAgo}</span>
                         </div>
-                        <p className="text-xs sm:text-sm text-slate-700 leading-relaxed line-clamp-3">{tweet.text}</p>
-                        {(tweet.likes || tweet.retweets) && (
-                          <div className="flex items-center gap-3 sm:gap-4 mt-2 text-[10px] sm:text-xs text-slate-500">
-                            {tweet.retweets && (
-                              <span>{tweet.retweets.toLocaleString()} retweets</span>
-                            )}
-                            {tweet.likes && (
-                              <span>{tweet.likes.toLocaleString()} likes</span>
-                            )}
-                          </div>
-                        )}
+                        <h3 className="font-semibold text-xs sm:text-sm text-slate-900 mb-1.5 line-clamp-2">{article.title}</h3>
+                        <p className="text-[10px] sm:text-xs text-slate-600 leading-relaxed line-clamp-2 mb-2">{article.description}</p>
+                        <div className="flex items-center gap-1 text-[10px] sm:text-xs text-slate-500">
+                          <span>Read more</span>
+                          <ExternalLink className="h-3 w-3" />
+                        </div>
                       </div>
                     </div>
                   </a>
