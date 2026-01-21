@@ -252,47 +252,49 @@ export default function Dashboard() {
             <h2 className="text-base sm:text-lg font-semibold text-slate-900">Cryptocurrency</h2>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             {cryptos.map((crypto) => {
               const isPositive = crypto.change24h >= 0
               
               return (
                 <div
                   key={crypto.id}
-                  className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-slate-200 p-3 sm:p-4 hover:shadow-md transition-shadow"
+                  className="bg-white rounded-lg shadow-sm border border-slate-200 p-2.5 sm:p-3 hover:shadow-md transition-shadow"
                 >
-                  <div className="flex items-start justify-between mb-2 sm:mb-3">
-                    <div>
-                      <h3 className="font-semibold text-slate-900 text-sm sm:text-base">{crypto.name}</h3>
-                      <p className="text-xs text-slate-500 font-mono">{crypto.symbol}</p>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <h3 className="font-semibold text-slate-900 text-xs sm:text-sm truncate">{crypto.name}</h3>
+                        <p className="text-[10px] sm:text-xs text-slate-500 font-mono flex-shrink-0">{crypto.symbol}</p>
+                      </div>
                     </div>
                     {isPositive ? (
-                      <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
+                      <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-600 flex-shrink-0 ml-1" />
                     ) : (
-                      <TrendingDown className="h-4 w-4 sm:h-5 sm:w-5 text-red-600" />
+                      <TrendingDown className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-red-600 flex-shrink-0 ml-1" />
                     )}
                   </div>
                   
-                  <div className="space-y-1.5 sm:space-y-2">
+                  <div className="space-y-1">
                     <div>
-                      <p className="text-lg sm:text-xl font-bold text-slate-900">{formatPrice(crypto.price)}</p>
+                      <p className="text-sm sm:text-base font-bold text-slate-900">{formatPrice(crypto.price)}</p>
                     </div>
                     
-                    <div className="flex items-center gap-1.5 sm:gap-2">
-                      <span className={`font-semibold text-xs sm:text-sm ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                    <div className="flex items-center gap-1.5">
+                      <span className={`font-semibold text-[10px] sm:text-xs ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
                         {isPositive ? '+' : ''}{crypto.change24h.toFixed(2)}%
                       </span>
-                      <span className="text-xs text-slate-500">24h</span>
+                      <span className="text-[10px] text-slate-500">24h</span>
                     </div>
                     
                     {crypto.marketCap > 0 && (
-                      <div className="pt-1.5 sm:pt-2 border-t border-slate-200">
-                        <div className="flex justify-between text-xs sm:text-sm">
-                          <span className="text-slate-500">Market Cap:</span>
+                      <div className="pt-1 border-t border-slate-200 space-y-0.5">
+                        <div className="flex justify-between text-[10px] sm:text-xs">
+                          <span className="text-slate-500">MCap:</span>
                           <span className="font-medium text-slate-700">{formatMarketCap(crypto.marketCap)}</span>
                         </div>
-                        <div className="flex justify-between text-xs sm:text-sm mt-0.5 sm:mt-1">
-                          <span className="text-slate-500">24h Volume:</span>
+                        <div className="flex justify-between text-[10px] sm:text-xs">
+                          <span className="text-slate-500">Vol:</span>
                           <span className="font-medium text-slate-700">{formatMarketCap(crypto.volume24h)}</span>
                         </div>
                       </div>
