@@ -13,6 +13,10 @@ interface Tweet {
   topic?: string
 }
 
+interface TweetWithEngagement extends Tweet {
+  _engagement: number
+}
+
 export async function GET() {
   try {
     const TWITTER_BEARER_TOKEN = process.env.TWITTER_BEARER_TOKEN
@@ -52,7 +56,7 @@ export async function GET() {
     }
 
     // Process tweets and sort by engagement
-    const tweets: Tweet[] = (data.data || []).map((tweet: any) => {
+    const tweetsWithEngagement: TweetWithEngagement[] = (data.data || []).map((tweet: any) => {
       const user = usersMap[tweet.author_id]
       const metrics = tweet.public_metrics || {}
       const engagement = (metrics.like_count || 0) + (metrics.retweet_count || 0) * 2
@@ -72,9 +76,9 @@ export async function GET() {
       }
     })
 
-    // Sort by engagement and take top 3
-    const topTweets = tweets
-      .sort((a, b) => (b as any)._engagement - (a as any)._engagement)
+    // Sort by engagement and take top 3, then remove the temporary _engagement field
+    const topTweets: Tweet[] = tweetsWithEngagement
+      .sort((a, b) => b._engagement - a._engagement)
       .slice(0, 3)
       .map(({ _engagement, ...tweet }) => tweet) // Remove temporary field
 
