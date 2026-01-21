@@ -110,6 +110,7 @@ export default function Dashboard() {
       } else {
         const errorData = await atpRes.json().catch(() => ({}))
         console.error('ATP Results API error:', errorData)
+        // Set empty array so it shows the loading message, not an error
         setAtpResults([])
       }
 
