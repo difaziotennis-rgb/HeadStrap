@@ -5,18 +5,10 @@ const STOCK_SYMBOLS = [
   // Top traded / Biggest companies
   'AAPL',   // Apple
   'MSFT',   // Microsoft
-  'GOOGL',  // Google
-  'AMZN',   // Amazon
   'NVDA',   // NVIDIA
   'META',   // Meta
   'TSLA',   // Tesla
-  'JPM',    // JPMorgan
-  'V',      // Visa
-  'JNJ',    // Johnson & Johnson
-  // Significant movers (add more as needed)
-  'AMD',    // AMD
-  'NFLX',   // Netflix
-  'DIS',    // Disney
+  'MSTR',   // MicroStrategy (always include)
 ]
 
 export async function GET() {
