@@ -206,9 +206,10 @@ export default function Dashboard() {
   const StockChart = ({ data, isPositive }: { data: IntradayDataPoint[], isPositive: boolean }) => {
     if (!data || data.length === 0) return null
 
-    const width = 600
-    const height = 220
-    const padding = { top: 25, right: 45, bottom: 50, left: 55 }
+    // Smaller chart size for mobile compatibility
+    const width = 500
+    const height = 200
+    const padding = { top: 20, right: 40, bottom: 45, left: 50 }
     const chartWidth = width - padding.left - padding.right
     const chartHeight = height - padding.top - padding.bottom
 
@@ -347,7 +348,7 @@ export default function Dashboard() {
                   x={padding.left - 12}
                   y={y + 4}
                   textAnchor="end"
-                  fontSize="11"
+                  fontSize="10"
                   fill="#2C3E50"
                   fontWeight={idx === Math.floor(numGridLines / 2) ? "600" : "400"}
                 >
@@ -431,7 +432,7 @@ export default function Dashboard() {
                     x={x}
                     y={height - padding.bottom + 22}
                     textAnchor="middle"
-                    fontSize="10"
+                    fontSize="9"
                     fill="#2C3E50"
                     fontWeight="500"
                   >
@@ -447,7 +448,7 @@ export default function Dashboard() {
               x={padding.left + (preMarketEnd / (data.length - 1 || 1)) * chartWidth / 2}
               y={padding.top - 8}
               textAnchor="middle"
-              fontSize="11"
+              fontSize="10"
               fill="#4A7C7E"
               fontWeight="600"
             >
@@ -459,7 +460,7 @@ export default function Dashboard() {
               x={padding.left + (preMarketEnd / (data.length - 1 || 1)) * chartWidth + ((regularEnd - preMarketEnd) / (data.length - 1 || 1)) * chartWidth / 2}
               y={padding.top - 8}
               textAnchor="middle"
-              fontSize="11"
+              fontSize="10"
               fill="#6B7E46"
               fontWeight="600"
             >
@@ -471,7 +472,7 @@ export default function Dashboard() {
               x={padding.left + (regularEnd / (data.length - 1 || 1)) * chartWidth + ((data.length - 1 - regularEnd) / (data.length - 1 || 1)) * chartWidth / 2}
               y={padding.top - 8}
               textAnchor="middle"
-              fontSize="11"
+              fontSize="10"
               fill="#4A7C7E"
               fontWeight="600"
             >
@@ -504,7 +505,7 @@ export default function Dashboard() {
                 x={points[points.length - 1].x}
                 y={points[points.length - 1].y - 12}
                 textAnchor="middle"
-                fontSize="11"
+                fontSize="10"
                 fill={isPositive ? '#6B7E46' : '#C97D60'}
                 fontWeight="700"
               >
@@ -653,9 +654,9 @@ export default function Dashboard() {
                         </tr>
                         {isExpanded && (
                           <tr key={`${stock.symbol}-chart`} className="bg-mcm-cream-100">
-                            <td colSpan={6} className="px-3 sm:px-4 py-4 sm:py-6">
+                            <td colSpan={6} className="px-2 sm:px-3 sm:px-4 py-3 sm:py-4 sm:py-6">
                               {stock.intradayData && stock.intradayData.length > 0 ? (
-                                <div className="space-y-4">
+                                <div className="space-y-2 sm:space-y-3 sm:space-y-4">
                                   {/* Chart */}
                                   <div>
                                     <p className="text-xs sm:text-sm font-display font-semibold text-mcm-charcoal-700 mb-2">Last Trading Day - Intraday Movement (Pre-Market, Regular Hours & After-Hours)</p>
