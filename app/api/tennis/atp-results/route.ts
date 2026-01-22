@@ -185,37 +185,85 @@ function extractMatchInfo(title: string, description: string, fullText: string):
   let winner = ''
   let loser = ''
   
-  // Find names before and after the score
+  // Find names before and after the score - use more precise pattern
+  // Look for names that are clearly separated (not part of longer phrases)
   const beforeScore = context.substring(0, scorePosInContext)
   const afterScore = context.substring(scorePosInContext + score.length)
   
-  const beforeNames = beforeScore.match(/\b([A-Z][a-z]+\s+[A-Z][a-z]+)\b/g) || []
-  const afterNames = afterScore.match(/\b([A-Z][a-z]+\s+[A-Z][a-z]+)\b/g) || []
+  // More precise pattern: names should be standalone, not part of longer phrases
+  // Pattern: word boundary, capitalized word, space, capitalized word, word boundary
+  // But exclude if followed/preceded by common words
+  const namePattern = /\b([A-Z][a-z]+\s+[A-Z][a-z]+)\b/g
   
-  // Filter out excluded words and venue names
-  const validBeforeNames = beforeNames.filter(n => {
-    const first = n.split(' ')[0]
-    const lowerN = n.toLowerCase()
-    return !excludeWords.has(n) && !excludeWords.has(first) && n.length >= 5 &&
-           !lowerN.includes('arena') && !lowerN.includes('court') && 
-           !lowerN.includes('park') && !lowerN.includes('stadium') &&
-           !lowerN.includes('rod laver') && !lowerN.includes('melbourne park')
-  })
-  const validAfterNames = afterNames.filter(n => {
-    const first = n.split(' ')[0]
-    const lowerN = n.toLowerCase()
-    return !excludeWords.has(n) && !excludeWords.has(first) && n.length >= 5 &&
-           !lowerN.includes('arena') && !lowerN.includes('court') && 
-           !lowerN.includes('park') && !lowerN.includes('stadium') &&
-           !lowerN.includes('rod laver') && !lowerN.includes('melbourne park')
-  })
+  const beforeNames: string[] = []
+  const afterNames: string[] = []
+  
+  // Extract names from before score
+  let match
+  while ((match = namePattern.exec(beforeScore)) !== null) {
+    const name = match[1].trim()
+    const matchIndex = match.index
+    const beforeText = beforeScore.substring(Math.max(0, matchIndex - 20), matchIndex)
+    const afterText = beforeScore.substring(matchIndex + name.length, Math.min(beforeScore.length, matchIndex + name.length + 20))
+    
+    // Check if this looks like a real player name (not part of a phrase)
+    const lowerName = name.toLowerCase()
+    const lowerBefore = beforeText.toLowerCase()
+    const lowerAfter = afterText.toLowerCase()
+    
+    // Skip if it's part of a longer phrase or contains description words
+    if (!lowerBefore.match(/\b(defending|champion|round|at|in|the|a|an|struggled|held|early|but|on|to)\s*$/i) &&
+        !lowerAfter.match(/^(defending|champion|round|at|in|the|a|an|struggled|held|early|but|on|to)\s*/i) &&
+        !lowerName.includes('round') && !lowerName.includes('champion') &&
+        !lowerName.includes('defending') && !lowerName.includes('struggled') &&
+        name.length >= 5 && name.length <= 30 && // Reasonable name length
+        name.split(' ').length >= 2 && name.split(' ').length <= 4) {
+      const first = name.split(' ')[0]
+      const lowerN = name.toLowerCase()
+      if (!excludeWords.has(name) && !excludeWords.has(first) &&
+          !lowerN.includes('arena') && !lowerN.includes('court') && 
+          !lowerN.includes('park') && !lowerN.includes('stadium') &&
+          !lowerN.includes('rod laver') && !lowerN.includes('melbourne park')) {
+        beforeNames.push(name)
+      }
+    }
+  }
+  
+  // Extract names from after score
+  namePattern.lastIndex = 0 // Reset regex
+  while ((match = namePattern.exec(afterScore)) !== null) {
+    const name = match[1].trim()
+    const matchIndex = match.index
+    const beforeText = afterScore.substring(Math.max(0, matchIndex - 20), matchIndex)
+    const afterText = afterScore.substring(matchIndex + name.length, Math.min(afterScore.length, matchIndex + name.length + 20))
+    
+    const lowerName = name.toLowerCase()
+    const lowerBefore = beforeText.toLowerCase()
+    const lowerAfter = afterText.toLowerCase()
+    
+    if (!lowerBefore.match(/\b(defending|champion|round|at|in|the|a|an|struggled|held|early|but|on|to)\s*$/i) &&
+        !lowerAfter.match(/^(defending|champion|round|at|in|the|a|an|struggled|held|early|but|on|to)\s*/i) &&
+        !lowerName.includes('round') && !lowerName.includes('champion') &&
+        !lowerName.includes('defending') && !lowerName.includes('struggled') &&
+        name.length >= 5 && name.length <= 30 &&
+        name.split(' ').length >= 2 && name.split(' ').length <= 4) {
+      const first = name.split(' ')[0]
+      const lowerN = name.toLowerCase()
+      if (!excludeWords.has(name) && !excludeWords.has(first) &&
+          !lowerN.includes('arena') && !lowerN.includes('court') && 
+          !lowerN.includes('park') && !lowerN.includes('stadium') &&
+          !lowerN.includes('rod laver') && !lowerN.includes('melbourne park')) {
+        afterNames.push(name)
+      }
+    }
+  }
   
   // Winner is typically the last name before the score, loser is first after
-  if (validBeforeNames.length > 0) {
-    winner = validBeforeNames[validBeforeNames.length - 1].trim()
+  if (beforeNames.length > 0) {
+    winner = beforeNames[beforeNames.length - 1].trim()
   }
-  if (validAfterNames.length > 0) {
-    loser = validAfterNames[0].trim()
+  if (afterNames.length > 0) {
+    loser = afterNames[0].trim()
   }
   
   // If we still don't have both, try looking for "defeats" or "def." pattern
