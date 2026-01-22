@@ -96,8 +96,8 @@ export async function GET() {
             const intradayHighs = intradayQuotes?.high || []
             const intradayLows = intradayQuotes?.low || []
             
-            // Get the last trading day (most recent day with data)
-            // Group data points by day and get the most recent complete day
+            // Get the last trading day (most recent day with substantial data)
+            // Group data points by day and get the day with the most data points
             const dataByDay = new Map<string, any[]>()
             
             intradayTimestamps.forEach((timestamp: number, index: number) => {
@@ -121,17 +121,32 @@ export async function GET() {
               })
             })
             
-            // Get the last trading day (most recent day with data)
-            const sortedDays = Array.from(dataByDay.keys()).sort().reverse()
-            const lastTradingDay = sortedDays[0] || sortedDays[1] // Use today or yesterday
+            // Find the day with the most data points (likely the complete trading day)
+            // A full trading day should have 50+ data points (5-minute intervals over ~4+ hours)
+            let lastTradingDay = null
+            let maxDataPoints = 0
+            
+            for (const [dayKey, dayData] of dataByDay.entries()) {
+              if (dayData.length > maxDataPoints) {
+                maxDataPoints = dayData.length
+                lastTradingDay = dayKey
+              }
+            }
+            
+            // If we found a day with substantial data, use it
+            // Otherwise, use the most recent day
+            if (!lastTradingDay || maxDataPoints < 20) {
+              const sortedDays = Array.from(dataByDay.keys()).sort().reverse()
+              lastTradingDay = sortedDays[0] || sortedDays[1]
+            }
             
             if (lastTradingDay && dataByDay.has(lastTradingDay)) {
-              // Get all data points for the last trading day, sorted by timestamp
+              // Get all data points for the selected trading day, sorted by timestamp
               intradayData = dataByDay.get(lastTradingDay)!
                 .sort((a, b) => a.timestamp - b.timestamp)
                 .map(({ hour, minute, ...rest }) => rest) // Remove helper fields
             } else {
-              // Fallback: use all available data
+              // Fallback: use all available data, sorted by timestamp
               intradayData = intradayTimestamps
                 .map((timestamp: number, index: number) => ({
                   timestamp,
@@ -141,6 +156,7 @@ export async function GET() {
                   low: intradayLows[index] || null,
                 }))
                 .filter((point: any) => point.price !== null && !isNaN(point.price))
+                .sort((a, b) => a.timestamp - b.timestamp)
             }
           }
         }
