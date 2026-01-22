@@ -91,17 +91,53 @@ export async function GET() {
           if (intradayChartData) {
             const intradayQuotes = intradayChartData.indicators?.quote?.[0]
             const intradayTimestamps = intradayChartData.timestamp || []
-            const intradayPrices = intradayQuotes?.close || []
-            const intradayVolumes = intradayQuotes?.volume || []
+            const intradayCloses = intradayQuotes?.close || []
+            const intradayOpens = intradayQuotes?.open || []
             const intradayHighs = intradayQuotes?.high || []
             const intradayLows = intradayQuotes?.low || []
+            const intradayVolumes = intradayQuotes?.volume || []
+            
+            // Forward-fill prices: use the best available price (close > open > high > low)
+            // This ensures we have accurate pricing even when close is null
+            const getBestPrice = (index: number): number | null => {
+              // Prefer close price, then open, then average of high/low, then high, then low
+              if (intradayCloses[index] !== null && !isNaN(intradayCloses[index])) {
+                return intradayCloses[index]
+              }
+              if (intradayOpens[index] !== null && !isNaN(intradayOpens[index])) {
+                return intradayOpens[index]
+              }
+              if (intradayHighs[index] !== null && !isNaN(intradayHighs[index]) && 
+                  intradayLows[index] !== null && !isNaN(intradayLows[index])) {
+                return (intradayHighs[index] + intradayLows[index]) / 2
+              }
+              if (intradayHighs[index] !== null && !isNaN(intradayHighs[index])) {
+                return intradayHighs[index]
+              }
+              if (intradayLows[index] !== null && !isNaN(intradayLows[index])) {
+                return intradayLows[index]
+              }
+              return null
+            }
+            
+            // Forward-fill: if price is null, use the last known price
+            let lastKnownPrice: number | null = null
+            const intradayPrices = intradayTimestamps.map((_: any, index: number) => {
+              const price = getBestPrice(index)
+              if (price !== null && !isNaN(price)) {
+                lastKnownPrice = price
+                return price
+              }
+              return lastKnownPrice // Forward-fill with last known price
+            })
             
             // Get the last trading day (most recent day with substantial data)
             // Group data points by day and get the day with the most data points
             const dataByDay = new Map<string, any[]>()
             
             intradayTimestamps.forEach((timestamp: number, index: number) => {
-              if (intradayPrices[index] === null || isNaN(intradayPrices[index])) return
+              const price = intradayPrices[index]
+              if (price === null || isNaN(price)) return
               
               const date = new Date(timestamp * 1000)
               const dayKey = date.toISOString().split('T')[0] // YYYY-MM-DD
@@ -112,7 +148,7 @@ export async function GET() {
               
               dataByDay.get(dayKey)!.push({
                 timestamp,
-                price: intradayPrices[index],
+                price: price, // Use the forward-filled price
                 volume: intradayVolumes[index] || 0,
                 high: intradayHighs[index] || null,
                 low: intradayLows[index] || null,
@@ -148,14 +184,18 @@ export async function GET() {
             } else {
               // Fallback: use all available data, sorted by timestamp
               intradayData = intradayTimestamps
-                .map((timestamp: number, index: number) => ({
-                  timestamp,
-                  price: intradayPrices[index] || null,
-                  volume: intradayVolumes[index] || 0,
-                  high: intradayHighs[index] || null,
-                  low: intradayLows[index] || null,
-                }))
-                .filter((point: any) => point.price !== null && !isNaN(point.price))
+                .map((timestamp: number, index: number) => {
+                  const price = intradayPrices[index]
+                  if (price === null || isNaN(price)) return null
+                  return {
+                    timestamp,
+                    price: price,
+                    volume: intradayVolumes[index] || 0,
+                    high: intradayHighs[index] || null,
+                    low: intradayLows[index] || null,
+                  }
+                })
+                .filter((point: any) => point !== null && point.price !== null && !isNaN(point.price))
                 .sort((a: any, b: any) => a.timestamp - b.timestamp)
             }
           }
