@@ -193,14 +193,14 @@ function extractMatchInfo(title: string, description: string, fullText: string):
   // More precise pattern: names should be standalone, not part of longer phrases
   // Pattern: word boundary, capitalized word, space, capitalized word, word boundary
   // But exclude if followed/preceded by common words
-  const namePattern = /\b([A-Z][a-z]+\s+[A-Z][a-z]+)\b/g
+  const preciseNamePattern = /\b([A-Z][a-z]+\s+[A-Z][a-z]+)\b/g
   
   const beforeNames: string[] = []
   const afterNames: string[] = []
   
   // Extract names from before score
   let match
-  while ((match = namePattern.exec(beforeScore)) !== null) {
+  while ((match = preciseNamePattern.exec(beforeScore)) !== null) {
     const name = match[1].trim()
     const matchIndex = match.index
     const beforeText = beforeScore.substring(Math.max(0, matchIndex - 20), matchIndex)
@@ -230,8 +230,8 @@ function extractMatchInfo(title: string, description: string, fullText: string):
   }
   
   // Extract names from after score
-  namePattern.lastIndex = 0 // Reset regex
-  while ((match = namePattern.exec(afterScore)) !== null) {
+  preciseNamePattern.lastIndex = 0 // Reset regex
+  while ((match = preciseNamePattern.exec(afterScore)) !== null) {
     const name = match[1].trim()
     const matchIndex = match.index
     const beforeText = afterScore.substring(Math.max(0, matchIndex - 20), matchIndex)
