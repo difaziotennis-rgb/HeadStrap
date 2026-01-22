@@ -64,9 +64,19 @@ function parseRSSFeed(xmlText: string): ATPResult[] {
         const matchInfo = extractMatchInfo(title, description, fullText)
         if (matchInfo) {
           // Filter: Only ATP matches, or very important WTA matches (Grand Slam finals)
+          // ATP matches: explicitly mention ATP, or are men's matches (not WTA), or are Masters/ATP tournaments
+          // Exclude WTA unless it's a Grand Slam final
+          const isWTA = text.includes('wta') || 
+                       (text.includes('sabalenka') || text.includes('gauff') || text.includes('osaka') || 
+                        text.includes('keys') || text.includes('swiatek') || text.includes('rybakina'))
           const isATP = text.includes('atp') || 
-                       (!text.includes('wta') && (text.includes('masters') || text.includes('atp')))
-          const isImportantWTA = text.includes('wta') && 
+                       text.includes('masters') ||
+                       (!isWTA && (text.includes('djokovic') || text.includes('alcaraz') || 
+                                   text.includes('sinner') || text.includes('shelton') || 
+                                   text.includes('de minaur') || text.includes('medvedev') ||
+                                   text.includes('hanfmann') || text.includes('humbert') ||
+                                   text.includes('gaston') || text.includes('martinez')))
+          const isImportantWTA = isWTA && 
                                 (text.includes('grand slam') || text.includes('wimbledon') || 
                                  text.includes('us open') || text.includes('french open') || 
                                  text.includes('australian open')) &&
