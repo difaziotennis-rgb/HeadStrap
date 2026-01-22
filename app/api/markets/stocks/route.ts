@@ -143,29 +143,29 @@ export async function GET() {
               dataByDay.get(dayKey)!.push(dataPoint)
             })
             
-            // Prioritize today's data, then find the day with the most data points
-            const today = new Date().toISOString().split('T')[0] // YYYY-MM-DD
+            // Find the most recent complete trading day
+            // A complete trading day should have 50+ data points (pre-market + regular + after-hours)
             const sortedDays = Array.from(dataByDay.keys()).sort().reverse()
+            const today = new Date().toISOString().split('T')[0]
             
             let lastTradingDay = null
+            let maxDataPoints = 0
             
-            // First, check if today has data (even if incomplete) - prioritize today
-            if (dataByDay.has(today) && dataByDay.get(today)!.length > 0) {
+            // Find the day with the most data points (complete trading day)
+            for (const [dayKey, dayData] of dataByDay.entries()) {
+              if (dayData.length > maxDataPoints) {
+                maxDataPoints = dayData.length
+                lastTradingDay = dayKey
+              }
+            }
+            
+            // If today has substantial data (50+ points = complete day), use it
+            // Otherwise use the day with most data (likely yesterday if market is closed or early in day)
+            if (dataByDay.has(today) && dataByDay.get(today)!.length >= 50) {
               lastTradingDay = today
-            } else {
-              // If no today data, find the day with the most data points
-              let maxDataPoints = 0
-              for (const [dayKey, dayData] of dataByDay.entries()) {
-                if (dayData.length > maxDataPoints) {
-                  maxDataPoints = dayData.length
-                  lastTradingDay = dayKey
-                }
-              }
-              
-              // Fallback to most recent day
-              if (!lastTradingDay || maxDataPoints < 20) {
-                lastTradingDay = sortedDays[0] || sortedDays[1]
-              }
+            } else if (!lastTradingDay || maxDataPoints < 20) {
+              // Fallback to most recent day with any data
+              lastTradingDay = sortedDays[0] || sortedDays[1]
             }
             
             if (lastTradingDay && dataByDay.has(lastTradingDay)) {
@@ -178,35 +178,6 @@ export async function GET() {
               intradayData = processedData
                 .map(({ hour, minute, dayKey, ...rest }: any) => rest) // Remove helper fields
                 .sort((a: any, b: any) => a.timestamp - b.timestamp)
-            }
-            
-            // Ensure the last data point matches the current stock price
-            // If the last intraday price doesn't match currentPrice, add/update it
-            if (intradayData.length > 0 && currentPrice) {
-              const lastDataPoint = intradayData[intradayData.length - 1]
-              const priceDiff = Math.abs(lastDataPoint.price - currentPrice)
-              
-              // If prices differ significantly (more than 0.1%), update the last point or add new one
-              if (priceDiff / currentPrice > 0.001) {
-                const now = Math.floor(Date.now() / 1000)
-                // Update the last point if it's recent (within last hour), otherwise add new point
-                if (now - lastDataPoint.timestamp < 3600) {
-                  intradayData[intradayData.length - 1] = {
-                    ...lastDataPoint,
-                    price: currentPrice,
-                    timestamp: now
-                  }
-                } else {
-                  // Add current price as new data point
-                  intradayData.push({
-                    timestamp: now,
-                    price: currentPrice,
-                    volume: latestVolume || 0,
-                    high: currentPrice,
-                    low: currentPrice
-                  })
-                }
-              }
             }
           }
         }
