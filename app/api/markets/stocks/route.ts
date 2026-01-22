@@ -101,6 +101,11 @@ export async function GET() {
             let lastValidClose: number | null = null
             const processedData: any[] = []
             
+            // Get today's date in ET timezone (Yahoo Finance uses ET)
+            const now = new Date()
+            const todayET = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"}))
+            const todayKey = todayET.toISOString().split('T')[0] // YYYY-MM-DD in ET
+            
             intradayTimestamps.forEach((timestamp: number, index: number) => {
               const closePrice = intradayCloses[index]
               
@@ -117,8 +122,10 @@ export async function GET() {
                 return
               }
               
+              // Convert timestamp to ET timezone for accurate day grouping
               const date = new Date(timestamp * 1000)
-              const dayKey = date.toISOString().split('T')[0] // YYYY-MM-DD
+              const dateET = new Date(date.toLocaleString("en-US", {timeZone: "America/New_York"}))
+              const dayKey = dateET.toISOString().split('T')[0] // YYYY-MM-DD in ET
               
               processedData.push({
                 timestamp,
@@ -127,12 +134,12 @@ export async function GET() {
                 high: intradayHighs[index] || null,
                 low: intradayLows[index] || null,
                 dayKey,
-                hour: date.getHours(),
-                minute: date.getMinutes(),
+                hour: dateET.getHours(),
+                minute: dateET.getMinutes(),
               })
             })
             
-            // Group data points by day
+            // Group data points by day (in ET timezone)
             const dataByDay = new Map<string, any[]>()
             
             processedData.forEach((dataPoint) => {
@@ -143,17 +150,15 @@ export async function GET() {
               dataByDay.get(dayKey)!.push(dataPoint)
             })
             
-            // Always prioritize today's data, even if incomplete
-            const sortedDays = Array.from(dataByDay.keys()).sort().reverse()
-            const today = new Date().toISOString().split('T')[0]
-            
+            // Always prioritize today's data (in ET timezone), even if incomplete
             let lastTradingDay = null
             
             // Always use today's data if it exists, regardless of how many data points
-            if (dataByDay.has(today) && dataByDay.get(today)!.length > 0) {
-              lastTradingDay = today
+            if (dataByDay.has(todayKey) && dataByDay.get(todayKey)!.length > 0) {
+              lastTradingDay = todayKey
             } else {
               // If no today data, find the day with the most data points (yesterday)
+              const sortedDays = Array.from(dataByDay.keys()).sort().reverse()
               let maxDataPoints = 0
               for (const [dayKey, dayData] of dataByDay.entries()) {
                 if (dayData.length > maxDataPoints) {
@@ -169,7 +174,7 @@ export async function GET() {
             }
             
             if (lastTradingDay && dataByDay.has(lastTradingDay)) {
-              // Get all data points for the selected trading day, sorted by timestamp
+              // Get all data points for today, sorted by timestamp
               intradayData = dataByDay.get(lastTradingDay)!
                 .sort((a: any, b: any) => a.timestamp - b.timestamp)
                 .map(({ hour, minute, dayKey, ...rest }: any) => rest) // Remove helper fields
@@ -178,6 +183,24 @@ export async function GET() {
               intradayData = processedData
                 .map(({ hour, minute, dayKey, ...rest }: any) => rest) // Remove helper fields
                 .sort((a: any, b: any) => a.timestamp - b.timestamp)
+            }
+            
+            // Ensure we have the current price at the end if it's different
+            if (intradayData.length > 0 && currentPrice) {
+              const lastPoint = intradayData[intradayData.length - 1]
+              const priceDiff = Math.abs(lastPoint.price - currentPrice)
+              
+              // If the last point is more than 5 minutes old or price differs, add current price
+              const nowTimestamp = Math.floor(Date.now() / 1000)
+              if (nowTimestamp - lastPoint.timestamp > 300 || priceDiff / currentPrice > 0.001) {
+                intradayData.push({
+                  timestamp: nowTimestamp,
+                  price: currentPrice,
+                  volume: latestVolume || 0,
+                  high: currentPrice,
+                  low: currentPrice
+                })
+              }
             }
           }
         }
