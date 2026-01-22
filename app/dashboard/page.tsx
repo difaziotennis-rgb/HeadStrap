@@ -289,8 +289,8 @@ export default function Dashboard() {
     })
 
     return (
-      <div className="w-full overflow-x-auto bg-mcm-cream-50 rounded-mcm-lg border-2 border-mcm-charcoal-200 p-4 shadow-mcm">
-        <svg width={width} height={height} className="min-w-full" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="xMidYMid meet">
+      <div className="w-full bg-mcm-cream-50 rounded-mcm-lg border-2 border-mcm-charcoal-200 p-2 sm:p-4 shadow-mcm">
+        <svg width={width} height={height} className="w-full h-auto" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="xMidYMid meet" style={{ maxHeight: '200px' }}>
           <defs>
             <linearGradient id={`gradient-${isPositive ? 'olive' : 'orange'}`} x1="0%" y1="0%" x2="0%" y2="100%">
               <stop offset="0%" stopColor={isPositive ? 'rgba(107, 126, 70, 0.3)' : 'rgba(201, 125, 96, 0.3)'} />
