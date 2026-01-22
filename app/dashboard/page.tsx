@@ -206,10 +206,9 @@ export default function Dashboard() {
   const StockChart = ({ data, isPositive }: { data: IntradayDataPoint[], isPositive: boolean }) => {
     if (!data || data.length === 0) return null
 
-    // Smaller chart size for mobile compatibility
-    const width = 500
-    const height = 200
-    const padding = { top: 20, right: 40, bottom: 45, left: 50 }
+    const width = 600
+    const height = 220
+    const padding = { top: 25, right: 45, bottom: 50, left: 55 }
     const chartWidth = width - padding.left - padding.right
     const chartHeight = height - padding.top - padding.bottom
 
@@ -289,8 +288,8 @@ export default function Dashboard() {
     })
 
     return (
-      <div className="w-full bg-mcm-cream-50 rounded-mcm-lg border-2 border-mcm-charcoal-200 p-2 sm:p-4 shadow-mcm">
-        <svg width={width} height={height} className="w-full h-auto" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="xMidYMid meet" style={{ maxHeight: '200px' }}>
+      <div className="w-full overflow-x-auto bg-mcm-cream-50 rounded-mcm-lg border-2 border-mcm-charcoal-200 p-2 sm:p-4 shadow-mcm">
+        <svg width={width} height={height} className="min-w-full" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="xMidYMid meet">
           <defs>
             <linearGradient id={`gradient-${isPositive ? 'olive' : 'orange'}`} x1="0%" y1="0%" x2="0%" y2="100%">
               <stop offset="0%" stopColor={isPositive ? 'rgba(107, 126, 70, 0.3)' : 'rgba(201, 125, 96, 0.3)'} />
