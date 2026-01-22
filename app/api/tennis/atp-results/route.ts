@@ -368,22 +368,22 @@ function extractMatchInfo(title: string, description: string, fullText: string):
     const context = text.substring(contextStart, contextEnd)
   
     // Find player names - look for proper names (First Last format) near the score
-    // Pattern: Capitalized first name + capitalized last name
-    const namePattern = /\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\b/g
+    // Pattern: Capitalized first name + capitalized last name - EXACTLY 2 words
+    const namePattern = /\b([A-Z][a-z]+\s+[A-Z][a-z]+)\b/g
     const allNames: string[] = []
   
     let nameMatch
     while ((nameMatch = namePattern.exec(context)) !== null) {
-    const name = nameMatch[1].trim()
-    const firstName = name.split(' ')[0]
-    const nameParts = name.split(' ')
-    // Filter out common words and ensure it looks like a name
-    // Accept names with 2+ words (First Last or First Middle Last)
-    if (!excludeWords.has(name) && !excludeWords.has(firstName) && 
-        name.length >= 4 && nameParts.length >= 2) {
-      allNames.push(name)
+      const name = nameMatch[1].trim()
+      const firstName = name.split(' ')[0]
+      const nameParts = name.split(' ')
+      // Filter out common words and ensure it looks like a name
+      // ONLY accept exactly 2 words (First Last)
+      if (!excludeWords.has(name) && !excludeWords.has(firstName) && 
+          name.length >= 4 && nameParts.length === 2) {
+        allNames.push(name)
+      }
     }
-  }
   
   // Remove duplicates
   const uniqueNames = Array.from(new Set(allNames))
@@ -432,7 +432,7 @@ function extractMatchInfo(title: string, description: string, fullText: string):
         !lowerName.includes('round') && !lowerName.includes('champion') &&
         !lowerName.includes('defending') && !lowerName.includes('struggled') &&
         name.length >= 5 && name.length <= 30 && // Reasonable name length
-        name.split(' ').length >= 2 && name.split(' ').length <= 4) {
+        name.split(' ').length === 2) { // ONLY exactly 2 words
       const first = name.split(' ')[0]
       const lowerN = name.toLowerCase()
       if (!excludeWords.has(name) && !excludeWords.has(first) &&
