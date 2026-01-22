@@ -135,26 +135,40 @@ function extractMatchInfo(title: string, description: string, fullText: string):
     const defeatIndex = defeatMatch.index || 0
     const defeatEnd = defeatIndex + defeatMatch[0].length
     
-    // Extract text right before defeat verb (up to 80 chars) for winner - need more context
-    const beforeDefeat = textBeforeScore.substring(Math.max(0, defeatIndex - 80), defeatIndex).trim()
+    // Extract text right before defeat verb (up to 100 chars) for winner - need more context
+    const beforeDefeat = textBeforeScore.substring(Math.max(0, defeatIndex - 100), defeatIndex).trim()
     // Extract text right after defeat verb (up to 50 chars) for loser
     const afterDefeat = textBeforeScore.substring(defeatEnd, Math.min(textBeforeScore.length, defeatEnd + 50)).trim()
     
-    // Find player name - look for the LAST occurrence of a proper name (2-4 words) before defeat verb
+    // Find player name - look for EXACTLY 2 words (First Last) before defeat verb
     // Must be immediately before defeat verb or separated by only a few words
-    // Pattern: Look for names that end right before the defeat verb
-    const allNameMatches: Array<{name: string, index: number}> = []
-    const namePattern = /\b([A-Z][a-z]+\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?(?:\s+[A-Z][a-z]+)?)\b/g
+    // Pattern: Look for names that are exactly 2 capitalized words
+    const allNameMatches: Array<{name: string, index: number, distance: number}> = []
+    const namePattern = /\b([A-Z][a-z]+\s+[A-Z][a-z]+)\b/g
     
     let match
     while ((match = namePattern.exec(beforeDefeat)) !== null) {
       const name = match[1]
       const nameWords = name.split(' ')
-      // Only accept 2-4 word names
-      if (nameWords.length >= 2 && nameWords.length <= 4) {
+      // ONLY accept exactly 2 words
+      if (nameWords.length === 2) {
         const lowerName = name.toLowerCase()
-        // Exclude if it contains description words
-        if (!lowerName.includes('defending') && !lowerName.includes('champion') &&
+        const firstName = nameWords[0].toLowerCase()
+        const lastName = nameWords[1].toLowerCase()
+        
+        // Exclude if it contains description words or common non-name words
+        const isDescriptionWord = (word: string) => {
+          return word === 'defending' || word === 'champion' || word === 'round' ||
+                 word === 'struggled' || word === 'held' || word === 'early' ||
+                 word === 'but' || word === 'on' || word === 'to' || word === 'at' ||
+                 word === 'nd' || word === 'rd' || word === 'th' || word === 'st' ||
+                 word === 'australian' || word === 'open' || word === 'arena' ||
+                 word === 'court' || word === 'park' || word === 'stadium' ||
+                 word === 'the' || word === 'and' || word === 'in' || word === 'of'
+        }
+        
+        if (!isDescriptionWord(firstName) && !isDescriptionWord(lastName) &&
+            !lowerName.includes('defending') && !lowerName.includes('champion') &&
             !lowerName.includes('round') && !lowerName.includes('struggled') &&
             !lowerName.includes('held') && !lowerName.includes('early') &&
             !lowerName.includes('but') && !lowerName.includes('on') &&
@@ -162,31 +176,44 @@ function extractMatchInfo(title: string, description: string, fullText: string):
             !lowerName.includes('nd') && !lowerName.includes('rd') && !lowerName.includes('th') &&
             !lowerName.includes('australian') && !lowerName.includes('open') &&
             !lowerName.includes('arena') && !lowerName.includes('court')) {
-          allNameMatches.push({name, index: match.index || 0})
+          
+          // Calculate distance from name end to defeat verb
+          const nameEnd = (match.index || 0) + name.length
+          const distanceToDefeat = beforeDefeat.length - nameEnd
+          
+          allNameMatches.push({name, index: match.index || 0, distance: distanceToDefeat})
         }
       }
     }
     
-    // Take the LAST name match (closest to defeat verb) - this should be the winner
+    // Take the name match closest to defeat verb (smallest distance)
     if (allNameMatches.length > 0) {
-      const lastMatch = allNameMatches[allNameMatches.length - 1]
-      const nameEnd = lastMatch.index + lastMatch.name.length
-      const distanceToDefeat = defeatIndex - (defeatIndex - 80 + nameEnd)
+      // Sort by distance (closest first)
+      allNameMatches.sort((a, b) => a.distance - b.distance)
       
-      // Only accept if name is within 30 chars of defeat verb (not too far away)
-      if (distanceToDefeat <= 30) {
-        winner = lastMatch.name.trim()
+      // Take the closest one, but only if it's within 50 chars
+      const closestMatch = allNameMatches[0]
+      if (closestMatch.distance <= 50) {
+        // Check what's between the name and defeat verb - should be minimal
+        const nameEnd = closestMatch.index + closestMatch.name.length
+        const textBetween = beforeDefeat.substring(nameEnd, beforeDefeat.length).trim()
         
-        // Also check for nationality prefix right before the name
-        const nameStartInText = defeatIndex - 80 + lastMatch.index
-        const beforeName = textBeforeScore.substring(Math.max(0, nameStartInText - 20), nameStartInText)
-        const nationalityMatch = beforeName.match(/(?:American|Spanish|French|Serbian|Italian|Australian|German|British|Canadian|Russian|Ukrainian|Belarusian|Polish|Czech|Swiss|Austrian|Japanese|Chinese|Korean|Brazilian|Argentine|Chilean|Colombian|Mexican|South African|Dutch|Belgian|Croatian|Slovak|Bulgarian|Romanian|Greek|Turkish|Indian|Thai|Filipino|Indonesian|Malaysian|Singaporean|New Zealand|Finnish|Norwegian|Swedish|Danish|Icelandic|Estonian|Latvian|Lithuanian|Portuguese|Hungarian|Slovenian|Bosnian|Macedonian|Montenegrin|Albanian|Moldovan|Georgian|Armenian|Azerbaijani|Kazakh|Uzbek|Kyrgyz|Tajik|Turkmen|Mongolian|Vietnamese|Cambodian|Laotian|Myanmar|Bangladeshi|Pakistani|Afghan|Iranian|Iraqi|Syrian|Lebanese|Jordanian|Palestinian|Israeli|Saudi|Emirati|Kuwaiti|Qatari|Bahraini|Omani|Yemeni|Egyptian|Libyan|Tunisian|Algerian|Moroccan|Sudanese|Ethiopian|Kenyan|Tanzanian|Ugandan|Rwandan|Ghanaian|Nigerian|Senegalese|Ivorian|Cameroonian|Zimbabwean|Botswanan|Namibian|Angolan|Mozambican|Malawian|Zambian|Malagasy|Mauritian|Seychellois|Comorian|Djiboutian|Eritrean|Somalian|Burundian|Central African|Chadian|Congolese|Equatorial Guinean|Gabonese|Guinean|Guinea-Bissauan|Liberian|Malian|Mauritanian|Nigerien|Sierra Leonean|Togolese|Beninese|Burkina Faso|Cape Verdean|Gambian)\s+$/i)
-        // If nationality found, winner is already correct (just the name part)
+        // If there's too much text between name and defeat verb, it's probably not the right name
+        // Allow for nationality prefix and a few words
+        if (textBetween.length <= 40) {
+          winner = closestMatch.name.trim()
+          
+          // Also check for nationality prefix right before the name
+          const nameStartInText = defeatIndex - 100 + closestMatch.index
+          const beforeName = textBeforeScore.substring(Math.max(0, nameStartInText - 20), nameStartInText)
+          const nationalityMatch = beforeName.match(/(?:American|Spanish|French|Serbian|Italian|Australian|German|British|Canadian|Russian|Ukrainian|Belarusian|Polish|Czech|Swiss|Austrian|Japanese|Chinese|Korean|Brazilian|Argentine|Chilean|Colombian|Mexican|South African|Dutch|Belgian|Croatian|Slovak|Bulgarian|Romanian|Greek|Turkish|Indian|Thai|Filipino|Indonesian|Malaysian|Singaporean|New Zealand|Finnish|Norwegian|Swedish|Danish|Icelandic|Estonian|Latvian|Lithuanian|Portuguese|Hungarian|Slovenian|Bosnian|Macedonian|Montenegrin|Albanian|Moldovan|Georgian|Armenian|Azerbaijani|Kazakh|Uzbek|Kyrgyz|Tajik|Turkmen|Mongolian|Vietnamese|Cambodian|Laotian|Myanmar|Bangladeshi|Pakistani|Afghan|Iranian|Iraqi|Syrian|Lebanese|Jordanian|Palestinian|Israeli|Saudi|Emirati|Kuwaiti|Qatari|Bahraini|Omani|Yemeni|Egyptian|Libyan|Tunisian|Algerian|Moroccan|Sudanese|Ethiopian|Kenyan|Tanzanian|Ugandan|Rwandan|Ghanaian|Nigerian|Senegalese|Ivorian|Cameroonian|Zimbabwean|Botswanan|Namibian|Angolan|Mozambican|Malawian|Zambian|Malagasy|Mauritian|Seychellois|Comorian|Djiboutian|Eritrean|Somalian|Burundian|Central African|Chadian|Congolese|Equatorial Guinean|Gabonese|Guinean|Guinea-Bissauan|Liberian|Malian|Mauritanian|Nigerien|Sierra Leonean|Togolese|Beninese|Burkina Faso|Cape Verdean|Gambian)\s+$/i)
+          // If nationality found, winner is already correct (just the name part)
+        }
       }
     }
     
-    // Find player name pattern right after defeat verb - must be FIRST name after verb
-    const nameAfterPattern = /^([A-Z][a-z]+\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?(?:\s+[A-Z][a-z]+)?)(?:\s+of\s+[A-Z][a-z]+)?/i
+    // Find player name pattern right after defeat verb - must be EXACTLY 2 words (First Last)
+    const nameAfterPattern = /^([A-Z][a-z]+\s+[A-Z][a-z]+)(?:\s+of\s+[A-Z][a-z]+)?/i
     const nameAfterMatch = afterDefeat.match(nameAfterPattern)
     
     if (nameAfterMatch && nameAfterMatch[1]) {
@@ -194,28 +221,58 @@ function extractMatchInfo(title: string, description: string, fullText: string):
       const loserWords = potentialLoser.split(' ')
       const lowerLoser = potentialLoser.toLowerCase()
       
-      // Validate it's a real name (2-4 words, no description words)
-      if (loserWords.length >= 2 && loserWords.length <= 4 &&
-          !lowerLoser.includes('defending') && !lowerLoser.includes('champion') &&
-          !lowerLoser.includes('round') && !lowerLoser.includes('struggled') &&
-          !lowerLoser.includes('held') && !lowerLoser.includes('early') &&
-          !lowerLoser.includes('but') && !lowerLoser.includes('on') &&
-          !lowerLoser.includes('to') && !lowerLoser.includes('at') &&
-          !lowerLoser.includes('nd') && !lowerLoser.includes('rd') && !lowerLoser.includes('th') &&
-          !lowerLoser.includes('australian') && !lowerLoser.includes('open')) {
-        loser = potentialLoser
-        // Remove "of France" etc.
-        loser = loser.replace(/\s+of\s+[A-Z][a-z]+$/i, '').trim()
+      // Validate it's exactly 2 words (First Last format)
+      if (loserWords.length === 2) {
+        const firstName = loserWords[0].toLowerCase()
+        const lastName = loserWords[1].toLowerCase()
+        
+        const isDescriptionWord = (word: string) => {
+          return word === 'defending' || word === 'champion' || word === 'round' ||
+                 word === 'struggled' || word === 'held' || word === 'early' ||
+                 word === 'but' || word === 'on' || word === 'to' || word === 'at' ||
+                 word === 'nd' || word === 'rd' || word === 'th' || word === 'st' ||
+                 word === 'australian' || word === 'open' || word === 'arena' ||
+                 word === 'court' || word === 'park' || word === 'stadium' ||
+                 word === 'the' || word === 'and' || word === 'in' || word === 'of'
+        }
+        
+        if (!isDescriptionWord(firstName) && !isDescriptionWord(lastName) &&
+            !lowerLoser.includes('defending') && !lowerLoser.includes('champion') &&
+            !lowerLoser.includes('round') && !lowerLoser.includes('struggled') &&
+            !lowerLoser.includes('held') && !lowerLoser.includes('early') &&
+            !lowerLoser.includes('but') && !lowerLoser.includes('on') &&
+            !lowerLoser.includes('to') && !lowerLoser.includes('at') &&
+            !lowerLoser.includes('nd') && !lowerLoser.includes('rd') && !lowerLoser.includes('th') &&
+            !lowerLoser.includes('australian') && !lowerLoser.includes('open')) {
+          loser = potentialLoser
+          // Remove "of France" etc.
+          loser = loser.replace(/\s+of\s+[A-Z][a-z]+$/i, '').trim()
+        }
       }
     }
     
-    // Validate names are reasonable player names (2-4 words, not description phrases)
+    // Validate names are exactly 2 words (First Last format)
     const winnerWords = winner.split(' ')
     const loserWords = loser.split(' ')
     const isReasonableName = (name: string, words: string[]) => {
-      if (!name || words.length < 2 || words.length > 4) return false
+      // Must be exactly 2 words
+      if (!name || words.length !== 2) return false
       const lower = name.toLowerCase()
-      return !lower.includes('defending') && !lower.includes('champion') &&
+      const firstName = words[0].toLowerCase()
+      const lastName = words[1].toLowerCase()
+      
+      const isDescriptionWord = (word: string) => {
+        return word === 'defending' || word === 'champion' || word === 'round' ||
+               word === 'struggled' || word === 'held' || word === 'early' ||
+               word === 'but' || word === 'on' || word === 'to' || word === 'at' ||
+               word === 'nd' || word === 'rd' || word === 'th' || word === 'st' ||
+               word === 'australian' || word === 'open' || word === 'arena' ||
+               word === 'court' || word === 'park' || word === 'stadium' ||
+               word === 'the' || word === 'and' || word === 'in' || word === 'of'
+      }
+      
+      return !isDescriptionWord(firstName) && !isDescriptionWord(lastName) &&
+             !lower.includes('defending') && !lower.includes('champion') &&
              !lower.includes('round') && !lower.includes('struggled') &&
              !lower.includes('held') && !lower.includes('early') &&
              !lower.includes('but') && !lower.includes('on') &&
