@@ -41,7 +41,7 @@ function parseRSSFeed(xmlText: string): ATPResult[] {
       const text = `${title} ${description}`.toLowerCase()
       const fullText = `${title} ${description}`
       
-      // Check if it's about ATP results - be more flexible with matching
+      // Check if it's about tennis results
       const isTennisRelated = text.includes('atp') || 
                                   text.includes('tennis') || 
                                   text.includes('wta') ||
@@ -63,11 +63,22 @@ function parseRSSFeed(xmlText: string): ATPResult[] {
         // Try to extract match information
         const matchInfo = extractMatchInfo(title, description, fullText)
         if (matchInfo) {
-          results.push({
-            ...matchInfo,
-            date: parseDate(pubDate),
-            url: link,
-          })
+          // Filter: Only ATP matches, or very important WTA matches (Grand Slam finals)
+          const isATP = text.includes('atp') || 
+                       (!text.includes('wta') && (text.includes('masters') || text.includes('atp')))
+          const isImportantWTA = text.includes('wta') && 
+                                (text.includes('grand slam') || text.includes('wimbledon') || 
+                                 text.includes('us open') || text.includes('french open') || 
+                                 text.includes('australian open')) &&
+                                (text.includes('final') || text.includes('champion'))
+          
+          if (isATP || isImportantWTA) {
+            results.push({
+              ...matchInfo,
+              date: parseDate(pubDate),
+              url: link,
+            })
+          }
         }
       }
     }
@@ -170,6 +181,34 @@ function extractMatchInfo(title: string, description: string, fullText: string):
     if (defeatMatch) {
       winner = defeatMatch[1]?.trim() || winner
       loser = defeatMatch[2]?.trim() || loser
+    }
+  }
+  
+  // If still missing winner, try looking in the full text before the score
+  if (!winner && loser) {
+    // Look for names in a wider context before the score
+    const widerBeforeScore = text.substring(Math.max(0, scoreIndex - 300), scoreIndex)
+    const widerBeforeNames = widerBeforeScore.match(/\b([A-Z][a-z]+\s+[A-Z][a-z]+)\b/g) || []
+    const validWiderBeforeNames = widerBeforeNames.filter(n => {
+      const first = n.split(' ')[0]
+      return !excludeWords.has(n) && !excludeWords.has(first) && n.length >= 5 && n !== loser
+    })
+    if (validWiderBeforeNames.length > 0) {
+      winner = validWiderBeforeNames[validWiderBeforeNames.length - 1].trim()
+    }
+  }
+  
+  // If still missing loser, try looking in the full text after the score
+  if (winner && !loser) {
+    // Look for names in a wider context after the score
+    const widerAfterScore = text.substring(scoreIndex + score.length, Math.min(text.length, scoreIndex + score.length + 300))
+    const widerAfterNames = widerAfterScore.match(/\b([A-Z][a-z]+\s+[A-Z][a-z]+)\b/g) || []
+    const validWiderAfterNames = widerAfterNames.filter(n => {
+      const first = n.split(' ')[0]
+      return !excludeWords.has(n) && !excludeWords.has(first) && n.length >= 5 && n !== winner
+    })
+    if (validWiderAfterNames.length > 0) {
+      loser = validWiderAfterNames[0].trim()
     }
   }
   
