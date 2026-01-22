@@ -483,7 +483,7 @@ function extractMatchInfo(title: string, description: string, fullText: string):
     
     // If we still don't have both, try looking for "defeats" or "def." pattern
     if (!extractedWinner || !extractedLoser) {
-    const defeatPattern = /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\s+(?:defeats?|beats?|def\.?|prevails?\s+over|overcame?)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/i
+    const defeatPattern = /([A-Z][a-z]+\s+[A-Z][a-z]+)\s+(?:defeats?|beats?|def\.?|prevails?\s+over|overcame?)\s+([A-Z][a-z]+\s+[A-Z][a-z]+)/i
       const defeatMatch = context.match(defeatPattern)
       if (defeatMatch) {
         const potentialWinner = defeatMatch[1]?.trim() || ''
@@ -505,11 +505,13 @@ function extractMatchInfo(title: string, description: string, fullText: string):
     if (!extractedWinner && extractedLoser) {
       // Look for names in a wider context before the score
       const widerBeforeScore = text.substring(Math.max(0, finalScoreIndex - 300), finalScoreIndex)
-    const widerBeforeNames = widerBeforeScore.match(/\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\b/g) || []
+    const widerBeforeNames = widerBeforeScore.match(/\b([A-Z][a-z]+\s+[A-Z][a-z]+)\b/g) || []
     const validWiderBeforeNames = widerBeforeNames.filter(n => {
       const first = n.split(' ')[0]
       const lowerN = n.toLowerCase()
-      return !excludeWords.has(n) && !excludeWords.has(first) && 
+      const nameParts = n.split(' ')
+      return nameParts.length === 2 && // ONLY exactly 2 words
+             !excludeWords.has(n) && !excludeWords.has(first) && 
              n.length >= 5 && n !== loser &&
              !lowerN.includes('arena') && !lowerN.includes('court') &&
              !lowerN.includes('park') && !lowerN.includes('stadium')
