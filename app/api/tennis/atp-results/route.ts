@@ -109,7 +109,8 @@ function extractMatchInfo(title: string, description: string, fullText: string):
   // "Madison Keys struggled early but held on to defeat Oleksandra Oliynykova 7-6 (6), 6-1"
   
   // First, find the defeat verb and score
-  const defeatVerbPattern = /(?:defeats?|beats?|def\.?|overcame?|prevailed?\s+over|held\s+on\s+to\s+defeat)/i
+  // Order matters - check longer phrases first
+  const defeatVerbPattern = /(?:held\s+on\s+to\s+defeat|defeats?|beats?|def\.?|overcame?|prevailed?\s+over)/i
   const scorePattern = /(\d+-\d+(?:\s*\(\d+\))?(?:\s*,\s*\d+-\d+(?:\s*\(\d+\))?)+)/g
   const singleScorePattern = /(\d+-\d+(?:\s*\(\d+\))?)/g
   
