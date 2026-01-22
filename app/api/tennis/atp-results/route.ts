@@ -148,10 +148,16 @@ function extractMatchInfo(title: string, description: string, fullText: string):
       
       // Take the last name before score as winner, first name after as loser
       if (beforeNames.length > 0 && !winner) {
-        winner = beforeNames[beforeNames.length - 1].trim()
+        const lastBeforeName = beforeNames[beforeNames.length - 1]
+        if (lastBeforeName) {
+          winner = lastBeforeName.trim()
+        }
       }
       if (afterNames.length > 0 && !loser) {
-        loser = afterNames[0].trim()
+        const firstAfterName = afterNames[0]
+        if (firstAfterName) {
+          loser = firstAfterName.trim()
+        }
       }
     }
   }
