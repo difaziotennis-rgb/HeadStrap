@@ -143,8 +143,8 @@ export async function GET() {
             if (lastTradingDay && dataByDay.has(lastTradingDay)) {
               // Get all data points for the selected trading day, sorted by timestamp
               intradayData = dataByDay.get(lastTradingDay)!
-                .sort((a, b) => a.timestamp - b.timestamp)
-                .map(({ hour, minute, ...rest }) => rest) // Remove helper fields
+                .sort((a: any, b: any) => a.timestamp - b.timestamp)
+                .map(({ hour, minute, ...rest }: any) => rest) // Remove helper fields
             } else {
               // Fallback: use all available data, sorted by timestamp
               intradayData = intradayTimestamps
@@ -156,7 +156,7 @@ export async function GET() {
                   low: intradayLows[index] || null,
                 }))
                 .filter((point: any) => point.price !== null && !isNaN(point.price))
-                .sort((a, b) => a.timestamp - b.timestamp)
+                .sort((a: any, b: any) => a.timestamp - b.timestamp)
             }
           }
         }
