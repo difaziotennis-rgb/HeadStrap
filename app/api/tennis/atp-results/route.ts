@@ -146,7 +146,15 @@ function extractMatchInfo(title: string, description: string, fullText: string):
     'Quarterfinal', 'Round', 'Champion', 'Defending', 'Australian', 'French', 
     'Wimbledon', 'Struggled', 'Held', 'Early', 'But', 'On', 'To', 'The', 'And',
     'With', 'From', 'For', 'After', 'Before', 'During', 'Match', 'Game', 'Set',
-    'Keys', 'Madison', 'Defending', 'Champion', 'Struggled', 'Early', 'Held'
+    'Keys', 'Madison', 'Defending', 'Champion', 'Struggled', 'Early', 'Held',
+    // Venues and arenas - must exclude these
+    'Rod Laver', 'Melbourne Park', 'Arthur Ashe', 'Centre Court', 'Court Philippe',
+    'Margaret Court', 'John Cain', 'Hisense Arena', 'Margaret Court Arena',
+    'Rod', 'Laver', 'Melbourne', 'Park', 'Arthur', 'Ashe', 'Philippe', 'Chatrier',
+    // Common non-player phrases
+    'Top Seeded', 'Reigning Champion', 'Defending Champion', 'American Ben',
+    'Spanish', 'French', 'Serbian', 'Italian', 'Australian', 'German',
+    'Reached', 'Advanced', 'Overcame', 'Prevailed', 'Booked', 'Places'
   ])
   
   let nameMatch
@@ -184,14 +192,22 @@ function extractMatchInfo(title: string, description: string, fullText: string):
   const beforeNames = beforeScore.match(/\b([A-Z][a-z]+\s+[A-Z][a-z]+)\b/g) || []
   const afterNames = afterScore.match(/\b([A-Z][a-z]+\s+[A-Z][a-z]+)\b/g) || []
   
-  // Filter out excluded words
+  // Filter out excluded words and venue names
   const validBeforeNames = beforeNames.filter(n => {
     const first = n.split(' ')[0]
-    return !excludeWords.has(n) && !excludeWords.has(first) && n.length >= 5
+    const lowerN = n.toLowerCase()
+    return !excludeWords.has(n) && !excludeWords.has(first) && n.length >= 5 &&
+           !lowerN.includes('arena') && !lowerN.includes('court') && 
+           !lowerN.includes('park') && !lowerN.includes('stadium') &&
+           !lowerN.includes('rod laver') && !lowerN.includes('melbourne park')
   })
   const validAfterNames = afterNames.filter(n => {
     const first = n.split(' ')[0]
-    return !excludeWords.has(n) && !excludeWords.has(first) && n.length >= 5
+    const lowerN = n.toLowerCase()
+    return !excludeWords.has(n) && !excludeWords.has(first) && n.length >= 5 &&
+           !lowerN.includes('arena') && !lowerN.includes('court') && 
+           !lowerN.includes('park') && !lowerN.includes('stadium') &&
+           !lowerN.includes('rod laver') && !lowerN.includes('melbourne park')
   })
   
   // Winner is typically the last name before the score, loser is first after
@@ -204,11 +220,21 @@ function extractMatchInfo(title: string, description: string, fullText: string):
   
   // If we still don't have both, try looking for "defeats" or "def." pattern
   if (!winner || !loser) {
-    const defeatPattern = /([A-Z][a-z]+\s+[A-Z][a-z]+)\s+(?:defeats?|beats?|def\.?)\s+([A-Z][a-z]+\s+[A-Z][a-z]+)/i
+    const defeatPattern = /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\s+(?:defeats?|beats?|def\.?|prevails?\s+over|overcame?)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/i
     const defeatMatch = context.match(defeatPattern)
     if (defeatMatch) {
-      winner = defeatMatch[1]?.trim() || winner
-      loser = defeatMatch[2]?.trim() || loser
+      const potentialWinner = defeatMatch[1]?.trim() || ''
+      const potentialLoser = defeatMatch[2]?.trim() || ''
+      // Validate these aren't venue names
+      if (potentialWinner && !excludeWords.has(potentialWinner) && 
+          !potentialWinner.toLowerCase().includes('arena') &&
+          !potentialWinner.toLowerCase().includes('court') &&
+          potentialLoser && !excludeWords.has(potentialLoser) &&
+          !potentialLoser.toLowerCase().includes('arena') &&
+          !potentialLoser.toLowerCase().includes('court')) {
+        winner = potentialWinner
+        loser = potentialLoser
+      }
     }
   }
   
@@ -216,10 +242,14 @@ function extractMatchInfo(title: string, description: string, fullText: string):
   if (!winner && loser) {
     // Look for names in a wider context before the score
     const widerBeforeScore = text.substring(Math.max(0, scoreIndex - 300), scoreIndex)
-    const widerBeforeNames = widerBeforeScore.match(/\b([A-Z][a-z]+\s+[A-Z][a-z]+)\b/g) || []
+    const widerBeforeNames = widerBeforeScore.match(/\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\b/g) || []
     const validWiderBeforeNames = widerBeforeNames.filter(n => {
       const first = n.split(' ')[0]
-      return !excludeWords.has(n) && !excludeWords.has(first) && n.length >= 5 && n !== loser
+      const lowerN = n.toLowerCase()
+      return !excludeWords.has(n) && !excludeWords.has(first) && 
+             n.length >= 5 && n !== loser &&
+             !lowerN.includes('arena') && !lowerN.includes('court') &&
+             !lowerN.includes('park') && !lowerN.includes('stadium')
     })
     if (validWiderBeforeNames.length > 0) {
       winner = validWiderBeforeNames[validWiderBeforeNames.length - 1].trim()
@@ -230,10 +260,14 @@ function extractMatchInfo(title: string, description: string, fullText: string):
   if (winner && !loser) {
     // Look for names in a wider context after the score
     const widerAfterScore = text.substring(scoreIndex + score.length, Math.min(text.length, scoreIndex + score.length + 300))
-    const widerAfterNames = widerAfterScore.match(/\b([A-Z][a-z]+\s+[A-Z][a-z]+)\b/g) || []
+    const widerAfterNames = widerAfterScore.match(/\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\b/g) || []
     const validWiderAfterNames = widerAfterNames.filter(n => {
       const first = n.split(' ')[0]
-      return !excludeWords.has(n) && !excludeWords.has(first) && n.length >= 5 && n !== winner
+      const lowerN = n.toLowerCase()
+      return !excludeWords.has(n) && !excludeWords.has(first) && 
+             n.length >= 5 && n !== winner &&
+             !lowerN.includes('arena') && !lowerN.includes('court') &&
+             !lowerN.includes('park') && !lowerN.includes('stadium')
     })
     if (validWiderAfterNames.length > 0) {
       loser = validWiderAfterNames[0].trim()
@@ -282,10 +316,22 @@ function extractMatchInfo(title: string, description: string, fullText: string):
     winner = cleanText(winner).trim()
     loser = cleanText(loser).trim()
     
-    // Make sure names don't contain score patterns and are reasonable
+    // Final check: exclude venue names and ensure names are valid
+    const winnerLower = winner.toLowerCase()
+    const loserLower = loser.toLowerCase()
+    const isVenueName = (name: string) => {
+      return name.includes('arena') || name.includes('court') || 
+             name.includes('park') || name.includes('stadium') ||
+             name.includes('rod laver') || name.includes('melbourne park') ||
+             name.includes('arthur ashe') || name.includes('centre court')
+    }
+    
+    // Make sure names don't contain score patterns, aren't venue names, and are reasonable
     if (!winner.match(/\d/) && !loser.match(/\d/) &&
         winner.length >= 3 && loser.length >= 3 &&
-        winner !== loser) {
+        winner !== loser &&
+        !isVenueName(winnerLower) && !isVenueName(loserLower) &&
+        !excludeWords.has(winner) && !excludeWords.has(loser)) {
       return {
         tournament: cleanText(tournament),
         round: round || 'Match',
