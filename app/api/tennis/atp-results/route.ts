@@ -93,16 +93,28 @@ function parseRSSFeed(xmlText: string): ATPResult[] {
 function extractMatchInfo(title: string, description: string, fullText: string): ATPResult | null {
   const text = `${title} ${description}`
   
-  // First, find complete score pattern - must have at least one set score
-  // Pattern: "7-6(6), 6-1" or "6-4, 7-6(5)" etc.
-  const scorePattern = /(\d+-\d+(?:\s*\(\d+\))?(?:\s*,\s*\d+-\d+(?:\s*\(\d+\))?)+)/g
-  const scoreMatches = text.match(scorePattern)
-  if (!scoreMatches || scoreMatches.length === 0) {
-    return null // No complete score found, can't be a match result
+  // First, find score pattern - try to get complete scores first, but also accept single sets
+  // Pattern: "7-6(6), 6-1" (complete) or "7-6(6)" (single set - might be in progress)
+  const completeScorePattern = /(\d+-\d+(?:\s*\(\d+\))?(?:\s*,\s*\d+-\d+(?:\s*\(\d+\))?)+)/g
+  const singleScorePattern = /(\d+-\d+(?:\s*\(\d+\))?)/g
+  
+  let scoreMatches = text.match(completeScorePattern)
+  let score = ''
+  
+  if (scoreMatches && scoreMatches.length > 0) {
+    // Prefer complete scores (multiple sets)
+    score = scoreMatches[0].trim()
+  } else {
+    // Fall back to single set scores if no complete score found
+    scoreMatches = text.match(singleScorePattern)
+    if (scoreMatches && scoreMatches.length > 0) {
+      score = scoreMatches[0].trim()
+    }
   }
   
-  // Take the first complete score (should have comma separating sets)
-  const score = scoreMatches[0].trim()
+  if (!score) {
+    return null // No score found, can't be a match result
+  }
   
   // Find the position of the score in the text
   const scoreIndex = text.indexOf(score)
@@ -117,22 +129,25 @@ function extractMatchInfo(title: string, description: string, fullText: string):
   
   // Find player names - look for proper names (First Last format) near the score
   // Pattern: Capitalized first name + capitalized last name
-  const namePattern = /\b([A-Z][a-z]+\s+[A-Z][a-z]+)\b/g
+  const namePattern = /\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\b/g
   const allNames: string[] = []
   const excludeWords = new Set([
     'ATP', 'WTA', 'Open', 'Masters', 'Grand', 'Slam', 'Final', 'Semifinal', 
     'Quarterfinal', 'Round', 'Champion', 'Defending', 'Australian', 'French', 
     'Wimbledon', 'Struggled', 'Held', 'Early', 'But', 'On', 'To', 'The', 'And',
-    'With', 'From', 'For', 'After', 'Before', 'During', 'Match', 'Game', 'Set'
+    'With', 'From', 'For', 'After', 'Before', 'During', 'Match', 'Game', 'Set',
+    'Keys', 'Madison', 'Defending', 'Champion', 'Struggled', 'Early', 'Held'
   ])
   
   let nameMatch
   while ((nameMatch = namePattern.exec(context)) !== null) {
     const name = nameMatch[1].trim()
     const firstName = name.split(' ')[0]
+    const nameParts = name.split(' ')
     // Filter out common words and ensure it looks like a name
+    // Accept names with 2+ words (First Last or First Middle Last)
     if (!excludeWords.has(name) && !excludeWords.has(firstName) && 
-        name.length >= 5 && name.split(' ').length === 2) {
+        name.length >= 4 && nameParts.length >= 2) {
       allNames.push(name)
     }
   }
@@ -140,8 +155,11 @@ function extractMatchInfo(title: string, description: string, fullText: string):
   // Remove duplicates
   const uniqueNames = Array.from(new Set(allNames))
   
+  // Log for debugging
   if (uniqueNames.length < 2) {
-    return null // Need at least 2 names for a match
+    console.log(`Not enough names found near score: ${uniqueNames.length} names found`)
+    console.log(`Context around score: ${context.substring(0, 200)}...`)
+    // Don't return null yet - try to extract with fewer names
   }
   
   // Determine winner and loser based on position relative to score
@@ -245,16 +263,19 @@ function extractMatchInfo(title: string, description: string, fullText: string):
   const round = extractRound(text)
   
   // Final validation - must have winner, loser, and valid score
+  // Relaxed requirements: names can be shorter, score can be single set
   if (winner && loser && score && 
-      winner.length >= 5 && loser.length >= 5 &&
-      winner.split(' ').length >= 2 && loser.split(' ').length >= 2 &&
-      score.match(/\d+-\d+.*,\s*\d+-\d+/)) { // Must have at least 2 sets
+      winner.length >= 3 && loser.length >= 3 &&
+      winner.split(' ').length >= 1 && loser.split(' ').length >= 1 &&
+      score.match(/\d+-\d+/)) { // Just needs to have a score pattern
     // Clean up names
     winner = cleanText(winner).trim()
     loser = cleanText(loser).trim()
     
-    // Make sure names don't contain score patterns
-    if (!winner.match(/\d/) && !loser.match(/\d/)) {
+    // Make sure names don't contain score patterns and are reasonable
+    if (!winner.match(/\d/) && !loser.match(/\d/) &&
+        winner.length >= 3 && loser.length >= 3 &&
+        winner !== loser) {
       return {
         tournament: cleanText(tournament),
         round: round || 'Match',
@@ -415,10 +436,13 @@ export async function GET() {
         
         if (response.ok) {
           const xmlText = await response.text()
+          console.log(`Fetched RSS feed ${feedUrl}, length: ${xmlText.length}`)
           const feedResults = parseRSSFeed(xmlText)
           if (feedResults.length > 0) {
-            console.log(`Found ${feedResults.length} results from ${feedUrl}`)
+            console.log(`Found ${feedResults.length} ATP results from ${feedUrl}`)
             results.push(...feedResults)
+          } else {
+            console.log(`No ATP results extracted from ${feedUrl} (may need better parsing)`)
           }
           
           if (results.length >= 2) break // Got enough results
@@ -440,38 +464,16 @@ export async function GET() {
       }
     }
     
-    // If still no results, provide fallback with recent noteworthy results
-    // This ensures the dashboard always has something to display
+    // If still no results, log and return empty array (don't show mock data)
     if (results.length === 0) {
-      console.log('No ATP results found from RSS feeds or scraping, using fallback data')
-      
-      // Provide fallback data with recent dates
-      const today = new Date()
-      const recentDates = [
-        new Date(today.getTime() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
-        new Date(today.getTime() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
-      ]
-      
-      results.push(
-        {
-          tournament: 'ATP Masters 1000',
-          round: 'Final',
-          winner: 'Top Player A',
-          loser: 'Top Player B',
-          score: '6-4, 7-6(5)',
-          date: recentDates[0].toISOString().split('T')[0],
-          significance: 'Major tournament final',
-        },
-        {
-          tournament: 'ATP 500',
-          round: 'Semifinal',
-          winner: 'Rising Star',
-          loser: 'Veteran Player',
-          score: '6-3, 6-2',
-          date: recentDates[1].toISOString().split('T')[0],
-          significance: 'Upset victory',
+      console.log('No ATP results found from RSS feeds or scraping')
+      console.log('This could mean: RSS feeds are not accessible, parsing failed, or no recent ATP matches')
+      // Return empty array instead of mock data - let the UI handle the empty state
+      return NextResponse.json({ results: [] }, {
+        headers: {
+          'Cache-Control': 's-maxage=1800, stale-while-revalidate',
         }
-      )
+      })
     }
     
     // Remove duplicates and sort by recency
