@@ -168,7 +168,23 @@ function extractMatchInfo(title: string, description: string, fullText: string):
                  word === 'the' || word === 'and' || word === 'in' || word === 'of'
         }
         
-        if (!isDescriptionWord(firstName) && !isDescriptionWord(lastName) &&
+        // Check if first word is a nationality (should skip these)
+        const isNationality = (word: string) => {
+          return word === 'american' || word === 'spanish' || word === 'french' ||
+                 word === 'serbian' || word === 'italian' || word === 'australian' ||
+                 word === 'german' || word === 'british' || word === 'canadian' ||
+                 word === 'russian' || word === 'ukrainian' || word === 'belarusian' ||
+                 word === 'polish' || word === 'czech' || word === 'swiss' ||
+                 word === 'austrian' || word === 'japanese' || word === 'chinese' ||
+                 word === 'korean' || word === 'brazilian' || word === 'argentine' ||
+                 word === 'chilean' || word === 'colombian' || word === 'mexican' ||
+                 word === 'dutch' || word === 'belgian' || word === 'croatian' ||
+                 word === 'slovak' || word === 'bulgarian' || word === 'romanian' ||
+                 word === 'greek' || word === 'turkish' || word === 'indian'
+        }
+        
+        // Skip if first word is a nationality (e.g., "American Ben" should be skipped, we want "Ben Shelton")
+        if (!isNationality(firstName) && !isDescriptionWord(firstName) && !isDescriptionWord(lastName) &&
             !lowerName.includes('defending') && !lowerName.includes('champion') &&
             !lowerName.includes('round') && !lowerName.includes('struggled') &&
             !lowerName.includes('held') && !lowerName.includes('early') &&
