@@ -488,11 +488,15 @@ function extractMatchInfo(title: string, description: string, fullText: string):
       if (defeatMatch) {
         const potentialWinner = defeatMatch[1]?.trim() || ''
         const potentialLoser = defeatMatch[2]?.trim() || ''
-        // Validate these aren't venue names
-        if (potentialWinner && !excludeWords.has(potentialWinner) && 
+        // Validate these are exactly 2 words and aren't venue names
+        const winnerParts = potentialWinner.split(' ')
+        const loserParts = potentialLoser.split(' ')
+        if (potentialWinner && winnerParts.length === 2 &&
+            !excludeWords.has(potentialWinner) && 
             !potentialWinner.toLowerCase().includes('arena') &&
             !potentialWinner.toLowerCase().includes('court') &&
-            potentialLoser && !excludeWords.has(potentialLoser) &&
+            potentialLoser && loserParts.length === 2 &&
+            !excludeWords.has(potentialLoser) &&
             !potentialLoser.toLowerCase().includes('arena') &&
             !potentialLoser.toLowerCase().includes('court')) {
           extractedWinner = potentialWinner
@@ -525,11 +529,13 @@ function extractMatchInfo(title: string, description: string, fullText: string):
     if (extractedWinner && !extractedLoser) {
       // Look for names in a wider context after the score
       const widerAfterScore = text.substring(finalScoreIndex + score.length, Math.min(text.length, finalScoreIndex + score.length + 300))
-    const widerAfterNames = widerAfterScore.match(/\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\b/g) || []
+    const widerAfterNames = widerAfterScore.match(/\b([A-Z][a-z]+\s+[A-Z][a-z]+)\b/g) || []
     const validWiderAfterNames = widerAfterNames.filter(n => {
       const first = n.split(' ')[0]
       const lowerN = n.toLowerCase()
-      return !excludeWords.has(n) && !excludeWords.has(first) && 
+      const nameParts = n.split(' ')
+      return nameParts.length === 2 && // ONLY exactly 2 words
+             !excludeWords.has(n) && !excludeWords.has(first) && 
              n.length >= 5 && n !== winner &&
              !lowerN.includes('arena') && !lowerN.includes('court') &&
              !lowerN.includes('park') && !lowerN.includes('stadium')
