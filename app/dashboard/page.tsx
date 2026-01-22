@@ -89,14 +89,24 @@ export default function Dashboard() {
     try {
       setRefreshing(true)
       
+      // Helper function to add timeout to fetch
+      const fetchWithTimeout = (url: string, timeout = 10000) => {
+        return Promise.race([
+          fetch(url),
+          new Promise<Response>((_, reject) =>
+            setTimeout(() => reject(new Error('Request timeout')), timeout)
+          )
+        ])
+      }
+      
       // Fetch stocks, crypto, news, daily thought, ATP results, and tennis pro tip in parallel
       const [stocksRes, cryptosRes, newsRes, thoughtRes, atpRes, tennisTipRes] = await Promise.all([
-        fetch('/api/markets/stocks'),
-        fetch('/api/markets/crypto'),
-        fetch('/api/markets/news'),
-        fetch('/api/daily-thought'),
-        fetch('/api/tennis/atp-results'),
-        fetch('/api/tennis-pro-tip'),
+        fetchWithTimeout('/api/markets/stocks').catch(() => ({ ok: false } as Response)),
+        fetchWithTimeout('/api/markets/crypto').catch(() => ({ ok: false } as Response)),
+        fetchWithTimeout('/api/markets/news').catch(() => ({ ok: false } as Response)),
+        fetchWithTimeout('/api/daily-thought').catch(() => ({ ok: false } as Response)),
+        fetchWithTimeout('/api/tennis/atp-results').catch(() => ({ ok: false } as Response)),
+        fetchWithTimeout('/api/tennis-pro-tip').catch(() => ({ ok: false } as Response)),
       ])
 
       if (stocksRes.ok) {
