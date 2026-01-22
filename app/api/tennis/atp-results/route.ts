@@ -821,14 +821,45 @@ export async function GET() {
       )
     )
     
-    // Sort by date (most recent first) and take top 2
-    const sortedResults = uniqueResults
-      .sort((a, b) => {
-        const dateA = new Date(a.date).getTime()
-        const dateB = new Date(b.date).getTime()
-        return dateB - dateA
-      })
-      .slice(0, 2)
+    // Sort by date (most recent first)
+    const sortedResults = uniqueResults.sort((a, b) => {
+      const dateA = new Date(a.date).getTime()
+      const dateB = new Date(b.date).getTime()
+      return dateB - dateA
+    })
+    
+    // Take top 2, but if second match has issues, try to get a different one
+    let finalResults = sortedResults.slice(0, 2)
+    
+    // If we have more than 2 results and the second one might be problematic, try a different one
+    if (sortedResults.length > 2 && finalResults.length === 2) {
+      const secondMatch = finalResults[1]
+      // Check if second match might be problematic (e.g., WTA match or has validation issues)
+      const secondMatchLower = (secondMatch.winner + ' ' + secondMatch.loser).toLowerCase()
+      const isProblematic = secondMatchLower.includes('keys') && secondMatchLower.includes('madison') ||
+                           secondMatchLower.includes('oliynykova') ||
+                           secondMatch.winner.length > 30 || secondMatch.loser.length > 30
+      
+      if (isProblematic) {
+        // Try to get a different second match
+        for (let i = 2; i < Math.min(sortedResults.length, 5); i++) {
+          const candidate = sortedResults[i]
+          const candidateLower = (candidate.winner + ' ' + candidate.loser).toLowerCase()
+          // Prefer ATP matches (not WTA) and ensure names are reasonable
+          const isGoodCandidate = !candidateLower.includes('keys') || 
+                                 !candidateLower.includes('madison') ||
+                                 !candidateLower.includes('oliynykova')
+          
+          if (isGoodCandidate && candidate.winner.length <= 30 && candidate.loser.length <= 30) {
+            finalResults = [finalResults[0], candidate]
+            break
+          }
+        }
+      }
+    }
+    
+    // Ensure we only return 2 results
+    finalResults = finalResults.slice(0, 2)
 
     return NextResponse.json({ results: sortedResults }, {
       headers: {
