@@ -143,29 +143,29 @@ export async function GET() {
               dataByDay.get(dayKey)!.push(dataPoint)
             })
             
-            // Find the most recent complete trading day
-            // A complete trading day should have 50+ data points (pre-market + regular + after-hours)
+            // Always prioritize today's data, even if incomplete
             const sortedDays = Array.from(dataByDay.keys()).sort().reverse()
             const today = new Date().toISOString().split('T')[0]
             
             let lastTradingDay = null
-            let maxDataPoints = 0
             
-            // Find the day with the most data points (complete trading day)
-            for (const [dayKey, dayData] of dataByDay.entries()) {
-              if (dayData.length > maxDataPoints) {
-                maxDataPoints = dayData.length
-                lastTradingDay = dayKey
-              }
-            }
-            
-            // If today has substantial data (50+ points = complete day), use it
-            // Otherwise use the day with most data (likely yesterday if market is closed or early in day)
-            if (dataByDay.has(today) && dataByDay.get(today)!.length >= 50) {
+            // Always use today's data if it exists, regardless of how many data points
+            if (dataByDay.has(today) && dataByDay.get(today)!.length > 0) {
               lastTradingDay = today
-            } else if (!lastTradingDay || maxDataPoints < 20) {
-              // Fallback to most recent day with any data
-              lastTradingDay = sortedDays[0] || sortedDays[1]
+            } else {
+              // If no today data, find the day with the most data points (yesterday)
+              let maxDataPoints = 0
+              for (const [dayKey, dayData] of dataByDay.entries()) {
+                if (dayData.length > maxDataPoints) {
+                  maxDataPoints = dayData.length
+                  lastTradingDay = dayKey
+                }
+              }
+              
+              // Fallback to most recent day
+              if (!lastTradingDay || maxDataPoints < 20) {
+                lastTradingDay = sortedDays[0] || sortedDays[1]
+              }
             }
             
             if (lastTradingDay && dataByDay.has(lastTradingDay)) {
