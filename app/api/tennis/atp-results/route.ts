@@ -103,66 +103,96 @@ function parseRSSFeed(xmlText: string): ATPResult[] {
 function extractMatchInfo(title: string, description: string, fullText: string): ATPResult | null {
   const text = `${title} ${description}`
   
-  // Strategy 1: Look for "Player defeats/overcame Player Score" pattern FIRST - most reliable
+  // Strategy 1: Find defeat verb first, then extract player names right before/after it
   // Examples from RSS:
   // "American Ben Shelton overcame Ugo Humbert of France 6-3, 7-6 (2), 7-6 (5)"
   // "Madison Keys struggled early but held on to defeat Oleksandra Oliynykova 7-6 (6), 6-1"
-  const defeatPatterns = [
-    // Pattern: "American Player1 overcame Player2 of France Score"
-    // Player name is 2-4 words, not phrases with description words
-    /(?:American|Spanish|French|Serbian|Italian|Australian|German|British|Canadian|Russian|Ukrainian|Belarusian|Polish|Czech|Swiss|Austrian|Japanese|Chinese|Korean|Brazilian|Argentine|Chilean|Colombian|Mexican|South African|Dutch|Belgian|Croatian|Slovak|Bulgarian|Romanian|Greek|Turkish|Indian|Thai|Filipino|Indonesian|Malaysian|Singaporean|New Zealand|Finnish|Norwegian|Swedish|Danish|Icelandic|Estonian|Latvian|Lithuanian|Portuguese|Hungarian|Slovenian|Bosnian|Macedonian|Montenegrin|Albanian|Moldovan|Georgian|Armenian|Azerbaijani|Kazakh|Uzbek|Kyrgyz|Tajik|Turkmen|Mongolian|Vietnamese|Cambodian|Laotian|Myanmar|Bangladeshi|Pakistani|Afghan|Iranian|Iraqi|Syrian|Lebanese|Jordanian|Palestinian|Israeli|Saudi|Emirati|Kuwaiti|Qatari|Bahraini|Omani|Yemeni|Egyptian|Libyan|Tunisian|Algerian|Moroccan|Sudanese|Ethiopian|Kenyan|Tanzanian|Ugandan|Rwandan|Ghanaian|Nigerian|Senegalese|Ivorian|Cameroonian|Zimbabwean|Botswanan|Namibian|Angolan|Mozambican|Malawian|Zambian|Malagasy|Mauritian|Seychellois|Comorian|Djiboutian|Eritrean|Somalian|Burundian|Central African|Chadian|Congolese|Equatorial Guinean|Gabonese|Guinean|Guinea-Bissauan|Liberian|Malian|Mauritanian|Nigerien|Sierra Leonean|Togolese|Beninese|Burkina Faso|Cape Verdean|Gambian)\s+([A-Z][a-z]+\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?(?:\s+[A-Z][a-z]+)?)\s+(?:defeats?|beats?|def\.?|overcame?|prevailed?\s+over|held\s+on\s+to\s+defeat)\s+([A-Z][a-z]+\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?(?:\s+[A-Z][a-z]+)?)(?:\s+of\s+[A-Z][a-z]+)?\s+(\d+-\d+(?:\s*\(\d+\))?(?:\s*,\s*\d+-\d+(?:\s*\(\d+\))?)*)/i,
-    // Pattern: "Player1 defeats Player2 Score" - player names are 2-4 words max
-    /([A-Z][a-z]+\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?(?:\s+[A-Z][a-z]+)?)\s+(?:defeats?|beats?|def\.?|overcame?|prevailed?\s+over|held\s+on\s+to\s+defeat)\s+([A-Z][a-z]+\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?(?:\s+[A-Z][a-z]+)?)(?:\s+of\s+[A-Z][a-z]+)?\s+(\d+-\d+(?:\s*\(\d+\))?(?:\s*,\s*\d+-\d+(?:\s*\(\d+\))?)*)/i,
-  ]
   
+  // First, find the defeat verb and score
+  const defeatVerbPattern = /(?:defeats?|beats?|def\.?|overcame?|prevailed?\s+over|held\s+on\s+to\s+defeat)/i
+  const scorePattern = /(\d+-\d+(?:\s*\(\d+\))?(?:\s*,\s*\d+-\d+(?:\s*\(\d+\))?)+)/g
+  const singleScorePattern = /(\d+-\d+(?:\s*\(\d+\))?)/g
+  
+  let scoreMatch = text.match(scorePattern)
+  if (!scoreMatch) {
+    scoreMatch = text.match(singleScorePattern)
+  }
+  
+  if (!scoreMatch) {
+    return null // No score found
+  }
+  
+  let score = scoreMatch[0].trim()
   let winner = ''
   let loser = ''
-  let score = ''
+  const scoreIndex = text.indexOf(score)
   
-  for (const pattern of defeatPatterns) {
-    const match = text.match(pattern)
-    if (match) {
-      // Pattern 1 has nationality as first group (index 1), winner (index 2), loser (index 3), score (index 4)
-      // Pattern 2 has winner (index 1), loser (index 2), score (index 3)
-      if (match[4]) {
-        // Pattern 1: nationality, winner, loser, score
-        winner = match[2]?.trim() || ''
-        loser = match[3]?.trim() || ''
-        score = match[4]?.trim() || ''
-      } else {
-        // Pattern 2: winner, loser, score
-        winner = match[1]?.trim() || ''
-        loser = match[2]?.trim() || ''
-        score = match[3]?.trim() || ''
-      }
-      
-      // Clean up loser - remove "of France" etc.
+  // Find defeat verb before the score
+  const textBeforeScore = text.substring(0, scoreIndex)
+  const defeatMatch = textBeforeScore.match(defeatVerbPattern)
+  
+  if (defeatMatch) {
+    const defeatIndex = defeatMatch.index || 0
+    const defeatEnd = defeatIndex + defeatMatch[0].length
+    
+    // Extract text right before defeat verb (up to 50 chars) for winner
+    const beforeDefeat = textBeforeScore.substring(Math.max(0, defeatIndex - 50), defeatIndex).trim()
+    // Extract text right after defeat verb (up to 50 chars) for loser
+    const afterDefeat = textBeforeScore.substring(defeatEnd, Math.min(textBeforeScore.length, defeatEnd + 50)).trim()
+    
+    // Find player name pattern (2-4 capitalized words) right before defeat verb
+    const nameBeforePattern = /([A-Z][a-z]+\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?(?:\s+[A-Z][a-z]+)?)\s*$/i
+    const nameBeforeMatch = beforeDefeat.match(nameBeforePattern)
+    
+    // Also check for nationality prefix
+    const nationalityPattern = /(?:American|Spanish|French|Serbian|Italian|Australian|German|British|Canadian|Russian|Ukrainian|Belarusian|Polish|Czech|Swiss|Austrian|Japanese|Chinese|Korean|Brazilian|Argentine|Chilean|Colombian|Mexican|South African|Dutch|Belgian|Croatian|Slovak|Bulgarian|Romanian|Greek|Turkish|Indian|Thai|Filipino|Indonesian|Malaysian|Singaporean|New Zealand|Finnish|Norwegian|Swedish|Danish|Icelandic|Estonian|Latvian|Lithuanian|Portuguese|Hungarian|Slovenian|Bosnian|Macedonian|Montenegrin|Albanian|Moldovan|Georgian|Armenian|Azerbaijani|Kazakh|Uzbek|Kyrgyz|Tajik|Turkmen|Mongolian|Vietnamese|Cambodian|Laotian|Myanmar|Bangladeshi|Pakistani|Afghan|Iranian|Iraqi|Syrian|Lebanese|Jordanian|Palestinian|Israeli|Saudi|Emirati|Kuwaiti|Qatari|Bahraini|Omani|Yemeni|Egyptian|Libyan|Tunisian|Algerian|Moroccan|Sudanese|Ethiopian|Kenyan|Tanzanian|Ugandan|Rwandan|Ghanaian|Nigerian|Senegalese|Ivorian|Cameroonian|Zimbabwean|Botswanan|Namibian|Angolan|Mozambican|Malawian|Zambian|Malagasy|Mauritian|Seychellois|Comorian|Djiboutian|Eritrean|Somalian|Burundian|Central African|Chadian|Congolese|Equatorial Guinean|Gabonese|Guinean|Guinea-Bissauan|Liberian|Malian|Mauritanian|Nigerien|Sierra Leonean|Togolese|Beninese|Burkina Faso|Cape Verdean|Gambian)\s+([A-Z][a-z]+\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?(?:\s+[A-Z][a-z]+)?)\s*$/i
+    const nationalityMatch = beforeDefeat.match(nationalityPattern)
+    
+    if (nationalityMatch && nationalityMatch[2]) {
+      winner = nationalityMatch[2].trim()
+    } else if (nameBeforeMatch && nameBeforeMatch[1]) {
+      winner = nameBeforeMatch[1].trim()
+    }
+    
+    // Find player name pattern right after defeat verb
+    const nameAfterPattern = /^([A-Z][a-z]+\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?(?:\s+[A-Z][a-z]+)?)(?:\s+of\s+[A-Z][a-z]+)?/i
+    const nameAfterMatch = afterDefeat.match(nameAfterPattern)
+    
+    if (nameAfterMatch && nameAfterMatch[1]) {
+      loser = nameAfterMatch[1].trim()
+      // Remove "of France" etc.
       loser = loser.replace(/\s+of\s+[A-Z][a-z]+$/i, '').trim()
-      
-      // Validate names are reasonable player names (2-4 words, not description phrases)
-      const winnerWords = winner.split(' ')
-      const loserWords = loser.split(' ')
-      const isReasonableName = (name: string, words: string[]) => {
-        const lower = name.toLowerCase()
-        return words.length >= 2 && words.length <= 4 &&
-               !lower.includes('defending') && !lower.includes('champion') &&
-               !lower.includes('round') && !lower.includes('struggled') &&
-               !lower.includes('held') && !lower.includes('early') &&
-               !lower.includes('but') && !lower.includes('on') &&
-               !lower.includes('to') && !lower.includes('at') &&
-               !lower.includes('arena') && !lower.includes('court')
-      }
-      
-      if (winner && loser && score && score.match(/\d+-\d+/) &&
-          isReasonableName(winner, winnerWords) &&
-          isReasonableName(loser, loserWords)) {
-        break // Found a good match
-      }
+    }
+    
+    // Validate names are reasonable player names (2-4 words, not description phrases)
+    const winnerWords = winner.split(' ')
+    const loserWords = loser.split(' ')
+    const isReasonableName = (name: string, words: string[]) => {
+      if (!name || words.length < 2 || words.length > 4) return false
+      const lower = name.toLowerCase()
+      return !lower.includes('defending') && !lower.includes('champion') &&
+             !lower.includes('round') && !lower.includes('struggled') &&
+             !lower.includes('held') && !lower.includes('early') &&
+             !lower.includes('but') && !lower.includes('on') &&
+             !lower.includes('to') && !lower.includes('at') &&
+             !lower.includes('arena') && !lower.includes('court') &&
+             !lower.includes('nd') && !lower.includes('rd') && !lower.includes('th')
+    }
+    
+    if (winner && loser && score && score.match(/\d+-\d+/) &&
+        isReasonableName(winner, winnerWords) &&
+        isReasonableName(loser, loserWords)) {
+      // Successfully extracted from defeat pattern
+    } else {
+      // Reset if validation failed
+      winner = ''
+      loser = ''
+      score = ''
     }
   }
   
   // Strategy 2: If pattern matching didn't work, find score first then extract names
-  if (!score) {
+  if (!score || !winner || !loser) {
     const completeScorePattern = /(\d+-\d+(?:\s*\(\d+\))?(?:\s*,\s*\d+-\d+(?:\s*\(\d+\))?)+)/g
     const singleScorePattern = /(\d+-\d+(?:\s*\(\d+\))?)/g
     
@@ -183,11 +213,13 @@ function extractMatchInfo(title: string, description: string, fullText: string):
   }
   
   // Clean up score - remove extra spaces
-  score = score.replace(/\s+/g, ' ').trim()
+  if (score) {
+    score = score.replace(/\s+/g, ' ').trim()
+  }
   
-  // Find the position of the score in the text
-  const scoreIndex = text.indexOf(score)
-  if (scoreIndex === -1) {
+  // Find the position of the score in the text (recalculate if score was reset)
+  const finalScoreIndex = text.indexOf(score)
+  if (finalScoreIndex === -1) {
     return null
   }
   
@@ -211,8 +243,8 @@ function extractMatchInfo(title: string, description: string, fullText: string):
   // If we already have winner/loser from pattern matching, skip the complex extraction
   if (!winner || !loser) {
     // Extract context around the score (100 chars before and after)
-    const contextStart = Math.max(0, scoreIndex - 150)
-    const contextEnd = Math.min(text.length, scoreIndex + score.length + 150)
+    const contextStart = Math.max(0, finalScoreIndex - 150)
+    const contextEnd = Math.min(text.length, finalScoreIndex + score.length + 150)
     const context = text.substring(contextStart, contextEnd)
   
     // Find player names - look for proper names (First Last format) near the score
@@ -244,7 +276,7 @@ function extractMatchInfo(title: string, description: string, fullText: string):
   }
   
     // Determine winner and loser based on position relative to score
-    const scorePosInContext = scoreIndex - contextStart
+    const scorePosInContext = finalScoreIndex - contextStart
     let extractedWinner = ''
     let extractedLoser = ''
   
@@ -351,8 +383,8 @@ function extractMatchInfo(title: string, description: string, fullText: string):
     
     // If still missing winner, try looking in the full text before the score
     if (!extractedWinner && extractedLoser) {
-    // Look for names in a wider context before the score
-    const widerBeforeScore = text.substring(Math.max(0, scoreIndex - 300), scoreIndex)
+      // Look for names in a wider context before the score
+      const widerBeforeScore = text.substring(Math.max(0, finalScoreIndex - 300), finalScoreIndex)
     const widerBeforeNames = widerBeforeScore.match(/\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\b/g) || []
     const validWiderBeforeNames = widerBeforeNames.filter(n => {
       const first = n.split(' ')[0]
@@ -369,8 +401,8 @@ function extractMatchInfo(title: string, description: string, fullText: string):
     
     // If still missing loser, try looking in the full text after the score
     if (extractedWinner && !extractedLoser) {
-    // Look for names in a wider context after the score
-    const widerAfterScore = text.substring(scoreIndex + score.length, Math.min(text.length, scoreIndex + score.length + 300))
+      // Look for names in a wider context after the score
+      const widerAfterScore = text.substring(finalScoreIndex + score.length, Math.min(text.length, finalScoreIndex + score.length + 300))
     const widerAfterNames = widerAfterScore.match(/\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\b/g) || []
     const validWiderAfterNames = widerAfterNames.filter(n => {
       const first = n.split(' ')[0]
