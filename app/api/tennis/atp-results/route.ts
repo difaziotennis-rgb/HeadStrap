@@ -211,13 +211,14 @@ function extractMatchInfo(title: string, description: string, fullText: string):
       // Take the closest one, but only if it's within 50 chars
       const closestMatch = allNameMatches[0]
       if (closestMatch.distance <= 50) {
-        // Check what's between the name and defeat verb - should be minimal
+        // Check what's between the name and defeat verb
         const nameEnd = closestMatch.index + closestMatch.name.length
         const textBetween = beforeDefeat.substring(nameEnd, beforeDefeat.length).trim()
         
-        // If there's too much text between name and defeat verb, it's probably not the right name
-        // Allow for nationality prefix and a few words
-        if (textBetween.length <= 40) {
+        // Accept the name if the text between is reasonable (not too long)
+        // We allow description words between name and defeat verb (e.g., "Madison Keys struggled early but held on to defeat")
+        // The name itself is already validated above, so if it's a valid 2-word name, accept it
+        if (textBetween.length <= 60) {
           winner = closestMatch.name.trim()
           
           // Also check for nationality prefix right before the name
