@@ -135,33 +135,78 @@ function extractMatchInfo(title: string, description: string, fullText: string):
     const defeatIndex = defeatMatch.index || 0
     const defeatEnd = defeatIndex + defeatMatch[0].length
     
-    // Extract text right before defeat verb (up to 50 chars) for winner
-    const beforeDefeat = textBeforeScore.substring(Math.max(0, defeatIndex - 50), defeatIndex).trim()
+    // Extract text right before defeat verb (up to 80 chars) for winner - need more context
+    const beforeDefeat = textBeforeScore.substring(Math.max(0, defeatIndex - 80), defeatIndex).trim()
     // Extract text right after defeat verb (up to 50 chars) for loser
     const afterDefeat = textBeforeScore.substring(defeatEnd, Math.min(textBeforeScore.length, defeatEnd + 50)).trim()
     
-    // Find player name pattern (2-4 capitalized words) right before defeat verb
-    const nameBeforePattern = /([A-Z][a-z]+\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?(?:\s+[A-Z][a-z]+)?)\s*$/i
-    const nameBeforeMatch = beforeDefeat.match(nameBeforePattern)
+    // Find player name - look for the LAST occurrence of a proper name (2-4 words) before defeat verb
+    // Must be immediately before defeat verb or separated by only a few words
+    // Pattern: Look for names that end right before the defeat verb
+    const allNameMatches: Array<{name: string, index: number}> = []
+    const namePattern = /\b([A-Z][a-z]+\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?(?:\s+[A-Z][a-z]+)?)\b/g
     
-    // Also check for nationality prefix
-    const nationalityPattern = /(?:American|Spanish|French|Serbian|Italian|Australian|German|British|Canadian|Russian|Ukrainian|Belarusian|Polish|Czech|Swiss|Austrian|Japanese|Chinese|Korean|Brazilian|Argentine|Chilean|Colombian|Mexican|South African|Dutch|Belgian|Croatian|Slovak|Bulgarian|Romanian|Greek|Turkish|Indian|Thai|Filipino|Indonesian|Malaysian|Singaporean|New Zealand|Finnish|Norwegian|Swedish|Danish|Icelandic|Estonian|Latvian|Lithuanian|Portuguese|Hungarian|Slovenian|Bosnian|Macedonian|Montenegrin|Albanian|Moldovan|Georgian|Armenian|Azerbaijani|Kazakh|Uzbek|Kyrgyz|Tajik|Turkmen|Mongolian|Vietnamese|Cambodian|Laotian|Myanmar|Bangladeshi|Pakistani|Afghan|Iranian|Iraqi|Syrian|Lebanese|Jordanian|Palestinian|Israeli|Saudi|Emirati|Kuwaiti|Qatari|Bahraini|Omani|Yemeni|Egyptian|Libyan|Tunisian|Algerian|Moroccan|Sudanese|Ethiopian|Kenyan|Tanzanian|Ugandan|Rwandan|Ghanaian|Nigerian|Senegalese|Ivorian|Cameroonian|Zimbabwean|Botswanan|Namibian|Angolan|Mozambican|Malawian|Zambian|Malagasy|Mauritian|Seychellois|Comorian|Djiboutian|Eritrean|Somalian|Burundian|Central African|Chadian|Congolese|Equatorial Guinean|Gabonese|Guinean|Guinea-Bissauan|Liberian|Malian|Mauritanian|Nigerien|Sierra Leonean|Togolese|Beninese|Burkina Faso|Cape Verdean|Gambian)\s+([A-Z][a-z]+\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?(?:\s+[A-Z][a-z]+)?)\s*$/i
-    const nationalityMatch = beforeDefeat.match(nationalityPattern)
-    
-    if (nationalityMatch && nationalityMatch[2]) {
-      winner = nationalityMatch[2].trim()
-    } else if (nameBeforeMatch && nameBeforeMatch[1]) {
-      winner = nameBeforeMatch[1].trim()
+    let match
+    while ((match = namePattern.exec(beforeDefeat)) !== null) {
+      const name = match[1]
+      const nameWords = name.split(' ')
+      // Only accept 2-4 word names
+      if (nameWords.length >= 2 && nameWords.length <= 4) {
+        const lowerName = name.toLowerCase()
+        // Exclude if it contains description words
+        if (!lowerName.includes('defending') && !lowerName.includes('champion') &&
+            !lowerName.includes('round') && !lowerName.includes('struggled') &&
+            !lowerName.includes('held') && !lowerName.includes('early') &&
+            !lowerName.includes('but') && !lowerName.includes('on') &&
+            !lowerName.includes('to') && !lowerName.includes('at') &&
+            !lowerName.includes('nd') && !lowerName.includes('rd') && !lowerName.includes('th') &&
+            !lowerName.includes('australian') && !lowerName.includes('open') &&
+            !lowerName.includes('arena') && !lowerName.includes('court')) {
+          allNameMatches.push({name, index: match.index || 0})
+        }
+      }
     }
     
-    // Find player name pattern right after defeat verb
+    // Take the LAST name match (closest to defeat verb) - this should be the winner
+    if (allNameMatches.length > 0) {
+      const lastMatch = allNameMatches[allNameMatches.length - 1]
+      const nameEnd = lastMatch.index + lastMatch.name.length
+      const distanceToDefeat = defeatIndex - (defeatIndex - 80 + nameEnd)
+      
+      // Only accept if name is within 30 chars of defeat verb (not too far away)
+      if (distanceToDefeat <= 30) {
+        winner = lastMatch.name.trim()
+        
+        // Also check for nationality prefix right before the name
+        const nameStartInText = defeatIndex - 80 + lastMatch.index
+        const beforeName = textBeforeScore.substring(Math.max(0, nameStartInText - 20), nameStartInText)
+        const nationalityMatch = beforeName.match(/(?:American|Spanish|French|Serbian|Italian|Australian|German|British|Canadian|Russian|Ukrainian|Belarusian|Polish|Czech|Swiss|Austrian|Japanese|Chinese|Korean|Brazilian|Argentine|Chilean|Colombian|Mexican|South African|Dutch|Belgian|Croatian|Slovak|Bulgarian|Romanian|Greek|Turkish|Indian|Thai|Filipino|Indonesian|Malaysian|Singaporean|New Zealand|Finnish|Norwegian|Swedish|Danish|Icelandic|Estonian|Latvian|Lithuanian|Portuguese|Hungarian|Slovenian|Bosnian|Macedonian|Montenegrin|Albanian|Moldovan|Georgian|Armenian|Azerbaijani|Kazakh|Uzbek|Kyrgyz|Tajik|Turkmen|Mongolian|Vietnamese|Cambodian|Laotian|Myanmar|Bangladeshi|Pakistani|Afghan|Iranian|Iraqi|Syrian|Lebanese|Jordanian|Palestinian|Israeli|Saudi|Emirati|Kuwaiti|Qatari|Bahraini|Omani|Yemeni|Egyptian|Libyan|Tunisian|Algerian|Moroccan|Sudanese|Ethiopian|Kenyan|Tanzanian|Ugandan|Rwandan|Ghanaian|Nigerian|Senegalese|Ivorian|Cameroonian|Zimbabwean|Botswanan|Namibian|Angolan|Mozambican|Malawian|Zambian|Malagasy|Mauritian|Seychellois|Comorian|Djiboutian|Eritrean|Somalian|Burundian|Central African|Chadian|Congolese|Equatorial Guinean|Gabonese|Guinean|Guinea-Bissauan|Liberian|Malian|Mauritanian|Nigerien|Sierra Leonean|Togolese|Beninese|Burkina Faso|Cape Verdean|Gambian)\s+$/i)
+        // If nationality found, winner is already correct (just the name part)
+      }
+    }
+    
+    // Find player name pattern right after defeat verb - must be FIRST name after verb
     const nameAfterPattern = /^([A-Z][a-z]+\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?(?:\s+[A-Z][a-z]+)?)(?:\s+of\s+[A-Z][a-z]+)?/i
     const nameAfterMatch = afterDefeat.match(nameAfterPattern)
     
     if (nameAfterMatch && nameAfterMatch[1]) {
-      loser = nameAfterMatch[1].trim()
-      // Remove "of France" etc.
-      loser = loser.replace(/\s+of\s+[A-Z][a-z]+$/i, '').trim()
+      const potentialLoser = nameAfterMatch[1].trim()
+      const loserWords = potentialLoser.split(' ')
+      const lowerLoser = potentialLoser.toLowerCase()
+      
+      // Validate it's a real name (2-4 words, no description words)
+      if (loserWords.length >= 2 && loserWords.length <= 4 &&
+          !lowerLoser.includes('defending') && !lowerLoser.includes('champion') &&
+          !lowerLoser.includes('round') && !lowerLoser.includes('struggled') &&
+          !lowerLoser.includes('held') && !lowerLoser.includes('early') &&
+          !lowerLoser.includes('but') && !lowerLoser.includes('on') &&
+          !lowerLoser.includes('to') && !lowerLoser.includes('at') &&
+          !lowerLoser.includes('nd') && !lowerLoser.includes('rd') && !lowerLoser.includes('th') &&
+          !lowerLoser.includes('australian') && !lowerLoser.includes('open')) {
+        loser = potentialLoser
+        // Remove "of France" etc.
+        loser = loser.replace(/\s+of\s+[A-Z][a-z]+$/i, '').trim()
+      }
     }
     
     // Validate names are reasonable player names (2-4 words, not description phrases)
