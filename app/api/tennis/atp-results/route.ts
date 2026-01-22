@@ -109,9 +109,10 @@ function extractMatchInfo(title: string, description: string, fullText: string):
   // "Madison Keys struggled early but held on to defeat Oleksandra Oliynykova 7-6 (6), 6-1"
   const defeatPatterns = [
     // Pattern: "American Player1 overcame Player2 of France Score"
-    /(?:American|Spanish|French|Serbian|Italian|Australian|German|British|Canadian|Russian|Ukrainian|Belarusian|Polish|Czech|Swiss|Austrian|Japanese|Chinese|Korean|Brazilian|Argentine|Chilean|Colombian|Mexican|South African|Dutch|Belgian|Croatian|Slovak|Bulgarian|Romanian|Greek|Turkish|Indian|Thai|Filipino|Indonesian|Malaysian|Singaporean|New Zealand|Finnish|Norwegian|Swedish|Danish|Icelandic|Estonian|Latvian|Lithuanian|Portuguese|Hungarian|Slovenian|Bosnian|Macedonian|Montenegrin|Albanian|Moldovan|Georgian|Armenian|Azerbaijani|Kazakh|Uzbek|Kyrgyz|Tajik|Turkmen|Mongolian|Vietnamese|Cambodian|Laotian|Myanmar|Bangladeshi|Pakistani|Afghan|Iranian|Iraqi|Syrian|Lebanese|Jordanian|Palestinian|Israeli|Saudi|Emirati|Kuwaiti|Qatari|Bahraini|Omani|Yemeni|Egyptian|Libyan|Tunisian|Algerian|Moroccan|Sudanese|Ethiopian|Kenyan|Tanzanian|Ugandan|Rwandan|Ghanaian|Nigerian|Senegalese|Ivorian|Cameroonian|Zimbabwean|Botswanan|Namibian|Angolan|Mozambican|Malawian|Zambian|Malagasy|Mauritian|Seychellois|Comorian|Djiboutian|Eritrean|Somalian|Burundian|Central African|Chadian|Congolese|Equatorial Guinean|Gabonese|Guinean|Guinea-Bissauan|Liberian|Malian|Mauritanian|Nigerien|Sierra Leonean|Togolese|Beninese|Burkina Faso|Cape Verdean|Gambian)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\s+(?:defeats?|beats?|def\.?|overcame?|prevailed?\s+over|held\s+on\s+to\s+defeat)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)(?:\s+of\s+[A-Z][a-z]+)?\s+(\d+-\d+(?:\s*\(\d+\))?(?:\s*,\s*\d+-\d+(?:\s*\(\d+\))?)*)/i,
-    // Pattern: "Player1 defeats Player2 Score" or "Player1 held on to defeat Player2 Score"
-    /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\s+(?:defeats?|beats?|def\.?|overcame?|prevailed?\s+over|held\s+on\s+to\s+defeat)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)(?:\s+of\s+[A-Z][a-z]+)?\s+(\d+-\d+(?:\s*\(\d+\))?(?:\s*,\s*\d+-\d+(?:\s*\(\d+\))?)*)/i,
+    // Player name is 2-4 words, not phrases with description words
+    /(?:American|Spanish|French|Serbian|Italian|Australian|German|British|Canadian|Russian|Ukrainian|Belarusian|Polish|Czech|Swiss|Austrian|Japanese|Chinese|Korean|Brazilian|Argentine|Chilean|Colombian|Mexican|South African|Dutch|Belgian|Croatian|Slovak|Bulgarian|Romanian|Greek|Turkish|Indian|Thai|Filipino|Indonesian|Malaysian|Singaporean|New Zealand|Finnish|Norwegian|Swedish|Danish|Icelandic|Estonian|Latvian|Lithuanian|Portuguese|Hungarian|Slovenian|Bosnian|Macedonian|Montenegrin|Albanian|Moldovan|Georgian|Armenian|Azerbaijani|Kazakh|Uzbek|Kyrgyz|Tajik|Turkmen|Mongolian|Vietnamese|Cambodian|Laotian|Myanmar|Bangladeshi|Pakistani|Afghan|Iranian|Iraqi|Syrian|Lebanese|Jordanian|Palestinian|Israeli|Saudi|Emirati|Kuwaiti|Qatari|Bahraini|Omani|Yemeni|Egyptian|Libyan|Tunisian|Algerian|Moroccan|Sudanese|Ethiopian|Kenyan|Tanzanian|Ugandan|Rwandan|Ghanaian|Nigerian|Senegalese|Ivorian|Cameroonian|Zimbabwean|Botswanan|Namibian|Angolan|Mozambican|Malawian|Zambian|Malagasy|Mauritian|Seychellois|Comorian|Djiboutian|Eritrean|Somalian|Burundian|Central African|Chadian|Congolese|Equatorial Guinean|Gabonese|Guinean|Guinea-Bissauan|Liberian|Malian|Mauritanian|Nigerien|Sierra Leonean|Togolese|Beninese|Burkina Faso|Cape Verdean|Gambian)\s+([A-Z][a-z]+\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?(?:\s+[A-Z][a-z]+)?)\s+(?:defeats?|beats?|def\.?|overcame?|prevailed?\s+over|held\s+on\s+to\s+defeat)\s+([A-Z][a-z]+\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?(?:\s+[A-Z][a-z]+)?)(?:\s+of\s+[A-Z][a-z]+)?\s+(\d+-\d+(?:\s*\(\d+\))?(?:\s*,\s*\d+-\d+(?:\s*\(\d+\))?)*)/i,
+    // Pattern: "Player1 defeats Player2 Score" - player names are 2-4 words max
+    /([A-Z][a-z]+\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?(?:\s+[A-Z][a-z]+)?)\s+(?:defeats?|beats?|def\.?|overcame?|prevailed?\s+over|held\s+on\s+to\s+defeat)\s+([A-Z][a-z]+\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?(?:\s+[A-Z][a-z]+)?)(?:\s+of\s+[A-Z][a-z]+)?\s+(\d+-\d+(?:\s*\(\d+\))?(?:\s*,\s*\d+-\d+(?:\s*\(\d+\))?)*)/i,
   ]
   
   let winner = ''
@@ -138,14 +139,23 @@ function extractMatchInfo(title: string, description: string, fullText: string):
       // Clean up loser - remove "of France" etc.
       loser = loser.replace(/\s+of\s+[A-Z][a-z]+$/i, '').trim()
       
-      // Validate names are reasonable (not too long, not venue names)
+      // Validate names are reasonable player names (2-4 words, not description phrases)
+      const winnerWords = winner.split(' ')
+      const loserWords = loser.split(' ')
+      const isReasonableName = (name: string, words: string[]) => {
+        const lower = name.toLowerCase()
+        return words.length >= 2 && words.length <= 4 &&
+               !lower.includes('defending') && !lower.includes('champion') &&
+               !lower.includes('round') && !lower.includes('struggled') &&
+               !lower.includes('held') && !lower.includes('early') &&
+               !lower.includes('but') && !lower.includes('on') &&
+               !lower.includes('to') && !lower.includes('at') &&
+               !lower.includes('arena') && !lower.includes('court')
+      }
+      
       if (winner && loser && score && score.match(/\d+-\d+/) &&
-          winner.length >= 3 && winner.length <= 30 &&
-          loser.length >= 3 && loser.length <= 30 &&
-          !winner.toLowerCase().includes('arena') && !winner.toLowerCase().includes('court') &&
-          !loser.toLowerCase().includes('arena') && !loser.toLowerCase().includes('court') &&
-          !winner.toLowerCase().includes('round') && !winner.toLowerCase().includes('champion') &&
-          !loser.toLowerCase().includes('round') && !loser.toLowerCase().includes('champion')) {
+          isReasonableName(winner, winnerWords) &&
+          isReasonableName(loser, loserWords)) {
         break // Found a good match
       }
     }
