@@ -73,20 +73,33 @@ export function AIAssistant({ students, onRefreshStudents, onSelectStudent }: AI
 
       const data = await response.json();
       
+      // Handle nested action structure: { action: { type, data, ... } } or flat { type, data, ... }
+      let action = data.action;
+      if (action && action.action) {
+        // If action is nested, unwrap it
+        action = action.action;
+      }
+      
+      // Validate action structure
+      if (action && !action.type) {
+        console.error('Invalid action structure:', action);
+        action = null;
+      }
+      
       const assistantMessage: Message = {
         role: 'assistant',
         content: data.response,
-        action: data.action,
+        action: action,
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
 
       // If there's an action that needs confirmation, set it as pending
-      if (data.action && data.action.needsConfirmation) {
-        setPendingAction(data.action);
-      } else if (data.action && !data.action.needsConfirmation) {
+      if (action && action.needsConfirmation) {
+        setPendingAction(action);
+      } else if (action && !action.needsConfirmation) {
         // Execute action immediately if no confirmation needed
-        await executeAction(data.action);
+        await executeAction(action);
       }
     } catch (error) {
       console.error('AI Assistant error:', error);
@@ -103,7 +116,22 @@ export function AIAssistant({ students, onRefreshStudents, onSelectStudent }: AI
   };
 
   const executeAction = async (action: Message['action']) => {
-    if (!action) return;
+    if (!action) {
+      console.error('executeAction called with null/undefined action');
+      return;
+    }
+
+    if (!action.type) {
+      console.error('Action missing type property:', action);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: `❌ Error: Action is missing required information. Please try rephrasing your request.`,
+        },
+      ]);
+      return;
+    }
 
     try {
       setIsLoading(true);
@@ -406,11 +434,12 @@ export function AIAssistant({ students, onRefreshStudents, onSelectStudent }: AI
         }
 
         default:
+          console.error('Unknown action type:', action.type, 'Full action:', action);
           setMessages((prev) => [
             ...prev,
             {
               role: 'assistant',
-              content: `I understood the action but couldn't execute it. Action type: ${action.type}`,
+              content: `I understood the action but couldn't execute it. Action type: ${action?.type || 'undefined'}. Please try rephrasing your request.`,
             },
           ]);
       }

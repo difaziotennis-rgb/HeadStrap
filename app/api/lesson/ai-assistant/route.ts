@@ -119,7 +119,7 @@ IMPORTANT:
       const action = parseActionFromMessage(message, students);
       return NextResponse.json({
         response: "I'll help you with that. Let me process your request.",
-        action: action,
+        action: action || null, // Ensure we return null instead of undefined
       });
     }
 
@@ -143,6 +143,12 @@ IMPORTANT:
     // If no action found in response, try to parse from message
     if (!action) {
       action = parseActionFromMessage(message, students);
+    }
+
+    // Ensure action has the correct structure
+    if (action && !action.type) {
+      console.error('Action missing type:', action);
+      action = null;
     }
 
     return NextResponse.json({
