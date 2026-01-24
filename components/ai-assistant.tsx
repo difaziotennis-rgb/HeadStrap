@@ -198,6 +198,213 @@ export function AIAssistant({ students, onRefreshStudents, onSelectStudent }: AI
           break;
         }
 
+        case 'add_key_area': {
+          // First, get the current student data
+          const getResponse = await fetch('/api/lesson/students');
+          if (!getResponse.ok) throw new Error('Failed to fetch student data');
+          const { students: allStudents } = await getResponse.json();
+          const student = allStudents.find((s: Student) => s.id === action.data.studentId);
+          
+          if (!student) throw new Error('Student not found');
+          
+          const currentSummary = student.summary_data || {};
+          const currentKeyAreas = currentSummary.key_areas_focused || [];
+          
+          // Add the new key area if it doesn't already exist
+          if (!currentKeyAreas.includes(action.data.keyArea)) {
+            const updatedSummary = {
+              ...currentSummary,
+              key_areas_focused: [...currentKeyAreas, action.data.keyArea],
+              last_updated: new Date().toISOString(),
+            };
+            
+            const response = await fetch('/api/lesson/students', {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                id: action.data.studentId,
+                summary_data: updatedSummary,
+              }),
+            });
+
+            if (!response.ok) throw new Error('Failed to add key area');
+            
+            onRefreshStudents();
+            setMessages((prev) => [
+              ...prev,
+              {
+                role: 'assistant',
+                content: `✅ Added "${action.data.keyArea}" to ${action.data.studentName}'s key areas of focus`,
+              },
+            ]);
+          } else {
+            setMessages((prev) => [
+              ...prev,
+              {
+                role: 'assistant',
+                content: `ℹ️ "${action.data.keyArea}" is already in ${action.data.studentName}'s key areas`,
+              },
+            ]);
+          }
+          break;
+        }
+
+        case 'add_physical_limitation': {
+          const getResponse = await fetch('/api/lesson/students');
+          if (!getResponse.ok) throw new Error('Failed to fetch student data');
+          const { students: allStudents } = await getResponse.json();
+          const student = allStudents.find((s: Student) => s.id === action.data.studentId);
+          
+          if (!student) throw new Error('Student not found');
+          
+          const currentSummary = student.summary_data || {};
+          const currentLimitations = currentSummary.physical_limitations || [];
+          
+          if (!currentLimitations.includes(action.data.limitation)) {
+            const updatedSummary = {
+              ...currentSummary,
+              physical_limitations: [...currentLimitations, action.data.limitation],
+              last_updated: new Date().toISOString(),
+            };
+            
+            const response = await fetch('/api/lesson/students', {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                id: action.data.studentId,
+                summary_data: updatedSummary,
+              }),
+            });
+
+            if (!response.ok) throw new Error('Failed to add physical limitation');
+            
+            onRefreshStudents();
+            setMessages((prev) => [
+              ...prev,
+              {
+                role: 'assistant',
+                content: `✅ Added "${action.data.limitation}" to ${action.data.studentName}'s physical limitations`,
+              },
+            ]);
+          } else {
+            setMessages((prev) => [
+              ...prev,
+              {
+                role: 'assistant',
+                content: `ℹ️ "${action.data.limitation}" is already in ${action.data.studentName}'s physical limitations`,
+              },
+            ]);
+          }
+          break;
+        }
+
+        case 'add_future_goal': {
+          const getResponse = await fetch('/api/lesson/students');
+          if (!getResponse.ok) throw new Error('Failed to fetch student data');
+          const { students: allStudents } = await getResponse.json();
+          const student = allStudents.find((s: Student) => s.id === action.data.studentId);
+          
+          if (!student) throw new Error('Student not found');
+          
+          const currentSummary = student.summary_data || {};
+          const currentGoals = currentSummary.future_goals || [];
+          
+          if (!currentGoals.includes(action.data.goal)) {
+            const updatedSummary = {
+              ...currentSummary,
+              future_goals: [...currentGoals, action.data.goal],
+              last_updated: new Date().toISOString(),
+            };
+            
+            const response = await fetch('/api/lesson/students', {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                id: action.data.studentId,
+                summary_data: updatedSummary,
+              }),
+            });
+
+            if (!response.ok) throw new Error('Failed to add future goal');
+            
+            onRefreshStudents();
+            setMessages((prev) => [
+              ...prev,
+              {
+                role: 'assistant',
+                content: `✅ Added "${action.data.goal}" to ${action.data.studentName}'s future goals`,
+              },
+            ]);
+          } else {
+            setMessages((prev) => [
+              ...prev,
+              {
+                role: 'assistant',
+                content: `ℹ️ "${action.data.goal}" is already in ${action.data.studentName}'s future goals`,
+              },
+            ]);
+          }
+          break;
+        }
+
+        case 'update_next_lesson_date': {
+          const getResponse = await fetch('/api/lesson/students');
+          if (!getResponse.ok) throw new Error('Failed to fetch student data');
+          const { students: allStudents } = await getResponse.json();
+          const student = allStudents.find((s: Student) => s.id === action.data.studentId);
+          
+          if (!student) throw new Error('Student not found');
+          
+          const currentSummary = student.summary_data || {};
+          const updatedSummary = {
+            ...currentSummary,
+            next_lesson_date: action.data.nextLessonDate,
+            last_updated: new Date().toISOString(),
+          };
+          
+          const response = await fetch('/api/lesson/students', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: action.data.studentId,
+              summary_data: updatedSummary,
+            }),
+          });
+
+          if (!response.ok) throw new Error('Failed to update next lesson date');
+          
+          onRefreshStudents();
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: 'assistant',
+              content: `✅ Updated ${action.data.studentName}'s next lesson date to "${action.data.nextLessonDate}"`,
+            },
+          ]);
+          break;
+        }
+
+        case 'navigate_to_student': {
+          const getResponse = await fetch('/api/lesson/students');
+          if (!getResponse.ok) throw new Error('Failed to fetch student data');
+          const { students: allStudents } = await getResponse.json();
+          const student = allStudents.find((s: Student) => s.id === action.data.studentId);
+          
+          if (student) {
+            onSelectStudent(student);
+            setMessages((prev) => [
+              ...prev,
+              {
+                role: 'assistant',
+                content: `✅ Opened ${action.data.studentName}'s profile`,
+              },
+            ]);
+          } else {
+            throw new Error('Student not found');
+          }
+          break;
+        }
+
         default:
           setMessages((prev) => [
             ...prev,

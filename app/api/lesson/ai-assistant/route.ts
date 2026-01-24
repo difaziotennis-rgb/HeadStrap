@@ -48,6 +48,11 @@ export async function POST(request: NextRequest) {
    - add_student: Create a new student (no confirmation needed)
    - delete_student: Delete a student and all their lessons (requires confirmation)
    - update_student_data: Update student summary data (requires confirmation)
+   - add_key_area: Add a key area of focus to a student (no confirmation needed)
+   - add_physical_limitation: Add a physical limitation to a student (no confirmation needed)
+   - add_future_goal: Add a future goal to a student (no confirmation needed)
+   - update_next_lesson_date: Update the next lesson date for a student (no confirmation needed)
+   - navigate_to_student: Open/select a student's profile (no confirmation needed)
 
 When the user wants to perform an action, respond with BOTH:
 1. A natural language response explaining what you'll do
@@ -65,10 +70,17 @@ Action formats:
 - add_student: { "type": "add_student", "data": { "name": "student name" }, "needsConfirmation": false }
 - delete_student: { "type": "delete_student", "data": { "studentId": "id", "studentName": "name" }, "needsConfirmation": true }
 - update_student_data: { "type": "update_student_data", "data": { "studentId": "id", "summaryData": {...} }, "needsConfirmation": true }
+- add_key_area: { "type": "add_key_area", "data": { "studentId": "id", "studentName": "name", "keyArea": "area text" }, "needsConfirmation": false }
+- add_physical_limitation: { "type": "add_physical_limitation", "data": { "studentId": "id", "studentName": "name", "limitation": "limitation text" }, "needsConfirmation": false }
+- add_future_goal: { "type": "add_future_goal", "data": { "studentId": "id", "studentName": "name", "goal": "goal text" }, "needsConfirmation": false }
+- update_next_lesson_date: { "type": "update_next_lesson_date", "data": { "studentId": "id", "studentName": "name", "nextLessonDate": "date text" }, "needsConfirmation": false }
+- navigate_to_student: { "type": "navigate_to_student", "data": { "studentId": "id", "studentName": "name" }, "needsConfirmation": false }
 
 IMPORTANT:
 - Always try to match student names (case-insensitive, partial matches OK)
-- For delete and edit actions, always set needsConfirmation: true
+- For delete and edit name actions, always set needsConfirmation: true
+- For adding data (key areas, limitations, goals, dates), no confirmation needed
+- When adding to arrays (key_areas_focused, physical_limitations, future_goals), preserve existing items and append the new one
 - Include the action JSON at the end of your response, prefixed with "ACTION:" 
 - If no action is needed, don't include an action object
 - Be helpful, friendly, and concise${studentsContext}`;
@@ -189,6 +201,84 @@ function parseActionFromMessage(message: string, students: Student[]): any {
           newName: newName,
         },
         needsConfirmation: true,
+      };
+    }
+  }
+
+  // Add key area - "add key area X to student Y" or "add X to Y's key areas"
+  const keyAreaMatch = lowerMessage.match(/(?:add|set)\s+(?:key\s+area|focus)\s+["']?([^"'\n]+)["']?\s+(?:to|for)\s+["']?([^"'\n]+)["']?/i) ||
+                       lowerMessage.match(/(?:add)\s+["']?([^"'\n]+)["']?\s+(?:to|for)\s+["']?([^"'\n]+)["']?\s+(?:key\s+area|focus)/i);
+  if (keyAreaMatch) {
+    const keyArea = keyAreaMatch[1].trim();
+    const studentName = keyAreaMatch[2].trim();
+    const student = findStudentByName(studentName, students);
+    if (student) {
+      return {
+        type: 'add_key_area',
+        data: { studentId: student.id, studentName: student.name, keyArea: keyArea },
+        needsConfirmation: false,
+      };
+    }
+  }
+
+  // Add physical limitation
+  const limitationMatch = lowerMessage.match(/(?:add|set)\s+(?:physical\s+)?limitation\s+["']?([^"'\n]+)["']?\s+(?:to|for)\s+["']?([^"'\n]+)["']?/i) ||
+                          lowerMessage.match(/(?:add)\s+["']?([^"'\n]+)["']?\s+(?:to|for)\s+["']?([^"'\n]+)["']?\s+(?:physical\s+)?limitation/i);
+  if (limitationMatch) {
+    const limitation = limitationMatch[1].trim();
+    const studentName = limitationMatch[2].trim();
+    const student = findStudentByName(studentName, students);
+    if (student) {
+      return {
+        type: 'add_physical_limitation',
+        data: { studentId: student.id, studentName: student.name, limitation: limitation },
+        needsConfirmation: false,
+      };
+    }
+  }
+
+  // Add future goal
+  const goalMatch = lowerMessage.match(/(?:add|set)\s+(?:future\s+)?goal\s+["']?([^"'\n]+)["']?\s+(?:to|for)\s+["']?([^"'\n]+)["']?/i) ||
+                    lowerMessage.match(/(?:add)\s+["']?([^"'\n]+)["']?\s+(?:to|for)\s+["']?([^"'\n]+)["']?\s+(?:future\s+)?goal/i);
+  if (goalMatch) {
+    const goal = goalMatch[1].trim();
+    const studentName = goalMatch[2].trim();
+    const student = findStudentByName(studentName, students);
+    if (student) {
+      return {
+        type: 'add_future_goal',
+        data: { studentId: student.id, studentName: student.name, goal: goal },
+        needsConfirmation: false,
+      };
+    }
+  }
+
+  // Update next lesson date
+  const nextLessonMatch = lowerMessage.match(/(?:set|update|change)\s+next\s+lesson\s+(?:date|for)?\s+["']?([^"'\n]+)["']?\s+(?:to|as)?\s*["']?([^"'\n]+)["']?/i) ||
+                          lowerMessage.match(/(?:next\s+lesson|lesson\s+date)\s+(?:for|with)?\s+["']?([^"'\n]+)["']?\s+(?:is|will\s+be)?\s*["']?([^"'\n]+)["']?/i);
+  if (nextLessonMatch) {
+    const studentName = nextLessonMatch[1].trim();
+    const date = nextLessonMatch[2].trim();
+    const student = findStudentByName(studentName, students);
+    if (student) {
+      return {
+        type: 'update_next_lesson_date',
+        data: { studentId: student.id, studentName: student.name, nextLessonDate: date },
+        needsConfirmation: false,
+      };
+    }
+  }
+
+  // Navigate to student - "show student X" or "open X" or "go to X"
+  const navigateMatch = lowerMessage.match(/(?:show|open|go\s+to|view|select)\s+(?:student\s+)?["']?([^"'\n]+)["']?/i);
+  if (navigateMatch) {
+    const studentName = navigateMatch[1].trim();
+    const student = findStudentByName(studentName, students);
+    if (student) {
+      return {
+        type: 'navigate_to_student',
+        data: { studentId: student.id, studentName: student.name },
+        needsConfirmation: false,
       };
     }
   }
