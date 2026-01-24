@@ -133,10 +133,18 @@ IMPORTANT:
 
     if (actionMatch) {
       try {
-        action = JSON.parse(actionMatch[1]);
+        const parsedAction = JSON.parse(actionMatch[1]);
+        // Handle nested action structure: { action: { type, data } } or flat { type, data }
+        if (parsedAction.action) {
+          action = parsedAction.action;
+        } else if (parsedAction.type) {
+          action = parsedAction;
+        } else {
+          console.error('Action JSON missing type:', parsedAction);
+        }
         cleanResponse = aiResponse.replace(/ACTION:\s*\{[\s\S]*\}/, '').trim();
       } catch (e) {
-        console.error('Failed to parse action JSON:', e);
+        console.error('Failed to parse action JSON:', e, 'Match:', actionMatch[1]);
       }
     }
 
@@ -149,6 +157,13 @@ IMPORTANT:
     if (action && !action.type) {
       console.error('Action missing type:', action);
       action = null;
+    }
+    
+    // Log for debugging
+    if (action) {
+      console.log('Parsed action:', JSON.stringify(action, null, 2));
+    } else {
+      console.log('No action parsed from message:', message);
     }
 
     return NextResponse.json({
