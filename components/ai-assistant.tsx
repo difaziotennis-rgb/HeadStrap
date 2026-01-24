@@ -433,6 +433,84 @@ export function AIAssistant({ students, onRefreshStudents, onSelectStudent }: AI
           break;
         }
 
+        case 'parse_and_update': {
+          // Use the parse endpoint to extract structured data from natural language
+          const getResponse = await fetch('/api/lesson/students');
+          if (!getResponse.ok) throw new Error('Failed to fetch student data');
+          const { students: allStudents } = await getResponse.json();
+          const student = allStudents.find((s: Student) => s.id === action.data.studentId);
+          
+          if (!student) throw new Error('Student not found');
+          
+          // Create a transcript-like text from the user's message
+          const transcript = `${action.data.studentName}: ${action.data.text}`;
+          
+          // Call the parse endpoint
+          const parseResponse = await fetch('/api/lesson/parse', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              transcript: transcript,
+              existingSummary: student.summary_data || {},
+            }),
+          });
+
+          if (!parseResponse.ok) throw new Error('Failed to parse information');
+          
+          const { parsedData } = await parseResponse.json();
+          
+          // Merge parsed data with existing summary
+          const currentSummary = student.summary_data || {};
+          const updatedSummary = {
+            ...currentSummary,
+            key_areas_focused: parsedData.key_areas_focused || currentSummary.key_areas_focused || [],
+            physical_limitations: parsedData.physical_limitations || currentSummary.physical_limitations || [],
+            future_goals: parsedData.future_goals || currentSummary.future_goals || [],
+            next_lesson_date: parsedData.next_lesson_date !== 'not specified' 
+              ? parsedData.next_lesson_date 
+              : currentSummary.next_lesson_date,
+            last_updated: new Date().toISOString(),
+          };
+          
+          // Update the student
+          const updateResponse = await fetch('/api/lesson/students', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: action.data.studentId,
+              summary_data: updatedSummary,
+            }),
+          });
+
+          if (!updateResponse.ok) throw new Error('Failed to update student');
+          
+          onRefreshStudents();
+          
+          // Build a summary of what was updated
+          const updates = [];
+          if (parsedData.key_areas_focused?.length > 0) {
+            updates.push(`key areas: ${parsedData.key_areas_focused.join(', ')}`);
+          }
+          if (parsedData.physical_limitations?.length > 0) {
+            updates.push(`limitations: ${parsedData.physical_limitations.join(', ')}`);
+          }
+          if (parsedData.future_goals?.length > 0) {
+            updates.push(`goals: ${parsedData.future_goals.join(', ')}`);
+          }
+          if (parsedData.next_lesson_date && parsedData.next_lesson_date !== 'not specified') {
+            updates.push(`next lesson: ${parsedData.next_lesson_date}`);
+          }
+          
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: 'assistant',
+              content: `✅ Updated ${action.data.studentName}'s profile: ${updates.join('; ')}`,
+            },
+          ]);
+          break;
+        }
+
         default:
           console.error('Unknown action type:', action.type, 'Full action:', action);
           setMessages((prev) => [
