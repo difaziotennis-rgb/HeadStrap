@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from '@/lib/supabase/lesson-server';
 import { Lesson } from '@/lib/types/lesson-intelligence';
 
 export async function POST(request: NextRequest) {

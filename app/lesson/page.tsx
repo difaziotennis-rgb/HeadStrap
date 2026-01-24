@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { LessonRecorder } from '@/components/lesson-recorder';
 import { StudentDashboard } from '@/components/student-dashboard';
 import { StudentProfile } from '@/components/student-profile';
 import { LessonUpdateForm } from '@/components/lesson-update-form';
+import { AIAssistant } from '@/components/ai-assistant';
 import { Student, ParsedLessonData, StudentSummaryData } from '@/lib/types/lesson-intelligence';
 
 export default function LessonPage() {
@@ -19,8 +20,55 @@ export default function LessonPage() {
   const [dashboardRefreshTrigger, setDashboardRefreshTrigger] = useState(0);
   const [showUpdateForm, setShowUpdateForm] = useState(false);
   const [lastProcessedStudent, setLastProcessedStudent] = useState<Student | null>(null);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [testConnectionResult, setTestConnectionResult] = useState<string | null>(null);
   const recordingTriggerRef = useRef<(() => void) | null>(null);
   const stopRecordingRef = useRef<(() => void) | null>(null);
+
+  const handleTestConnection = async () => {
+    setTestConnectionResult('Testing...');
+    try {
+      // Test both the database connection and full diagnostics
+      const [dbResponse, diagResponse] = await Promise.all([
+        fetch('/api/lesson/test-db'),
+        fetch('/api/lesson/diagnostics'),
+      ]);
+      
+      const dbData = await dbResponse.json();
+      const diagData = await diagResponse.json();
+      
+      setTestConnectionResult(JSON.stringify({
+        database: dbData,
+        diagnostics: diagData,
+      }, null, 2));
+    } catch (err) {
+      setTestConnectionResult('Test failed: ' + (err instanceof Error ? err.message : 'Unknown error'));
+    }
+  };
+
+  // Fetch students for AI assistant
+  const fetchStudents = async () => {
+    try {
+      const response = await fetch('/api/lesson/students');
+      if (response.ok) {
+        const data = await response.json();
+        setStudents(data.students || []);
+      }
+    } catch (error) {
+      console.error('Error fetching students:', error);
+    }
+  };
+
+  // Refresh students (called when dashboard refreshes)
+  const handleRefreshStudents = () => {
+    fetchStudents();
+    setDashboardRefreshTrigger((prev) => prev + 1);
+  };
+
+  // Fetch students on mount and when dashboard refreshes
+  useEffect(() => {
+    fetchStudents();
+  }, [dashboardRefreshTrigger]);
 
   const handleTranscriptComplete = async (newTranscript: string) => {
     setTranscript(newTranscript);
@@ -246,11 +294,41 @@ export default function LessonPage() {
       {/* Header */}
       <header className="bg-slate-950/95 backdrop-blur-sm border-b border-slate-700/60 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
-          <h1 className="font-display text-xl font-semibold tracking-tight text-[#C9A227]">
-            Lesson Intelligence
-          </h1>
+          <div className="flex items-center justify-between">
+            <h1 className="font-display text-xl font-semibold tracking-tight text-[#C9A227]">
+              Lesson Intelligence
+            </h1>
+            <button
+              type="button"
+              onClick={handleTestConnection}
+              className="bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold px-4 py-2 rounded-xl transition-colors text-sm whitespace-nowrap"
+            >
+              Test Connection
+            </button>
+          </div>
         </div>
       </header>
+      
+      {/* Test Connection Result */}
+      {testConnectionResult && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+          <div className="p-4 bg-slate-900/80 border border-slate-700/60 rounded-xl">
+            <div className="flex items-start justify-between gap-2 mb-2">
+              <p className="text-xs font-semibold text-slate-300 uppercase tracking-wide">Connection Test Result:</p>
+              <button
+                type="button"
+                onClick={() => setTestConnectionResult(null)}
+                className="text-xs text-slate-400 hover:text-slate-300"
+              >
+                ✕
+              </button>
+            </div>
+            <pre className="text-xs text-slate-300 font-mono whitespace-pre-wrap break-all overflow-x-auto select-all">
+              {testConnectionResult}
+            </pre>
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12" role="main">
@@ -433,6 +511,13 @@ export default function LessonPage() {
           </div>
         )}
       </main>
+
+      {/* AI Assistant */}
+      <AIAssistant
+        students={students}
+        onRefreshStudents={handleRefreshStudents}
+        onSelectStudent={setSelectedStudent}
+      />
 
       {/* Footer */}
       <footer className="bg-slate-950 border-t border-slate-700/60 mt-16">

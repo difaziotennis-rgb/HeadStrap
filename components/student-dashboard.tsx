@@ -27,14 +27,31 @@ export function StudentDashboard({ onStudentSelect, selectedStudentId, refreshTr
     try {
       setLoading(true);
       const response = await fetch('/api/lesson/students');
-      if (!response.ok) {
-        throw new Error('Failed to fetch students');
+      
+      // Try to parse JSON, but handle non-JSON responses
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        const text = await response.text();
+        throw new Error(`Server returned non-JSON response (${response.status}): ${text.substring(0, 200)}`);
       }
-      const data = await response.json();
+      
+      if (!response.ok) {
+        const errorMessage = data.details 
+          ? `${data.error || 'Failed to fetch students'}: ${data.details}`
+          : data.error || `Failed to fetch students (Status: ${response.status})`;
+        throw new Error(errorMessage);
+      }
+      
       setStudents(data.students || []);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load students');
+      console.error('Error fetching students:', err);
+      const errorMessage = err instanceof Error 
+        ? err.message 
+        : 'Failed to load students. Please check your connection and try again.';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -154,14 +171,48 @@ export function StudentDashboard({ onStudentSelect, selectedStudentId, refreshTr
   if (error) {
     return (
       <div className="bg-slate-900/80 border border-rose-400/40 rounded-xl p-8 shadow-xl shadow-black/20">
-        <p className="text-rose-300 font-medium text-sm">Error: {error}</p>
-        <button
-          type="button"
-          onClick={fetchStudents}
-          className="mt-4 bg-[#C9A227] hover:bg-[#A68B2C] text-slate-950 font-semibold px-4 py-2 rounded-xl transition-colors"
-        >
-          Retry
-        </button>
+        <p className="text-rose-300 font-medium text-sm mb-2">Error: {error}</p>
+        <p className="text-slate-400 text-xs mb-4">
+          This might be due to missing environment variables or Supabase configuration. 
+          Check your browser console (F12) for more details.
+        </p>
+        <div className="mb-4 p-3 bg-slate-950/50 rounded-lg border border-rose-500/30">
+          <p className="text-xs text-slate-400 mb-2">To debug:</p>
+          <ol className="text-xs text-slate-400 list-decimal list-inside space-y-1 ml-2">
+            <li>Open browser console (F12 or right-click → Inspect)</li>
+            <li>Go to Network tab</li>
+            <li>Refresh the page</li>
+            <li>Click on the failed request (api/lesson/students)</li>
+            <li>Check the Response tab for the error details</li>
+          </ol>
+        </div>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={fetchStudents}
+            className="bg-[#C9A227] hover:bg-[#A68B2C] text-slate-950 font-semibold px-4 py-2 rounded-xl transition-colors"
+          >
+            Retry
+          </button>
+          <button
+            type="button"
+            onClick={async () => {
+              try {
+                const response = await fetch('/api/lesson/test-db');
+                const data = await response.json();
+                const message = JSON.stringify(data, null, 2);
+                console.log('Test DB Result:', data);
+                alert(message);
+              } catch (err) {
+                console.error('Test failed:', err);
+                alert('Test failed: ' + (err instanceof Error ? err.message : 'Unknown error'));
+              }
+            }}
+            className="bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold px-4 py-2 rounded-xl transition-colors text-sm"
+          >
+            Test Connection
+          </button>
+        </div>
       </div>
     );
   }

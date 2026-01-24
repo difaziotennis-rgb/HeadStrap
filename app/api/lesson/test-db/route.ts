@@ -1,8 +1,26 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from '@/lib/supabase/lesson-server';
 
 export async function GET() {
   try {
+    // Check environment variables first
+    const hasUrl = !!process.env.NEXT_PUBLIC_LESSON_SUPABASE_URL;
+    const hasKey = !!process.env.NEXT_PUBLIC_LESSON_SUPABASE_ANON_KEY;
+    
+    if (!hasUrl || !hasKey) {
+      return NextResponse.json({
+        connected: false,
+        error: {
+          message: 'Missing environment variables',
+          hasUrl,
+          hasKey,
+          urlPrefix: process.env.NEXT_PUBLIC_LESSON_SUPABASE_URL?.substring(0, 30) || 'NOT SET',
+          keyPrefix: process.env.NEXT_PUBLIC_LESSON_SUPABASE_ANON_KEY?.substring(0, 20) || 'NOT SET',
+        },
+        suggestion: 'Please set NEXT_PUBLIC_LESSON_SUPABASE_URL and NEXT_PUBLIC_LESSON_SUPABASE_ANON_KEY in your environment variables.'
+      }, { status: 500 });
+    }
+    
     const supabase = await createClient();
     
     // Test 1: Check if we can connect
