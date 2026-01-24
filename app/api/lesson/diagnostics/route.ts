@@ -8,11 +8,11 @@ export async function GET() {
       checks: {},
     };
 
-  // Check Supabase variables
-  const hasSupabaseUrl = !!process.env.NEXT_PUBLIC_LESSON_SUPABASE_URL;
-  const hasSupabaseKey = !!process.env.NEXT_PUBLIC_LESSON_SUPABASE_ANON_KEY;
-  
-  diagnostics.checks.supabase = {
+    // Check Supabase variables
+    const hasSupabaseUrl = !!process.env.NEXT_PUBLIC_LESSON_SUPABASE_URL;
+    const hasSupabaseKey = !!process.env.NEXT_PUBLIC_LESSON_SUPABASE_ANON_KEY;
+    
+    diagnostics.checks.supabase = {
     url: {
       present: hasSupabaseUrl,
       value: hasSupabaseUrl 
@@ -25,23 +25,23 @@ export async function GET() {
         ? `${process.env.NEXT_PUBLIC_LESSON_SUPABASE_ANON_KEY.substring(0, 20)}...` 
         : 'MISSING',
     },
-    status: hasSupabaseUrl && hasSupabaseKey ? 'OK' : 'MISSING VARIABLES',
-  };
+      status: hasSupabaseUrl && hasSupabaseKey ? 'OK' : 'MISSING VARIABLES',
+    };
 
-  // Check Groq API key
-  const hasGroqKey = !!process.env.GROQ_API_KEY;
-  diagnostics.checks.groq = {
+    // Check Groq API key
+    const hasGroqKey = !!process.env.GROQ_API_KEY;
+    diagnostics.checks.groq = {
     apiKey: {
       present: hasGroqKey,
       value: hasGroqKey 
         ? `${process.env.GROQ_API_KEY.substring(0, 20)}...` 
         : 'MISSING',
     },
-    status: hasGroqKey ? 'OK' : 'MISSING',
-  };
+      status: hasGroqKey ? 'OK' : 'MISSING',
+    };
 
-  // Test Supabase connection if variables are present
-  if (hasSupabaseUrl && hasSupabaseKey) {
+    // Test Supabase connection if variables are present
+    if (hasSupabaseUrl && hasSupabaseKey) {
     try {
       const { createClient } = await import('@/lib/supabase/lesson-server');
       const supabase = await createClient();
@@ -76,18 +76,18 @@ export async function GET() {
         } : { message: 'Unknown error', error: String(error) },
       };
     }
-  } else {
-    diagnostics.checks.supabase.connection = {
-      status: 'SKIPPED',
-      message: 'Cannot test connection - missing environment variables',
-    };
-  }
+    } else {
+      diagnostics.checks.supabase.connection = {
+        status: 'SKIPPED',
+        message: 'Cannot test connection - missing environment variables',
+      };
+    }
 
-  // Overall status
-  const allRequired = hasSupabaseUrl && hasSupabaseKey && hasGroqKey;
-  const supabaseConnected = diagnostics.checks.supabase.connection?.status === 'OK';
-  
-  diagnostics.summary = {
+    // Overall status
+    const allRequired = hasSupabaseUrl && hasSupabaseKey && hasGroqKey;
+    const supabaseConnected = diagnostics.checks.supabase.connection?.status === 'OK';
+    
+    diagnostics.summary = {
     allRequired: allRequired,
     supabaseConnected: supabaseConnected,
     status: allRequired && supabaseConnected ? 'READY' : 'NOT READY',
