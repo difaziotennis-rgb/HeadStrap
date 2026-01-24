@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 
 export async function GET() {
-  const diagnostics: Record<string, any> = {
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV,
-    checks: {},
-  };
+  try {
+    const diagnostics: Record<string, any> = {
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV,
+      checks: {},
+    };
 
   // Check Supabase variables
   const hasSupabaseUrl = !!process.env.NEXT_PUBLIC_LESSON_SUPABASE_URL;
@@ -57,6 +58,7 @@ export async function GET() {
             code: error.code,
             message: error.message,
             hint: error.hint,
+            details: error.details,
           },
         };
       } else {
@@ -68,7 +70,10 @@ export async function GET() {
     } catch (error) {
       diagnostics.checks.supabase.connection = {
         status: 'ERROR',
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? {
+          message: error.message,
+          stack: error.stack,
+        } : { message: 'Unknown error', error: String(error) },
       };
     }
   } else {
@@ -93,7 +98,24 @@ export async function GET() {
     ].filter(Boolean) as string[],
   };
 
-  return NextResponse.json(diagnostics, {
-    status: diagnostics.summary.status === 'READY' ? 200 : 500,
-  });
+    // Always return 200, even if there are issues - we want to show the diagnostics
+    return NextResponse.json(diagnostics, { status: 200 });
+  } catch (error) {
+    // If anything goes wrong, return a diagnostic error response
+    return NextResponse.json({
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV,
+      error: 'Failed to run diagnostics',
+      errorDetails: error instanceof Error ? {
+        message: error.message,
+        stack: error.stack,
+      } : { message: String(error) },
+      checks: {
+        diagnostics: {
+          status: 'ERROR',
+          message: 'Diagnostics endpoint itself failed',
+        },
+      },
+    }, { status: 200 }); // Still return 200 so user can see the error
+  }
 }
