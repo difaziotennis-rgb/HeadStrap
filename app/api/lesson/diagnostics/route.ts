@@ -13,69 +13,69 @@ export async function GET() {
     const hasSupabaseKey = !!process.env.NEXT_PUBLIC_LESSON_SUPABASE_ANON_KEY;
     
     diagnostics.checks.supabase = {
-    url: {
-      present: hasSupabaseUrl,
-      value: hasSupabaseUrl 
-        ? `${process.env.NEXT_PUBLIC_LESSON_SUPABASE_URL.substring(0, 30)}...` 
-        : 'MISSING',
-    },
-    anonKey: {
-      present: hasSupabaseKey,
-      value: hasSupabaseKey 
-        ? `${process.env.NEXT_PUBLIC_LESSON_SUPABASE_ANON_KEY.substring(0, 20)}...` 
-        : 'MISSING',
-    },
+      url: {
+        present: hasSupabaseUrl,
+        value: hasSupabaseUrl 
+          ? `${process.env.NEXT_PUBLIC_LESSON_SUPABASE_URL.substring(0, 30)}...` 
+          : 'MISSING',
+      },
+      anonKey: {
+        present: hasSupabaseKey,
+        value: hasSupabaseKey 
+          ? `${process.env.NEXT_PUBLIC_LESSON_SUPABASE_ANON_KEY.substring(0, 20)}...` 
+          : 'MISSING',
+      },
       status: hasSupabaseUrl && hasSupabaseKey ? 'OK' : 'MISSING VARIABLES',
     };
 
     // Check Groq API key
     const hasGroqKey = !!process.env.GROQ_API_KEY;
     diagnostics.checks.groq = {
-    apiKey: {
-      present: hasGroqKey,
-      value: hasGroqKey 
-        ? `${process.env.GROQ_API_KEY.substring(0, 20)}...` 
-        : 'MISSING',
-    },
+      apiKey: {
+        present: hasGroqKey,
+        value: hasGroqKey 
+          ? `${process.env.GROQ_API_KEY.substring(0, 20)}...` 
+          : 'MISSING',
+      },
       status: hasGroqKey ? 'OK' : 'MISSING',
     };
 
     // Test Supabase connection if variables are present
     if (hasSupabaseUrl && hasSupabaseKey) {
-    try {
-      const { createClient } = await import('@/lib/supabase/lesson-server');
-      const supabase = await createClient();
-      
-      const { data, error } = await supabase
-        .from('students')
-        .select('count')
-        .limit(1);
+      try {
+        const { createClient } = await import('@/lib/supabase/lesson-server');
+        const supabase = await createClient();
+        
+        const { data, error } = await supabase
+          .from('students')
+          .select('count')
+          .limit(1);
 
-      if (error) {
+        if (error) {
+          diagnostics.checks.supabase.connection = {
+            status: 'FAILED',
+            error: {
+              code: error.code,
+              message: error.message,
+              hint: error.hint,
+              details: error.details,
+            },
+          };
+        } else {
+          diagnostics.checks.supabase.connection = {
+            status: 'OK',
+            message: 'Successfully connected to Supabase',
+          };
+        }
+      } catch (error) {
         diagnostics.checks.supabase.connection = {
-          status: 'FAILED',
-          error: {
-            code: error.code,
+          status: 'ERROR',
+          error: error instanceof Error ? {
             message: error.message,
-            hint: error.hint,
-            details: error.details,
-          },
-        };
-      } else {
-        diagnostics.checks.supabase.connection = {
-          status: 'OK',
-          message: 'Successfully connected to Supabase',
+            stack: error.stack,
+          } : { message: 'Unknown error', error: String(error) },
         };
       }
-    } catch (error) {
-      diagnostics.checks.supabase.connection = {
-        status: 'ERROR',
-        error: error instanceof Error ? {
-          message: error.message,
-          stack: error.stack,
-        } : { message: 'Unknown error', error: String(error) },
-      };
-    }
     } else {
       diagnostics.checks.supabase.connection = {
         status: 'SKIPPED',
