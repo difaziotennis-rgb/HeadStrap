@@ -21,30 +21,8 @@ export default function LessonPage() {
   const [showUpdateForm, setShowUpdateForm] = useState(false);
   const [lastProcessedStudent, setLastProcessedStudent] = useState<Student | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
-  const [testConnectionResult, setTestConnectionResult] = useState<string | null>(null);
   const recordingTriggerRef = useRef<(() => void) | null>(null);
   const stopRecordingRef = useRef<(() => void) | null>(null);
-
-  const handleTestConnection = async () => {
-    setTestConnectionResult('Testing...');
-    try {
-      // Test both the database connection and full diagnostics
-      const [dbResponse, diagResponse] = await Promise.all([
-        fetch('/api/lesson/test-db'),
-        fetch('/api/lesson/diagnostics'),
-      ]);
-      
-      const dbData = await dbResponse.json();
-      const diagData = await diagResponse.json();
-      
-      setTestConnectionResult(JSON.stringify({
-        database: dbData,
-        diagnostics: diagData,
-      }, null, 2));
-    } catch (err) {
-      setTestConnectionResult('Test failed: ' + (err instanceof Error ? err.message : 'Unknown error'));
-    }
-  };
 
   // Fetch students for AI assistant
   const fetchStudents = async () => {
@@ -294,41 +272,11 @@ export default function LessonPage() {
       {/* Header */}
       <header className="bg-slate-950/95 backdrop-blur-sm border-b border-slate-700/60 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
-          <div className="flex items-center justify-between">
-            <h1 className="font-display text-xl font-semibold tracking-tight text-[#C9A227]">
-              Lesson Intelligence
-            </h1>
-            <button
-              type="button"
-              onClick={handleTestConnection}
-              className="bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold px-4 py-2 rounded-xl transition-colors text-sm whitespace-nowrap"
-            >
-              Test Connection
-            </button>
-          </div>
+          <h1 className="font-display text-xl font-semibold tracking-tight text-[#C9A227]">
+            Lesson Intelligence
+          </h1>
         </div>
       </header>
-      
-      {/* Test Connection Result */}
-      {testConnectionResult && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
-          <div className="p-4 bg-slate-900/80 border border-slate-700/60 rounded-xl">
-            <div className="flex items-start justify-between gap-2 mb-2">
-              <p className="text-xs font-semibold text-slate-300 uppercase tracking-wide">Connection Test Result:</p>
-              <button
-                type="button"
-                onClick={() => setTestConnectionResult(null)}
-                className="text-xs text-slate-400 hover:text-slate-300"
-              >
-                ✕
-              </button>
-            </div>
-            <pre className="text-xs text-slate-300 font-mono whitespace-pre-wrap break-all overflow-x-auto select-all">
-              {testConnectionResult}
-            </pre>
-          </div>
-        </div>
-      )}
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12" role="main">
