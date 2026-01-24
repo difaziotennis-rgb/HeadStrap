@@ -16,13 +16,13 @@ export async function GET() {
       url: {
         present: hasSupabaseUrl,
         value: hasSupabaseUrl 
-          ? `${process.env.NEXT_PUBLIC_LESSON_SUPABASE_URL.substring(0, 30)}...` 
+          ? `${(process.env.NEXT_PUBLIC_LESSON_SUPABASE_URL || '').substring(0, 30)}...` 
           : 'MISSING',
       },
       anonKey: {
         present: hasSupabaseKey,
         value: hasSupabaseKey 
-          ? `${process.env.NEXT_PUBLIC_LESSON_SUPABASE_ANON_KEY.substring(0, 20)}...` 
+          ? `${(process.env.NEXT_PUBLIC_LESSON_SUPABASE_ANON_KEY || '').substring(0, 20)}...` 
           : 'MISSING',
       },
       status: hasSupabaseUrl && hasSupabaseKey ? 'OK' : 'MISSING VARIABLES',
@@ -34,7 +34,7 @@ export async function GET() {
       apiKey: {
         present: hasGroqKey,
         value: hasGroqKey 
-          ? `${process.env.GROQ_API_KEY.substring(0, 20)}...` 
+          ? `${(process.env.GROQ_API_KEY || '').substring(0, 20)}...` 
           : 'MISSING',
       },
       status: hasGroqKey ? 'OK' : 'MISSING',
