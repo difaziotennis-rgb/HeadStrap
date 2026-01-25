@@ -487,7 +487,7 @@ export function AIAssistant({ students, onRefreshStudents, onSelectStudent }: AI
           onRefreshStudents();
           
           // Build a summary of what was updated
-          const updates = [];
+          const updates: string[] = [];
           if (parsedData.key_areas_focused?.length > 0) {
             updates.push(`key areas: ${parsedData.key_areas_focused.join(', ')}`);
           }
