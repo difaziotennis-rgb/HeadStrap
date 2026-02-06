@@ -1,12 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { X } from "lucide-react";
+import { X, CheckCircle, Mail, Loader2 } from "lucide-react";
 import { TimeSlot, Booking } from "@/lib/types";
 import { formatTime } from "@/lib/utils";
 import { format } from "date-fns";
-import { timeSlots, bookings } from "@/lib/mock-data";
-import { PaymentModal } from "@/components/payment-modal";
 
 interface BookingModalProps {
   slot: TimeSlot;
@@ -23,8 +21,7 @@ export function BookingModal({ slot, isOpen, onClose, onBookingComplete }: Booki
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [showPayment, setShowPayment] = useState(false);
-  const [tempBooking, setTempBooking] = useState<Booking | null>(null);
+  const [requestSubmitted, setRequestSubmitted] = useState(false);
 
   if (!isOpen) return null;
 
@@ -32,19 +29,26 @@ export function BookingModal({ slot, isOpen, onClose, onBookingComplete }: Booki
     e.preventDefault();
     setError("");
 
-    // Basic validation - at least name or email required
-    if (!formData.name.trim() && !formData.email.trim()) {
-      setError("Please provide at least your name or email address.");
+    // Email is required for booking confirmation
+    if (!formData.email.trim()) {
+      setError("Please provide your email address for booking confirmation.");
+      return;
+    }
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email.trim())) {
+      setError("Please provide a valid email address.");
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      // Create temporary booking (not saved yet - will be saved after payment)
+      // Create booking request
       const bookingId = `booking-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       const clientName = formData.name.trim() || "Guest";
-      const clientEmail = formData.email.trim() || "";
+      const clientEmail = formData.email.trim();
       const clientPhone = formData.phone.trim() || "";
       
       const booking: Booking = {
@@ -55,106 +59,108 @@ export function BookingModal({ slot, isOpen, onClose, onBookingComplete }: Booki
         clientName,
         clientEmail,
         clientPhone,
-        status: "pending", // Pending until payment
+        status: "pending",
         createdAt: new Date().toISOString(),
         paymentStatus: "pending",
         amount: 160,
       };
 
-      // Store temporarily - will be saved after payment
-      setTempBooking(booking);
+      // Send booking request to admin
+      const response = await fetch("/api/booking-request", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ booking }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to submit booking request");
+      }
+
+      // Show success state
+      setRequestSubmitted(true);
       setIsSubmitting(false);
-      setShowPayment(true);
-    } catch (err) {
-      setError("Failed to process booking. Please try again.");
+    } catch (err: any) {
+      setError(err.message || "Failed to submit booking request. Please try again.");
       setIsSubmitting(false);
     }
   };
 
-  const handlePaymentSuccess = async (isStripePayment: boolean = false) => {
-    // If Stripe payment, don't do anything - let Stripe handle redirect
-    if (isStripePayment) {
-      return;
-    }
-    if (!tempBooking) return;
-
-    try {
-      // For Stripe, create booking with "pending" status (will be confirmed after Stripe redirect)
-      // For other payments, mark as "confirmed" and "paid" immediately
-      if (isStripePayment) {
-        tempBooking.status = "pending";
-        tempBooking.paymentStatus = "pending";
-      } else {
-        tempBooking.status = "confirmed";
-        tempBooking.paymentStatus = "paid";
-      }
-
-      // Save booking to Map
-      bookings.set(tempBooking.id, tempBooking);
-      
-      // Also save to sessionStorage
-      sessionStorage.setItem(`booking_${tempBooking.id}`, JSON.stringify(tempBooking));
-
-      // For non-Stripe payments, mark slot as booked immediately
-      // For Stripe, slot will be marked booked after payment confirmation
-      if (!isStripePayment) {
-        // Update time slot - mark as booked
-        const updatedSlot: TimeSlot = {
-          ...slot,
-          booked: true,
-          bookedBy: tempBooking.clientName,
-          bookedEmail: tempBooking.clientEmail,
-          bookedPhone: tempBooking.clientPhone,
-        };
-        timeSlots.set(slot.id, updatedSlot);
-        
-        // Save updated slot to sessionStorage
-        sessionStorage.setItem(`slot_${slot.id}`, JSON.stringify(updatedSlot));
-
-        // Send email notification (only for non-Stripe, Stripe will trigger after redirect)
-        // Fire and forget - use setTimeout to ensure it's completely async and non-blocking
-        const notificationEmail = "difaziotennis@gmail.com";
-        setTimeout(() => {
-          fetch("/api/send-email", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              booking: tempBooking,
-              notificationEmail,
-            }),
-          }).catch(() => {
-            // Silently fail - email notification is not critical
-          });
-        }, 100);
-
-        // Reset form and close modals
-        setFormData({ name: "", email: "", phone: "" });
-        setShowPayment(false);
-        setTempBooking(null);
-        
-        // Redirect to success page
-        window.location.href = `/booking-success?id=${tempBooking.id}&payment=success`;
-      } else {
-        // For Stripe, don't redirect yet - Stripe will handle the redirect
-        // Just close the payment modal, Stripe redirect will happen next
-      }
-    } catch (err) {
-      setError("Failed to create booking. Please try again.");
+  const handleClose = () => {
+    setFormData({ name: "", email: "", phone: "" });
+    setRequestSubmitted(false);
+    setError("");
+    onClose();
+    if (requestSubmitted) {
+      onBookingComplete();
     }
   };
 
   const date = new Date(slot.date + "T12:00:00");
+
+  // Success state - request submitted
+  if (requestSubmitted) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+        <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+          {/* Header */}
+          <div className="bg-green-600 text-white px-6 py-6 text-center">
+            <CheckCircle className="h-12 w-12 mx-auto mb-3" />
+            <h2 className="text-2xl font-serif font-semibold">Request Submitted!</h2>
+          </div>
+
+          {/* Content */}
+          <div className="px-6 py-6">
+            <div className="text-center mb-6">
+              <p className="text-gray-700 mb-4">
+                Your lesson request has been sent to Derek DiFazio for review.
+              </p>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left">
+                <div className="flex items-start gap-3">
+                  <Mail className="h-5 w-5 text-blue-600 mt-0.5" />
+                  <div>
+                    <p className="font-semibold text-blue-800">Check your email</p>
+                    <p className="text-sm text-blue-700">
+                      You'll receive a confirmation at <strong>{formData.email}</strong> once your lesson is accepted.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gray-50 rounded-lg p-4 mb-6">
+              <h3 className="font-semibold text-gray-800 mb-2">Requested Lesson Details</h3>
+              <div className="space-y-1 text-sm text-gray-600">
+                <p><span className="font-medium">Date:</span> {format(date, "EEEE, MMMM d, yyyy")}</p>
+                <p><span className="font-medium">Time:</span> {formatTime(slot.hour)}</p>
+                <p><span className="font-medium">Duration:</span> 1 hour</p>
+                <p><span className="font-medium">Price:</span> $160</p>
+              </div>
+            </div>
+
+            <button
+              onClick={handleClose}
+              className="w-full px-6 py-3 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 bg-white border-b border-primary-200 px-6 py-4 flex items-center justify-between rounded-t-2xl">
-          <h2 className="text-2xl font-serif text-primary-800">Book Your Lesson</h2>
+          <h2 className="text-2xl font-serif text-primary-800">Request a Lesson</h2>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="p-2 hover:bg-primary-100 rounded-lg transition-colors"
             aria-label="Close booking modal"
             type="button"
@@ -185,10 +191,17 @@ export function BookingModal({ slot, isOpen, onClose, onBookingComplete }: Booki
                 <span className="font-semibold text-primary-800">1 hour</span>
               </div>
               <div className="flex justify-between pt-2 border-t border-primary-200">
-                <span className="text-earth-600">Total:</span>
+                <span className="text-earth-600">Price:</span>
                 <span className="font-bold text-lg text-primary-800">$160</span>
               </div>
             </div>
+          </div>
+
+          {/* Info Banner */}
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-6">
+            <p className="text-sm text-amber-800">
+              <strong>How it works:</strong> Submit your request and you'll receive an email confirmation once Derek accepts your lesson.
+            </p>
           </div>
 
           {/* Form */}
@@ -211,7 +224,7 @@ export function BookingModal({ slot, isOpen, onClose, onBookingComplete }: Booki
 
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-primary-800 mb-2">
-                Email Address <span className="text-earth-400 text-xs">(optional)</span>
+                Email Address <span className="text-red-500">*</span>
               </label>
               <input
                 type="email"
@@ -221,8 +234,10 @@ export function BookingModal({ slot, isOpen, onClose, onBookingComplete }: Booki
                 className="w-full px-4 py-3 border border-primary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all"
                 placeholder="john@example.com"
                 autoComplete="email"
-                aria-required="false"
+                aria-required="true"
+                required
               />
+              <p className="text-xs text-earth-500 mt-1">Required - you'll receive confirmation here</p>
             </div>
 
             <div>
@@ -250,7 +265,7 @@ export function BookingModal({ slot, isOpen, onClose, onBookingComplete }: Booki
             <div className="flex gap-3 pt-4">
               <button
                 type="button"
-                onClick={onClose}
+                onClick={handleClose}
                 className="flex-1 px-6 py-3 border-2 border-primary-300 text-primary-700 rounded-lg font-semibold hover:bg-primary-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={isSubmitting}
                 aria-label="Cancel booking"
@@ -261,36 +276,22 @@ export function BookingModal({ slot, isOpen, onClose, onBookingComplete }: Booki
                 type="submit"
                 className="flex-1 px-6 py-3 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 disabled={isSubmitting}
-                aria-label={isSubmitting ? "Processing booking" : "Continue to payment"}
+                aria-label={isSubmitting ? "Submitting request" : "Request lesson"}
                 aria-busy={isSubmitting}
               >
                 {isSubmitting ? (
                   <>
-                    <span className="animate-spin">⏳</span>
-                    <span>Processing...</span>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <span>Submitting...</span>
                   </>
                 ) : (
-                  "Continue to Payment"
+                  "Request Lesson"
                 )}
               </button>
             </div>
           </form>
         </div>
       </div>
-
-      {/* Payment Modal - shown after form submission */}
-      {showPayment && tempBooking && (
-        <PaymentModal
-          booking={tempBooking}
-          isOpen={showPayment}
-          onClose={() => {
-            setShowPayment(false);
-            setTempBooking(null);
-          }}
-          onPaymentSuccess={(isStripe?: boolean) => handlePaymentSuccess(isStripe)}
-        />
-      )}
     </div>
   );
 }
-
