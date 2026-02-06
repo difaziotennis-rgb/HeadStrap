@@ -100,7 +100,6 @@ export function Leaderboard({ clubId }: { clubId: string | null }) {
     <Card className="w-full">
       <CardHeader>
         <CardTitle className="text-2xl font-bold">Tennis Ladder Standings</CardTitle>
-        <p className="text-sm text-muted-foreground">Updated in real-time</p>
       </CardHeader>
       <CardContent>
         <div className="rounded-md border overflow-hidden">
