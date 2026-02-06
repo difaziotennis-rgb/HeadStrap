@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { Booking } from "@/lib/types";
+import { PAYMENT_CONFIG } from "@/lib/payment-config";
 
 // Decode the booking token
 function decodeBookingToken(token: string): Booking | null {
@@ -48,6 +49,25 @@ export async function POST(request: Request) {
     const adminEmail = "difaziotennis@gmail.com";
     const RESEND_API_KEY = process.env.RESEND_API_KEY;
 
+    // Build payment links from config
+    const venmoLink = PAYMENT_CONFIG.venmoHandle
+      ? `https://venmo.com/?txn=pay&recipients=${encodeURIComponent(
+          PAYMENT_CONFIG.venmoHandle.replace(/^@/, "")
+        )}&amount=${booking.amount}&note=${encodeURIComponent(
+          `Tennis lesson on ${formattedDate} at ${formattedTime}`
+        )}`
+      : "";
+
+    const paypalLink = PAYMENT_CONFIG.paypalMeUsername
+      ? `https://paypal.me/${encodeURIComponent(
+          PAYMENT_CONFIG.paypalMeUsername.replace(/^@/, "").replace(/^paypal\.me\//, "")
+        )}/${booking.amount}?locale.x=en_US`
+      : PAYMENT_CONFIG.paypalEmail
+      ? `https://www.paypal.com/send?amount=${booking.amount}&currencyCode=USD&recipient=${encodeURIComponent(
+          PAYMENT_CONFIG.paypalEmail
+        )}&note=${encodeURIComponent(`Tennis lesson on ${formattedDate} at ${formattedTime}`)}`
+      : "";
+
     // Send confirmation email to CLIENT
     const clientSubject = `✅ Lesson Confirmed: ${formattedDate} at ${formattedTime}`;
     const clientHtml = `
@@ -64,6 +84,14 @@ export async function POST(request: Request) {
             .label { font-weight: bold; color: #555; display: inline-block; width: 100px; }
             .value { color: #333; }
             .success-banner { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 15px; border-radius: 5px; text-align: center; margin-bottom: 20px; }
+            .payment-section { background-color: #fffbeb; border: 1px solid #fbbf24; padding: 16px; border-radius: 8px; margin: 16px 0; }
+            .payment-title { font-weight: 600; color: #92400e; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.08em; font-size: 12px; }
+            .payment-copy { font-size: 13px; color: #78350f; margin-bottom: 10px; }
+            .payment-row { display: flex; align-items: center; justify-content: space-between; padding-top: 8px; border-top: 1px solid rgba(251,191,36,0.4); margin-top: 6px; }
+            .payment-label { font-size: 13px; font-weight: 500; color: #92400e; }
+            .payment-meta { font-size: 12px; color: #7c2d12; }
+            .payment-link { display: inline-block; padding: 7px 14px; border-radius: 999px; background-color: #111827; color: #f9fafb !important; font-size: 11px; font-weight: 500; text-decoration: none; letter-spacing: 0.08em; text-transform: uppercase; }
+            .payment-link span { margin-left: 4px; }
             .footer { margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #777; }
             .contact { background-color: #e7f3ff; padding: 15px; border-radius: 5px; margin-top: 15px; }
           </style>
@@ -102,6 +130,35 @@ export async function POST(request: Request) {
                   <span class="label">Location:</span>
                   <span class="value">Rhinebeck Tennis Club, Rhinebeck NY</span>
                 </div>
+              </div>
+
+              <div class="payment-section">
+                <div class="payment-title">Secure Payment Options</div>
+                <p class="payment-copy">
+                  To finalize your booking, please submit payment ahead of your lesson using one of the options below:
+                </p>
+                ${venmoLink ? `
+                <div class="payment-row">
+                  <div>
+                    <div class="payment-label">Venmo</div>
+                    <div class="payment-meta">@${PAYMENT_CONFIG.venmoHandle.replace(/^@/, "")}</div>
+                  </div>
+                  <a href="${venmoLink}" class="payment-link" target="_blank" rel="noopener noreferrer">
+                    Venmo<span>Pay $${booking.amount}</span>
+                  </a>
+                </div>` : ""}
+                ${paypalLink ? `
+                <div class="payment-row">
+                  <div>
+                    <div class="payment-label">PayPal</div>
+                    <div class="payment-meta">${PAYMENT_CONFIG.paypalMeUsername
+                      ? `paypal.me/${PAYMENT_CONFIG.paypalMeUsername}`
+                      : PAYMENT_CONFIG.paypalEmail}</div>
+                  </div>
+                  <a href="${paypalLink}" class="payment-link" target="_blank" rel="noopener noreferrer">
+                    PayPal<span>Pay $${booking.amount}</span>
+                  </a>
+                </div>` : ""}
               </div>
 
               <div class="contact">
@@ -240,7 +297,7 @@ Confirmed on: ${new Date().toLocaleString()}
             "Authorization": `Bearer ${RESEND_API_KEY}`,
           },
           body: JSON.stringify({
-            from: "DiFazio Tennis <notifications@difaziotennis.com>",
+            from: "DiFazio Tennis <difaziotennis@gmail.com>",
             to: booking.clientEmail,
             subject: clientSubject,
             html: clientHtml,
@@ -264,7 +321,7 @@ Confirmed on: ${new Date().toLocaleString()}
             "Authorization": `Bearer ${RESEND_API_KEY}`,
           },
           body: JSON.stringify({
-            from: "DiFazio Tennis <notifications@difaziotennis.com>",
+            from: "DiFazio Tennis <difaziotennis@gmail.com>",
             to: adminEmail,
             subject: adminSubject,
             html: adminHtml,

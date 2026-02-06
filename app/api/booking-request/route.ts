@@ -163,7 +163,7 @@ Request ID: ${booking.id}
           "Authorization": `Bearer ${RESEND_API_KEY}`,
         },
         body: JSON.stringify({
-          from: "DiFazio Tennis <notifications@difaziotennis.com>",
+          from: "DiFazio Tennis <difaziotennis@gmail.com>",
           to: notificationEmail,
           subject: subject,
           html: htmlBody,
