@@ -297,11 +297,13 @@ Confirmed on: ${new Date().toLocaleString()}
             "Authorization": `Bearer ${RESEND_API_KEY}`,
           },
           body: JSON.stringify({
-            from: "DiFazio Tennis <difaziotennis@gmail.com>",
+            // Use Resend's verified sandbox sender; replies go to your real email
+            from: "DiFazio Tennis <onboarding@resend.dev>",
             to: booking.clientEmail,
             subject: clientSubject,
             html: clientHtml,
             text: clientText,
+            reply_to: "difaziotennis@gmail.com",
           }),
         });
         clientEmailSent = clientResponse.ok;
@@ -321,11 +323,13 @@ Confirmed on: ${new Date().toLocaleString()}
             "Authorization": `Bearer ${RESEND_API_KEY}`,
           },
           body: JSON.stringify({
-            from: "DiFazio Tennis <difaziotennis@gmail.com>",
+            // Use Resend's verified sandbox sender; replies go to your real email
+            from: "DiFazio Tennis <onboarding@resend.dev>",
             to: adminEmail,
             subject: adminSubject,
             html: adminHtml,
             text: adminText,
+            reply_to: "difaziotennis@gmail.com",
           }),
         });
         adminEmailSent = adminResponse.ok;

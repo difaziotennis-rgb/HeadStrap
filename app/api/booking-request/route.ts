@@ -163,11 +163,13 @@ Request ID: ${booking.id}
           "Authorization": `Bearer ${RESEND_API_KEY}`,
         },
         body: JSON.stringify({
-          from: "DiFazio Tennis <difaziotennis@gmail.com>",
+          // Use Resend's verified sandbox sender; replies go to your real email
+          from: "DiFazio Tennis <onboarding@resend.dev>",
           to: notificationEmail,
           subject: subject,
           html: htmlBody,
           text: textBody,
+          reply_to: "difaziotennis@gmail.com",
         }),
       });
 
