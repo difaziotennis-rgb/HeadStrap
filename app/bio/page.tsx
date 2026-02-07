@@ -21,7 +21,7 @@ export default function BioPage() {
                 href="/book"
                 className="text-[#8a8477] hover:text-[#1a1a1a] text-[12px] font-medium transition-colors"
               >
-                Book a Lesson
+                Book
               </Link>
               <Link
                 href="/ladder"
