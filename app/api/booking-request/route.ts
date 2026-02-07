@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { Booking } from "@/lib/types";
+import { sendEmail } from "@/lib/send-email";
 
 // Simple encoding for the booking token (in production, use proper JWT)
 function encodeBookingToken(booking: Booking): string {
@@ -151,50 +152,25 @@ Request submitted: ${new Date(booking.createdAt).toLocaleString()}
 Request ID: ${booking.id}
     `.trim();
 
-    // Send email using Resend
-    const RESEND_API_KEY = process.env.RESEND_API_KEY;
-    
-    if (RESEND_API_KEY) {
-      const resendResponse = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${RESEND_API_KEY}`,
-        },
-        body: JSON.stringify({
-          from: "DiFazio Tennis <notifications@difaziotennis.com>",
-          to: notificationEmail,
-          subject: subject,
-          html: htmlBody,
-          text: textBody,
-          reply_to: "difaziotennis@gmail.com",
-        }),
-      });
+    // Send email via Gmail SMTP
+    const result = await sendEmail({
+      to: notificationEmail,
+      subject,
+      html: htmlBody,
+      text: textBody,
+    });
 
-      if (!resendResponse.ok) {
-        const error = await resendResponse.json();
-        console.error("Resend API error:", error);
-      } else {
-        const data = await resendResponse.json();
-        return NextResponse.json({ 
-          success: true, 
-          messageId: data.id,
-          message: "Booking request sent to admin"
-        });
-      }
-    }
-
-    // Fallback for development
-    if (process.env.NODE_ENV === "development") {
-      console.log("📧 Booking request email (would send to):", notificationEmail);
-      console.log("Subject:", subject);
-      console.log("Confirm URL:", confirmUrl);
+    if (!result.success) {
+      console.error("Failed to send booking request email:", result.error);
     }
 
     return NextResponse.json({ 
       success: true, 
-      message: "Booking request submitted (configure RESEND_API_KEY for email)",
-      confirmUrl: process.env.NODE_ENV === "development" ? confirmUrl : undefined
+      emailSent: result.success,
+      emailError: result.error || null,
+      message: result.success 
+        ? "Booking request sent to admin" 
+        : "Booking request submitted but email failed to send"
     });
 
   } catch (error: any) {

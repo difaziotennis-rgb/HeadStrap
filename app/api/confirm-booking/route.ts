@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { Booking } from "@/lib/types";
 import { PAYMENT_CONFIG } from "@/lib/payment-config";
+import { sendEmail } from "@/lib/send-email";
 
 // Decode the booking token
 function decodeBookingToken(token: string): Booking | null {
@@ -47,8 +48,6 @@ export async function POST(request: Request) {
     const formattedTime = `${hour12}:00 ${ampm}`;
 
     const adminEmail = "difaziotennis@gmail.com";
-    const RESEND_API_KEY = process.env.RESEND_API_KEY;
-
     // Build payment links from config
     const venmoLink = PAYMENT_CONFIG.venmoHandle
       ? `https://venmo.com/?txn=pay&recipients=${encodeURIComponent(
@@ -284,85 +283,32 @@ Booking ID: ${booking.id}
 Confirmed on: ${new Date().toLocaleString()}
     `.trim();
 
-    let clientEmailSent = false;
-    let adminEmailSent = false;
-    let clientEmailError: any = null;
-    let adminEmailError: any = null;
+    // Send confirmation email to client
+    const clientResult = await sendEmail({
+      to: booking.clientEmail,
+      subject: clientSubject,
+      html: clientHtml,
+      text: clientText,
+    });
 
-    if (RESEND_API_KEY) {
-      // Send to client
-      try {
-        const clientPayload = {
-          from: "DiFazio Tennis <notifications@difaziotennis.com>",
-          to: [booking.clientEmail],
-          subject: clientSubject,
-          html: clientHtml,
-          text: clientText,
-          reply_to: "difaziotennis@gmail.com",
-        };
-        console.log("Sending client email to:", booking.clientEmail);
-        const clientResponse = await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${RESEND_API_KEY}`,
-          },
-          body: JSON.stringify(clientPayload),
-        });
-        const clientData = await clientResponse.json();
-        clientEmailSent = clientResponse.ok;
-        if (!clientResponse.ok) {
-          clientEmailError = clientData;
-          console.error("Failed to send client email:", JSON.stringify(clientData));
-        } else {
-          console.log("Client email sent successfully:", clientData.id);
-        }
-      } catch (e: any) {
-        clientEmailError = e.message;
-        console.error("Error sending client email:", e);
-      }
-
-      // Send to admin
-      try {
-        const adminResponse = await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${RESEND_API_KEY}`,
-          },
-          body: JSON.stringify({
-            from: "DiFazio Tennis <notifications@difaziotennis.com>",
-            to: [adminEmail],
-            subject: adminSubject,
-            html: adminHtml,
-            text: adminText,
-            reply_to: "difaziotennis@gmail.com",
-          }),
-        });
-        const adminData = await adminResponse.json();
-        adminEmailSent = adminResponse.ok;
-        if (!adminResponse.ok) {
-          adminEmailError = adminData;
-          console.error("Failed to send admin email:", JSON.stringify(adminData));
-        } else {
-          console.log("Admin email sent successfully:", adminData.id);
-        }
-      } catch (e: any) {
-        adminEmailError = e.message;
-        console.error("Error sending admin email:", e);
-      }
-    }
+    // Send confirmation email to admin
+    const adminResult = await sendEmail({
+      to: adminEmail,
+      subject: adminSubject,
+      html: adminHtml,
+      text: adminText,
+    });
 
     return NextResponse.json({ 
       success: true, 
       booking,
       emailsSent: {
-        client: clientEmailSent,
-        admin: adminEmailSent
+        client: clientResult.success,
+        admin: adminResult.success
       },
       emailErrors: {
-        client: clientEmailError,
-        admin: adminEmailError
+        client: clientResult.error || null,
+        admin: adminResult.error || null
       },
       message: "Booking confirmed successfully"
     });
