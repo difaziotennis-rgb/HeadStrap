@@ -224,27 +224,30 @@ export function AdminDashboard() {
               {hasActivity && (
                 <div className="px-4 pb-3 pt-0">
                   <div className="flex flex-wrap gap-1.5">
-                    {booked.map((slot) => (
-                      <div
-                        key={slot.id}
-                        className="px-2.5 py-1 rounded-md bg-[#1a1a1a] text-white text-[11px] font-medium"
-                      >
-                        {formatTime(slot.hour)}
-                        {slot.bookedBy && (
-                          <span className="text-white/60 ml-1">
-                            · {slot.bookedBy.split(" ")[0]}
-                          </span>
-                        )}
-                      </div>
-                    ))}
-                    {available.map((slot) => (
-                      <div
-                        key={slot.id}
-                        className="px-2.5 py-1 rounded-md border border-[#d9d5cf] text-[#7a756d] text-[11px]"
-                      >
-                        {formatTime(slot.hour)}
-                      </div>
-                    ))}
+                    {[...booked, ...available]
+                      .sort((a, b) => a.hour - b.hour)
+                      .map((slot) =>
+                        slot.booked ? (
+                          <div
+                            key={slot.id}
+                            className="px-2.5 py-1 rounded-md bg-[#1a1a1a] text-white text-[11px] font-medium"
+                          >
+                            {formatTime(slot.hour)}
+                            {slot.bookedBy && (
+                              <span className="text-white/60 ml-1">
+                                · {slot.bookedBy.split(" ")[0]}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <div
+                            key={slot.id}
+                            className="px-2.5 py-1 rounded-md border border-[#d9d5cf] text-[#7a756d] text-[11px]"
+                          >
+                            {formatTime(slot.hour)}
+                          </div>
+                        )
+                      )}
                   </div>
                 </div>
               )}
