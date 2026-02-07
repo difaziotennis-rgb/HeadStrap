@@ -1,7 +1,6 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
 import { Home } from 'lucide-react'
 
 export function HomeLink() {
@@ -12,16 +11,14 @@ export function HomeLink() {
   }
 
   return (
-    <div className="mt-12 pt-8 border-t flex justify-center">
-      <Button
-        variant="ghost"
+    <div className="mt-12 pt-8 border-t border-[#e8e5df] flex justify-center">
+      <button
         onClick={handleGoHome}
-        className="text-muted-foreground hover:text-foreground"
+        className="flex items-center gap-2 text-[12px] text-[#7a756d] hover:text-[#1a1a1a] transition-colors"
       >
-        <Home className="w-4 h-4 mr-2" />
+        <Home className="w-3.5 h-3.5" />
         Back to Home
-      </Button>
+      </button>
     </div>
   )
 }
-

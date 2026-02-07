@@ -123,7 +123,7 @@ export default function BookPage() {
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-10" role="main">
         {/* Calendar Card */}
-        <div className="bg-[#faf9f7] rounded-2xl shadow-sm border border-[#e8e5df] p-5 sm:p-8 mb-8" aria-label="Booking calendar">
+        <div className="bg-white rounded-2xl shadow-sm border border-[#e8e5df] p-5 sm:p-8 mb-8" aria-label="Booking calendar">
           {isAdminMode ? (
             <AdminCalendar />
           ) : (

@@ -210,7 +210,7 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
             aria-label="Previous year"
             type="button"
           >
-            <ChevronLeft className="h-5 w-5 text-[#8a8477]" />
+            <ChevronLeft className="h-5 w-5 text-[#6b665e]" />
           </button>
           <h2 className="text-[22px] font-light tracking-tight text-[#1a1a1a]">
             {currentMonth.getFullYear()}
@@ -225,7 +225,7 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
             aria-label="Next year"
             type="button"
           >
-            <ChevronRight className="h-5 w-5 text-[#8a8477]" />
+            <ChevronRight className="h-5 w-5 text-[#6b665e]" />
           </button>
         </div>
 
@@ -271,7 +271,7 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
                 <div className="text-[14px] font-medium text-[#1a1a1a] mb-1">
                   {format(month, 'MMMM')}
                 </div>
-                <div className="text-[11px] text-[#a39e95]">
+                <div className="text-[11px] text-[#7a756d]">
                   {hasAvailableSlots ? "Available" : hasVisibleSlots ? "Booked" : "No availability"}
                 </div>
               </button>
@@ -285,7 +285,7 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
             e.stopPropagation();
             setViewMode("month");
           }}
-          className="mt-6 text-[13px] text-[#8a8477] hover:text-[#1a1a1a] font-medium active:scale-95 transition-colors"
+          className="mt-6 text-[13px] text-[#6b665e] hover:text-[#1a1a1a] font-medium active:scale-95 transition-colors"
         >
           ← Back to month view
         </button>
@@ -307,7 +307,7 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
           aria-label="Previous month"
           type="button"
         >
-          <ChevronLeft className="h-5 w-5 text-[#8a8477]" />
+          <ChevronLeft className="h-5 w-5 text-[#6b665e]" />
         </button>
         <div className="flex flex-col items-center gap-1">
           <h2 className="text-[22px] sm:text-[26px] font-light tracking-tight text-[#1a1a1a]">
@@ -315,7 +315,7 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
           </h2>
           <button
             onClick={() => setViewMode("year")}
-            className="text-[11px] text-[#a39e95] hover:text-[#1a1a1a] font-medium transition-colors"
+            className="text-[11px] text-[#7a756d] hover:text-[#1a1a1a] font-medium transition-colors"
           >
             View year
           </button>
@@ -326,7 +326,7 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
           aria-label="Next month"
           type="button"
         >
-          <ChevronRight className="h-5 w-5 text-[#8a8477]" />
+          <ChevronRight className="h-5 w-5 text-[#6b665e]" />
         </button>
       </div>
 
@@ -335,7 +335,7 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
         {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
           <div
             key={day}
-            className="text-center text-[10px] tracking-[0.1em] uppercase font-medium text-[#a39e95] py-2"
+            className="text-center text-[10px] tracking-[0.1em] uppercase font-medium text-[#6b665e] py-2"
           >
             {day}
           </div>
@@ -373,9 +373,9 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
               aria-pressed={isSelected || undefined}
               className={cn(
                 "aspect-square rounded-lg border transition-all text-[13px] font-medium active:scale-95",
-                isPast && "opacity-30 cursor-not-allowed bg-transparent border-transparent",
-                !isPast && !isSelected && hasAvailableSlots && "bg-white border-[#1a1a1a] hover:bg-[#f7f7f5] cursor-pointer",
-                !isPast && !isSelected && !hasAvailableSlots && "bg-transparent border-[#e8e5df] text-[#a39e95] cursor-pointer hover:border-[#c4bfb8]",
+                isPast && "opacity-25 cursor-not-allowed bg-transparent border-transparent",
+                !isPast && !isSelected && hasAvailableSlots && "bg-[#faf9f7] border-[#1a1a1a] hover:bg-[#f0ede8] cursor-pointer shadow-sm",
+                !isPast && !isSelected && !hasAvailableSlots && "bg-transparent border-[#d9d5cf] text-[#6b665e] cursor-pointer hover:border-[#a39e95]",
                 isSelected && "bg-[#1a1a1a] border-[#1a1a1a] text-white",
                 isCurrentDay && !isSelected && "ring-2 ring-[#1a1a1a]/20"
               )}
@@ -398,7 +398,7 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
         
         return (
           <div className="mt-6 border-t border-[#e8e5df] pt-6" key={`slots-${refreshKey}-${selectedDateState?.getTime()}`}>
-            <p className="text-[10px] tracking-[0.12em] uppercase text-[#a39e95] mb-4">
+            <p className="text-[10px] tracking-[0.12em] uppercase text-[#6b665e] mb-4">
               Available times · {format(selectedDateState, 'EEEE, MMMM d')}
             </p>
             {availableSlots.length > 0 ? (
@@ -417,7 +417,7 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
                     className={cn(
                       "py-2.5 px-3 rounded-lg border transition-all text-[13px] font-medium flex items-center justify-center gap-2 active:scale-95",
                       slot.booked && "bg-[#fef2f2] border-[#fecaca] text-[#991b1b] cursor-not-allowed",
-                      !slot.booked && slot.available && "bg-white border-[#e8e5df] text-[#1a1a1a] hover:border-[#1a1a1a] hover:bg-[#f7f7f5] cursor-pointer"
+                      !slot.booked && slot.available && "bg-[#faf9f7] border-[#d9d5cf] text-[#1a1a1a] hover:border-[#1a1a1a] hover:bg-[#f0ede8] cursor-pointer shadow-sm"
                     )}
                   >
                     <Clock className="h-3.5 w-3.5" />
@@ -427,7 +427,7 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
                 ))}
               </div>
             ) : (
-              <p className="text-[13px] text-[#a39e95] text-center py-4">
+              <p className="text-[13px] text-[#7a756d] text-center py-4">
                 No available times for this date.
               </p>
             )}

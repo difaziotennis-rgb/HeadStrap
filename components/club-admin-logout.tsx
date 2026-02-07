@@ -1,7 +1,6 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
 import { LogOut } from 'lucide-react'
 
 export function ClubAdminLogout({ clubId, clubSlug, onLogout }: { clubId: string; clubSlug: string; onLogout: () => void }) {
@@ -23,14 +22,12 @@ export function ClubAdminLogout({ clubId, clubSlug, onLogout }: { clubId: string
   }
 
   return (
-    <Button
+    <button
       onClick={handleLogout}
-      variant="outline"
-      className="w-full sm:w-auto"
+      className="flex items-center gap-2 px-3 py-1.5 text-[11px] text-[#7a756d] hover:text-[#1a1a1a] border border-[#e8e5df] rounded-lg hover:border-[#c4bfb8] transition-all"
     >
-      <LogOut className="w-4 h-4 mr-2" />
+      <LogOut className="w-3 h-3" />
       Logout
-    </Button>
+    </button>
   )
 }
-

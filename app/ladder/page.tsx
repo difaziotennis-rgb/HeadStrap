@@ -12,8 +12,8 @@ export default function LadderPage() {
   }, [router])
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 flex items-center justify-center">
-      <div className="text-center text-muted-foreground">Redirecting...</div>
+    <div className="min-h-screen bg-[#f7f7f5] flex items-center justify-center">
+      <div className="text-[13px] text-[#7a756d]">Redirecting...</div>
     </div>
   )
 }

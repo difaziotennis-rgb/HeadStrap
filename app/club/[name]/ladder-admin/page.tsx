@@ -2,10 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Club } from '@/lib/types/database'
 import { ArrowLeft } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { HomeLink } from '@/components/home-link'
 import { ClubAdminPanel } from '@/components/club-admin-panel'
 import { ClubAdminLogout } from '@/components/club-admin-logout'
@@ -84,18 +82,23 @@ export default function ClubAdminPage() {
 
   if (loading || checkingAuth) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 flex items-center justify-center">
-        <div className="text-center text-muted-foreground">Loading...</div>
+      <div className="min-h-screen bg-[#f7f7f5] flex items-center justify-center">
+        <div className="text-[13px] text-[#7a756d]">Loading...</div>
       </div>
     )
   }
 
   if (!club) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 flex items-center justify-center">
+      <div className="min-h-screen bg-[#f7f7f5] flex items-center justify-center">
         <div className="text-center">
-          <p className="text-muted-foreground mb-4">Club not found</p>
-          <Button onClick={() => router.push('/club/rhinebeck-tennis-club')}>Go Home</Button>
+          <p className="text-[13px] text-[#7a756d] mb-4">Club not found</p>
+          <button
+            onClick={() => router.push('/club/rhinebeck-tennis-club')}
+            className="px-4 py-2 bg-[#1a1a1a] text-white text-[13px] font-medium rounded-lg hover:bg-[#333] transition-colors"
+          >
+            Go Home
+          </button>
         </div>
       </div>
     )
@@ -106,40 +109,47 @@ export default function ClubAdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50">
-      <div className="container mx-auto px-4 py-8 sm:py-12">
-        <div className="max-w-4xl mx-auto">
-          {/* Back Button */}
-          <Button
-            variant="ghost"
-            onClick={() => router.push(`/club/${clubSlug}`)}
-            className="mb-6"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to {club.name} Ladder
-          </Button>
+    <div className="min-h-screen bg-[#f7f7f5]">
+      {/* Header */}
+      <header className="bg-[#faf9f7] border-b border-[#e8e5df] sticky top-0 z-40">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4">
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] tracking-[0.25em] uppercase text-[#b0a99f]">DiFazio Tennis</p>
+            <ClubAdminLogout clubId={club.id} clubSlug={clubSlug} onLogout={checkAuth} />
+          </div>
+        </div>
+      </header>
 
-          <div className="mb-8">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <h1 className="text-4xl font-bold text-gray-900 mb-2">
-                  {club.name} - Admin
-                </h1>
-                <p className="text-lg text-gray-600">
-                  Manage your club's tennis ladder
-                </p>
-              </div>
-              <ClubAdminLogout clubId={club.id} clubSlug={clubSlug} onLogout={checkAuth} />
+      {/* Main Content */}
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
+        {/* Back Button */}
+        <button
+          onClick={() => router.push(`/club/${clubSlug}`)}
+          className="flex items-center gap-2 text-[12px] text-[#7a756d] hover:text-[#1a1a1a] transition-colors mb-6"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          Back to {club.name} Ladder
+        </button>
+
+        {/* Title Section */}
+        <div className="mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-light tracking-tight text-[#1a1a1a] mb-1">
+                {club.name}
+              </h1>
+              <p className="text-[11px] tracking-[0.15em] uppercase text-[#7a756d]">
+                Ladder Administration
+              </p>
             </div>
           </div>
-
-          <ClubAdminPanel clubId={club.id} clubSlug={clubSlug} />
-
-          {/* Home Link */}
-          <HomeLink />
         </div>
-      </div>
+
+        <ClubAdminPanel clubId={club.id} clubSlug={clubSlug} />
+
+        {/* Home Link */}
+        <HomeLink />
+      </main>
     </div>
   )
 }
-
