@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { ChevronLeft } from "lucide-react";
 
 export default function BioPage() {
@@ -44,9 +45,16 @@ export default function BioPage() {
         </Link>
 
         <div className="bg-white rounded-2xl shadow-sm border border-[#e8e5df] p-6 sm:p-10">
-          {/* Photo placeholder */}
-          <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-2xl bg-[#f0ede8] border border-[#e8e5df] mx-auto mb-8 flex items-center justify-center">
-            <span className="text-[#c4bfb8] text-[11px] tracking-[0.1em] uppercase">Photo</span>
+          {/* Photo */}
+          <div className="w-32 h-40 sm:w-40 sm:h-48 rounded-2xl overflow-hidden mx-auto mb-8 border border-[#e8e5df]">
+            <Image
+              src="/derek-bio.png"
+              alt="Derek DiFazio"
+              width={160}
+              height={192}
+              className="w-full h-full object-cover object-top"
+              priority
+            />
           </div>
 
           <h1 className="text-[24px] sm:text-[30px] font-light tracking-tight text-[#1a1a1a] text-center mb-2">
