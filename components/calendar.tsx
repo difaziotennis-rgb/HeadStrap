@@ -253,7 +253,7 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
                   {format(month, 'MMMM')}
                 </div>
                 <div className="flex items-center gap-1.5 text-[11px] text-[#7a756d]">
-                  {hasAvailableSlots && <span className="w-[5px] h-[5px] rounded-full bg-[#4a9e6a] flex-shrink-0" />}
+                  {hasAvailableSlots && <span className="w-[4px] h-[4px] rounded-full bg-[#b0a99f] flex-shrink-0" />}
                   {hasAvailableSlots ? "Available" : hasVisibleSlots ? "Booked" : "No availability"}
                 </div>
               </button>
@@ -364,7 +364,7 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
               <div className="flex flex-col items-center justify-center h-full">
                 <span>{format(day, 'd')}</span>
                 {!isPast && hasAvailableSlots && !isSelected && (
-                  <span className="block w-[5px] h-[5px] rounded-full bg-[#4a9e6a] mt-0.5" />
+                  <span className="block w-[4px] h-[4px] rounded-full bg-[#b0a99f] mt-0.5" />
                 )}
               </div>
             </button>
