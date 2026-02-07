@@ -22,9 +22,8 @@ export async function POST(request: Request) {
     const token = encodeBookingToken(booking);
     
     // Get base URL for the confirmation link
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 
-                    process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 
-                    "http://localhost:3000";
+    // Use explicit base URL first, fall back to localhost for dev
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
     
     const confirmUrl = `${baseUrl}/confirm-booking?token=${token}`;
 
