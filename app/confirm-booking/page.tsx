@@ -17,6 +17,32 @@ function decodeBookingToken(token: string): Booking | null {
   }
 }
 
+// Mark a slot as booked in the same localStorage the admin calendar uses
+function markSlotBooked(booking: Booking) {
+  try {
+    const STORAGE_KEY = "difazio_admin_slots";
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const slots = raw ? JSON.parse(raw) : {};
+    const slotId = `${booking.date}-${booking.hour}`;
+    const existing = slots[slotId] || {
+      id: slotId,
+      date: booking.date,
+      hour: booking.hour,
+      available: true,
+    };
+    slots[slotId] = {
+      ...existing,
+      booked: true,
+      bookedBy: booking.clientName,
+      bookedEmail: booking.clientEmail,
+      bookedPhone: booking.clientPhone,
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(slots));
+  } catch (e) {
+    console.error("Failed to mark slot as booked:", e);
+  }
+}
+
 function ConfirmBookingContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
@@ -59,6 +85,11 @@ function ConfirmBookingContent() {
 
         if (!response.ok) {
           throw new Error(data.error || "Failed to confirm booking");
+        }
+
+        // Mark the slot as booked in localStorage so admin calendar reflects it
+        if (data.booking) {
+          markSlotBooked(data.booking);
         }
 
         setBooking(data.booking);

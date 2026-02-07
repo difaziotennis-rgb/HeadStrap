@@ -5,26 +5,29 @@ import Link from "next/link";
 import { Calendar } from "@/components/calendar";
 import { BookingModal } from "@/components/booking-modal";
 import { AdminCalendar } from "@/components/admin-calendar";
+import { AdminDashboard } from "@/components/admin-dashboard";
 import { TimeSlot } from "@/lib/types";
 import { initializeMockData } from "@/lib/mock-data";
-import { LogOut, Lock, Trophy } from "lucide-react";
+import { LogOut, Lock, Trophy, LayoutDashboard, CalendarDays } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+type AdminTab = "dashboard" | "calendar";
 
 export default function BookPage() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAdminMode, setIsAdminMode] = useState(false);
+  const [adminTab, setAdminTab] = useState<AdminTab>("dashboard");
   const [showAdminLogin, setShowAdminLogin] = useState(false);
   const [adminUsername, setAdminUsername] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
   const [adminError, setAdminError] = useState("");
-  const [refreshKey, setRefreshKey] = useState(0); // Force calendar refresh without page reload
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
-    // Initialize mock data on client side
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       initializeMockData();
-      // Check if already logged in
       const auth = sessionStorage.getItem("adminAuth");
       if (auth === "true") {
         setIsAdminMode(true);
@@ -32,9 +35,7 @@ export default function BookPage() {
     }
   }, []);
 
-  const handleDateSelect = (date: Date) => {
-    setSelectedDate(date);
-  };
+  const handleDateSelect = (date: Date) => setSelectedDate(date);
 
   const handleTimeSlotSelect = (slot: TimeSlot) => {
     if (slot.available && !slot.booked) {
@@ -47,15 +48,12 @@ export default function BookPage() {
     setIsModalOpen(false);
     setSelectedSlot(null);
     setSelectedDate(null);
-    // Force calendar to refresh by updating a refresh key
-    // This avoids full page reload for better UX
-    setRefreshKey(prev => prev + 1);
+    setRefreshKey((prev) => prev + 1);
   };
 
   const handleAdminLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setAdminError("");
-
     if (adminUsername === "admin" && adminPassword === "admin") {
       sessionStorage.setItem("adminAuth", "true");
       setIsAdminMode(true);
@@ -80,7 +78,9 @@ export default function BookPage() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-[10px] tracking-[0.25em] uppercase text-[#b0a99f]">DiFazio Tennis</p>
+              <p className="text-[10px] tracking-[0.25em] uppercase text-[#b0a99f]">
+                DiFazio Tennis
+              </p>
             </div>
             <div className="flex items-center gap-4">
               <Link
@@ -113,11 +113,45 @@ export default function BookPage() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-10" role="main">
-        {/* Calendar Card */}
-        <div className="bg-white rounded-2xl shadow-sm border border-[#e8e5df] p-5 sm:p-8 mb-8" aria-label="Booking calendar">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8" role="main">
+        {/* Admin Tab Switcher */}
+        {isAdminMode && (
+          <div className="flex items-center gap-1 mb-5 bg-[#f0ede8] rounded-xl p-1 max-w-xs">
+            <button
+              onClick={() => setAdminTab("dashboard")}
+              className={cn(
+                "flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[12px] font-medium transition-all",
+                adminTab === "dashboard"
+                  ? "bg-white text-[#1a1a1a] shadow-sm"
+                  : "text-[#7a756d] hover:text-[#1a1a1a]"
+              )}
+            >
+              <LayoutDashboard className="h-3.5 w-3.5" />
+              Schedule
+            </button>
+            <button
+              onClick={() => setAdminTab("calendar")}
+              className={cn(
+                "flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[12px] font-medium transition-all",
+                adminTab === "calendar"
+                  ? "bg-white text-[#1a1a1a] shadow-sm"
+                  : "text-[#7a756d] hover:text-[#1a1a1a]"
+              )}
+            >
+              <CalendarDays className="h-3.5 w-3.5" />
+              Availability
+            </button>
+          </div>
+        )}
+
+        {/* Content Card */}
+        <div className="bg-white rounded-2xl shadow-sm border border-[#e8e5df] p-5 sm:p-8 mb-8">
           {isAdminMode ? (
-            <AdminCalendar />
+            adminTab === "dashboard" ? (
+              <AdminDashboard />
+            ) : (
+              <AdminCalendar />
+            )
           ) : (
             <Calendar
               key={refreshKey}
@@ -147,11 +181,17 @@ export default function BookPage() {
               DiFazio Tennis · Rhinebeck, NY
             </p>
             <p className="text-[11px] text-[#c4bfb8] mt-1.5">
-              <a href="mailto:difaziotennis@gmail.com" className="hover:text-[#8a8477] transition-colors">
+              <a
+                href="mailto:difaziotennis@gmail.com"
+                className="hover:text-[#8a8477] transition-colors"
+              >
                 difaziotennis@gmail.com
               </a>
               {" · "}
-              <a href="tel:6319015220" className="hover:text-[#8a8477] transition-colors">
+              <a
+                href="tel:6319015220"
+                className="hover:text-[#8a8477] transition-colors"
+              >
                 631-901-5220
               </a>
             </p>
@@ -171,7 +211,9 @@ export default function BookPage() {
                 </button>
               ) : (
                 <div className="bg-[#faf9f7] rounded-xl border border-[#e8e5df] p-5">
-                  <p className="text-[10px] tracking-[0.12em] uppercase text-[#a39e95] mb-4 text-center">Admin Login</p>
+                  <p className="text-[10px] tracking-[0.12em] uppercase text-[#a39e95] mb-4 text-center">
+                    Admin Login
+                  </p>
                   <form onSubmit={handleAdminLogin} className="space-y-3">
                     <input
                       type="text"
