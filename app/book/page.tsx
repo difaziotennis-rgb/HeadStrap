@@ -179,7 +179,7 @@ export default function BookPage() {
                       value={adminUsername}
                       onChange={(e) => setAdminUsername(e.target.value)}
                       placeholder="Username"
-                      className="w-full px-3 py-2 bg-white border border-[#e8e5df] rounded-lg text-[13px] text-[#1a1a1a] placeholder:text-[#c4bfb8] focus:ring-1 focus:ring-[#1a1a1a] focus:border-[#1a1a1a] outline-none transition-all"
+                      className="w-full px-3 py-2 bg-white border border-[#e8e5df] rounded-lg text-[16px] sm:text-[13px] text-[#1a1a1a] placeholder:text-[#c4bfb8] focus:ring-1 focus:ring-[#1a1a1a] focus:border-[#1a1a1a] outline-none transition-all"
                       required
                       aria-label="Admin username"
                       autoComplete="username"
@@ -190,7 +190,7 @@ export default function BookPage() {
                       value={adminPassword}
                       onChange={(e) => setAdminPassword(e.target.value)}
                       placeholder="Password"
-                      className="w-full px-3 py-2 bg-white border border-[#e8e5df] rounded-lg text-[13px] text-[#1a1a1a] placeholder:text-[#c4bfb8] focus:ring-1 focus:ring-[#1a1a1a] focus:border-[#1a1a1a] outline-none transition-all"
+                      className="w-full px-3 py-2 bg-white border border-[#e8e5df] rounded-lg text-[16px] sm:text-[13px] text-[#1a1a1a] placeholder:text-[#c4bfb8] focus:ring-1 focus:ring-[#1a1a1a] focus:border-[#1a1a1a] outline-none transition-all"
                       required
                       aria-label="Admin password"
                       autoComplete="current-password"
