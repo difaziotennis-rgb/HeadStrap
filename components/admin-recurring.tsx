@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Trash2, X, ChevronDown, RefreshCw } from "lucide-react";
+import { Plus, Trash2, X, ChevronDown, Pencil, Check } from "lucide-react";
 import { RecurringLesson, TimeSlot } from "@/lib/types";
 import { formatTime, getHoursForDay } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -255,6 +255,29 @@ export function AdminRecurring() {
     setTimeout(() => setSaveMsg(null), 3000);
   }
 
+  function handleEdit(id: string, updates: { clientName?: string; clientEmail?: string; clientPhone?: string; dayOfWeek?: number; hour?: number }) {
+    const oldLesson = lessons.find((l) => l.id === id);
+    if (!oldLesson) return;
+
+    // If day or hour changed, remove old slots first
+    if (updates.dayOfWeek !== undefined || updates.hour !== undefined) {
+      removeRecurringSlotsForLesson(oldLesson);
+    }
+
+    const updated = lessons.map((l) => {
+      if (l.id !== id) return l;
+      return { ...l, ...updates };
+    });
+    setLessons(updated);
+    saveRecurring(updated);
+
+    // Re-stamp if day/hour/name changed
+    stampRecurringToSlots(updated);
+
+    setSaveMsg("Recurring lesson updated");
+    setTimeout(() => setSaveMsg(null), 3000);
+  }
+
   // Get next 8 weeks of upcoming dates for a recurring lesson
   function getUpcomingDates(lesson: RecurringLesson): { dateStr: string; cancelled: boolean }[] {
     const today = new Date();
@@ -447,6 +470,7 @@ export function AdminRecurring() {
             key={lesson.id}
             lesson={lesson}
             onDelete={handleDelete}
+            onEdit={handleEdit}
             onCancelDate={handleCancelDate}
             onRestoreDate={handleRestoreDate}
             getUpcomingDates={getUpcomingDates}
@@ -461,29 +485,63 @@ export function AdminRecurring() {
 function RecurringLessonCard({
   lesson,
   onDelete,
+  onEdit,
   onCancelDate,
   onRestoreDate,
   getUpcomingDates,
 }: {
   lesson: RecurringLesson;
   onDelete: (id: string) => void;
+  onEdit: (id: string, updates: { clientName?: string; clientEmail?: string; clientPhone?: string; dayOfWeek?: number; hour?: number }) => void;
   onCancelDate: (id: string, date: string) => void;
   onRestoreDate: (id: string, date: string) => void;
   getUpcomingDates: (lesson: RecurringLesson) => { dateStr: string; cancelled: boolean }[];
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+
+  // Edit form state
+  const [editName, setEditName] = useState(lesson.clientName);
+  const [editEmail, setEditEmail] = useState(lesson.clientEmail || "");
+  const [editPhone, setEditPhone] = useState(lesson.clientPhone || "");
+  const [editDay, setEditDay] = useState(lesson.dayOfWeek);
+  const [editHour, setEditHour] = useState(lesson.hour);
+
   const upcoming = getUpcomingDates(lesson);
   const activeDates = upcoming.filter((d) => !d.cancelled).length;
+  const editHours = getHoursForDay(editDay);
+
+  function startEditing() {
+    setEditName(lesson.clientName);
+    setEditEmail(lesson.clientEmail || "");
+    setEditPhone(lesson.clientPhone || "");
+    setEditDay(lesson.dayOfWeek);
+    setEditHour(lesson.hour);
+    setEditing(true);
+    setExpanded(true);
+  }
+
+  function saveEdit() {
+    if (!editName.trim()) return;
+    onEdit(lesson.id, {
+      clientName: editName.trim(),
+      clientEmail: editEmail.trim() || undefined,
+      clientPhone: editPhone.trim() || undefined,
+      dayOfWeek: editDay,
+      hour: editHour,
+    });
+    setEditing(false);
+  }
 
   return (
     <div className="border border-[#e8e5df] rounded-xl bg-white overflow-hidden">
       {/* Summary row */}
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full px-4 py-3 flex items-center justify-between text-left"
-      >
-        <div className="flex items-center gap-3 min-w-0">
+      <div className="w-full px-4 py-3 flex items-center justify-between text-left">
+        <button
+          onClick={() => { if (!editing) setExpanded(!expanded); }}
+          className="flex items-center gap-3 min-w-0 flex-1"
+        >
           <div className="w-9 h-9 rounded-lg bg-[#1a1a1a] text-white flex items-center justify-center text-[11px] font-medium flex-shrink-0">
             {DAY_SHORT[lesson.dayOfWeek]}
           </div>
@@ -495,23 +553,131 @@ function RecurringLessonCard({
               {DAY_NAMES[lesson.dayOfWeek]}s at {formatTime(lesson.hour)}
             </p>
           </div>
-        </div>
+        </button>
         <div className="flex items-center gap-2 flex-shrink-0">
+          {!editing && (
+            <button
+              onClick={(e) => { e.stopPropagation(); startEditing(); }}
+              className="p-1.5 hover:bg-[#f0ede8] rounded-lg transition-colors"
+              title="Edit"
+            >
+              <Pencil className="h-3.5 w-3.5 text-[#a39e95]" />
+            </button>
+          )}
           <span className="text-[10px] text-[#a39e95]">
-            {activeDates}/{upcoming.length} weeks
+            {activeDates}/{upcoming.length} wks
           </span>
-          <ChevronDown
-            className={cn(
-              "h-4 w-4 text-[#a39e95] transition-transform",
-              expanded && "rotate-180"
-            )}
-          />
+          <button onClick={() => { if (!editing) setExpanded(!expanded); }}>
+            <ChevronDown
+              className={cn(
+                "h-4 w-4 text-[#a39e95] transition-transform",
+                expanded && "rotate-180"
+              )}
+            />
+          </button>
         </div>
-      </button>
+      </div>
 
       {/* Expanded details */}
       {expanded && (
         <div className="px-4 pb-4 border-t border-[#f0ede8]">
+
+          {/* Inline edit form */}
+          {editing && (
+            <div className="mt-3 mb-4 space-y-3 bg-[#faf9f7] rounded-lg p-3 border border-[#e8e5df]">
+              <div>
+                <label className="block text-[10px] tracking-[0.12em] uppercase text-[#a39e95] mb-1">
+                  Client Name
+                </label>
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="w-full px-3 py-2 bg-white border border-[#e8e5df] rounded-lg text-[16px] sm:text-[13px] text-[#1a1a1a] focus:ring-1 focus:ring-[#1a1a1a] focus:border-[#1a1a1a] outline-none"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] tracking-[0.12em] uppercase text-[#a39e95] mb-1">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    value={editEmail}
+                    onChange={(e) => setEditEmail(e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-[#e8e5df] rounded-lg text-[16px] sm:text-[13px] text-[#1a1a1a] placeholder:text-[#c4bfb8] focus:ring-1 focus:ring-[#1a1a1a] focus:border-[#1a1a1a] outline-none"
+                    placeholder="Optional"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] tracking-[0.12em] uppercase text-[#a39e95] mb-1">
+                    Phone
+                  </label>
+                  <input
+                    type="tel"
+                    value={editPhone}
+                    onChange={(e) => setEditPhone(e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-[#e8e5df] rounded-lg text-[16px] sm:text-[13px] text-[#1a1a1a] placeholder:text-[#c4bfb8] focus:ring-1 focus:ring-[#1a1a1a] focus:border-[#1a1a1a] outline-none"
+                    placeholder="Optional"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] tracking-[0.12em] uppercase text-[#a39e95] mb-1">
+                    Day
+                  </label>
+                  <select
+                    value={editDay}
+                    onChange={(e) => {
+                      const newDay = Number(e.target.value);
+                      setEditDay(newDay);
+                      const newHours = getHoursForDay(newDay);
+                      if (!newHours.includes(editHour)) {
+                        setEditHour(newHours[0]);
+                      }
+                    }}
+                    className="w-full px-3 py-2 bg-white border border-[#e8e5df] rounded-lg text-[13px] text-[#1a1a1a] focus:ring-1 focus:ring-[#1a1a1a] focus:border-[#1a1a1a] outline-none appearance-none"
+                  >
+                    {DAY_NAMES.map((name, i) => (
+                      <option key={i} value={i}>{name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] tracking-[0.12em] uppercase text-[#a39e95] mb-1">
+                    Time
+                  </label>
+                  <select
+                    value={editHour}
+                    onChange={(e) => setEditHour(Number(e.target.value))}
+                    className="w-full px-3 py-2 bg-white border border-[#e8e5df] rounded-lg text-[13px] text-[#1a1a1a] focus:ring-1 focus:ring-[#1a1a1a] focus:border-[#1a1a1a] outline-none appearance-none"
+                  >
+                    {editHours.map((h) => (
+                      <option key={h} value={h}>{formatTime(h)}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button
+                  onClick={() => setEditing(false)}
+                  className="flex-1 py-2 border border-[#e8e5df] text-[#6b665e] rounded-lg text-[12px] font-medium hover:bg-[#f0ede8] transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={saveEdit}
+                  disabled={!editName.trim()}
+                  className="flex-1 py-2 bg-[#1a1a1a] text-white rounded-lg text-[12px] font-medium hover:bg-[#333] transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5"
+                >
+                  <Check className="h-3.5 w-3.5" />
+                  Save
+                </button>
+              </div>
+            </div>
+          )}
+
           <p className="text-[10px] tracking-[0.12em] uppercase text-[#a39e95] mt-3 mb-2">
             Next {WEEKS_AHEAD} weeks
           </p>
