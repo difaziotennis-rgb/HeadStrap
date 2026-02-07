@@ -67,7 +67,7 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
     [savedSlots, loaded]
   );
 
-  /** Get visible (available or booked) slots for a date. */
+  /** Get only available (not booked) slots for a date. */
   const visibleSlotsForDate = useCallback(
     (date: Date): TimeSlot[] => {
       if (!loaded) return [];
@@ -77,7 +77,7 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
       for (const hour of hours) {
         const id = `${dateStr}-${hour}`;
         const slot = savedSlots[id];
-        if (slot && (slot.available || slot.booked)) {
+        if (slot && slot.available && !slot.booked) {
           result.push(slot);
         }
       }
@@ -133,16 +133,12 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
             const mEnd = endOfMonth(month);
             const days = eachDayOfInterval({ start: mStart, end: mEnd });
 
-            let hasVisibleSlots = false;
             let hasAvailableSlots = false;
             for (const day of days) {
               const dateStr = buildDateStr(day);
               for (const hour of getHoursForDay(day.getDay())) {
                 const slot = savedSlots[`${dateStr}-${hour}`];
-                if (slot) {
-                  if (slot.available || slot.booked) hasVisibleSlots = true;
-                  if (slot.available && !slot.booked) { hasAvailableSlots = true; break; }
-                }
+                if (slot && slot.available && !slot.booked) { hasAvailableSlots = true; break; }
               }
               if (hasAvailableSlots) break;
             }
@@ -154,14 +150,13 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
                 className={cn(
                   "p-4 rounded-xl border transition-all text-left active:scale-95",
                   hasAvailableSlots ? "border-[#1a1a1a] bg-white hover:bg-[#f7f7f5] cursor-pointer"
-                    : hasVisibleSlots ? "border-[#e8e5df] bg-[#fef2f2] cursor-pointer"
                     : "border-[#e8e5df] bg-[#f7f7f5] cursor-pointer"
                 )}
               >
                 <div className="text-[14px] font-medium text-[#1a1a1a] mb-1">{format(month, "MMMM")}</div>
                 <div className="flex items-center gap-1.5 text-[11px] text-[#7a756d]">
                   {hasAvailableSlots && <span className="w-[4px] h-[4px] rounded-full bg-[#b0a99f] flex-shrink-0" />}
-                  {hasAvailableSlots ? "Available" : hasVisibleSlots ? "Booked" : "No availability"}
+                  {hasAvailableSlots ? "Available" : "No availability"}
                 </div>
               </button>
             );
@@ -255,17 +250,11 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
                   <button
                     key={slot.id}
                     onClick={(e) => { e.preventDefault(); onTimeSlotSelect(slot); }}
-                    disabled={slot.booked || !slot.available}
                     type="button"
-                    className={cn(
-                      "py-2.5 px-3 rounded-lg border transition-all text-[13px] font-medium flex items-center justify-center gap-2 active:scale-95",
-                      slot.booked && "bg-[#fef2f2] border-[#fecaca] text-[#991b1b] cursor-not-allowed",
-                      !slot.booked && slot.available && "bg-[#faf9f7] border-[#d9d5cf] text-[#1a1a1a] hover:border-[#1a1a1a] hover:bg-[#f0ede8] cursor-pointer shadow-sm"
-                    )}
+                    className="py-2.5 px-3 rounded-lg border border-[#d9d5cf] bg-[#faf9f7] text-[#1a1a1a] hover:border-[#1a1a1a] hover:bg-[#f0ede8] cursor-pointer shadow-sm transition-all text-[13px] font-medium flex items-center justify-center gap-2 active:scale-95"
                   >
                     <Clock className="h-3.5 w-3.5" />
                     <span>{formatTime(slot.hour)}</span>
-                    {slot.booked && <span className="text-[10px]">(Booked)</span>}
                   </button>
                 ))}
               </div>
