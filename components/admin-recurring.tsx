@@ -1,15 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Trash2, X, ChevronDown } from "lucide-react";
+import { Plus, Trash2, X, ChevronDown, RefreshCw } from "lucide-react";
 import { RecurringLesson, TimeSlot } from "@/lib/types";
 import { formatTime, getHoursForDay } from "@/lib/utils";
 import { cn } from "@/lib/utils";
-import { format, addMonths, eachDayOfInterval, getDay } from "date-fns";
+import { format, addWeeks, eachDayOfInterval, getDay } from "date-fns";
 
 // ─── localStorage keys ───────────────────────────────────────
 const RECURRING_KEY = "difazio_recurring";
 const SLOTS_KEY = "difazio_admin_slots";
+const WEEKS_AHEAD = 8;
 
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const DAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -61,21 +62,34 @@ function buildDateStr(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
-/** Stamp all recurring lesson occurrences into the slots storage. */
+/** Get the rolling window: today → 8 weeks from today */
+function getRollingEnd(): Date {
+  return addWeeks(new Date(), WEEKS_AHEAD);
+}
+
+/**
+ * Stamp all recurring lesson occurrences into the slots storage
+ * for the rolling 8-week window from today.
+ */
 function stampRecurringToSlots(lessons: RecurringLesson[]) {
   const slots = loadSlots();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const end = getRollingEnd();
+
+  const allDays = eachDayOfInterval({ start: today, end });
 
   for (const lesson of lessons) {
-    const start = new Date(lesson.startDate + "T12:00:00");
-    const end = new Date(lesson.endDate + "T12:00:00");
-    const allDays = eachDayOfInterval({ start, end });
-
     for (const day of allDays) {
       if (getDay(day) !== lesson.dayOfWeek) continue;
       const dateStr = buildDateStr(day);
       if (lesson.cancelledDates.includes(dateStr)) continue;
 
       const id = `${dateStr}-${lesson.hour}`;
+      // Don't overwrite a slot that was booked by a non-recurring client
+      const existing = slots[id];
+      if (existing?.booked && !existing?.notes?.startsWith("Recurring:")) continue;
+
       slots[id] = {
         id,
         date: dateStr,
@@ -93,6 +107,38 @@ function stampRecurringToSlots(lessons: RecurringLesson[]) {
   saveSlots(slots);
 }
 
+/**
+ * Remove slots owned by a specific recurring lesson across all time.
+ */
+function removeRecurringSlotsForLesson(lesson: RecurringLesson) {
+  const slots = loadSlots();
+  const keysToDelete: string[] = [];
+  for (const key of Object.keys(slots)) {
+    if (slots[key]?.notes === `Recurring: ${lesson.id}`) {
+      keysToDelete.push(key);
+    }
+  }
+  for (const key of keysToDelete) {
+    delete slots[key];
+  }
+  saveSlots(slots);
+}
+
+/**
+ * Prune cancelled dates that are in the past (house-keeping).
+ */
+function pruneOldCancellations(lessons: RecurringLesson[]): RecurringLesson[] {
+  const todayStr = buildDateStr(new Date());
+  let changed = false;
+  const pruned = lessons.map((l) => {
+    const filtered = l.cancelledDates.filter((d) => d >= todayStr);
+    if (filtered.length !== l.cancelledDates.length) changed = true;
+    return { ...l, cancelledDates: filtered };
+  });
+  if (changed) saveRecurring(pruned);
+  return changed ? pruned : lessons;
+}
+
 // ─── Component ───────────────────────────────────────────────
 export function AdminRecurring() {
   const [lessons, setLessons] = useState<RecurringLesson[]>([]);
@@ -106,10 +152,16 @@ export function AdminRecurring() {
   const [formPhone, setFormPhone] = useState("");
   const [formDay, setFormDay] = useState(1); // Monday default
   const [formHour, setFormHour] = useState(10);
-  const [formMonths, setFormMonths] = useState(6);
 
   useEffect(() => {
-    setLessons(loadRecurring());
+    let data = loadRecurring();
+    // Prune old cancelled dates
+    data = pruneOldCancellations(data);
+    setLessons(data);
+    // Auto-refresh: re-stamp the next 8 weeks on every load
+    if (data.length > 0) {
+      stampRecurringToSlots(data);
+    }
     setLoaded(true);
   }, []);
 
@@ -118,7 +170,6 @@ export function AdminRecurring() {
 
     const today = new Date();
     const startDate = buildDateStr(today);
-    const endDate = buildDateStr(addMonths(today, formMonths));
 
     const newLesson: RecurringLesson = {
       id: `rec-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
@@ -128,7 +179,7 @@ export function AdminRecurring() {
       dayOfWeek: formDay,
       hour: formHour,
       startDate,
-      endDate,
+      endDate: "", // not used — rolling window
       cancelledDates: [],
       createdAt: new Date().toISOString(),
     };
@@ -151,21 +202,8 @@ export function AdminRecurring() {
     const lesson = lessons.find((l) => l.id === id);
     if (!lesson) return;
 
-    // Remove slots this recurring lesson created
-    const slots = loadSlots();
-    const start = new Date(lesson.startDate + "T12:00:00");
-    const end = new Date(lesson.endDate + "T12:00:00");
-    const allDays = eachDayOfInterval({ start, end });
-    for (const day of allDays) {
-      if (getDay(day) !== lesson.dayOfWeek) continue;
-      const dateStr = buildDateStr(day);
-      const slotId = `${dateStr}-${lesson.hour}`;
-      const slot = slots[slotId];
-      if (slot?.notes?.includes(lesson.id)) {
-        delete slots[slotId];
-      }
-    }
-    saveSlots(slots);
+    // Remove all slots this recurring lesson created
+    removeRecurringSlotsForLesson(lesson);
 
     const updated = lessons.filter((l) => l.id !== id);
     setLessons(updated);
@@ -217,15 +255,15 @@ export function AdminRecurring() {
     setTimeout(() => setSaveMsg(null), 3000);
   }
 
-  // Get next N upcoming dates for a recurring lesson
-  function getUpcomingDates(lesson: RecurringLesson, count: number): { dateStr: string; cancelled: boolean }[] {
+  // Get next 8 weeks of upcoming dates for a recurring lesson
+  function getUpcomingDates(lesson: RecurringLesson): { dateStr: string; cancelled: boolean }[] {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const end = new Date(lesson.endDate + "T12:00:00");
+    const end = getRollingEnd();
     const results: { dateStr: string; cancelled: boolean }[] = [];
 
     const current = new Date(today);
-    while (results.length < count && current <= end) {
+    while (current <= end) {
       if (getDay(current) === lesson.dayOfWeek) {
         const dateStr = buildDateStr(current);
         results.push({
@@ -251,7 +289,8 @@ export function AdminRecurring() {
             Recurring Lessons
           </h2>
           <p className="text-[11px] text-[#a39e95] mt-0.5">
-            {lessons.length} active recurring lesson{lessons.length !== 1 ? "s" : ""}
+            {lessons.length} active{" "}
+            {lessons.length === 1 ? "lesson" : "lessons"} &middot; rolling {WEEKS_AHEAD} weeks
           </p>
         </div>
         {!showAddForm && (
@@ -337,7 +376,6 @@ export function AdminRecurring() {
                   onChange={(e) => {
                     const newDay = Number(e.target.value);
                     setFormDay(newDay);
-                    // Reset hour if current hour isn't valid for new day
                     const newHours = getHoursForDay(newDay);
                     if (!newHours.includes(formHour)) {
                       setFormHour(newHours[0]);
@@ -370,21 +408,9 @@ export function AdminRecurring() {
               </div>
             </div>
 
-            <div>
-              <label className="block text-[10px] tracking-[0.12em] uppercase text-[#a39e95] mb-1">
-                Duration
-              </label>
-              <select
-                value={formMonths}
-                onChange={(e) => setFormMonths(Number(e.target.value))}
-                className="w-full px-3 py-2 bg-white border border-[#e8e5df] rounded-lg text-[13px] text-[#1a1a1a] focus:ring-1 focus:ring-[#1a1a1a] focus:border-[#1a1a1a] outline-none appearance-none"
-              >
-                <option value={3}>3 months</option>
-                <option value={6}>6 months</option>
-                <option value={9}>9 months</option>
-                <option value={12}>12 months</option>
-              </select>
-            </div>
+            <p className="text-[11px] text-[#a39e95]">
+              Automatically books the next {WEEKS_AHEAD} weeks and keeps rolling forward.
+            </p>
 
             <div className="flex gap-2 pt-1">
               <button
@@ -443,11 +469,12 @@ function RecurringLessonCard({
   onDelete: (id: string) => void;
   onCancelDate: (id: string, date: string) => void;
   onRestoreDate: (id: string, date: string) => void;
-  getUpcomingDates: (lesson: RecurringLesson, count: number) => { dateStr: string; cancelled: boolean }[];
+  getUpcomingDates: (lesson: RecurringLesson) => { dateStr: string; cancelled: boolean }[];
 }) {
   const [expanded, setExpanded] = useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
-  const upcoming = getUpcomingDates(lesson, 8);
+  const upcoming = getUpcomingDates(lesson);
+  const activeDates = upcoming.filter((d) => !d.cancelled).length;
 
   return (
     <div className="border border-[#e8e5df] rounded-xl bg-white overflow-hidden">
@@ -471,7 +498,7 @@ function RecurringLessonCard({
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           <span className="text-[10px] text-[#a39e95]">
-            until {format(new Date(lesson.endDate + "T12:00:00"), "MMM yyyy")}
+            {activeDates}/{upcoming.length} weeks
           </span>
           <ChevronDown
             className={cn(
@@ -486,7 +513,7 @@ function RecurringLessonCard({
       {expanded && (
         <div className="px-4 pb-4 border-t border-[#f0ede8]">
           <p className="text-[10px] tracking-[0.12em] uppercase text-[#a39e95] mt-3 mb-2">
-            Upcoming weeks
+            Next {WEEKS_AHEAD} weeks
           </p>
           {upcoming.length === 0 ? (
             <p className="text-[11px] text-[#a39e95]">No upcoming dates</p>
