@@ -2,17 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Save, CreditCard, Wallet, Building2, Mail } from "lucide-react";
 import Link from "next/link";
-import { initializeMockData } from "@/lib/mock-data";
+import { Save, CalendarDays, LogOut } from "lucide-react";
+import { PAYMENT_CONFIG } from "@/lib/payment-config";
 
 interface PaymentSettings {
   paypalEmail: string;
+  paypalMeUsername: string;
   venmoHandle: string;
-  bankAccountName: string;
-  bankAccountNumber: string;
-  bankRoutingNumber: string;
-  bankName: string;
+  lessonRate: string;
   notificationEmail: string;
   notes: string;
 }
@@ -24,39 +22,52 @@ export default function PaymentSettingsPage() {
   const [saveMessage, setSaveMessage] = useState("");
   const [formData, setFormData] = useState<PaymentSettings>({
     paypalEmail: "",
+    paypalMeUsername: "",
     venmoHandle: "",
-    bankAccountName: "",
-    bankAccountNumber: "",
-    bankRoutingNumber: "",
-    bankName: "",
-    notificationEmail: "difaziotennis@gmail.com",
+    lessonRate: "160",
+    notificationEmail: "",
     notes: "",
   });
 
   useEffect(() => {
-    // Check authentication
     const auth = sessionStorage.getItem("adminAuth");
     if (auth !== "true") {
       router.push("/book");
     } else {
       setIsAuthenticated(true);
-      // Load saved payment settings
       loadPaymentSettings();
     }
   }, [router]);
 
   const loadPaymentSettings = () => {
+    // Start with hardcoded config as defaults
+    const defaults: PaymentSettings = {
+      paypalEmail: PAYMENT_CONFIG.paypalEmail || "",
+      paypalMeUsername: PAYMENT_CONFIG.paypalMeUsername || "",
+      venmoHandle: PAYMENT_CONFIG.venmoHandle || "",
+      lessonRate: "160",
+      notificationEmail: PAYMENT_CONFIG.notificationEmail || "",
+      notes: "",
+    };
+
+    // Override with any localStorage values (if admin has saved custom settings)
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("paymentSettings");
       if (saved) {
         try {
           const settings = JSON.parse(saved);
-          setFormData(settings);
+          setFormData({
+            ...defaults,
+            ...settings,
+          });
+          return;
         } catch (e) {
           console.error("Error loading payment settings:", e);
         }
       }
     }
+
+    setFormData(defaults);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -65,10 +76,8 @@ export default function PaymentSettingsPage() {
     setSaveMessage("");
 
     try {
-      // Save to localStorage (in production, save to database)
       localStorage.setItem("paymentSettings", JSON.stringify(formData));
-      
-      setSaveMessage("Payment settings saved successfully!");
+      setSaveMessage("Settings saved.");
       setTimeout(() => setSaveMessage(""), 3000);
     } catch (error) {
       setSaveMessage("Error saving settings. Please try again.");
@@ -81,122 +90,164 @@ export default function PaymentSettingsPage() {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
+  const handleLogout = () => {
+    sessionStorage.removeItem("adminAuth");
+    router.push("/book");
+  };
+
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-earth-600">Loading...</p>
-        </div>
+      <div className="min-h-screen bg-[#f7f7f5] flex items-center justify-center">
+        <div className="text-[13px] text-[#7a756d]">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-50">
+    <div className="min-h-screen bg-[#f7f7f5]">
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-sm border-b border-primary-100 sticky top-0 z-40">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <header className="bg-[#faf9f7] border-b border-[#e8e5df] sticky top-0 z-40">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => router.push("/book")}
-                className="p-2 hover:bg-primary-100 rounded-lg transition-colors"
-                type="button"
-                aria-label="Go back to booking page"
-              >
-                <ArrowLeft className="h-5 w-5 text-primary-700" />
-              </button>
-              <div>
-                <h1 className="text-2xl font-serif text-primary-800">Payment Settings</h1>
-                <p className="text-sm text-earth-600">Configure how you receive payments</p>
-              </div>
-            </div>
+            <p className="text-[10px] tracking-[0.25em] uppercase text-[#b0a99f]">DiFazio Tennis</p>
             <div className="flex items-center gap-4">
               <Link
-                href="/admin/dashboard"
-                className="text-primary-700 hover:text-primary-800 font-medium text-sm underline"
+                href="/book"
+                className="flex items-center gap-1.5 text-[#8a8477] hover:text-[#1a1a1a] text-[12px] font-medium transition-colors"
               >
-                Club Management
+                <CalendarDays className="h-3.5 w-3.5" />
+                Calendar
               </Link>
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-1 text-[12px] text-[#8a8477] hover:text-[#1a1a1a] font-medium transition-colors"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                Logout
+              </button>
             </div>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* PayPal Section */}
-          <div className="bg-white/60 backdrop-blur-sm rounded-2xl shadow-lg border border-primary-100 p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Wallet className="h-6 w-6 text-blue-700" />
-              </div>
-              <div>
-                <h2 className="text-xl font-serif text-primary-800">PayPal</h2>
-                <p className="text-sm text-earth-600">Email address for PayPal payments</p>
-              </div>
-            </div>
-            <div>
-              <label htmlFor="paypalEmail" className="block text-sm font-medium text-primary-800 mb-2">
-                PayPal Email Address
-              </label>
-              <input
-                type="email"
-                id="paypalEmail"
-                value={formData.paypalEmail}
-                onChange={(e) => handleChange("paypalEmail", e.target.value)}
-                placeholder="your-email@example.com"
-                className="w-full px-4 py-2 border border-primary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
-              />
-              <p className="mt-1 text-xs text-earth-500">
-                This is where PayPal payments will be sent
-              </p>
-            </div>
-          </div>
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
+        {/* Title */}
+        <div className="mb-8">
+          <h1 className="text-2xl sm:text-3xl font-light tracking-tight text-[#1a1a1a] mb-1">
+            Payment Settings
+          </h1>
+          <p className="text-[12px] text-[#7a756d]">
+            These are the payment methods included in client confirmation emails.
+          </p>
+        </div>
 
-          {/* Venmo Section */}
-          <div className="bg-white/60 backdrop-blur-sm rounded-2xl shadow-lg border border-primary-100 p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <Wallet className="h-6 w-6 text-purple-700" />
-              </div>
-              <div>
-                <h2 className="text-xl font-serif text-primary-800">Venmo</h2>
-                <p className="text-sm text-earth-600">Your Venmo username or phone number</p>
-              </div>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Venmo */}
+          <div className="bg-white rounded-2xl shadow-sm border border-[#e8e5df] p-5 sm:p-6">
+            <div className="mb-4">
+              <h2 className="text-[10px] tracking-[0.15em] uppercase text-[#7a756d] font-medium">Venmo</h2>
             </div>
-            <div>
-              <label htmlFor="venmoHandle" className="block text-sm font-medium text-primary-800 mb-2">
-                Venmo Handle
+            <div className="space-y-1.5">
+              <label htmlFor="venmoHandle" className="block text-[10px] tracking-[0.1em] uppercase text-[#7a756d] font-medium">
+                Venmo Handle / Phone Number
               </label>
               <input
                 type="text"
                 id="venmoHandle"
                 value={formData.venmoHandle}
                 onChange={(e) => handleChange("venmoHandle", e.target.value)}
-                placeholder="@your-venmo-handle or phone number"
-                className="w-full px-4 py-2 border border-primary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+                placeholder="@your-venmo or phone number"
+                className="w-full px-3 py-2 bg-[#faf9f7] border border-[#e8e5df] rounded-lg text-[16px] sm:text-[13px] text-[#1a1a1a] placeholder:text-[#c4bfb8] focus:ring-1 focus:ring-[#1a1a1a] focus:border-[#1a1a1a] outline-none transition-all"
               />
-              <p className="mt-1 text-xs text-earth-500">
-                Your Venmo username (with @) or phone number
+              <p className="text-[11px] text-[#b0a99f]">
+                Clients will see a "Pay with Venmo" link in their confirmation email
               </p>
             </div>
           </div>
 
-          {/* Notification Email Section */}
-          <div className="bg-white/60 backdrop-blur-sm rounded-2xl shadow-lg border border-primary-100 p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Mail className="h-6 w-6 text-blue-700" />
+          {/* PayPal */}
+          <div className="bg-white rounded-2xl shadow-sm border border-[#e8e5df] p-5 sm:p-6">
+            <div className="mb-4">
+              <h2 className="text-[10px] tracking-[0.15em] uppercase text-[#7a756d] font-medium">PayPal</h2>
+            </div>
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <label htmlFor="paypalMeUsername" className="block text-[10px] tracking-[0.1em] uppercase text-[#7a756d] font-medium">
+                  PayPal.me Username
+                </label>
+                <input
+                  type="text"
+                  id="paypalMeUsername"
+                  value={formData.paypalMeUsername}
+                  onChange={(e) => handleChange("paypalMeUsername", e.target.value)}
+                  placeholder="yourname"
+                  className="w-full px-3 py-2 bg-[#faf9f7] border border-[#e8e5df] rounded-lg text-[16px] sm:text-[13px] text-[#1a1a1a] placeholder:text-[#c4bfb8] focus:ring-1 focus:ring-[#1a1a1a] focus:border-[#1a1a1a] outline-none transition-all"
+                />
+                <p className="text-[11px] text-[#b0a99f]">
+                  Creates a paypal.me/{formData.paypalMeUsername || "username"} link with the lesson amount pre-filled
+                </p>
               </div>
-              <div>
-                <h2 className="text-xl font-serif text-primary-800">Email Notifications</h2>
-                <p className="text-sm text-earth-600">Email address to receive booking notifications</p>
+              <div className="space-y-1.5">
+                <label htmlFor="paypalEmail" className="block text-[10px] tracking-[0.1em] uppercase text-[#7a756d] font-medium">
+                  PayPal Email
+                </label>
+                <input
+                  type="email"
+                  id="paypalEmail"
+                  value={formData.paypalEmail}
+                  onChange={(e) => handleChange("paypalEmail", e.target.value)}
+                  placeholder="your-email@example.com"
+                  className="w-full px-3 py-2 bg-[#faf9f7] border border-[#e8e5df] rounded-lg text-[16px] sm:text-[13px] text-[#1a1a1a] placeholder:text-[#c4bfb8] focus:ring-1 focus:ring-[#1a1a1a] focus:border-[#1a1a1a] outline-none transition-all"
+                />
+                <p className="text-[11px] text-[#b0a99f]">
+                  Used as a fallback if PayPal.me username is not set
+                </p>
               </div>
             </div>
-            <div>
-              <label htmlFor="notificationEmail" className="block text-sm font-medium text-primary-800 mb-2">
+          </div>
+
+          {/* Stripe */}
+          <div className="bg-white rounded-2xl shadow-sm border border-[#e8e5df] p-5 sm:p-6">
+            <div className="mb-4">
+              <h2 className="text-[10px] tracking-[0.15em] uppercase text-[#7a756d] font-medium">Stripe (Card Payments)</h2>
+            </div>
+            <p className="text-[12px] text-[#7a756d]">
+              Stripe checkout links are generated automatically when you accept a lesson request. 
+              The Stripe API key is configured via the <span className="font-mono text-[11px] bg-[#f0ede8] px-1 py-0.5 rounded">STRIPE_SECRET_KEY</span> environment variable.
+            </p>
+          </div>
+
+          {/* Lesson Rate */}
+          <div className="bg-white rounded-2xl shadow-sm border border-[#e8e5df] p-5 sm:p-6">
+            <div className="mb-4">
+              <h2 className="text-[10px] tracking-[0.15em] uppercase text-[#7a756d] font-medium">Lesson Rate</h2>
+            </div>
+            <div className="space-y-1.5">
+              <label htmlFor="lessonRate" className="block text-[10px] tracking-[0.1em] uppercase text-[#7a756d] font-medium">
+                Rate Per Lesson ($)
+              </label>
+              <input
+                type="text"
+                id="lessonRate"
+                value={formData.lessonRate}
+                onChange={(e) => handleChange("lessonRate", e.target.value)}
+                placeholder="160"
+                className="w-full px-3 py-2 bg-[#faf9f7] border border-[#e8e5df] rounded-lg text-[16px] sm:text-[13px] text-[#1a1a1a] placeholder:text-[#c4bfb8] focus:ring-1 focus:ring-[#1a1a1a] focus:border-[#1a1a1a] outline-none transition-all"
+              />
+              <p className="text-[11px] text-[#b0a99f]">
+                This amount is pre-filled in Venmo, PayPal, and Stripe payment links
+              </p>
+            </div>
+          </div>
+
+          {/* Notification Email */}
+          <div className="bg-white rounded-2xl shadow-sm border border-[#e8e5df] p-5 sm:p-6">
+            <div className="mb-4">
+              <h2 className="text-[10px] tracking-[0.15em] uppercase text-[#7a756d] font-medium">Notifications</h2>
+            </div>
+            <div className="space-y-1.5">
+              <label htmlFor="notificationEmail" className="block text-[10px] tracking-[0.1em] uppercase text-[#7a756d] font-medium">
                 Notification Email
               </label>
               <input
@@ -205,151 +256,68 @@ export default function PaymentSettingsPage() {
                 value={formData.notificationEmail}
                 onChange={(e) => handleChange("notificationEmail", e.target.value)}
                 placeholder="difaziotennis@gmail.com"
-                className="w-full px-4 py-2 border border-primary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+                className="w-full px-3 py-2 bg-[#faf9f7] border border-[#e8e5df] rounded-lg text-[16px] sm:text-[13px] text-[#1a1a1a] placeholder:text-[#c4bfb8] focus:ring-1 focus:ring-[#1a1a1a] focus:border-[#1a1a1a] outline-none transition-all"
               />
-              <p className="mt-1 text-xs text-earth-500">
-                You'll receive an email whenever someone books a lesson
+              <p className="text-[11px] text-[#b0a99f]">
+                You'll receive lesson request and confirmation emails here
               </p>
             </div>
           </div>
 
-          {/* Bank Account Section */}
-          <div className="bg-white/60 backdrop-blur-sm rounded-2xl shadow-lg border border-primary-100 p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Building2 className="h-6 w-6 text-green-700" />
-              </div>
-              <div>
-                <h2 className="text-xl font-serif text-primary-800">Bank Account</h2>
-                <p className="text-sm text-earth-600">For direct bank transfers or ACH payments</p>
-              </div>
+          {/* Notes */}
+          <div className="bg-white rounded-2xl shadow-sm border border-[#e8e5df] p-5 sm:p-6">
+            <div className="mb-4">
+              <h2 className="text-[10px] tracking-[0.15em] uppercase text-[#7a756d] font-medium">Notes</h2>
             </div>
-            <div className="space-y-4">
-              <div>
-                <label htmlFor="bankName" className="block text-sm font-medium text-primary-800 mb-2">
-                  Bank Name
-                </label>
-                <input
-                  type="text"
-                  id="bankName"
-                  value={formData.bankName}
-                  onChange={(e) => handleChange("bankName", e.target.value)}
-                  placeholder="Bank of America"
-                  className="w-full px-4 py-2 border border-primary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
-                />
-              </div>
-              <div>
-                <label htmlFor="bankAccountName" className="block text-sm font-medium text-primary-800 mb-2">
-                  Account Holder Name
-                </label>
-                <input
-                  type="text"
-                  id="bankAccountName"
-                  value={formData.bankAccountName}
-                  onChange={(e) => handleChange("bankAccountName", e.target.value)}
-                  placeholder="John Doe"
-                  className="w-full px-4 py-2 border border-primary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
-                />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="bankAccountNumber" className="block text-sm font-medium text-primary-800 mb-2">
-                    Account Number
-                  </label>
-                  <input
-                    type="text"
-                    id="bankAccountNumber"
-                    value={formData.bankAccountNumber}
-                    onChange={(e) => handleChange("bankAccountNumber", e.target.value)}
-                    placeholder="123456789"
-                    className="w-full px-4 py-2 border border-primary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="bankRoutingNumber" className="block text-sm font-medium text-primary-800 mb-2">
-                    Routing Number
-                  </label>
-                  <input
-                    type="text"
-                    id="bankRoutingNumber"
-                    value={formData.bankRoutingNumber}
-                    onChange={(e) => handleChange("bankRoutingNumber", e.target.value)}
-                    placeholder="123456789"
-                    className="w-full px-4 py-2 border border-primary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Notes Section */}
-          <div className="bg-white/60 backdrop-blur-sm rounded-2xl shadow-lg border border-primary-100 p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <CreditCard className="h-6 w-6 text-primary-700" />
-              <div>
-                <h2 className="text-xl font-serif text-primary-800">Additional Notes</h2>
-                <p className="text-sm text-earth-600">Any additional payment instructions</p>
-              </div>
-            </div>
-            <div>
-              <label htmlFor="notes" className="block text-sm font-medium text-primary-800 mb-2">
-                Payment Instructions
+            <div className="space-y-1.5">
+              <label htmlFor="notes" className="block text-[10px] tracking-[0.1em] uppercase text-[#7a756d] font-medium">
+                Additional Payment Instructions
               </label>
               <textarea
                 id="notes"
                 value={formData.notes}
                 onChange={(e) => handleChange("notes", e.target.value)}
                 placeholder="e.g., 'Please include booking date in payment memo'"
-                rows={4}
-                className="w-full px-4 py-2 border border-primary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+                rows={3}
+                className="w-full px-3 py-2 bg-[#faf9f7] border border-[#e8e5df] rounded-lg text-[16px] sm:text-[13px] text-[#1a1a1a] placeholder:text-[#c4bfb8] focus:ring-1 focus:ring-[#1a1a1a] focus:border-[#1a1a1a] outline-none transition-all resize-none"
               />
             </div>
           </div>
 
-          {/* Save Button */}
-          <div className="flex items-center justify-between">
+          {/* Actions */}
+          <div className="flex items-center gap-3 pt-2">
             <button
               type="button"
               onClick={() => router.push("/book")}
-              className="px-6 py-3 border-2 border-primary-300 text-primary-700 rounded-lg font-semibold hover:bg-primary-50 transition-colors"
-              aria-label="Cancel and return to booking page"
+              className="px-5 py-2.5 border border-[#e8e5df] text-[#6b665e] rounded-lg text-[12px] font-medium hover:bg-[#f0ede8] transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSaving}
-              className="px-6 py-3 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-5 py-2.5 bg-[#1a1a1a] text-white rounded-lg text-[12px] font-medium hover:bg-[#333] transition-colors disabled:opacity-50 flex items-center gap-2"
             >
-              <Save className="h-5 w-5" />
+              <Save className="h-3.5 w-3.5" />
               {isSaving ? "Saving..." : "Save Settings"}
             </button>
+            {saveMessage && (
+              <span className={`text-[12px] ${saveMessage.includes("Error") ? "text-[#991b1b]" : "text-[#5a8a5a]"}`}>
+                {saveMessage}
+              </span>
+            )}
           </div>
-
-          {saveMessage && (
-            <div
-              className={`p-4 rounded-lg ${
-                saveMessage.includes("Error")
-                  ? "bg-red-50 border border-red-200 text-red-700"
-                  : "bg-green-50 border border-green-200 text-green-700"
-              }`}
-            >
-              {saveMessage}
-            </div>
-          )}
         </form>
 
-        {/* Security Note */}
-        <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <p className="text-sm text-blue-800">
-            <strong>Security Note:</strong> Payment information is stored locally in your browser. 
-            In production, this should be stored securely in a database with encryption.
+        {/* Info Note */}
+        <div className="mt-8 p-4 bg-[#faf9f7] border border-[#e8e5df] rounded-xl">
+          <p className="text-[11px] text-[#7a756d]">
+            <strong className="text-[#1a1a1a]">Note:</strong> Changes here are saved to your browser. 
+            To update the payment links that appear in client emails, the values in the server configuration 
+            (<span className="font-mono text-[10px] bg-[#f0ede8] px-1 py-0.5 rounded">payment-config.ts</span>) also need to be updated.
           </p>
         </div>
       </main>
     </div>
   );
 }
-
-
-

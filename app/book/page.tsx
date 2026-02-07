@@ -95,12 +95,6 @@ export default function BookPage() {
               {isAdminMode && (
                 <>
                   <Link
-                    href="/admin/dashboard"
-                    className="text-[#8a8477] hover:text-[#1a1a1a] text-[12px] font-medium transition-colors"
-                  >
-                    Dashboard
-                  </Link>
-                  <Link
                     href="/admin/payment-settings"
                     className="text-[#8a8477] hover:text-[#1a1a1a] text-[12px] font-medium transition-colors"
                   >
