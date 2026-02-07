@@ -297,8 +297,7 @@ Confirmed on: ${new Date().toLocaleString()}
             "Authorization": `Bearer ${RESEND_API_KEY}`,
           },
           body: JSON.stringify({
-            // Use Resend's verified sandbox sender; replies go to your real email
-            from: "DiFazio Tennis <onboarding@resend.dev>",
+            from: "DiFazio Tennis <notifications@difaziotennis.com>",
             to: booking.clientEmail,
             subject: clientSubject,
             html: clientHtml,
@@ -323,8 +322,7 @@ Confirmed on: ${new Date().toLocaleString()}
             "Authorization": `Bearer ${RESEND_API_KEY}`,
           },
           body: JSON.stringify({
-            // Use Resend's verified sandbox sender; replies go to your real email
-            from: "DiFazio Tennis <onboarding@resend.dev>",
+            from: "DiFazio Tennis <notifications@difaziotennis.com>",
             to: adminEmail,
             subject: adminSubject,
             html: adminHtml,
