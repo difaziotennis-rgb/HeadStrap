@@ -68,10 +68,11 @@ function getPaymentLinks(booking: Booking, formattedDate: string, formattedTime:
     ? `https://venmo.com/?txn=pay&recipients=${encodeURIComponent(PAYMENT_CONFIG.venmoHandle.replace(/^@/, ""))}&amount=${booking.amount}&note=${encodeURIComponent(note)}`
     : "";
 
+  // PayPal.me link with amount in the path (e.g. paypal.me/difaziotennis/160.00)
   const paypal = PAYMENT_CONFIG.paypalMeUsername
-    ? `https://paypal.me/${encodeURIComponent(PAYMENT_CONFIG.paypalMeUsername.replace(/^@/, "").replace(/^paypal\.me\//, ""))}/${booking.amount}`
+    ? `https://www.paypal.me/${PAYMENT_CONFIG.paypalMeUsername.replace(/^@/, "").replace(/^paypal\.me\//, "")}/${booking.amount.toFixed(2)}USD`
     : PAYMENT_CONFIG.paypalEmail
-    ? `https://www.paypal.com/send?amount=${booking.amount}&currencyCode=USD&recipient=${encodeURIComponent(PAYMENT_CONFIG.paypalEmail)}&note=${encodeURIComponent(note)}`
+    ? `https://www.paypal.com/paypalme/${encodeURIComponent(PAYMENT_CONFIG.paypalEmail)}/${booking.amount.toFixed(2)}`
     : "";
 
   return { venmo, paypal };
@@ -79,14 +80,10 @@ function getPaymentLinks(booking: Booking, formattedDate: string, formattedTime:
 
 // ─── CLIENT CONFIRMATION EMAIL ───────────────────────────────────
 
-export function clientConfirmationEmail(booking: Booking) {
+export function clientConfirmationEmail(booking: Booking, stripeCheckoutUrl?: string) {
   const date = formatBookingDate(booking.date);
   const time = formatTime(booking.hour);
   const { venmo, paypal } = getPaymentLinks(booking, date, time);
-
-  // Stripe checkout link (generates on-demand, so we link to the booking page)
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-  const stripeConfigured = !!process.env.STRIPE_SECRET_KEY;
 
   const html = emailWrapper(`
     <div class="header">
@@ -128,7 +125,7 @@ export function clientConfirmationEmail(booking: Booking) {
       <div class="payment-grid">
         ${venmo ? `<a href="${venmo}" target="_blank" rel="noopener" class="payment-btn btn-dark">Pay $${booking.amount} with Venmo</a>` : ""}
         ${paypal ? `<a href="${paypal}" target="_blank" rel="noopener" class="payment-btn btn-dark">Pay $${booking.amount} with PayPal</a>` : ""}
-        ${stripeConfigured ? `<a href="${baseUrl}/book" target="_blank" rel="noopener" class="payment-btn btn-outline">Pay $${booking.amount} with Card (Stripe)</a>` : ""}
+        ${stripeCheckoutUrl ? `<a href="${stripeCheckoutUrl}" target="_blank" rel="noopener" class="payment-btn btn-outline">Pay $${booking.amount} with Card</a>` : ""}
       </div>
 
       <div class="divider"></div>
@@ -155,6 +152,7 @@ Fee: $${booking.amount}
 PAYMENT OPTIONS:
 ${venmo ? `Venmo: ${venmo}` : ""}
 ${paypal ? `PayPal: ${paypal}` : ""}
+${stripeCheckoutUrl ? `Card: ${stripeCheckoutUrl}` : ""}
 
 Questions? Contact Derek at difaziotennis@gmail.com or 631-901-5220.
 

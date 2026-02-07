@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import Stripe from "stripe";
 import { Booking } from "@/lib/types";
 import { sendEmail } from "@/lib/send-email";
 import { clientConfirmationEmail, adminConfirmationEmail } from "@/lib/email-templates";
@@ -35,9 +36,46 @@ export async function POST(request: Request) {
     }
 
     const adminEmail = "difaziotennis@gmail.com";
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+
+    // Create Stripe checkout session for the email payment link
+    let stripeCheckoutUrl = "";
+    const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+    if (stripeSecretKey) {
+      try {
+        const stripe = new Stripe(stripeSecretKey, { apiVersion: "2025-12-15.clover" });
+        const session = await stripe.checkout.sessions.create({
+          payment_method_types: ["card"],
+          line_items: [{
+            price_data: {
+              currency: "usd",
+              product_data: {
+                name: "Tennis Lesson",
+                description: `Private lesson on ${booking.date} at ${booking.hour}:00`,
+              },
+              unit_amount: booking.amount * 100,
+            },
+            quantity: 1,
+          }],
+          mode: "payment",
+          success_url: `${baseUrl}/booking-success?id=${booking.id}&payment=success`,
+          cancel_url: `${baseUrl}/book?payment=cancelled`,
+          customer_email: booking.clientEmail || undefined,
+          metadata: {
+            bookingId: booking.id,
+            date: booking.date,
+            hour: booking.hour.toString(),
+            clientName: booking.clientName,
+          },
+        });
+        stripeCheckoutUrl = session.url || "";
+      } catch (e) {
+        console.error("Failed to create Stripe checkout session for email:", e);
+      }
+    }
 
     // Generate emails from templates
-    const clientEmail = clientConfirmationEmail(booking);
+    const clientEmail = clientConfirmationEmail(booking, stripeCheckoutUrl);
     const adminEmailContent = adminConfirmationEmail(booking);
 
     // Send confirmation email to client
