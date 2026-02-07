@@ -381,7 +381,7 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
               className={cn(
                 "aspect-square rounded-lg border transition-all text-[13px] font-medium active:scale-95",
                 isPast && "opacity-25 cursor-not-allowed bg-transparent border-transparent",
-                !isPast && !isSelected && hasAvailableSlots && "bg-[#faf9f7] border-[#1a1a1a] hover:bg-[#f0ede8] cursor-pointer shadow-sm",
+                !isPast && !isSelected && hasAvailableSlots && "bg-transparent border-[#d9d5cf] hover:bg-[#f0ede8] cursor-pointer hover:border-[#a39e95]",
                 !isPast && !isSelected && !hasAvailableSlots && "bg-transparent border-[#d9d5cf] text-[#6b665e] cursor-pointer hover:border-[#a39e95]",
                 isSelected && "bg-[#1a1a1a] border-[#1a1a1a] text-white",
                 isCurrentDay && !isSelected && "ring-2 ring-[#1a1a1a]/20"
