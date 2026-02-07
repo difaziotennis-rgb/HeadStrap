@@ -128,13 +128,13 @@ export function clientConfirmationEmail(booking: Booking, stripeCheckoutUrl?: st
         ${stripeCheckoutUrl ? `<a href="${stripeCheckoutUrl}" target="_blank" rel="noopener" class="payment-btn btn-outline">Pay $${booking.amount} with Card</a>` : ""}
       </div>
 
-      <div class="divider"></div>
-
-      <p class="muted">Questions? Contact Derek at <a href="mailto:difaziotennis@gmail.com" style="color:#2d5016;">difaziotennis@gmail.com</a> or <a href="tel:6319015220" style="color:#2d5016;">631-901-5220</a>.</p>
     </div>
 
     <div class="footer">
-      <div class="footer-text">DiFazio Tennis &middot; Rhinebeck, NY</div>
+      <div class="footer-text">
+        DiFazio Tennis &middot; Rhinebeck, NY<br>
+        <a href="mailto:difaziotennis@gmail.com" style="color:#8a8477;">difaziotennis@gmail.com</a> &middot; <a href="tel:6319015220" style="color:#8a8477;">631-901-5220</a>
+      </div>
     </div>
   `);
 
@@ -154,9 +154,8 @@ ${venmo ? `Venmo: ${venmo}` : ""}
 ${paypal ? `PayPal: ${paypal}` : ""}
 ${stripeCheckoutUrl ? `Card: ${stripeCheckoutUrl}` : ""}
 
-Questions? Contact Derek at difaziotennis@gmail.com or 631-901-5220.
-
 DiFazio Tennis - Rhinebeck, NY
+difaziotennis@gmail.com | 631-901-5220
   `.trim();
 
   const subject = `Lesson Confirmed - ${date} at ${time}`;
