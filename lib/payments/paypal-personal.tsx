@@ -45,10 +45,14 @@ export function PayPalPersonalPayment({ booking, onSuccess }: PayPalPersonalPaym
   }
 
   const amount = booking.amount.toFixed(2);
+  const wh = Math.floor(booking.hour);
+  const mn = Math.round((booking.hour - wh) * 60);
+  const dh = wh === 0 ? 12 : wh > 12 ? wh - 12 : wh;
+  const timeStr = dh + ":" + String(mn).padStart(2, "0") + " " + (booking.hour >= 12 ? "PM" : "AM");
   const note = `Tennis Lesson - ${new Date(booking.date + "T12:00:00").toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
-  })} at ${(() => { const wh = Math.floor(booking.hour); const mn = Math.round((booking.hour - wh) * 60); const dh = wh === 0 ? 12 : wh > 12 ? wh - 12 : wh; return `${dh}:${String(mn).padStart(2, '0')} ${booking.hour >= 12 ? 'PM' : 'AM'}`; })()`;
+  })} at ${timeStr}`;
   
   // Create PayPal payment link
   let paypalUrl: string;

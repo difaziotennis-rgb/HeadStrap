@@ -69,7 +69,7 @@ export function PaymentModal({ booking, isOpen, onClose, onPaymentSuccess }: Pay
               <div className="flex justify-between">
                 <span className="text-earth-600">Time:</span>
                 <span className="font-semibold text-primary-800">
-                  {(() => { const wh = Math.floor(booking.hour); const mn = Math.round((booking.hour - wh) * 60); const dh = wh === 0 ? 12 : wh > 12 ? wh - 12 : wh; return `${dh}:${String(mn).padStart(2, '0')} ${booking.hour >= 12 ? 'PM' : 'AM'}`; })()}
+                  {(() => { const wh = Math.floor(booking.hour); const mn = Math.round((booking.hour - wh) * 60); const dh = wh === 0 ? 12 : wh > 12 ? wh - 12 : wh; return dh + ":" + String(mn).padStart(2, "0") + " " + (booking.hour >= 12 ? "PM" : "AM"); })()}
                 </span>
               </div>
               <div className="flex justify-between pt-2 border-t border-primary-200">
