@@ -167,67 +167,71 @@ export function BookingModal({ slot, isOpen, onClose, onBookingComplete }: Booki
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-[#faf9f7] rounded-2xl shadow-2xl max-w-[420px] w-full max-h-[90vh] overflow-y-auto">
+
         {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-primary-200 px-6 py-4 flex items-center justify-between rounded-t-2xl">
-          <h2 className="text-2xl font-serif text-primary-800">Request a Lesson</h2>
-          <button
-            onClick={handleClose}
-            className="p-2 hover:bg-primary-100 rounded-lg transition-colors"
-            aria-label="Close booking modal"
-            type="button"
-          >
-            <X className="h-5 w-5 text-primary-700" />
-          </button>
+        <div className="sticky top-0 bg-[#faf9f7] z-10 rounded-t-2xl">
+          <div className="px-8 pt-8 pb-2 flex items-start justify-between">
+            <div>
+              <p className="text-[10px] tracking-[0.25em] uppercase text-[#b0a99f] mb-3">DiFazio Tennis</p>
+              <h2 className="text-[22px] font-light tracking-tight text-[#1a1a1a]">Request a Lesson</h2>
+            </div>
+            <button
+              onClick={handleClose}
+              className="p-1.5 hover:bg-[#e8e5df] rounded-lg transition-colors mt-1"
+              aria-label="Close booking modal"
+              type="button"
+            >
+              <X className="h-4 w-4 text-[#a39e95]" />
+            </button>
+          </div>
+          <div className="mx-8 h-px bg-[#e8e5df]" />
         </div>
 
-        {/* Content */}
-        <div className="px-6 py-6">
-          {/* Booking Details */}
-          <div className="bg-primary-50 rounded-lg p-4 mb-6">
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-earth-600">Date:</span>
-                <span className="font-semibold text-primary-800">
-                  {format(date, "EEEE, MMMM d, yyyy")}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-earth-600">Time:</span>
-                <span className="font-semibold text-primary-800">
-                  {formatTime(slot.hour)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-earth-600">Duration:</span>
-                <span className="font-semibold text-primary-800">1 hour</span>
-              </div>
-              <div className="flex justify-between pt-2 border-t border-primary-200">
-                <span className="text-earth-600">Price:</span>
-                <span className="font-bold text-lg text-primary-800">$160</span>
-              </div>
-            </div>
+        {/* Lesson Details */}
+        <div className="px-8 pt-5 pb-1">
+          <div className="flex justify-between py-[10px] border-b border-[#f0ede8]">
+            <span className="text-[10px] tracking-[0.12em] uppercase text-[#a39e95]">Date</span>
+            <span className="text-[13px] font-medium text-[#1a1a1a]">{format(date, "EEEE, MMMM d")}</span>
           </div>
-
-          {/* Info Banner */}
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-6">
-            <p className="text-sm text-amber-800">
-              <strong>How it works:</strong> Submit your request and you'll receive an email confirmation once your lesson is accepted.
-            </p>
+          <div className="flex justify-between py-[10px] border-b border-[#f0ede8]">
+            <span className="text-[10px] tracking-[0.12em] uppercase text-[#a39e95]">Time</span>
+            <span className="text-[13px] font-medium text-[#1a1a1a]">{formatTime(slot.hour)}</span>
           </div>
+          <div className="flex justify-between py-[10px] border-b border-[#f0ede8]">
+            <span className="text-[10px] tracking-[0.12em] uppercase text-[#a39e95]">Duration</span>
+            <span className="text-[13px] font-medium text-[#1a1a1a]">1 hour</span>
+          </div>
+          <div className="flex justify-between py-[10px]">
+            <span className="text-[10px] tracking-[0.12em] uppercase text-[#a39e95]">Lesson fee</span>
+            <span className="text-[13px] font-medium text-[#1a1a1a]">$160</span>
+          </div>
+        </div>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="mx-8 h-px bg-[#e8e5df]" />
+
+        {/* How it works */}
+        <div className="px-8 pt-4 pb-1">
+          <p className="text-[12px] text-[#8a8477] leading-relaxed text-center">
+            Submit your request and a confirmation email will be sent once your lesson is accepted.
+          </p>
+        </div>
+
+        <div className="mx-8 mt-3 h-px bg-[#e8e5df]" />
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="px-8 pt-5 pb-8">
+          <div className="space-y-4">
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-primary-800 mb-2">
-                Full Name <span className="text-earth-400 text-xs">(optional)</span>
+              <label htmlFor="name" className="block text-[10px] tracking-[0.12em] uppercase text-[#a39e95] mb-2">
+                Full Name <span className="normal-case tracking-normal text-[#c4bfb8]">(optional)</span>
               </label>
               <input
                 type="text"
                 id="name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-4 py-3 border border-primary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all"
+                className="w-full px-4 py-2.5 bg-white border border-[#e8e5df] rounded-lg text-[13px] text-[#1a1a1a] placeholder:text-[#c4bfb8] focus:ring-1 focus:ring-[#1a1a1a] focus:border-[#1a1a1a] outline-none transition-all"
                 placeholder="John Doe"
                 autoComplete="name"
                 aria-required="false"
@@ -235,73 +239,78 @@ export function BookingModal({ slot, isOpen, onClose, onBookingComplete }: Booki
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-primary-800 mb-2">
-                Email Address <span className="text-red-500">*</span>
+              <label htmlFor="email" className="block text-[10px] tracking-[0.12em] uppercase text-[#a39e95] mb-2">
+                Email Address <span className="text-[#1a1a1a]">*</span>
               </label>
               <input
                 type="email"
                 id="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full px-4 py-3 border border-primary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all"
+                className="w-full px-4 py-2.5 bg-white border border-[#e8e5df] rounded-lg text-[13px] text-[#1a1a1a] placeholder:text-[#c4bfb8] focus:ring-1 focus:ring-[#1a1a1a] focus:border-[#1a1a1a] outline-none transition-all"
                 placeholder="john@example.com"
                 autoComplete="email"
                 aria-required="true"
                 required
               />
-              <p className="text-xs text-earth-500 mt-1">Required - you'll receive confirmation here</p>
+              <p className="text-[11px] text-[#b0a99f] mt-1.5">You'll receive your confirmation here</p>
             </div>
 
             <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-primary-800 mb-2">
-                Phone Number <span className="text-earth-400 text-xs">(optional)</span>
+              <label htmlFor="phone" className="block text-[10px] tracking-[0.12em] uppercase text-[#a39e95] mb-2">
+                Phone Number <span className="normal-case tracking-normal text-[#c4bfb8]">(optional)</span>
               </label>
               <input
                 type="tel"
                 id="phone"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="w-full px-4 py-3 border border-primary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all"
+                className="w-full px-4 py-2.5 bg-white border border-[#e8e5df] rounded-lg text-[13px] text-[#1a1a1a] placeholder:text-[#c4bfb8] focus:ring-1 focus:ring-[#1a1a1a] focus:border-[#1a1a1a] outline-none transition-all"
                 placeholder="(845) 555-1234"
                 autoComplete="tel"
                 aria-required="false"
               />
             </div>
+          </div>
 
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                {error}
-              </div>
-            )}
-
-            <div className="flex gap-3 pt-4">
-              <button
-                type="button"
-                onClick={handleClose}
-                className="flex-1 px-6 py-3 border-2 border-primary-300 text-primary-700 rounded-lg font-semibold hover:bg-primary-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={isSubmitting}
-                aria-label="Cancel booking"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="flex-1 px-6 py-3 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                disabled={isSubmitting}
-                aria-label={isSubmitting ? "Submitting request" : "Request lesson"}
-                aria-busy={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    <span>Submitting...</span>
-                  </>
-                ) : (
-                  "Request Lesson"
-                )}
-              </button>
+          {error && (
+            <div className="mt-4 px-4 py-3 bg-[#fef2f2] border border-[#fecaca] text-[#991b1b] rounded-lg text-[12px]">
+              {error}
             </div>
-          </form>
+          )}
+
+          <div className="flex gap-3 mt-6">
+            <button
+              type="button"
+              onClick={handleClose}
+              className="flex-1 py-3 border border-[#e8e5df] text-[#6b665e] rounded-lg text-[13px] font-medium hover:bg-[#f0ede8] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isSubmitting}
+              aria-label="Cancel booking"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="flex-1 py-3 bg-[#1a1a1a] text-white rounded-lg text-[13px] font-medium tracking-wide hover:bg-[#2a2a2a] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              disabled={isSubmitting}
+              aria-label={isSubmitting ? "Submitting request" : "Request lesson"}
+              aria-busy={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Submitting...</span>
+                </>
+              ) : (
+                "Request Lesson"
+              )}
+            </button>
+          </div>
+        </form>
+
+        {/* Footer */}
+        <div className="py-4 border-t border-[#e8e5df] text-center">
+          <p className="text-[10px] text-[#c4bfb8] tracking-wide">Rhinebeck, NY</p>
         </div>
       </div>
     </div>
