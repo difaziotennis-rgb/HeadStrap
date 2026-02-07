@@ -212,7 +212,7 @@ export function BookingModal({ slot, isOpen, onClose, onBookingComplete }: Booki
           {/* Info Banner */}
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-6">
             <p className="text-sm text-amber-800">
-              <strong>How it works:</strong> Submit your request and you'll receive an email confirmation once Derek accepts your lesson.
+              <strong>How it works:</strong> Submit your request and you'll receive an email confirmation once your lesson is accepted.
             </p>
           </div>
 
