@@ -239,7 +239,8 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
             const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
             const hasVisibleSlots = days.some(day => {
               const dateStr = format(day, 'yyyy-MM-dd');
-              return Array.from({ length: 11 }, (_, i) => i + 9).some(hour => {
+              const dayHours = getHoursForDay(day.getDay());
+              return dayHours.some(hour => {
                 const slot = timeSlots.get(`${dateStr}-${hour}`);
                 return slot && (slot.available || slot.booked);
               });
@@ -247,7 +248,8 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
             
             const hasAvailableSlots = days.some(day => {
               const dateStr = format(day, 'yyyy-MM-dd');
-              return Array.from({ length: 11 }, (_, i) => i + 9).some(hour => {
+              const dayHours = getHoursForDay(day.getDay());
+              return dayHours.some(hour => {
                 const slot = timeSlots.get(`${dateStr}-${hour}`);
                 return slot?.available && !slot?.booked;
               });
@@ -274,7 +276,8 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
                 <div className="text-[14px] font-medium text-[#1a1a1a] mb-1">
                   {format(month, 'MMMM')}
                 </div>
-                <div className="text-[11px] text-[#7a756d]">
+                <div className="flex items-center gap-1.5 text-[11px] text-[#7a756d]">
+                  {hasAvailableSlots && <span className="w-[5px] h-[5px] rounded-full bg-[#4a9e6a] flex-shrink-0" />}
                   {hasAvailableSlots ? "Available" : hasVisibleSlots ? "Booked" : "No availability"}
                 </div>
               </button>
@@ -387,7 +390,7 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
               <div className="flex flex-col items-center justify-center h-full">
                 <span>{format(day, 'd')}</span>
                 {!isPast && hasAvailableSlots && !isSelected && (
-                  <span className="text-[8px] text-[#1a1a1a] mt-0.5">●</span>
+                  <span className="block w-[5px] h-[5px] rounded-full bg-[#4a9e6a] mt-0.5" />
                 )}
               </div>
             </button>
