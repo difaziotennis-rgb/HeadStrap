@@ -5,7 +5,7 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMont
 import { ChevronLeft, ChevronRight, Check, X } from "lucide-react";
 import { TimeSlot } from "@/lib/types";
 import { timeSlots, initializeMockData } from "@/lib/mock-data";
-import { formatTime, isPastDate } from "@/lib/utils";
+import { formatTime, isPastDate, getHoursForDay } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
 export function AdminCalendar() {
@@ -40,13 +40,13 @@ export function AdminCalendar() {
     const dayOfWeek = getDay(date); // 0 = Sunday
     const isSunday = dayOfWeek === 0;
     
-    // Regular hours: 9 AM to 7 PM (9-19)
-    for (let hour = 9; hour <= 19; hour++) {
+    // Regular hours based on day of week
+    const hours = getHoursForDay(dayOfWeek);
+    for (const hour of hours) {
       const id = `${dateStr}-${hour}`;
       let slot = timeSlots.get(id);
       
       if (!slot) {
-        // Create new slot
         slot = {
           id,
           date: dateStr,
@@ -66,7 +66,6 @@ export function AdminCalendar() {
       let slot = timeSlots.get(id);
       
       if (!slot) {
-        // Create new slot
         slot = {
           id,
           date: dateStr,
@@ -193,7 +192,8 @@ export function AdminCalendar() {
             e.preventDefault();
             e.stopPropagation();
             // Ensure slots are initialized for this date
-            for (let hour = 9; hour <= 19; hour++) {
+            const dayHours = getHoursForDay(getDay(day));
+            for (const hour of dayHours) {
               const id = `${dateStr}-${hour}`;
               if (!timeSlots.has(id)) {
                 timeSlots.set(id, {

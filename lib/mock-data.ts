@@ -1,4 +1,5 @@
 import { TimeSlot, Booking } from "./types";
+import { getHoursForDay } from "./utils";
 
 // Mock data storage - in production, use a database
 export const timeSlots: Map<string, TimeSlot> = new Map();
@@ -25,8 +26,9 @@ export function initializeMockData() {
     const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
     const isSunday = dayOfWeek === 0;
     
-    // Regular hours: 9 AM to 7 PM (9-19) for all days
-    for (let hour = 9; hour <= 19; hour++) {
+    // Regular hours based on day of week
+    const hours = getHoursForDay(dayOfWeek);
+    for (const hour of hours) {
       const id = `${dateStr}-${hour}`;
       // Only create if it doesn't exist (preserves booked slots)
       if (!timeSlots.has(id)) {

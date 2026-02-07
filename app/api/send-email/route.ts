@@ -21,7 +21,10 @@ export async function POST(request: Request) {
       day: "numeric",
     });
 
-    const formattedTime = `${booking.hour}:00 ${booking.hour >= 12 ? "PM" : "AM"}`;
+    const wholeHour = Math.floor(booking.hour);
+    const mins = Math.round((booking.hour - wholeHour) * 60);
+    const h = wholeHour === 0 ? 12 : wholeHour > 12 ? wholeHour - 12 : wholeHour;
+    const formattedTime = `${h}:${String(mins).padStart(2, '0')} ${booking.hour >= 12 ? "PM" : "AM"}`;
 
     // Email subject
     const subject = `New Booking: ${booking.clientName} - ${formattedDate} at ${formattedTime}`;

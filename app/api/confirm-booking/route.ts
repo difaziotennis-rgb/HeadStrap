@@ -3,6 +3,7 @@ import Stripe from "stripe";
 import { Booking } from "@/lib/types";
 import { sendEmail } from "@/lib/send-email";
 import { clientConfirmationEmail, adminConfirmationEmail } from "@/lib/email-templates";
+import { formatTime } from "@/lib/utils";
 
 // Decode the booking token
 function decodeBookingToken(token: string): Booking | null {
@@ -51,7 +52,7 @@ export async function POST(request: Request) {
               currency: "usd",
               product_data: {
                 name: "Tennis Lesson",
-                description: `Private lesson on ${booking.date} at ${booking.hour}:00`,
+                description: `Private lesson on ${booking.date} at ${formatTime(booking.hour)}`,
               },
               unit_amount: booking.amount * 100,
             },

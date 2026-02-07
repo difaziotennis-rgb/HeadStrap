@@ -5,7 +5,7 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMont
 import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
 import { TimeSlot } from "@/lib/types";
 import { timeSlots, initializeMockData } from "@/lib/mock-data";
-import { formatTime, isPastDate, isToday } from "@/lib/utils";
+import { formatTime, isPastDate, isToday, getHoursForDay } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
 interface CalendarProps {
@@ -39,7 +39,8 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
     
     const checkAvailability = async () => {
       try {
-        const hours = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
+        const dayOfWeek = selectedDateState.getDay();
+        const hours = getHoursForDay(dayOfWeek);
         const checks = hours.map(async (hour) => {
           const slotId = `${dateStr}-${hour}`;
           const slot = timeSlots.get(slotId);
@@ -101,8 +102,9 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
     const dayOfWeek = date.getDay(); // 0 = Sunday
     const isSunday = dayOfWeek === 0;
     
-    // Regular hours: 9 AM to 7 PM (9-19)
-    for (let hour = 9; hour <= 19; hour++) {
+    // Regular hours based on day of week
+    const hours = getHoursForDay(dayOfWeek);
+    for (const hour of hours) {
       const id = `${dateStr}-${hour}`;
       let slot = timeSlots.get(id);
       
@@ -156,7 +158,8 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
     }
     // Ensure slots are initialized for this date
     const dateStr = format(date, 'yyyy-MM-dd');
-    for (let hour = 9; hour <= 19; hour++) {
+    const hours = getHoursForDay(date.getDay());
+    for (const hour of hours) {
       const id = `${dateStr}-${hour}`;
       if (!timeSlots.has(id)) {
         timeSlots.set(id, {
@@ -351,12 +354,13 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
           
           const hasAvailableSlots = (() => {
             if (isPast) return false;
-            const existingAvailable = Array.from({ length: 11 }, (_, i) => i + 9).some(hour => {
+            const dayHours = getHoursForDay(day.getDay());
+            // Also check Sunday 3 AM
+            const allHours = day.getDay() === 0 ? [3, ...dayHours] : dayHours;
+            return allHours.some(hour => {
               const slot = timeSlots.get(`${dateStr}-${hour}`);
               return slot?.available && !slot?.booked;
             });
-            if (existingAvailable) return true;
-            return false;
           })();
 
           return (

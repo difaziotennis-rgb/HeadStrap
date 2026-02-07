@@ -48,13 +48,10 @@ export async function GET() {
       month: 'long', 
       day: 'numeric' 
     });
-    const timeStr = nextSlot.hour === 0 
-      ? '12:00 AM'
-      : nextSlot.hour < 12 
-      ? `${nextSlot.hour}:00 AM`
-      : nextSlot.hour === 12 
-      ? '12:00 PM'
-      : `${nextSlot.hour - 12}:00 PM`;
+    const wh = Math.floor(nextSlot.hour);
+    const mn = Math.round((nextSlot.hour - wh) * 60);
+    const dh = wh === 0 ? 12 : wh > 12 ? wh - 12 : wh;
+    const timeStr = `${dh}:${String(mn).padStart(2, '0')} ${nextSlot.hour >= 12 ? 'PM' : 'AM'}`;
     
     return NextResponse.json({
       available: true,

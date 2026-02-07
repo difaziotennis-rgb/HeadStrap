@@ -38,7 +38,7 @@ export async function POST(request: Request) {
             currency: "usd",
             product_data: {
               name: "Tennis Lesson",
-              description: `Private lesson on ${date} at ${hour}:00`,
+              description: `Private lesson on ${date} at ${(() => { const wh = Math.floor(Number(hour)); const mn = Math.round((Number(hour) - wh) * 60); const dh = wh === 0 ? 12 : wh > 12 ? wh - 12 : wh; return `${dh}:${String(mn).padStart(2, '0')} ${Number(hour) >= 12 ? 'PM' : 'AM'}`; })()}`,
             },
             unit_amount: amount * 100, // Convert to cents
           },

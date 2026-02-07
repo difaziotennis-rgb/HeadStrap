@@ -56,8 +56,10 @@ function formatBookingDate(dateStr: string): string {
 }
 
 function formatTime(hour: number): string {
-  const h = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
-  return `${h}:00 ${hour >= 12 ? "PM" : "AM"}`;
+  const wholeHour = Math.floor(hour);
+  const minutes = Math.round((hour - wholeHour) * 60);
+  const h = wholeHour > 12 ? wholeHour - 12 : wholeHour === 0 ? 12 : wholeHour;
+  return `${h}:${minutes.toString().padStart(2, "0")} ${hour >= 12 ? "PM" : "AM"}`;
 }
 
 // Build payment links

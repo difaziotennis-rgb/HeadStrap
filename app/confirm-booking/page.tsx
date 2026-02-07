@@ -83,9 +83,11 @@ function ConfirmBookingContent() {
   };
 
   const formatTime = (hour: number) => {
-    const hour12 = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+    const wholeHour = Math.floor(hour);
+    const mins = Math.round((hour - wholeHour) * 60);
+    const hour12 = wholeHour > 12 ? wholeHour - 12 : wholeHour === 0 ? 12 : wholeHour;
     const ampm = hour >= 12 ? "PM" : "AM";
-    return `${hour12}:00 ${ampm}`;
+    return `${hour12}:${String(mins).padStart(2, '0')} ${ampm}`;
   };
 
   return (
