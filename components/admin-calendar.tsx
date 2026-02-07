@@ -365,7 +365,7 @@ export function AdminCalendar() {
                         setBookName("");
                       }}
                       type="button"
-                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-[#6b665e] text-white rounded-full flex items-center justify-center text-[9px] font-bold opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#1a1a1a] sm:opacity-0 sm:group-hover:opacity-100"
+                      className="absolute -top-2 -right-2 w-7 h-7 sm:w-5 sm:h-5 bg-[#6b665e] text-white rounded-full flex items-center justify-center text-[11px] sm:text-[9px] font-bold opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity hover:bg-[#1a1a1a] active:scale-90"
                       title="Book this slot"
                     >
                       B
@@ -380,10 +380,10 @@ export function AdminCalendar() {
                         handleUnbook(slot.id);
                       }}
                       type="button"
-                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-[#991b1b] text-white rounded-full flex items-center justify-center text-[9px] opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#7f1d1d] sm:opacity-0 sm:group-hover:opacity-100"
+                      className="absolute -top-2 -right-2 w-7 h-7 sm:w-5 sm:h-5 bg-[#991b1b] text-white rounded-full flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity hover:bg-[#7f1d1d] active:scale-90"
                       title="Unbook this slot"
                     >
-                      <X className="h-3 w-3" />
+                      <X className="h-3.5 w-3.5 sm:h-3 sm:w-3" />
                     </button>
                   )}
                 </div>
