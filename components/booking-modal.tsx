@@ -101,57 +101,64 @@ export function BookingModal({ slot, isOpen, onClose, onBookingComplete }: Booki
 
   const date = new Date(slot.date + "T12:00:00");
 
-  // Success state - request submitted (clean, minimal design matching email style)
+  // Success state - request submitted
   if (requestSubmitted) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-        <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
-          {/* Clean header */}
-          <div className="px-8 pt-8 pb-4">
-            <p className="text-[11px] tracking-[0.2em] uppercase text-[#8a8477] mb-2">DiFazio Tennis</p>
-            <div className="flex items-center gap-3">
-              <h2 className="text-xl font-semibold text-[#1a1a1a]">Request submitted</h2>
-              <span className="px-2.5 py-0.5 rounded-full bg-[#e8f5e1] text-[#2d5016] text-[11px] font-medium tracking-wide uppercase">Sent</span>
+        <div className="bg-[#faf9f7] rounded-2xl shadow-2xl max-w-[420px] w-full overflow-hidden">
+
+          {/* Header */}
+          <div className="px-8 pt-10 pb-2 text-center">
+            <p className="text-[10px] tracking-[0.25em] uppercase text-[#b0a99f] mb-4">DiFazio Tennis</p>
+            <h2 className="text-[22px] font-light tracking-tight text-[#1a1a1a]">Request Received</h2>
+          </div>
+
+          {/* Divider */}
+          <div className="mx-8 mt-4 mb-0 h-px bg-[#e8e5df]" />
+
+          {/* Details */}
+          <div className="px-8 pt-5 pb-1">
+            <div className="flex justify-between py-[10px] border-b border-[#f0ede8]">
+              <span className="text-[10px] tracking-[0.12em] uppercase text-[#a39e95]">Date</span>
+              <span className="text-[13px] font-medium text-[#1a1a1a]">{format(date, "EEEE, MMMM d")}</span>
+            </div>
+            <div className="flex justify-between py-[10px] border-b border-[#f0ede8]">
+              <span className="text-[10px] tracking-[0.12em] uppercase text-[#a39e95]">Time</span>
+              <span className="text-[13px] font-medium text-[#1a1a1a]">{formatTime(slot.hour)}</span>
+            </div>
+            <div className="flex justify-between py-[10px] border-b border-[#f0ede8]">
+              <span className="text-[10px] tracking-[0.12em] uppercase text-[#a39e95]">Duration</span>
+              <span className="text-[13px] font-medium text-[#1a1a1a]">1 hour</span>
+            </div>
+            <div className="flex justify-between py-[10px]">
+              <span className="text-[10px] tracking-[0.12em] uppercase text-[#a39e95]">Lesson fee</span>
+              <span className="text-[13px] font-medium text-[#1a1a1a]">$160</span>
             </div>
           </div>
 
-          {/* Content */}
-          <div className="px-8 pb-6">
-            <p className="text-sm text-[#4a4a4a] leading-relaxed mb-5">
-              Your lesson request has been sent. You'll receive a confirmation email at <strong className="text-[#1a1a1a]">{formData.email}</strong> once accepted.
+          {/* Divider */}
+          <div className="mx-8 h-px bg-[#e8e5df]" />
+
+          {/* Note */}
+          <div className="px-8 py-5">
+            <p className="text-[13px] text-[#6b665e] leading-relaxed text-center">
+              A confirmation email will be sent to <span className="text-[#1a1a1a] font-medium">{formData.email}</span> once your lesson is accepted.
             </p>
+          </div>
 
-            {/* Details grid */}
-            <div className="border-t border-[#f0ede8]">
-              <div className="flex justify-between py-2.5 border-b border-[#f5f3f0]">
-                <span className="text-[11px] tracking-[0.1em] uppercase text-[#8a8477]">Date</span>
-                <span className="text-sm font-medium text-[#1a1a1a]">{format(date, "EEEE, MMMM d, yyyy")}</span>
-              </div>
-              <div className="flex justify-between py-2.5 border-b border-[#f5f3f0]">
-                <span className="text-[11px] tracking-[0.1em] uppercase text-[#8a8477]">Time</span>
-                <span className="text-sm font-medium text-[#1a1a1a]">{formatTime(slot.hour)}</span>
-              </div>
-              <div className="flex justify-between py-2.5 border-b border-[#f5f3f0]">
-                <span className="text-[11px] tracking-[0.1em] uppercase text-[#8a8477]">Duration</span>
-                <span className="text-sm font-medium text-[#1a1a1a]">1 hour</span>
-              </div>
-              <div className="flex justify-between py-2.5">
-                <span className="text-[11px] tracking-[0.1em] uppercase text-[#8a8477]">Lesson fee</span>
-                <span className="text-sm font-medium text-[#1a1a1a]">${slot.hour ? 160 : 160}</span>
-              </div>
-            </div>
-
+          {/* Button */}
+          <div className="px-8 pb-8">
             <button
               onClick={handleClose}
-              className="w-full mt-6 px-6 py-3 bg-[#2d5016] text-white rounded-lg font-semibold hover:bg-[#3d6a1f] transition-colors text-sm"
+              className="w-full py-3 bg-[#1a1a1a] text-white rounded-lg text-[13px] font-medium tracking-wide hover:bg-[#2a2a2a] transition-colors"
             >
               Done
             </button>
           </div>
 
           {/* Footer */}
-          <div className="px-8 py-4 border-t border-[#f0ede8] text-center">
-            <p className="text-[11px] text-[#b0a99f]">DiFazio Tennis · Rhinebeck, NY</p>
+          <div className="py-4 border-t border-[#e8e5df] text-center">
+            <p className="text-[10px] text-[#c4bfb8] tracking-wide">Rhinebeck, NY</p>
           </div>
         </div>
       </div>
