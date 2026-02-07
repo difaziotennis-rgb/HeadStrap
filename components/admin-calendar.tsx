@@ -1,158 +1,203 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, getDay, isSameDay } from "date-fns";
-import { ChevronLeft, ChevronRight, Check, X } from "lucide-react";
+import {
+  format,
+  startOfMonth,
+  endOfMonth,
+  eachDayOfInterval,
+  addMonths,
+  subMonths,
+  getDay,
+  isSameDay,
+  isToday,
+} from "date-fns";
+import { ChevronLeft, ChevronRight, Check, X, Save } from "lucide-react";
 import { TimeSlot } from "@/lib/types";
-import { timeSlots, initializeMockData } from "@/lib/mock-data";
 import { formatTime, isPastDate, getHoursForDay } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
+// ─── localStorage key ────────────────────────────────────────
+const STORAGE_KEY = "difazio_admin_slots";
+
+// ─── Direct localStorage helpers (no abstractions) ──────────
+function loadSlots(): Record<string, TimeSlot> {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return parsed as Record<string, TimeSlot>;
+    }
+  } catch (e) {
+    console.error("loadSlots error:", e);
+  }
+  return {};
+}
+
+function saveSlots(slots: Record<string, TimeSlot>): boolean {
+  try {
+    const json = JSON.stringify(slots);
+    localStorage.setItem(STORAGE_KEY, json);
+    // Verify it was saved
+    const verify = localStorage.getItem(STORAGE_KEY);
+    return verify === json;
+  } catch (e) {
+    console.error("saveSlots error:", e);
+    return false;
+  }
+}
+
+// ─── Build default slots for a date ─────────────────────────
+function buildDateStr(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function defaultSlotsForDate(date: Date): TimeSlot[] {
+  const dateStr = buildDateStr(date);
+  const hours = getHoursForDay(date.getDay());
+  return hours.map((hour) => ({
+    id: `${dateStr}-${hour}`,
+    date: dateStr,
+    hour,
+    available: false,
+    booked: false,
+  }));
+}
+
+// ─── Component ──────────────────────────────────────────────
 export function AdminCalendar() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [selectedSlots, setSelectedSlots] = useState<Set<string>>(new Set());
-  const [refreshKey, setRefreshKey] = useState(0); // Force re-render when slots change
 
+  // All slot data lives in React state, keyed by slot id
+  const [slots, setSlots] = useState<Record<string, TimeSlot>>({});
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
+
+  // ── Load from localStorage on mount ────────────────────────
   useEffect(() => {
-    // Initialize mock data
-    if (typeof window !== 'undefined') {
-      initializeMockData();
-    }
-    
-    // Load existing available slots
-    const available = new Set<string>();
-    timeSlots.forEach((slot) => {
-      if (slot.available && !slot.booked) {
-        available.add(slot.id);
-      }
-    });
-    setSelectedSlots(available);
+    const saved = loadSlots();
+    setSlots(saved);
+    setLoaded(true);
   }, []);
 
+  // ── Get merged slots for a date (saved + defaults) ─────────
+  function getSlotsForDate(date: Date): TimeSlot[] {
+    const defaults = defaultSlotsForDate(date);
+    return defaults.map((def) => slots[def.id] ?? def);
+  }
+
+  // ── Toggle a single slot ───────────────────────────────────
+  function handleToggleSlot(slot: TimeSlot) {
+    if (slot.booked) return;
+    const updated = { ...slot, available: !slot.available };
+    setSlots((prev) => ({ ...prev, [updated.id]: updated }));
+    setHasUnsavedChanges(true);
+    setSaveMessage(null);
+  }
+
+  // ── Bulk toggle all slots for a date ───────────────────────
+  function handleBulkToggle(date: Date, makeAvailable: boolean) {
+    const dateSlots = getSlotsForDate(date);
+    const updates: Record<string, TimeSlot> = {};
+    for (const slot of dateSlots) {
+      if (slot.booked) continue;
+      updates[slot.id] = { ...slot, available: makeAvailable };
+    }
+    setSlots((prev) => ({ ...prev, ...updates }));
+    setHasUnsavedChanges(true);
+    setSaveMessage(null);
+  }
+
+  // ── SAVE to localStorage ───────────────────────────────────
+  function handleSave() {
+    // Only persist slots that are available or booked (skip empty defaults)
+    const toSave: Record<string, TimeSlot> = {};
+    for (const [id, slot] of Object.entries(slots)) {
+      if (slot.available || slot.booked) {
+        toSave[id] = slot;
+      }
+    }
+    const success = saveSlots(toSave);
+    if (success) {
+      setHasUnsavedChanges(false);
+      setSaveMessage("Saved!");
+      setTimeout(() => setSaveMessage(null), 3000);
+    } else {
+      setSaveMessage("Error saving — please try again");
+    }
+  }
+
+  // ── Calendar grid setup ────────────────────────────────────
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
   const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
-
-  const getTimeSlotsForDate = (date: Date): TimeSlot[] => {
-    const dateStr = format(date, 'yyyy-MM-dd');
-    const slots: TimeSlot[] = [];
-    const dayOfWeek = getDay(date);
-    
-    // Regular hours based on day of week
-    const hours = getHoursForDay(dayOfWeek);
-    for (const hour of hours) {
-      const id = `${dateStr}-${hour}`;
-      let slot = timeSlots.get(id);
-      
-      if (!slot) {
-        slot = {
-          id,
-          date: dateStr,
-          hour,
-          available: false,
-          booked: false,
-        };
-        timeSlots.set(id, slot);
-      }
-      
-      slots.push(slot);
-    }
-    
-    return slots.sort((a, b) => a.hour - b.hour);
-  };
-
-  const handleToggleSlot = (slotId: string, isBooked: boolean) => {
-    if (isBooked) return; // Can't toggle booked slots
-
-    const slot = timeSlots.get(slotId);
-    if (!slot) return;
-
-    const newAvailable = !slot.available;
-    const updatedSlot: TimeSlot = {
-      ...slot,
-      available: newAvailable,
-    };
-    timeSlots.set(slotId, updatedSlot);
-
-    // Update selected slots set
-    const newSelected = new Set(selectedSlots);
-    if (newAvailable) {
-      newSelected.add(slotId);
-    } else {
-      newSelected.delete(slotId);
-    }
-    setSelectedSlots(newSelected);
-    // Force re-render
-    setRefreshKey(prev => prev + 1);
-  };
-
-  const handleBulkToggle = (date: Date, makeAvailable: boolean) => {
-    const dateStr = format(date, 'yyyy-MM-dd');
-    const slots = getTimeSlotsForDate(date);
-    
-    slots.forEach((slot) => {
-      if (slot.booked) return; // Skip booked slots
-      
-      const updatedSlot: TimeSlot = {
-        ...slot,
-        available: makeAvailable,
-      };
-      timeSlots.set(slot.id, updatedSlot);
-
-      const newSelected = new Set(selectedSlots);
-      if (makeAvailable) {
-        newSelected.add(slot.id);
-      } else {
-        newSelected.delete(slot.id);
-      }
-      setSelectedSlots(newSelected);
-    });
-    // Force re-render
-    setRefreshKey(prev => prev + 1);
-  };
-
   const firstDayOfWeek = getDay(monthStart);
-  const daysBeforeMonth = Array.from({ length: firstDayOfWeek }, (_, i) => null);
+  const daysBeforeMonth = Array.from({ length: firstDayOfWeek }, () => null);
+
+  if (!loaded) return null;
 
   return (
     <div className="w-full">
+      {/* Save Bar — always visible when there are changes */}
+      {hasUnsavedChanges && (
+        <div className="mb-4 flex items-center justify-between bg-[#1a1a1a] text-white rounded-xl px-4 py-3">
+          <span className="text-[13px]">You have unsaved changes</span>
+          <button
+            onClick={handleSave}
+            type="button"
+            className="flex items-center gap-1.5 bg-white text-[#1a1a1a] px-4 py-1.5 rounded-lg text-[13px] font-medium hover:bg-[#f0ede8] transition-colors active:scale-95"
+          >
+            <Save className="h-3.5 w-3.5" />
+            Save Availability
+          </button>
+        </div>
+      )}
+      {saveMessage && !hasUnsavedChanges && (
+        <div className="mb-4 bg-[#f0fdf4] border border-[#bbf7d0] text-[#166534] rounded-xl px-4 py-3 text-[13px] text-center">
+          {saveMessage}
+        </div>
+      )}
+
+      {/* Month Navigation */}
       <div className="flex items-center justify-between mb-6">
         <button
           onClick={(e) => {
             e.preventDefault();
-            e.stopPropagation();
             setCurrentMonth(subMonths(currentMonth, 1));
           }}
-          className="p-2 hover:bg-primary-100 rounded-lg transition-colors active:scale-95"
+          className="p-2 hover:bg-[#f0ede8] rounded-lg transition-colors active:scale-95"
           type="button"
           aria-label="Previous month"
         >
-          <ChevronLeft className="h-5 w-5 text-primary-700" />
+          <ChevronLeft className="h-5 w-5 text-[#6b665e]" />
         </button>
-        <h2 className="text-2xl sm:text-3xl font-serif text-primary-800 font-semibold">
-          {format(currentMonth, 'MMMM yyyy')}
+        <h2 className="text-[22px] sm:text-[26px] font-light tracking-tight text-[#1a1a1a]">
+          {format(currentMonth, "MMMM yyyy")}
         </h2>
         <button
           onClick={(e) => {
             e.preventDefault();
-            e.stopPropagation();
             setCurrentMonth(addMonths(currentMonth, 1));
           }}
-          className="p-2 hover:bg-primary-100 rounded-lg transition-colors active:scale-95"
+          className="p-2 hover:bg-[#f0ede8] rounded-lg transition-colors active:scale-95"
           type="button"
           aria-label="Next month"
         >
-          <ChevronRight className="h-5 w-5 text-primary-700" />
+          <ChevronRight className="h-5 w-5 text-[#6b665e]" />
         </button>
       </div>
 
       {/* Calendar Grid */}
-      <div className="grid grid-cols-7 gap-2 mb-6">
-        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+      <div className="grid grid-cols-7 gap-1.5 sm:gap-2 mb-6">
+        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
           <div
             key={day}
-            className="text-center text-sm font-semibold text-primary-700 py-2"
+            className="text-center text-[10px] tracking-[0.1em] uppercase font-medium text-[#6b665e] py-2"
           >
             {day}
           </div>
@@ -161,59 +206,46 @@ export function AdminCalendar() {
           <div key={`empty-${index}`} className="aspect-square" />
         ))}
         {daysInMonth.map((day) => {
-          const dateStr = format(day, 'yyyy-MM-dd');
-          const isPast = isPastDate(day);
-          const isSelected = selectedDate && isSameDay(day, selectedDate);
-          const slots = getTimeSlotsForDate(day);
-          const availableCount = slots.filter(s => s.available && !s.booked).length;
-          const bookedCount = slots.filter(s => s.booked).length;
-
-          const handleAdminDateClick = (e: React.MouseEvent) => {
-            e.preventDefault();
-            e.stopPropagation();
-            // Ensure slots are initialized for this date
-            const dayHours = getHoursForDay(getDay(day));
-            for (const hour of dayHours) {
-              const id = `${dateStr}-${hour}`;
-              if (!timeSlots.has(id)) {
-                timeSlots.set(id, {
-                  id,
-                  date: dateStr,
-                  hour,
-                  available: false, // Admin view - all unavailable by default
-                  booked: false,
-                });
-              }
-            }
-            setSelectedDate(day);
-          };
+          const past = isPastDate(day);
+          const selected = selectedDate && isSameDay(day, selectedDate);
+          const currentDay = isToday(day);
+          const dateSlots = getSlotsForDate(day);
+          const avail = dateSlots.filter((s) => s.available && !s.booked).length;
+          const booked = dateSlots.filter((s) => s.booked).length;
 
           return (
             <button
               key={day.toISOString()}
-              onClick={handleAdminDateClick}
-              disabled={isPast}
+              onClick={(e) => {
+                e.preventDefault();
+                setSelectedDate(day);
+              }}
+              disabled={past}
               type="button"
-              aria-label={`Select ${format(day, 'EEEE, MMMM d, yyyy')} for availability management`}
-              aria-pressed={isSelected || undefined}
               className={cn(
-                "aspect-square rounded-lg border-2 transition-all text-sm font-medium flex flex-col items-center justify-center p-1",
-                isPast && "opacity-40 cursor-not-allowed bg-gray-100 border-gray-200",
-                !isPast && !isSelected && "bg-white border-primary-300 hover:border-primary-500 cursor-pointer active:scale-95",
-                isSelected && "bg-primary-600 border-primary-700 text-white ring-4 ring-primary-200"
+                "aspect-square rounded-lg border transition-all text-[13px] active:scale-95",
+                past && "opacity-25 cursor-not-allowed bg-transparent border-transparent",
+                !past && !selected && "bg-transparent border-[#d9d5cf] text-[#1a1a1a] cursor-pointer hover:bg-[#f0ede8] hover:border-[#a39e95]",
+                selected && "bg-[#1a1a1a] border-[#1a1a1a] text-white",
+                currentDay && !selected && "ring-2 ring-[#1a1a1a]/20"
               )}
             >
-              <span>{format(day, 'd')}</span>
-              {!isPast && (
-                <div className="text-[10px] mt-1 space-y-0.5">
-                  {availableCount > 0 && (
-                    <div className="text-green-600 font-semibold">{availableCount}</div>
-                  )}
-                  {bookedCount > 0 && (
-                    <div className="text-red-600 font-semibold">-{bookedCount}</div>
-                  )}
-                </div>
-              )}
+              <div className="flex flex-col items-center justify-center h-full">
+                <span>{format(day, "d")}</span>
+                {!past && (avail > 0 || booked > 0) && !selected && (
+                  <span className={cn("text-[9px] mt-0.5", avail > 0 ? "text-[#7a756d]" : "text-[#c4bfb8]")}>
+                    {avail > 0 ? avail : ""}
+                    {avail > 0 && booked > 0 ? "/" : ""}
+                    {booked > 0 ? <span className="text-[#b05454]">{booked}b</span> : ""}
+                  </span>
+                )}
+                {selected && (avail > 0 || booked > 0) && (
+                  <span className="text-[9px] mt-0.5 text-white/70">
+                    {avail > 0 ? avail : ""}
+                    {booked > 0 ? `/${booked}b` : ""}
+                  </span>
+                )}
+              </div>
             </button>
           );
         })}
@@ -221,80 +253,90 @@ export function AdminCalendar() {
 
       {/* Time Slots for Selected Date */}
       {selectedDate && !isPastDate(selectedDate) && (
-        <div className="mt-8 border-t border-primary-200 pt-6" key={`admin-slots-${refreshKey}`}>
+        <div className="mt-6 border-t border-[#e8e5df] pt-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xl font-serif text-primary-800">
-              {format(selectedDate, 'EEEE, MMMM d')}
-            </h3>
+            <p className="text-[10px] tracking-[0.12em] uppercase text-[#6b665e]">
+              {format(selectedDate, "EEEE, MMMM d")}
+            </p>
             <div className="flex gap-2">
               <button
                 onClick={(e) => {
                   e.preventDefault();
-                  e.stopPropagation();
                   handleBulkToggle(selectedDate, true);
                 }}
-                className="px-3 py-1.5 text-sm bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors font-medium active:scale-95 cursor-pointer"
+                className="px-3 py-1.5 text-[11px] font-medium border border-[#d9d5cf] text-[#1a1a1a] rounded-lg hover:bg-[#f0ede8] transition-colors active:scale-95 cursor-pointer"
                 type="button"
-                aria-label="Make all time slots available for this date"
               >
-                Make All Available
+                All Available
               </button>
               <button
                 onClick={(e) => {
                   e.preventDefault();
-                  e.stopPropagation();
                   handleBulkToggle(selectedDate, false);
                 }}
-                className="px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium active:scale-95 cursor-pointer"
+                className="px-3 py-1.5 text-[11px] font-medium border border-[#d9d5cf] text-[#7a756d] rounded-lg hover:bg-[#f0ede8] transition-colors active:scale-95 cursor-pointer"
                 type="button"
-                aria-label="Make all time slots unavailable for this date"
               >
-                Make All Unavailable
+                All Unavailable
               </button>
             </div>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-            {getTimeSlotsForDate(selectedDate).map((slot) => (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+            {getSlotsForDate(selectedDate).map((slot) => (
               <button
                 key={slot.id}
                 onClick={(e) => {
                   e.preventDefault();
-                  e.stopPropagation();
-                  handleToggleSlot(slot.id, slot.booked);
+                  handleToggleSlot(slot);
                 }}
                 disabled={slot.booked}
                 type="button"
-                aria-label={`Toggle availability for ${formatTime(slot.hour)}${slot.booked ? ' (cannot change booked slot)' : ''}`}
-                aria-pressed={slot.available || undefined}
                 className={cn(
-                  "p-3 rounded-lg border-2 transition-all text-sm font-medium flex flex-col items-center gap-2",
-                  slot.booked && "bg-red-50 border-red-300 text-red-600 cursor-not-allowed",
-                  !slot.booked && slot.available && "bg-green-50 border-green-400 text-green-700 hover:bg-green-100 cursor-pointer",
-                  !slot.booked && !slot.available && "bg-gray-50 border-gray-300 text-gray-500 hover:bg-gray-100 cursor-pointer"
+                  "py-2.5 px-3 rounded-lg border transition-all text-[13px] flex items-center justify-center gap-2 active:scale-95",
+                  slot.booked && "bg-[#fef2f2] border-[#fecaca] text-[#991b1b] cursor-not-allowed",
+                  !slot.booked && slot.available && "bg-[#1a1a1a] border-[#1a1a1a] text-white hover:bg-[#333] cursor-pointer",
+                  !slot.booked && !slot.available && "bg-transparent border-[#d9d5cf] text-[#7a756d] hover:border-[#a39e95] hover:bg-[#f0ede8] cursor-pointer"
                 )}
               >
-                <span className="font-semibold">{formatTime(slot.hour)}</span>
-                {slot.booked ? (
-                  <X className="h-4 w-4 text-red-600" />
-                ) : slot.available ? (
-                  <Check className="h-4 w-4 text-green-600" />
-                ) : (
-                  <span className="text-xs">Unavailable</span>
-                )}
+                <span>{formatTime(slot.hour)}</span>
+                {slot.booked && <X className="h-3.5 w-3.5" />}
+                {!slot.booked && slot.available && <Check className="h-3.5 w-3.5" />}
               </button>
             ))}
           </div>
-          <p className="text-sm text-earth-600 mt-4">
-            <span className="inline-block w-3 h-3 bg-green-400 rounded mr-2"></span>
-            Available
-            <span className="inline-block w-3 h-3 bg-gray-300 rounded mr-2 ml-4"></span>
-            Unavailable
-            <span className="inline-block w-3 h-3 bg-red-300 rounded mr-2 ml-4"></span>
-            Booked
-          </p>
+
+          {/* Save button below time slots */}
+          <div className="mt-5 flex items-center justify-between">
+            <div className="flex items-center gap-5 text-[10px] text-[#7a756d]">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded bg-[#1a1a1a]"></span>
+                Available
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded border border-[#d9d5cf]"></span>
+                Unavailable
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded bg-[#fef2f2] border border-[#fecaca]"></span>
+                Booked
+              </span>
+            </div>
+            <button
+              onClick={handleSave}
+              type="button"
+              className={cn(
+                "flex items-center gap-1.5 px-5 py-2 rounded-lg text-[13px] font-medium transition-colors active:scale-95",
+                hasUnsavedChanges
+                  ? "bg-[#1a1a1a] text-white hover:bg-[#333]"
+                  : "bg-[#f0ede8] text-[#7a756d] cursor-default"
+              )}
+            >
+              <Save className="h-3.5 w-3.5" />
+              {hasUnsavedChanges ? "Save" : "Saved"}
+            </button>
+          </div>
         </div>
       )}
     </div>
   );
 }
-

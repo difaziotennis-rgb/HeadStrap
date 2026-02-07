@@ -1,12 +1,31 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, getDay } from "date-fns";
 import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
 import { TimeSlot } from "@/lib/types";
-import { timeSlots, initializeMockData } from "@/lib/mock-data";
 import { formatTime, isPastDate, isToday, getHoursForDay } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+
+// Same key the admin calendar uses
+const STORAGE_KEY = "difazio_admin_slots";
+
+function loadSlots(): Record<string, TimeSlot> {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw) as Record<string, TimeSlot>;
+  } catch (e) {
+    console.error("loadSlots error:", e);
+  }
+  return {};
+}
+
+function buildDateStr(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
 
 interface CalendarProps {
   onDateSelect: (date: Date) => void;
@@ -18,176 +37,81 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [viewMode, setViewMode] = useState<"month" | "year">("month");
   const [selectedDateState, setSelectedDateState] = useState<Date | null>(selectedDate);
-  const [refreshKey, setRefreshKey] = useState(0); // Force re-render when slots change
+  const [savedSlots, setSavedSlots] = useState<Record<string, TimeSlot>>({});
+  const [loaded, setLoaded] = useState(false);
 
+  // Load saved slots from localStorage on mount
   useEffect(() => {
-    // Initialize mock data on mount (only once)
-    if (typeof window !== 'undefined') {
-      initializeMockData();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setSavedSlots(loadSlots());
+    setLoaded(true);
   }, []);
 
-  // Sync court availability when a date is selected
-  // Only checks times that are marked as available on YOUR site
-  // Debounce to avoid excessive API calls
+  // Sync selectedDate prop
   useEffect(() => {
-    if (!selectedDateState) return;
-    
-    const dateStr = format(selectedDateState, 'yyyy-MM-dd');
-    let timeoutId: NodeJS.Timeout;
-    
-    const checkAvailability = async () => {
-      try {
-        const dayOfWeek = selectedDateState.getDay();
-        const hours = getHoursForDay(dayOfWeek);
-        const checks = hours.map(async (hour) => {
-          const slotId = `${dateStr}-${hour}`;
-          const slot = timeSlots.get(slotId);
-          
-          // Only check if slot exists, is marked as available on YOUR site, and isn't booked
-          if (slot && slot.available && !slot.booked) {
-            try {
-              const response = await fetch(
-                `/api/check-court-availability?date=${dateStr}&hour=${hour}`
-              );
-              if (response.ok) {
-                const data = await response.json();
-                // If external site says it's NOT available, mark it as unavailable on your site
-                if (data.available === false) {
-                  slot.available = false;
-                  timeSlots.set(slotId, slot);
-                  if (typeof window !== "undefined") {
-                    sessionStorage.setItem(`slot_${slotId}`, JSON.stringify(slot));
-                  }
-                  // Force re-render
-                  setRefreshKey(prev => prev + 1);
-                }
-              }
-            } catch (error) {
-              // Silently fail - availability check is optional
-            }
-          }
-        });
-        
-        await Promise.all(checks);
-      } catch (error) {
-        // Silently fail - availability check is optional
-      }
-    };
-    
-    // Debounce availability checks by 300ms
-    timeoutId = setTimeout(checkAvailability, 300);
-    
-    return () => {
-      clearTimeout(timeoutId);
-    };
-  }, [selectedDateState]);
-
-  // Sync selectedDate prop with internal state
-  useEffect(() => {
-    if (selectedDate) {
-      setSelectedDateState(selectedDate);
-    }
+    if (selectedDate) setSelectedDateState(selectedDate);
   }, [selectedDate]);
+
+  // ── helpers ─────────────────────────────────────────────────
+
+  /** Check if a day has any available slots. */
+  const dayHasAvailability = useCallback(
+    (day: Date): boolean => {
+      if (!loaded) return false;
+      const dateStr = buildDateStr(day);
+      const hours = getHoursForDay(day.getDay());
+      return hours.some((hour) => {
+        const slot = savedSlots[`${dateStr}-${hour}`];
+        return slot?.available && !slot?.booked;
+      });
+    },
+    [savedSlots, loaded]
+  );
+
+  /** Get visible (available or booked) slots for a date. */
+  const visibleSlotsForDate = useCallback(
+    (date: Date): TimeSlot[] => {
+      if (!loaded) return [];
+      const dateStr = buildDateStr(date);
+      const hours = getHoursForDay(date.getDay());
+      const result: TimeSlot[] = [];
+      for (const hour of hours) {
+        const id = `${dateStr}-${hour}`;
+        const slot = savedSlots[id];
+        if (slot && (slot.available || slot.booked)) {
+          result.push(slot);
+        }
+      }
+      return result;
+    },
+    [savedSlots, loaded]
+  );
+
+  const handleDateClick = (date: Date) => {
+    if (isPastDate(date) && !isToday(date)) return;
+    setSelectedDateState(date);
+    onDateSelect(date);
+  };
+
+  const handlePrevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
+  const handleNextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
+  const handlePrevYear = () => setCurrentMonth(subMonths(currentMonth, 12));
+  const handleNextYear = () => setCurrentMonth(addMonths(currentMonth, 12));
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
   const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
-  // Get available time slots for selected date (only show available and booked slots)
-  const getTimeSlotsForDate = (date: Date): TimeSlot[] => {
-    const dateStr = format(date, 'yyyy-MM-dd');
-    const slots: TimeSlot[] = [];
-    const dayOfWeek = date.getDay();
-    
-    // Regular hours based on day of week
-    const hours = getHoursForDay(dayOfWeek);
-    for (const hour of hours) {
-      const id = `${dateStr}-${hour}`;
-      let slot = timeSlots.get(id);
-      
-      // Create slot if it doesn't exist
-      if (!slot) {
-        slot = {
-          id,
-          date: dateStr,
-          hour,
-          available: false, // All slots unavailable by default
-          booked: false,
-        };
-        timeSlots.set(id, slot);
-      }
-      
-      // Only show slots that are available or booked (hide unavailable ones)
-      if (slot.available || slot.booked) {
-        slots.push(slot);
-      }
-    }
-    
-    return slots.sort((a, b) => a.hour - b.hour);
-  };
-
-  const handleDateClick = (date: Date) => {
-    if (isPastDate(date) && !isToday(date)) {
-      return;
-    }
-    // Ensure slots are initialized for this date
-    const dateStr = format(date, 'yyyy-MM-dd');
-    const hours = getHoursForDay(date.getDay());
-    for (const hour of hours) {
-      const id = `${dateStr}-${hour}`;
-      if (!timeSlots.has(id)) {
-        timeSlots.set(id, {
-          id,
-          date: dateStr,
-          hour,
-          available: false, // All slots unavailable by default
-          booked: false,
-        });
-      }
-    }
-    setSelectedDateState(date);
-    onDateSelect(date);
-    // Always force a re-render to show time slots
-    setRefreshKey(prev => prev + 1);
-  };
-
-  const handlePrevMonth = () => {
-    setCurrentMonth(subMonths(currentMonth, 1));
-  };
-
-  const handleNextMonth = () => {
-    setCurrentMonth(addMonths(currentMonth, 1));
-  };
-
-  const handlePrevYear = () => {
-    setCurrentMonth(subMonths(currentMonth, 12));
-  };
-
-  const handleNextYear = () => {
-    setCurrentMonth(addMonths(currentMonth, 12));
-  };
-
-  // Year view - show 12 months
+  // ── Year view ───────────────────────────────────────────────
   if (viewMode === "year") {
-    const months = Array.from({ length: 12 }, (_, i) => {
-      const month = new Date(currentMonth.getFullYear(), i, 1);
-      return month;
-    });
+    const months = Array.from({ length: 12 }, (_, i) => new Date(currentMonth.getFullYear(), i, 1));
 
     return (
       <div className="w-full">
         <div className="flex items-center justify-between mb-6">
           <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handlePrevYear();
-            }}
+            onClick={(e) => { e.preventDefault(); handlePrevYear(); }}
             className="p-2 hover:bg-[#f0ede8] rounded-lg transition-colors active:scale-95"
-            aria-label="Previous year"
-            type="button"
+            aria-label="Previous year" type="button"
           >
             <ChevronLeft className="h-5 w-5 text-[#6b665e]" />
           </button>
@@ -195,14 +119,9 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
             {currentMonth.getFullYear()}
           </h2>
           <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleNextYear();
-            }}
+            onClick={(e) => { e.preventDefault(); handleNextYear(); }}
             className="p-2 hover:bg-[#f0ede8] rounded-lg transition-colors active:scale-95"
-            aria-label="Next year"
-            type="button"
+            aria-label="Next year" type="button"
           >
             <ChevronRight className="h-5 w-5 text-[#6b665e]" />
           </button>
@@ -210,48 +129,36 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {months.map((month) => {
-            const monthStart = startOfMonth(month);
-            const monthEnd = endOfMonth(month);
-            const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
-            const hasVisibleSlots = days.some(day => {
-              const dateStr = format(day, 'yyyy-MM-dd');
-              const dayHours = getHoursForDay(day.getDay());
-              return dayHours.some(hour => {
-                const slot = timeSlots.get(`${dateStr}-${hour}`);
-                return slot && (slot.available || slot.booked);
-              });
-            });
-            
-            const hasAvailableSlots = days.some(day => {
-              const dateStr = format(day, 'yyyy-MM-dd');
-              const dayHours = getHoursForDay(day.getDay());
-              return dayHours.some(hour => {
-                const slot = timeSlots.get(`${dateStr}-${hour}`);
-                return slot?.available && !slot?.booked;
-              });
-            });
+            const mStart = startOfMonth(month);
+            const mEnd = endOfMonth(month);
+            const days = eachDayOfInterval({ start: mStart, end: mEnd });
+
+            let hasVisibleSlots = false;
+            let hasAvailableSlots = false;
+            for (const day of days) {
+              const dateStr = buildDateStr(day);
+              for (const hour of getHoursForDay(day.getDay())) {
+                const slot = savedSlots[`${dateStr}-${hour}`];
+                if (slot) {
+                  if (slot.available || slot.booked) hasVisibleSlots = true;
+                  if (slot.available && !slot.booked) { hasAvailableSlots = true; break; }
+                }
+              }
+              if (hasAvailableSlots) break;
+            }
 
             return (
               <button
                 key={month.toISOString()}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setCurrentMonth(month);
-                  setViewMode("month");
-                }}
+                onClick={(e) => { e.preventDefault(); setCurrentMonth(month); setViewMode("month"); }}
                 className={cn(
                   "p-4 rounded-xl border transition-all text-left active:scale-95",
-                  hasAvailableSlots
-                    ? "border-[#1a1a1a] bg-white hover:bg-[#f7f7f5] cursor-pointer"
-                    : hasVisibleSlots
-                    ? "border-[#e8e5df] bg-[#fef2f2] cursor-pointer"
+                  hasAvailableSlots ? "border-[#1a1a1a] bg-white hover:bg-[#f7f7f5] cursor-pointer"
+                    : hasVisibleSlots ? "border-[#e8e5df] bg-[#fef2f2] cursor-pointer"
                     : "border-[#e8e5df] bg-[#f7f7f5] cursor-pointer"
                 )}
               >
-                <div className="text-[14px] font-medium text-[#1a1a1a] mb-1">
-                  {format(month, 'MMMM')}
-                </div>
+                <div className="text-[14px] font-medium text-[#1a1a1a] mb-1">{format(month, "MMMM")}</div>
                 <div className="flex items-center gap-1.5 text-[11px] text-[#7a756d]">
                   {hasAvailableSlots && <span className="w-[4px] h-[4px] rounded-full bg-[#b0a99f] flex-shrink-0" />}
                   {hasAvailableSlots ? "Available" : hasVisibleSlots ? "Booked" : "No availability"}
@@ -262,11 +169,7 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
         </div>
 
         <button
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setViewMode("month");
-          }}
+          onClick={(e) => { e.preventDefault(); setViewMode("month"); }}
           className="mt-6 text-[13px] text-[#6b665e] hover:text-[#1a1a1a] font-medium active:scale-95 transition-colors"
         >
           ← Back to month view
@@ -275,50 +178,32 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
     );
   }
 
-  // Month view
+  // ── Month view ──────────────────────────────────────────────
   const firstDayOfWeek = getDay(monthStart);
-  const daysBeforeMonth = Array.from({ length: firstDayOfWeek }, (_, i) => null);
+  const daysBeforeMonth = Array.from({ length: firstDayOfWeek }, () => null);
 
   return (
     <div className="w-full">
-      {/* Month Navigation */}
       <div className="flex items-center justify-between mb-6">
-        <button
-          onClick={handlePrevMonth}
-          className="p-2 hover:bg-[#f0ede8] rounded-lg transition-colors"
-          aria-label="Previous month"
-          type="button"
-        >
+        <button onClick={handlePrevMonth} className="p-2 hover:bg-[#f0ede8] rounded-lg transition-colors" aria-label="Previous month" type="button">
           <ChevronLeft className="h-5 w-5 text-[#6b665e]" />
         </button>
         <div className="flex flex-col items-center gap-1">
           <h2 className="text-[22px] sm:text-[26px] font-light tracking-tight text-[#1a1a1a]">
-            {format(currentMonth, 'MMMM yyyy')}
+            {format(currentMonth, "MMMM yyyy")}
           </h2>
-          <button
-            onClick={() => setViewMode("year")}
-            className="text-[11px] text-[#7a756d] hover:text-[#1a1a1a] font-medium transition-colors"
-          >
+          <button onClick={() => setViewMode("year")} className="text-[11px] text-[#7a756d] hover:text-[#1a1a1a] font-medium transition-colors">
             View year
           </button>
         </div>
-        <button
-          onClick={handleNextMonth}
-          className="p-2 hover:bg-[#f0ede8] rounded-lg transition-colors"
-          aria-label="Next month"
-          type="button"
-        >
+        <button onClick={handleNextMonth} className="p-2 hover:bg-[#f0ede8] rounded-lg transition-colors" aria-label="Next month" type="button">
           <ChevronRight className="h-5 w-5 text-[#6b665e]" />
         </button>
       </div>
 
-      {/* Calendar Grid */}
       <div className="grid grid-cols-7 gap-1.5 sm:gap-2 mb-6">
-        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-          <div
-            key={day}
-            className="text-center text-[10px] tracking-[0.1em] uppercase font-medium text-[#6b665e] py-2"
-          >
+        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+          <div key={day} className="text-center text-[10px] tracking-[0.1em] uppercase font-medium text-[#6b665e] py-2">
             {day}
           </div>
         ))}
@@ -326,44 +211,29 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
           <div key={`empty-${index}`} className="aspect-square" />
         ))}
         {daysInMonth.map((day) => {
-          const dateStr = format(day, 'yyyy-MM-dd');
           const isPast = isPastDate(day) && !isToday(day);
           const isSelected = selectedDateState && isSameDay(day, selectedDateState);
           const isCurrentDay = isToday(day);
-          
-          const hasAvailableSlots = (() => {
-            if (isPast) return false;
-            const dayHours = getHoursForDay(day.getDay());
-            return dayHours.some(hour => {
-              const slot = timeSlots.get(`${dateStr}-${hour}`);
-              return slot?.available && !slot?.booked;
-            });
-          })();
+          const hasAvail = !isPast && dayHasAvailability(day);
 
           return (
             <button
               key={day.toISOString()}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleDateClick(day);
-              }}
+              onClick={(e) => { e.preventDefault(); handleDateClick(day); }}
               disabled={isPast}
               type="button"
-              aria-label={`Select ${format(day, 'EEEE, MMMM d, yyyy')}`}
-              aria-pressed={isSelected || undefined}
+              aria-label={`Select ${format(day, "EEEE, MMMM d, yyyy")}`}
               className={cn(
-                "aspect-square rounded-lg border transition-all text-[13px] font-medium active:scale-95",
+                "aspect-square rounded-lg border transition-all text-[13px] active:scale-95",
                 isPast && "opacity-25 cursor-not-allowed bg-transparent border-transparent",
-                !isPast && !isSelected && hasAvailableSlots && "bg-transparent border-[#d9d5cf] hover:bg-[#f0ede8] cursor-pointer hover:border-[#a39e95]",
-                !isPast && !isSelected && !hasAvailableSlots && "bg-transparent border-[#d9d5cf] text-[#6b665e] cursor-pointer hover:border-[#a39e95]",
+                !isPast && !isSelected && "bg-transparent border-[#d9d5cf] text-[#1a1a1a] cursor-pointer hover:bg-[#f0ede8] hover:border-[#a39e95]",
                 isSelected && "bg-[#1a1a1a] border-[#1a1a1a] text-white",
                 isCurrentDay && !isSelected && "ring-2 ring-[#1a1a1a]/20"
               )}
             >
               <div className="flex flex-col items-center justify-center h-full">
-                <span>{format(day, 'd')}</span>
-                {!isPast && hasAvailableSlots && !isSelected && (
+                <span>{format(day, "d")}</span>
+                {hasAvail && !isSelected && (
                   <span className="block w-[4px] h-[4px] rounded-full bg-[#b0a99f] mt-0.5" />
                 )}
               </div>
@@ -372,29 +242,21 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
         })}
       </div>
 
-      {/* Time Slots for Selected Date */}
       {selectedDateState && !isPastDate(selectedDateState) && (() => {
-        const slots = getTimeSlotsForDate(selectedDateState);
-        const availableSlots = slots.filter(slot => slot.available || slot.booked);
-        
+        const slots = visibleSlotsForDate(selectedDateState);
         return (
-          <div className="mt-6 border-t border-[#e8e5df] pt-6" key={`slots-${refreshKey}-${selectedDateState?.getTime()}`}>
+          <div className="mt-6 border-t border-[#e8e5df] pt-6">
             <p className="text-[10px] tracking-[0.12em] uppercase text-[#6b665e] mb-4">
-              Available times · {format(selectedDateState, 'EEEE, MMMM d')}
+              Available times · {format(selectedDateState, "EEEE, MMMM d")}
             </p>
-            {availableSlots.length > 0 ? (
+            {slots.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-                {availableSlots.map((slot) => (
+                {slots.map((slot) => (
                   <button
                     key={slot.id}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      onTimeSlotSelect(slot);
-                    }}
+                    onClick={(e) => { e.preventDefault(); onTimeSlotSelect(slot); }}
                     disabled={slot.booked || !slot.available}
                     type="button"
-                    aria-label={`Book time slot at ${formatTime(slot.hour)}${slot.booked ? ' (already booked)' : ''}`}
                     className={cn(
                       "py-2.5 px-3 rounded-lg border transition-all text-[13px] font-medium flex items-center justify-center gap-2 active:scale-95",
                       slot.booked && "bg-[#fef2f2] border-[#fecaca] text-[#991b1b] cursor-not-allowed",
@@ -418,4 +280,3 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
     </div>
   );
 }
-

@@ -4,7 +4,13 @@ import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { CheckCircle, Calendar, Clock, DollarSign, CreditCard } from "lucide-react";
 import { Booking } from "@/lib/types";
-import { bookings } from "@/lib/mock-data";
+import {
+  bookings,
+  readSlotsFromStorage,
+  writeSlotToStorage,
+  writeBookingToStorage,
+  readBookingsFromStorage,
+} from "@/lib/mock-data";
 import { formatTime } from "@/lib/utils";
 import { format } from "date-fns";
 import { PaymentModal } from "@/components/payment-modal";
@@ -29,60 +35,69 @@ function BookingSuccessContent() {
           try {
             const parsed = JSON.parse(stored) as Booking;
             found = parsed;
-            // Also add it back to the Map
             bookings.set(bookingId, parsed);
           } catch (e) {
-            // Invalid booking data - will show error below
+            // Invalid booking data
           }
+        }
+      }
+
+      // Also check localStorage bookings
+      if (!found) {
+        const persistedBookings = readBookingsFromStorage();
+        if (persistedBookings[bookingId]) {
+          found = persistedBookings[bookingId];
+          bookings.set(bookingId, found);
         }
       }
       
       if (found) {
         setBooking(found);
-        // If payment was successful via Stripe redirect, update payment status and mark slot as booked
         if (paymentStatus === "success" && found.paymentStatus === "pending") {
-          // Payment completed via Stripe - update booking and mark slot as booked
           found.paymentStatus = "paid";
           found.status = "confirmed";
-          bookings.set(bookingId, found);
+
+          // Persist booking
+          writeBookingToStorage(found);
+          sessionStorage.setItem(`booking_${bookingId}`, JSON.stringify(found));
           
-          // Update in sessionStorage
-          if (typeof window !== "undefined") {
-            sessionStorage.setItem(`booking_${bookingId}`, JSON.stringify(found));
-            
-            // Mark time slot as booked
-            const slotId = `${found.date}-${found.hour}`;
-            const slotStorage = sessionStorage.getItem(`slot_${slotId}`);
-            if (slotStorage) {
-              try {
-                const slot = JSON.parse(slotStorage);
-                slot.booked = true;
-                slot.bookedBy = found.clientName;
-                slot.bookedEmail = found.clientEmail;
-                slot.bookedPhone = found.clientPhone;
-                sessionStorage.setItem(`slot_${slotId}`, JSON.stringify(slot));
-              } catch (e) {
-                // Slot update failed - non-critical
-              }
-            }
-            
-            // Send email notification
-            fetch("/api/send-email", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                booking: found,
-                notificationEmail: "difaziotennis@gmail.com",
-              }),
-            }).catch(() => {
-              // Email notification failed - non-critical
+          // Mark the time slot as booked and persist to localStorage
+          const slotId = `${found.date}-${found.hour}`;
+          const storedSlots = readSlotsFromStorage();
+          const existingSlot = storedSlots[slotId];
+          if (existingSlot) {
+            writeSlotToStorage({
+              ...existingSlot,
+              booked: true,
+              bookedBy: found.clientName,
+              bookedEmail: found.clientEmail,
+              bookedPhone: found.clientPhone,
+            });
+          } else {
+            // Slot wasn't in storage yet — create it
+            writeSlotToStorage({
+              id: slotId,
+              date: found.date,
+              hour: found.hour,
+              available: true,
+              booked: true,
+              bookedBy: found.clientName,
+              bookedEmail: found.clientEmail,
+              bookedPhone: found.clientPhone,
             });
           }
+            
+          // Send email notification
+          fetch("/api/send-email", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              booking: found,
+              notificationEmail: "difaziotennis@gmail.com",
+            }),
+          }).catch(() => {});
         }
       } else {
-        // Show error after a delay
         setTimeout(() => {
           if (!booking) {
             alert("Booking not found. Redirecting back to booking page.");
@@ -208,15 +223,13 @@ function BookingSuccessContent() {
           isOpen={showPaymentModal}
           onClose={() => setShowPaymentModal(false)}
           onPaymentSuccess={() => {
-            // Update booking payment status
             if (booking) {
-              booking.paymentStatus = "paid";
-              bookings.set(booking.id, booking);
-              sessionStorage.setItem(`booking_${booking.id}`, JSON.stringify(booking));
+              const updated = { ...booking, paymentStatus: "paid" as const };
+              writeBookingToStorage(updated);
+              sessionStorage.setItem(`booking_${booking.id}`, JSON.stringify(updated));
+              setBooking(updated);
             }
             setShowPaymentModal(false);
-            // Update booking state to show updated status
-            setBooking({ ...booking, paymentStatus: "paid" });
           }}
         />
       )}
