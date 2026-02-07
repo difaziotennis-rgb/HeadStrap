@@ -36,23 +36,21 @@ export default function BioPage() {
       {/* Content */}
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-10 sm:py-16">
         <div className="bg-white rounded-2xl shadow-sm border border-[#e8e5df] overflow-hidden">
-          {/* Photo — large hero-style */}
-          <div className="relative w-full aspect-[3/2] sm:aspect-[2.5/1] bg-[#f0ede8]">
+          {/* Photo */}
+          <div className="relative w-full aspect-[4/5] sm:aspect-[3/2] bg-[#f0ede8]">
             <Image
               src="/derek-bio.png"
               alt="Derek DiFazio"
               fill
-              className="object-cover object-[center_15%]"
+              className="object-cover object-top"
               priority
             />
-            {/* Subtle gradient overlay at bottom for text readability */}
-            <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/30 to-transparent" />
           </div>
 
           {/* Bio content */}
-          <div className="px-6 sm:px-12 py-8 sm:py-12">
+          <div className="px-6 sm:px-12 py-8 sm:py-12 bg-[#faf9f7]">
             <p className="text-[10px] tracking-[0.2em] uppercase text-[#b0a99f] mb-2">
-              About the Coach
+              Tennis Professional
             </p>
             <h1 className="text-[26px] sm:text-[32px] font-light tracking-tight text-[#1a1a1a] mb-6">
               Derek DiFazio
