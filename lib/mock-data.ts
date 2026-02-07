@@ -23,8 +23,7 @@ export function initializeMockData() {
     date.setDate(date.getDate() + dayOffset);
     
     const dateStr = date.toISOString().split('T')[0];
-    const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
-    const isSunday = dayOfWeek === 0;
+    const dayOfWeek = date.getDay();
     
     // Regular hours based on day of week
     const hours = getHoursForDay(dayOfWeek);
@@ -37,21 +36,6 @@ export function initializeMockData() {
           date: dateStr,
           hour,
           available: false, // All slots unavailable by default
-          booked: false,
-        });
-      }
-    }
-    
-    // 3 AM (hour 3) only on Sundays
-    if (isSunday) {
-      const id = `${dateStr}-3`;
-      // Only create if it doesn't exist (preserves booked slots)
-      if (!timeSlots.has(id)) {
-        timeSlots.set(id, {
-          id,
-          date: dateStr,
-          hour: 3,
-          available: true, // 3am is available by default on Sundays
           booked: false,
         });
       }

@@ -37,8 +37,7 @@ export function AdminCalendar() {
   const getTimeSlotsForDate = (date: Date): TimeSlot[] => {
     const dateStr = format(date, 'yyyy-MM-dd');
     const slots: TimeSlot[] = [];
-    const dayOfWeek = getDay(date); // 0 = Sunday
-    const isSunday = dayOfWeek === 0;
+    const dayOfWeek = getDay(date);
     
     // Regular hours based on day of week
     const hours = getHoursForDay(dayOfWeek);
@@ -52,25 +51,6 @@ export function AdminCalendar() {
           date: dateStr,
           hour,
           available: false,
-          booked: false,
-        };
-        timeSlots.set(id, slot);
-      }
-      
-      slots.push(slot);
-    }
-    
-    // 3 AM (hour 3) only on Sundays
-    if (isSunday) {
-      const id = `${dateStr}-3`;
-      let slot = timeSlots.get(id);
-      
-      if (!slot) {
-        slot = {
-          id,
-          date: dateStr,
-          hour: 3,
-          available: true, // 3am is available by default on Sundays
           booked: false,
         };
         timeSlots.set(id, slot);

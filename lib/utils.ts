@@ -21,7 +21,7 @@ export function formatTime(hour: number): string {
  * Returns the available hour slots for a given day of the week.
  * - Monday (1) & Friday (5): 9 AM–6 PM + 7:30 PM (no 7 PM)
  * - All other days: 8 AM–8 PM
- * Does NOT include special slots like Sunday 3 AM.
+ * Returns all regular time slots for the given day.
  */
 export function getHoursForDay(dayOfWeek: number): number[] {
   if (dayOfWeek === 1 || dayOfWeek === 5) {
