@@ -24,6 +24,8 @@ function ConfirmBookingContent() {
   const [status, setStatus] = useState<"loading" | "confirming" | "success" | "error">("loading");
   const [booking, setBooking] = useState<Booking | null>(null);
   const [error, setError] = useState("");
+  const [emailStatus, setEmailStatus] = useState<{ client: boolean; admin: boolean } | null>(null);
+  const [emailErrors, setEmailErrors] = useState<{ client: any; admin: any } | null>(null);
 
   useEffect(() => {
     if (!token) {
@@ -61,6 +63,8 @@ function ConfirmBookingContent() {
       }
 
       setBooking(data.booking);
+      setEmailStatus(data.emailsSent || null);
+      setEmailErrors(data.emailErrors || null);
       setStatus("success");
     } catch (err: any) {
       setError(err.message || "An error occurred");
@@ -120,9 +124,24 @@ function ConfirmBookingContent() {
             <div className="text-center py-4">
               <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
               <h2 className="text-xl font-semibold text-gray-800 mb-2">Booking Confirmed!</h2>
-              <p className="text-gray-600 mb-6">
-                Confirmation emails have been sent to you and the client.
+              <p className="text-gray-600 mb-4">
+                {emailStatus?.client && emailStatus?.admin
+                  ? "Confirmation emails have been sent to you and the client."
+                  : emailStatus?.admin
+                  ? "Confirmation sent to you. Client email may be pending."
+                  : "Booking confirmed."}
               </p>
+
+              {emailErrors?.client && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 text-left text-sm">
+                  <p className="font-semibold text-red-800">Client email failed:</p>
+                  <p className="text-red-700 font-mono text-xs mt-1">
+                    {typeof emailErrors.client === "string"
+                      ? emailErrors.client
+                      : JSON.stringify(emailErrors.client)}
+                  </p>
+                </div>
+              )}
               
               <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6 text-left">
                 <h3 className="font-semibold text-green-800 mb-3">Confirmed Details</h3>

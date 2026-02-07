@@ -286,30 +286,39 @@ Confirmed on: ${new Date().toLocaleString()}
 
     let clientEmailSent = false;
     let adminEmailSent = false;
+    let clientEmailError: any = null;
+    let adminEmailError: any = null;
 
     if (RESEND_API_KEY) {
       // Send to client
       try {
+        const clientPayload = {
+          from: "DiFazio Tennis <notifications@difaziotennis.com>",
+          to: [booking.clientEmail],
+          subject: clientSubject,
+          html: clientHtml,
+          text: clientText,
+          reply_to: "difaziotennis@gmail.com",
+        };
+        console.log("Sending client email to:", booking.clientEmail);
         const clientResponse = await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             "Authorization": `Bearer ${RESEND_API_KEY}`,
           },
-          body: JSON.stringify({
-            from: "DiFazio Tennis <notifications@difaziotennis.com>",
-            to: booking.clientEmail,
-            subject: clientSubject,
-            html: clientHtml,
-            text: clientText,
-            reply_to: "difaziotennis@gmail.com",
-          }),
+          body: JSON.stringify(clientPayload),
         });
+        const clientData = await clientResponse.json();
         clientEmailSent = clientResponse.ok;
         if (!clientResponse.ok) {
-          console.error("Failed to send client email:", await clientResponse.json());
+          clientEmailError = clientData;
+          console.error("Failed to send client email:", JSON.stringify(clientData));
+        } else {
+          console.log("Client email sent successfully:", clientData.id);
         }
-      } catch (e) {
+      } catch (e: any) {
+        clientEmailError = e.message;
         console.error("Error sending client email:", e);
       }
 
@@ -323,27 +332,25 @@ Confirmed on: ${new Date().toLocaleString()}
           },
           body: JSON.stringify({
             from: "DiFazio Tennis <notifications@difaziotennis.com>",
-            to: adminEmail,
+            to: [adminEmail],
             subject: adminSubject,
             html: adminHtml,
             text: adminText,
             reply_to: "difaziotennis@gmail.com",
           }),
         });
+        const adminData = await adminResponse.json();
         adminEmailSent = adminResponse.ok;
         if (!adminResponse.ok) {
-          console.error("Failed to send admin email:", await adminResponse.json());
+          adminEmailError = adminData;
+          console.error("Failed to send admin email:", JSON.stringify(adminData));
+        } else {
+          console.log("Admin email sent successfully:", adminData.id);
         }
-      } catch (e) {
+      } catch (e: any) {
+        adminEmailError = e.message;
         console.error("Error sending admin email:", e);
       }
-    }
-
-    // Log in development
-    if (process.env.NODE_ENV === "development") {
-      console.log("📧 Confirmation emails:");
-      console.log("  - Client:", booking.clientEmail, clientEmailSent ? "✅" : "⏳");
-      console.log("  - Admin:", adminEmail, adminEmailSent ? "✅" : "⏳");
     }
 
     return NextResponse.json({ 
@@ -352,6 +359,10 @@ Confirmed on: ${new Date().toLocaleString()}
       emailsSent: {
         client: clientEmailSent,
         admin: adminEmailSent
+      },
+      emailErrors: {
+        client: clientEmailError,
+        admin: adminEmailError
       },
       message: "Booking confirmed successfully"
     });
