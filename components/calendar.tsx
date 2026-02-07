@@ -206,13 +206,13 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
               e.stopPropagation();
               handlePrevYear();
             }}
-            className="p-2 hover:bg-primary-100 rounded-lg transition-colors active:scale-95"
+            className="p-2 hover:bg-[#f0ede8] rounded-lg transition-colors active:scale-95"
             aria-label="Previous year"
             type="button"
           >
-            <ChevronLeft className="h-5 w-5 text-primary-700" />
+            <ChevronLeft className="h-5 w-5 text-[#8a8477]" />
           </button>
-          <h2 className="text-2xl font-serif text-primary-800 font-semibold">
+          <h2 className="text-[22px] font-light tracking-tight text-[#1a1a1a]">
             {currentMonth.getFullYear()}
           </h2>
           <button
@@ -221,15 +221,15 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
               e.stopPropagation();
               handleNextYear();
             }}
-            className="p-2 hover:bg-primary-100 rounded-lg transition-colors active:scale-95"
+            className="p-2 hover:bg-[#f0ede8] rounded-lg transition-colors active:scale-95"
             aria-label="Next year"
             type="button"
           >
-            <ChevronRight className="h-5 w-5 text-primary-700" />
+            <ChevronRight className="h-5 w-5 text-[#8a8477]" />
           </button>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {months.map((month) => {
             const monthStart = startOfMonth(month);
             const monthEnd = endOfMonth(month);
@@ -260,19 +260,19 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
                   setViewMode("month");
                 }}
                 className={cn(
-                  "p-4 rounded-lg border-2 transition-all text-left active:scale-95",
+                  "p-4 rounded-xl border transition-all text-left active:scale-95",
                   hasAvailableSlots
-                    ? "border-primary-300 bg-primary-50 hover:border-primary-500 hover:bg-primary-100 cursor-pointer"
+                    ? "border-[#1a1a1a] bg-white hover:bg-[#f7f7f5] cursor-pointer"
                     : hasVisibleSlots
-                    ? "border-red-300 bg-red-50 cursor-pointer"
-                    : "border-gray-200 bg-gray-50 cursor-pointer"
+                    ? "border-[#e8e5df] bg-[#fef2f2] cursor-pointer"
+                    : "border-[#e8e5df] bg-[#f7f7f5] cursor-pointer"
                 )}
               >
-                <div className="font-semibold text-primary-800 mb-2">
+                <div className="text-[14px] font-medium text-[#1a1a1a] mb-1">
                   {format(month, 'MMMM')}
                 </div>
-                <div className="text-sm text-earth-600">
-                  {hasAvailableSlots ? "Available" : hasVisibleSlots ? "Booked only" : "No availability"}
+                <div className="text-[11px] text-[#a39e95]">
+                  {hasAvailableSlots ? "Available" : hasVisibleSlots ? "Booked" : "No availability"}
                 </div>
               </button>
             );
@@ -285,7 +285,7 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
             e.stopPropagation();
             setViewMode("month");
           }}
-          className="mt-6 text-primary-700 hover:text-primary-800 font-medium active:scale-95"
+          className="mt-6 text-[13px] text-[#8a8477] hover:text-[#1a1a1a] font-medium active:scale-95 transition-colors"
         >
           ← Back to month view
         </button>
@@ -303,39 +303,39 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
       <div className="flex items-center justify-between mb-6">
         <button
           onClick={handlePrevMonth}
-          className="p-2 hover:bg-primary-100 rounded-lg transition-colors"
+          className="p-2 hover:bg-[#f0ede8] rounded-lg transition-colors"
           aria-label="Previous month"
           type="button"
         >
-          <ChevronLeft className="h-5 w-5 text-primary-700" />
+          <ChevronLeft className="h-5 w-5 text-[#8a8477]" />
         </button>
         <div className="flex flex-col items-center gap-1">
-          <h2 className="text-2xl sm:text-3xl font-serif text-primary-800 font-semibold">
+          <h2 className="text-[22px] sm:text-[26px] font-light tracking-tight text-[#1a1a1a]">
             {format(currentMonth, 'MMMM yyyy')}
           </h2>
           <button
             onClick={() => setViewMode("year")}
-            className="text-sm text-primary-600 hover:text-primary-800 font-medium"
+            className="text-[11px] text-[#a39e95] hover:text-[#1a1a1a] font-medium transition-colors"
           >
-            View 12 months
+            View year
           </button>
         </div>
         <button
           onClick={handleNextMonth}
-          className="p-2 hover:bg-primary-100 rounded-lg transition-colors"
+          className="p-2 hover:bg-[#f0ede8] rounded-lg transition-colors"
           aria-label="Next month"
           type="button"
         >
-          <ChevronRight className="h-5 w-5 text-primary-700" />
+          <ChevronRight className="h-5 w-5 text-[#8a8477]" />
         </button>
       </div>
 
       {/* Calendar Grid */}
-      <div className="grid grid-cols-7 gap-2 mb-6">
+      <div className="grid grid-cols-7 gap-1.5 sm:gap-2 mb-6">
         {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
           <div
             key={day}
-            className="text-center text-sm font-semibold text-primary-700 py-2"
+            className="text-center text-[10px] tracking-[0.1em] uppercase font-medium text-[#a39e95] py-2"
           >
             {day}
           </div>
@@ -349,18 +349,13 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
           const isSelected = selectedDateState && isSameDay(day, selectedDateState);
           const isCurrentDay = isToday(day);
           
-          // Check if day has available slots (check existing slots or if it's a future date, assume 9 AM is available)
           const hasAvailableSlots = (() => {
-            // If it's a past date, no slots
             if (isPast) return false;
-            // Check if any slots exist and are available
             const existingAvailable = Array.from({ length: 11 }, (_, i) => i + 9).some(hour => {
               const slot = timeSlots.get(`${dateStr}-${hour}`);
               return slot?.available && !slot?.booked;
             });
-            // If slots exist and one is available, return true
             if (existingAvailable) return true;
-            // If no slots exist yet, they will all be unavailable by default
             return false;
           })();
 
@@ -377,18 +372,18 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
               aria-label={`Select ${format(day, 'EEEE, MMMM d, yyyy')}`}
               aria-pressed={isSelected || undefined}
               className={cn(
-                "aspect-square rounded-lg border-2 transition-all text-sm font-medium active:scale-95",
-                isPast && "opacity-40 cursor-not-allowed bg-gray-100 border-gray-200",
-                !isPast && !isSelected && hasAvailableSlots && "bg-primary-50 border-primary-300 hover:border-primary-500 hover:bg-primary-100 cursor-pointer",
-                !isPast && !isSelected && !hasAvailableSlots && "bg-gray-50 border-gray-200 cursor-pointer",
-                isSelected && "bg-primary-600 border-primary-700 text-white ring-4 ring-primary-200",
-                isCurrentDay && !isSelected && "ring-2 ring-primary-400"
+                "aspect-square rounded-lg border transition-all text-[13px] font-medium active:scale-95",
+                isPast && "opacity-30 cursor-not-allowed bg-transparent border-transparent",
+                !isPast && !isSelected && hasAvailableSlots && "bg-white border-[#1a1a1a] hover:bg-[#f7f7f5] cursor-pointer",
+                !isPast && !isSelected && !hasAvailableSlots && "bg-transparent border-[#e8e5df] text-[#a39e95] cursor-pointer hover:border-[#c4bfb8]",
+                isSelected && "bg-[#1a1a1a] border-[#1a1a1a] text-white",
+                isCurrentDay && !isSelected && "ring-2 ring-[#1a1a1a]/20"
               )}
             >
               <div className="flex flex-col items-center justify-center h-full">
                 <span>{format(day, 'd')}</span>
-                {!isPast && hasAvailableSlots && (
-                  <span className="text-[10px] text-primary-600 mt-1">•</span>
+                {!isPast && hasAvailableSlots && !isSelected && (
+                  <span className="text-[8px] text-[#1a1a1a] mt-0.5">●</span>
                 )}
               </div>
             </button>
@@ -402,12 +397,12 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
         const availableSlots = slots.filter(slot => slot.available || slot.booked);
         
         return (
-          <div className="mt-8 border-t border-primary-200 pt-6" key={`slots-${refreshKey}-${selectedDateState?.getTime()}`}>
-            <h3 className="text-xl font-serif text-primary-800 mb-4">
-              Available Times for {format(selectedDateState, 'EEEE, MMMM d')}
-            </h3>
+          <div className="mt-6 border-t border-[#e8e5df] pt-6" key={`slots-${refreshKey}-${selectedDateState?.getTime()}`}>
+            <p className="text-[10px] tracking-[0.12em] uppercase text-[#a39e95] mb-4">
+              Available times · {format(selectedDateState, 'EEEE, MMMM d')}
+            </p>
             {availableSlots.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
                 {availableSlots.map((slot) => (
                   <button
                     key={slot.id}
@@ -420,20 +415,20 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
                     type="button"
                     aria-label={`Book time slot at ${formatTime(slot.hour)}${slot.booked ? ' (already booked)' : ''}`}
                     className={cn(
-                      "p-3 rounded-lg border-2 transition-all text-sm font-medium flex items-center justify-center gap-2 active:scale-95",
-                      slot.booked && "bg-red-100 border-red-300 text-red-600 cursor-not-allowed",
-                      !slot.booked && slot.available && "bg-white border-primary-300 text-primary-700 hover:border-primary-500 hover:bg-primary-50 cursor-pointer"
+                      "py-2.5 px-3 rounded-lg border transition-all text-[13px] font-medium flex items-center justify-center gap-2 active:scale-95",
+                      slot.booked && "bg-[#fef2f2] border-[#fecaca] text-[#991b1b] cursor-not-allowed",
+                      !slot.booked && slot.available && "bg-white border-[#e8e5df] text-[#1a1a1a] hover:border-[#1a1a1a] hover:bg-[#f7f7f5] cursor-pointer"
                     )}
                   >
-                    <Clock className="h-4 w-4" />
+                    <Clock className="h-3.5 w-3.5" />
                     <span>{formatTime(slot.hour)}</span>
-                    {slot.booked && <span className="text-xs">(Booked)</span>}
+                    {slot.booked && <span className="text-[10px]">(Booked)</span>}
                   </button>
                 ))}
               </div>
             ) : (
-              <p className="text-earth-600 text-center py-4">
-                No available times for this date. Please select another date or contact us for availability.
+              <p className="text-[13px] text-[#a39e95] text-center py-4">
+                No available times for this date.
               </p>
             )}
           </div>

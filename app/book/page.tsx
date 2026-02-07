@@ -76,51 +76,54 @@ export default function BookPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-50">
-      {/* Top Navigation Bar - Always visible */}
-      <header className="bg-white/80 backdrop-blur-sm border-b border-primary-100 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+    <div className="min-h-screen bg-[#f7f7f5]">
+      {/* Top Navigation Bar */}
+      <header className="bg-[#faf9f7] border-b border-[#e8e5df] sticky top-0 z-40">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[10px] tracking-[0.25em] uppercase text-[#b0a99f]">DiFazio Tennis</p>
+            </div>
             <div className="flex items-center gap-4">
               <button
                 onClick={() => router.push('/club/rhinebeck-tennis-club')}
-                className="flex items-center gap-2 text-primary-700 hover:text-primary-800 font-medium text-sm transition-colors"
+                className="flex items-center gap-1.5 text-[#8a8477] hover:text-[#1a1a1a] text-[12px] font-medium transition-colors"
               >
-                <Trophy className="h-4 w-4" />
-                Tennis Ladder
+                <Trophy className="h-3.5 w-3.5" />
+                Ladder
               </button>
+              {isAdminMode && (
+                <>
+                  <Link
+                    href="/admin/dashboard"
+                    className="text-[#8a8477] hover:text-[#1a1a1a] text-[12px] font-medium transition-colors"
+                  >
+                    Dashboard
+                  </Link>
+                  <Link
+                    href="/admin/payment-settings"
+                    className="text-[#8a8477] hover:text-[#1a1a1a] text-[12px] font-medium transition-colors"
+                  >
+                    Payments
+                  </Link>
+                  <button
+                    onClick={handleAdminLogout}
+                    className="flex items-center gap-1 text-[12px] text-[#8a8477] hover:text-[#1a1a1a] font-medium transition-colors"
+                  >
+                    <LogOut className="h-3.5 w-3.5" />
+                    Logout
+                  </button>
+                </>
+              )}
             </div>
-            {isAdminMode && (
-              <div className="flex items-center gap-4">
-                <Link
-                  href="/admin/dashboard"
-                  className="text-primary-700 hover:text-primary-800 font-medium text-sm underline"
-                >
-                  Club Management
-                </Link>
-                <Link
-                  href="/admin/payment-settings"
-                  className="text-primary-700 hover:text-primary-800 font-medium text-sm underline"
-                >
-                  Payment Settings
-                </Link>
-                <button
-                  onClick={handleAdminLogout}
-                  className="flex items-center gap-1 text-sm text-primary-700 hover:text-primary-800 font-medium"
-                >
-                  <LogOut className="h-4 w-4" />
-                  Logout
-                </button>
-              </div>
-            )}
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12" role="main">
-        {/* Calendar - Client or Admin View */}
-        <div className="bg-white/60 backdrop-blur-sm rounded-2xl shadow-lg border border-primary-100 p-4 sm:p-6 lg:p-8 mb-8" aria-label="Booking calendar">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-10" role="main">
+        {/* Calendar Card */}
+        <div className="bg-[#faf9f7] rounded-2xl shadow-sm border border-[#e8e5df] p-5 sm:p-8 mb-8" aria-label="Booking calendar">
           {isAdminMode ? (
             <AdminCalendar />
           ) : (
@@ -144,73 +147,68 @@ export default function BookPage() {
         )}
       </main>
 
-      {/* Footer with Admin Login */}
-      <footer className="bg-white/80 backdrop-blur-sm border-t border-primary-100 mt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-center text-earth-600 text-sm mb-6">
-            <p>Rhinebeck Tennis Club • Rhinebeck, NY</p>
-            <p className="mt-2">
-              <a href="mailto:difaziotennis@gmail.com" className="text-primary-700 hover:text-primary-800 hover:underline">
+      {/* Footer */}
+      <footer className="border-t border-[#e8e5df] mt-8">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+          <div className="text-center">
+            <p className="text-[11px] text-[#b0a99f] tracking-wide">
+              DiFazio Tennis · Rhinebeck, NY
+            </p>
+            <p className="text-[11px] text-[#c4bfb8] mt-1.5">
+              <a href="mailto:difaziotennis@gmail.com" className="hover:text-[#8a8477] transition-colors">
                 difaziotennis@gmail.com
               </a>
-              {" • "}
-              <a href="tel:6319015220" className="text-primary-700 hover:text-primary-800 hover:underline">
+              {" · "}
+              <a href="tel:6319015220" className="hover:text-[#8a8477] transition-colors">
                 631-901-5220
               </a>
             </p>
-            <p className="mt-2">© {new Date().getFullYear()} DiFazio Tennis</p>
           </div>
 
           {/* Admin Login Section */}
           {!isAdminMode && (
-            <div className="max-w-md mx-auto mt-8 pt-8 border-t border-primary-200">
+            <div className="max-w-sm mx-auto mt-8 pt-6 border-t border-[#e8e5df]">
               {!showAdminLogin ? (
                 <button
                   onClick={() => setShowAdminLogin(true)}
-                  className="flex items-center justify-center gap-2 text-sm text-earth-500 hover:text-primary-700 transition-colors mx-auto"
+                  className="flex items-center justify-center gap-1.5 text-[11px] text-[#c4bfb8] hover:text-[#8a8477] transition-colors mx-auto"
                   aria-label="Open admin login form"
                 >
-                  <Lock className="h-4 w-4" aria-hidden="true" />
-                  <span>Admin Login</span>
+                  <Lock className="h-3.5 w-3.5" aria-hidden="true" />
+                  <span>Admin</span>
                 </button>
               ) : (
-                <div className="bg-white rounded-lg border border-primary-200 p-6">
-                  <h3 className="text-lg font-serif text-primary-800 mb-4 text-center">
-                    Admin Login
-                  </h3>
-                  <form onSubmit={handleAdminLogin} className="space-y-4">
-                    <div>
-                      <input
-                        type="text"
-                        id="admin-username"
-                        value={adminUsername}
-                        onChange={(e) => setAdminUsername(e.target.value)}
-                        placeholder="Username"
-                        className="w-full px-4 py-2 border border-primary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none text-sm"
-                        required
-                        aria-label="Admin username"
-                        autoComplete="username"
-                      />
-                    </div>
-                    <div>
-                      <input
-                        type="password"
-                        id="admin-password"
-                        value={adminPassword}
-                        onChange={(e) => setAdminPassword(e.target.value)}
-                        placeholder="Password"
-                        className="w-full px-4 py-2 border border-primary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none text-sm"
-                        required
-                        aria-label="Admin password"
-                        autoComplete="current-password"
-                      />
-                    </div>
+                <div className="bg-[#faf9f7] rounded-xl border border-[#e8e5df] p-5">
+                  <p className="text-[10px] tracking-[0.12em] uppercase text-[#a39e95] mb-4 text-center">Admin Login</p>
+                  <form onSubmit={handleAdminLogin} className="space-y-3">
+                    <input
+                      type="text"
+                      id="admin-username"
+                      value={adminUsername}
+                      onChange={(e) => setAdminUsername(e.target.value)}
+                      placeholder="Username"
+                      className="w-full px-3 py-2 bg-white border border-[#e8e5df] rounded-lg text-[13px] text-[#1a1a1a] placeholder:text-[#c4bfb8] focus:ring-1 focus:ring-[#1a1a1a] focus:border-[#1a1a1a] outline-none transition-all"
+                      required
+                      aria-label="Admin username"
+                      autoComplete="username"
+                    />
+                    <input
+                      type="password"
+                      id="admin-password"
+                      value={adminPassword}
+                      onChange={(e) => setAdminPassword(e.target.value)}
+                      placeholder="Password"
+                      className="w-full px-3 py-2 bg-white border border-[#e8e5df] rounded-lg text-[13px] text-[#1a1a1a] placeholder:text-[#c4bfb8] focus:ring-1 focus:ring-[#1a1a1a] focus:border-[#1a1a1a] outline-none transition-all"
+                      required
+                      aria-label="Admin password"
+                      autoComplete="current-password"
+                    />
                     {adminError && (
-                      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded-lg text-sm">
+                      <div className="px-3 py-2 bg-[#fef2f2] border border-[#fecaca] text-[#991b1b] rounded-lg text-[12px]">
                         {adminError}
                       </div>
                     )}
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 pt-1">
                       <button
                         type="button"
                         onClick={() => {
@@ -219,13 +217,13 @@ export default function BookPage() {
                           setAdminUsername("");
                           setAdminPassword("");
                         }}
-                        className="flex-1 px-4 py-2 border border-primary-300 text-primary-700 rounded-lg font-medium hover:bg-primary-50 transition-colors text-sm"
+                        className="flex-1 py-2 border border-[#e8e5df] text-[#6b665e] rounded-lg text-[12px] font-medium hover:bg-[#f0ede8] transition-colors"
                       >
                         Cancel
                       </button>
                       <button
                         type="submit"
-                        className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors text-sm"
+                        className="flex-1 py-2 bg-[#1a1a1a] text-white rounded-lg text-[12px] font-medium hover:bg-[#2a2a2a] transition-colors"
                       >
                         Login
                       </button>
