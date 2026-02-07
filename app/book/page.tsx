@@ -84,6 +84,14 @@ export default function BookPage() {
               </p>
             </div>
             <div className="flex items-center gap-4">
+              {!isAdminMode && (
+                <Link
+                  href="/ladder"
+                  className="text-[#8a8477] hover:text-[#1a1a1a] text-[12px] font-medium transition-colors"
+                >
+                  Ladder
+                </Link>
+              )}
               {isAdminMode && (
                 <>
                   <Link
