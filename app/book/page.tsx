@@ -6,12 +6,13 @@ import { Calendar } from "@/components/calendar";
 import { BookingModal } from "@/components/booking-modal";
 import { AdminCalendar } from "@/components/admin-calendar";
 import { AdminDashboard } from "@/components/admin-dashboard";
+import { AdminRecurring } from "@/components/admin-recurring";
 import { TimeSlot } from "@/lib/types";
 import { initializeMockData } from "@/lib/mock-data";
-import { LogOut, Lock, Trophy, LayoutDashboard, CalendarDays } from "lucide-react";
+import { LogOut, Lock, Trophy, LayoutDashboard, CalendarDays, Repeat } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type AdminTab = "dashboard" | "calendar";
+type AdminTab = "dashboard" | "calendar" | "recurring";
 
 export default function BookPage() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -109,7 +110,7 @@ export default function BookPage() {
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8" role="main">
         {/* Admin Tab Switcher */}
         {isAdminMode && (
-          <div className="flex items-center gap-1 mb-5 bg-[#f0ede8] rounded-xl p-1 max-w-xs">
+          <div className="flex items-center gap-1 mb-5 bg-[#f0ede8] rounded-xl p-1 max-w-md">
             <button
               onClick={() => setAdminTab("dashboard")}
               className={cn(
@@ -134,6 +135,18 @@ export default function BookPage() {
               <CalendarDays className="h-3.5 w-3.5" />
               Availability
             </button>
+            <button
+              onClick={() => setAdminTab("recurring")}
+              className={cn(
+                "flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[12px] font-medium transition-all",
+                adminTab === "recurring"
+                  ? "bg-white text-[#1a1a1a] shadow-sm"
+                  : "text-[#7a756d] hover:text-[#1a1a1a]"
+              )}
+            >
+              <Repeat className="h-3.5 w-3.5" />
+              Recurring
+            </button>
           </div>
         )}
 
@@ -142,6 +155,8 @@ export default function BookPage() {
           {isAdminMode ? (
             adminTab === "dashboard" ? (
               <AdminDashboard />
+            ) : adminTab === "recurring" ? (
+              <AdminRecurring />
             ) : (
               <AdminCalendar />
             )

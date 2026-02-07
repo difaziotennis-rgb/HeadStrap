@@ -47,6 +47,20 @@ export interface Club {
   updatedAt?: string;
 }
 
+export interface RecurringLesson {
+  id: string;
+  clientName: string;
+  clientEmail?: string;
+  clientPhone?: string;
+  dayOfWeek: number; // 0=Sun, 1=Mon, ... 6=Sat
+  hour: number; // e.g. 10, 14, 19.5
+  startDate: string; // YYYY-MM-DD — first occurrence
+  endDate: string; // YYYY-MM-DD — last occurrence (default ~6 months out)
+  /** Dates (YYYY-MM-DD) where this recurring lesson is cancelled for that week */
+  cancelledDates: string[];
+  createdAt: string;
+}
+
 
 
 
