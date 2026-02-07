@@ -211,7 +211,9 @@ export function AdminCalendar() {
           const currentDay = isToday(day);
           const dateSlots = getSlotsForDate(day);
           const avail = dateSlots.filter((s) => s.available && !s.booked).length;
-          const booked = dateSlots.filter((s) => s.booked).length;
+          const booked = dateSlots.filter((s) => s.booked && !s.notes?.startsWith("Recurring:")).length;
+          const recurring = dateSlots.filter((s) => s.booked && s.notes?.startsWith("Recurring:")).length;
+          const totalCount = avail + booked + recurring;
 
           return (
             <button
@@ -232,17 +234,18 @@ export function AdminCalendar() {
             >
               <div className="flex flex-col items-center justify-center h-full">
                 <span>{format(day, "d")}</span>
-                {!past && (avail > 0 || booked > 0) && !selected && (
-                  <span className={cn("text-[9px] mt-0.5", avail > 0 ? "text-[#7a756d]" : "text-[#c4bfb8]")}>
-                    {avail > 0 ? avail : ""}
-                    {avail > 0 && booked > 0 ? "/" : ""}
-                    {booked > 0 ? <span className="text-[#b05454]">{booked}b</span> : ""}
+                {!past && totalCount > 0 && !selected && (
+                  <span className="text-[9px] mt-0.5 text-[#7a756d]">
+                    {avail > 0 && <span>{avail}</span>}
+                    {booked > 0 && <span className="text-[#b05454]">{avail > 0 || recurring > 0 ? "/" : ""}{booked}b</span>}
+                    {recurring > 0 && <span className="text-[#6b665e]">{avail > 0 ? "/" : ""}{recurring}r</span>}
                   </span>
                 )}
-                {selected && (avail > 0 || booked > 0) && (
+                {selected && totalCount > 0 && (
                   <span className="text-[9px] mt-0.5 text-white/70">
-                    {avail > 0 ? avail : ""}
-                    {booked > 0 ? `/${booked}b` : ""}
+                    {avail > 0 && <span>{avail}</span>}
+                    {booked > 0 && <span>{avail > 0 || recurring > 0 ? "/" : ""}{booked}b</span>}
+                    {recurring > 0 && <span>{avail > 0 ? "/" : ""}{recurring}r</span>}
                   </span>
                 )}
               </div>
@@ -282,32 +285,39 @@ export function AdminCalendar() {
             </div>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-            {getSlotsForDate(selectedDate).map((slot) => (
-              <button
-                key={slot.id}
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleToggleSlot(slot);
-                }}
-                disabled={slot.booked}
-                type="button"
-                className={cn(
-                  "py-2.5 px-3 rounded-lg border transition-all text-[13px] flex items-center justify-center gap-2 active:scale-95",
-                  slot.booked && "bg-[#fef2f2] border-[#fecaca] text-[#991b1b] cursor-not-allowed",
-                  !slot.booked && slot.available && "bg-[#1a1a1a] border-[#1a1a1a] text-white hover:bg-[#333] cursor-pointer",
-                  !slot.booked && !slot.available && "bg-transparent border-[#d9d5cf] text-[#7a756d] hover:border-[#a39e95] hover:bg-[#f0ede8] cursor-pointer"
-                )}
-              >
-                <span>{formatTime(slot.hour)}</span>
-                {slot.booked && <X className="h-3.5 w-3.5" />}
-                {!slot.booked && slot.available && <Check className="h-3.5 w-3.5" />}
-              </button>
-            ))}
+            {getSlotsForDate(selectedDate).map((slot) => {
+              const isRecurring = slot.booked && slot.notes?.startsWith("Recurring:");
+              return (
+                <button
+                  key={slot.id}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleToggleSlot(slot);
+                  }}
+                  disabled={slot.booked}
+                  type="button"
+                  className={cn(
+                    "py-2.5 px-3 rounded-lg border transition-all text-[13px] flex flex-col items-center justify-center gap-0.5 active:scale-95",
+                    isRecurring && "bg-[#f5f3f0] border-[#c4bfb8] text-[#6b665e] cursor-not-allowed",
+                    slot.booked && !isRecurring && "bg-[#fef2f2] border-[#fecaca] text-[#991b1b] cursor-not-allowed",
+                    !slot.booked && slot.available && "bg-[#1a1a1a] border-[#1a1a1a] text-white hover:bg-[#333] cursor-pointer",
+                    !slot.booked && !slot.available && "bg-transparent border-[#d9d5cf] text-[#7a756d] hover:border-[#a39e95] hover:bg-[#f0ede8] cursor-pointer"
+                  )}
+                >
+                  <span>{formatTime(slot.hour)}</span>
+                  {isRecurring && slot.bookedBy && (
+                    <span className="text-[9px] text-[#a39e95] truncate max-w-full">{slot.bookedBy.split(" ")[0]}</span>
+                  )}
+                  {slot.booked && !isRecurring && <X className="h-3.5 w-3.5" />}
+                  {!slot.booked && slot.available && <Check className="h-3.5 w-3.5" />}
+                </button>
+              );
+            })}
           </div>
 
           {/* Save button below time slots */}
           <div className="mt-5 flex items-center justify-between">
-            <div className="flex items-center gap-5 text-[10px] text-[#7a756d]">
+            <div className="flex items-center gap-4 text-[10px] text-[#7a756d] flex-wrap">
               <span className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded bg-[#1a1a1a]"></span>
                 Available
@@ -315,6 +325,10 @@ export function AdminCalendar() {
               <span className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded border border-[#d9d5cf]"></span>
                 Unavailable
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded bg-[#f5f3f0] border border-[#c4bfb8]"></span>
+                Recurring
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded bg-[#fef2f2] border border-[#fecaca]"></span>
