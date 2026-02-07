@@ -393,36 +393,36 @@ export function AdminCalendar() {
 
           {/* Quick-book inline form */}
           {bookingSlotId && (
-            <div className="mt-3 p-3 bg-[#faf9f7] border border-[#e8e5df] rounded-xl">
+            <div className="mt-3 p-4 bg-[#faf9f7] border border-[#e8e5df] rounded-xl">
               <p className="text-[10px] tracking-[0.12em] uppercase text-[#6b665e] font-medium mb-2">
                 Book {formatTime(
                   getSlotsForDate(selectedDate).find((s) => s.id === bookingSlotId)?.hour ?? 0
                 )} — enter client name
               </p>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={bookName}
-                  onChange={(e) => setBookName(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") handleQuickBook(); }}
-                  className="flex-1 px-3 py-2 bg-white border border-[#e8e5df] rounded-lg text-[16px] sm:text-[13px] text-[#1a1a1a] placeholder:text-[#c4bfb8] focus:ring-1 focus:ring-[#1a1a1a] focus:border-[#1a1a1a] outline-none"
-                  placeholder="Client name"
-                  autoFocus
-                />
+              <input
+                type="text"
+                value={bookName}
+                onChange={(e) => setBookName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") handleQuickBook(); }}
+                className="w-full px-3 py-2.5 bg-white border border-[#e8e5df] rounded-lg text-[16px] sm:text-[13px] text-[#1a1a1a] placeholder:text-[#c4bfb8] focus:ring-1 focus:ring-[#1a1a1a] focus:border-[#1a1a1a] outline-none"
+                placeholder="Client name"
+                autoFocus
+              />
+              <div className="flex gap-2 mt-3">
+                <button
+                  onClick={() => { setBookingSlotId(null); setBookName(""); }}
+                  type="button"
+                  className="flex-1 py-2.5 border border-[#e8e5df] text-[#6b665e] rounded-lg text-[12px] font-medium hover:bg-[#f0ede8] transition-colors"
+                >
+                  Cancel
+                </button>
                 <button
                   onClick={handleQuickBook}
                   disabled={!bookName.trim()}
                   type="button"
-                  className="px-4 py-2 bg-[#1a1a1a] text-white rounded-lg text-[12px] font-medium hover:bg-[#333] transition-colors disabled:opacity-40"
+                  className="flex-1 py-2.5 bg-[#1a1a1a] text-white rounded-lg text-[12px] font-medium hover:bg-[#333] transition-colors disabled:opacity-40"
                 >
                   Book
-                </button>
-                <button
-                  onClick={() => { setBookingSlotId(null); setBookName(""); }}
-                  type="button"
-                  className="px-3 py-2 border border-[#e8e5df] text-[#6b665e] rounded-lg text-[12px] hover:bg-[#f0ede8] transition-colors"
-                >
-                  Cancel
                 </button>
               </div>
             </div>
