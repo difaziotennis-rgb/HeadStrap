@@ -465,7 +465,7 @@ export function AdminRecurring() {
       )}
 
       <div className="space-y-3">
-        {lessons.map((lesson) => (
+        {[...lessons].sort((a, b) => a.dayOfWeek - b.dayOfWeek || a.hour - b.hour).map((lesson) => (
           <RecurringLessonCard
             key={lesson.id}
             lesson={lesson}
