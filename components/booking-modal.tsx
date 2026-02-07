@@ -4,6 +4,7 @@ import { useState } from "react";
 import { X, CheckCircle, Mail, Loader2 } from "lucide-react";
 import { TimeSlot, Booking } from "@/lib/types";
 import { formatTime } from "@/lib/utils";
+import { getLessonRate } from "@/lib/payment-config";
 import { format } from "date-fns";
 
 interface BookingModalProps {
@@ -62,7 +63,7 @@ export function BookingModal({ slot, isOpen, onClose, onBookingComplete }: Booki
         status: "pending",
         createdAt: new Date().toISOString(),
         paymentStatus: "pending",
-        amount: 160,
+        amount: getLessonRate(),
       };
 
       // Send booking request to admin
@@ -132,7 +133,7 @@ export function BookingModal({ slot, isOpen, onClose, onBookingComplete }: Booki
             </div>
             <div className="flex justify-between py-[10px]">
               <span className="text-[10px] tracking-[0.12em] uppercase text-[#a39e95]">Lesson fee</span>
-              <span className="text-[13px] font-medium text-[#1a1a1a]">$160</span>
+              <span className="text-[13px] font-medium text-[#1a1a1a]">${getLessonRate()}</span>
             </div>
           </div>
 
@@ -204,7 +205,7 @@ export function BookingModal({ slot, isOpen, onClose, onBookingComplete }: Booki
           </div>
           <div className="flex justify-between py-[7px]">
             <span className="text-[10px] tracking-[0.12em] uppercase text-[#a39e95]">Lesson fee</span>
-            <span className="text-[13px] font-medium text-[#1a1a1a]">$160</span>
+            <span className="text-[13px] font-medium text-[#1a1a1a]">${getLessonRate()}</span>
           </div>
         </div>
 

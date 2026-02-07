@@ -8,10 +8,8 @@ import { AdminCalendar } from "@/components/admin-calendar";
 import { TimeSlot } from "@/lib/types";
 import { initializeMockData } from "@/lib/mock-data";
 import { LogOut, Lock, Trophy } from "lucide-react";
-import { useRouter } from "next/navigation";
 
 export default function BookPage() {
-  const router = useRouter();
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -85,13 +83,13 @@ export default function BookPage() {
               <p className="text-[10px] tracking-[0.25em] uppercase text-[#b0a99f]">DiFazio Tennis</p>
             </div>
             <div className="flex items-center gap-4">
-              <button
-                onClick={() => router.push('/club/rhinebeck-tennis-club')}
+              <Link
+                href="/ladder"
                 className="flex items-center gap-1.5 text-[#8a8477] hover:text-[#1a1a1a] text-[12px] font-medium transition-colors"
               >
                 <Trophy className="h-3.5 w-3.5" />
                 Ladder
-              </button>
+              </Link>
               {isAdminMode && (
                 <>
                   <Link

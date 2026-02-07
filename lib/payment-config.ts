@@ -22,6 +22,9 @@ export const PAYMENT_CONFIG = {
   
   // Notification Email
   notificationEmail: "difaziotennis@gmail.com",
+  
+  // Lesson rate in dollars
+  lessonRate: 160,
 } as const;
 
 /**
@@ -47,6 +50,13 @@ export function getVenmoHandle(): string {
   }
   
   return PAYMENT_CONFIG.venmoHandle || "";
+}
+
+/**
+ * Get the lesson rate (in dollars)
+ */
+export function getLessonRate(): number {
+  return PAYMENT_CONFIG.lessonRate;
 }
 
 /**
