@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Trash2, X, ChevronDown, Pencil, Check } from "lucide-react";
+import { Plus, Trash2, X, Pencil, Check } from "lucide-react";
 import { RecurringLesson, TimeSlot } from "@/lib/types";
 import { formatTime, getHoursForDay } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -152,6 +152,7 @@ export function AdminRecurring() {
   const [formPhone, setFormPhone] = useState("");
   const [formDay, setFormDay] = useState(1); // Monday default
   const [formHour, setFormHour] = useState(10);
+  const [expandedLessonId, setExpandedLessonId] = useState<string | null>(null);
 
   useEffect(() => {
     let data = loadRecurring();
@@ -454,7 +455,7 @@ export function AdminRecurring() {
         </div>
       )}
 
-      {/* Lesson List */}
+      {/* Weekly Schedule View */}
       {lessons.length === 0 && !showAddForm && (
         <div className="text-center py-10">
           <p className="text-[13px] text-[#7a756d] mb-1">No recurring lessons yet</p>
@@ -464,53 +465,145 @@ export function AdminRecurring() {
         </div>
       )}
 
-      <div className="space-y-3">
-        {[...lessons].sort((a, b) => a.dayOfWeek - b.dayOfWeek || a.hour - b.hour).map((lesson) => (
-          <RecurringLessonCard
-            key={lesson.id}
-            lesson={lesson}
-            onDelete={handleDelete}
-            onEdit={handleEdit}
-            onCancelDate={handleCancelDate}
-            onRestoreDate={handleRestoreDate}
-            getUpcomingDates={getUpcomingDates}
-          />
-        ))}
-      </div>
+      {lessons.length > 0 && (
+        <div className="space-y-2">
+          {DAY_NAMES.map((dayName, dayIdx) => {
+            const dayLessons = lessons
+              .filter((l) => l.dayOfWeek === dayIdx)
+              .sort((a, b) => a.hour - b.hour);
+
+            return (
+              <div
+                key={dayIdx}
+                className={cn(
+                  "rounded-xl border transition-all",
+                  dayLessons.length > 0
+                    ? "border-[#e8e5df] bg-white"
+                    : "border-[#e8e5df] bg-[#faf9f7] opacity-50"
+                )}
+              >
+                {/* Day header */}
+                <div className="flex items-center justify-between px-4 py-2.5">
+                  <div className="flex items-center gap-2.5">
+                    <div className={cn(
+                      "w-8 h-8 rounded-lg flex items-center justify-center text-[11px] font-medium",
+                      dayLessons.length > 0
+                        ? "bg-[#1a1a1a] text-white"
+                        : "bg-[#f0ede8] text-[#6b665e]"
+                    )}>
+                      {DAY_SHORT[dayIdx]}
+                    </div>
+                    <p className={cn(
+                      "text-[13px] font-medium",
+                      dayLessons.length > 0 ? "text-[#1a1a1a]" : "text-[#a39e95]"
+                    )}>
+                      {dayName}
+                    </p>
+                  </div>
+                  <span className="text-[11px] text-[#a39e95]">
+                    {dayLessons.length > 0
+                      ? `${dayLessons.length} lesson${dayLessons.length !== 1 ? "s" : ""}`
+                      : "No lessons"}
+                  </span>
+                </div>
+
+                {/* Lesson pills */}
+                {dayLessons.length > 0 && (
+                  <div className="px-4 pb-3 pt-0">
+                    <div className="flex flex-wrap gap-1.5">
+                      {dayLessons.map((lesson) => (
+                        <RecurringLessonPill
+                          key={lesson.id}
+                          lesson={lesson}
+                          isActive={expandedLessonId === lesson.id}
+                          onTap={() => setExpandedLessonId(expandedLessonId === lesson.id ? null : lesson.id)}
+                        />
+                      ))}
+                    </div>
+
+                    {/* Expanded detail for selected lesson in this day */}
+                    {expandedLessonId && dayLessons.some((l) => l.id === expandedLessonId) && (() => {
+                      const lesson = lessons.find((l) => l.id === expandedLessonId);
+                      if (!lesson) return null;
+                      return (
+                        <RecurringLessonDetail
+                          lesson={lesson}
+                          onEdit={handleEdit}
+                          onDelete={handleDelete}
+                          onCancelDate={handleCancelDate}
+                          onRestoreDate={handleRestoreDate}
+                          getUpcomingDates={getUpcomingDates}
+                          onClose={() => setExpandedLessonId(null)}
+                        />
+                      );
+                    })()}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
 
-// ─── Recurring Lesson Card ───────────────────────────────────
-function RecurringLessonCard({
+// ─── Recurring Lesson Pill (in weekly view) ─────────────────
+function RecurringLessonPill({
   lesson,
-  onDelete,
+  isActive,
+  onTap,
+}: {
+  lesson: RecurringLesson;
+  isActive: boolean;
+  onTap: () => void;
+}) {
+  return (
+    <button
+      onClick={onTap}
+      type="button"
+      className={cn(
+        "px-2.5 py-1 rounded-md text-[11px] font-medium transition-all active:scale-95",
+        isActive
+          ? "bg-[#333] text-white ring-2 ring-[#1a1a1a]/30"
+          : "bg-[#1a1a1a] text-white hover:bg-[#333]"
+      )}
+    >
+      {formatTime(lesson.hour)}
+      <span className="text-white/60 ml-1">· {lesson.clientName.split(" ")[0]}</span>
+    </button>
+  );
+}
+
+// ─── Recurring Lesson Detail (expanded below pills) ─────────
+function RecurringLessonDetail({
+  lesson,
   onEdit,
+  onDelete,
   onCancelDate,
   onRestoreDate,
   getUpcomingDates,
+  onClose,
 }: {
   lesson: RecurringLesson;
-  onDelete: (id: string) => void;
   onEdit: (id: string, updates: { clientName?: string; clientEmail?: string; clientPhone?: string; dayOfWeek?: number; hour?: number }) => void;
+  onDelete: (id: string) => void;
   onCancelDate: (id: string, date: string) => void;
   onRestoreDate: (id: string, date: string) => void;
   getUpcomingDates: (lesson: RecurringLesson) => { dateStr: string; cancelled: boolean }[];
+  onClose: () => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
-  const [editing, setEditing] = useState(false);
+  const [mode, setMode] = useState<"info" | "edit">("info");
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
 
-  // Edit form state
   const [editName, setEditName] = useState(lesson.clientName);
   const [editEmail, setEditEmail] = useState(lesson.clientEmail || "");
   const [editPhone, setEditPhone] = useState(lesson.clientPhone || "");
   const [editDay, setEditDay] = useState(lesson.dayOfWeek);
   const [editHour, setEditHour] = useState(lesson.hour);
+  const editHours = getHoursForDay(editDay);
 
   const upcoming = getUpcomingDates(lesson);
-  const activeDates = upcoming.filter((d) => !d.cancelled).length;
-  const editHours = getHoursForDay(editDay);
 
   function startEditing() {
     setEditName(lesson.clientName);
@@ -518,8 +611,7 @@ function RecurringLessonCard({
     setEditPhone(lesson.clientPhone || "");
     setEditDay(lesson.dayOfWeek);
     setEditHour(lesson.hour);
-    setEditing(true);
-    setExpanded(true);
+    setMode("edit");
   }
 
   function saveEdit() {
@@ -531,154 +623,42 @@ function RecurringLessonCard({
       dayOfWeek: editDay,
       hour: editHour,
     });
-    setEditing(false);
+    onClose();
   }
 
   return (
-    <div className="border border-[#e8e5df] rounded-xl bg-white overflow-hidden">
-      {/* Summary row */}
-      <div className="w-full px-4 py-3 flex items-center justify-between text-left">
-        <button
-          onClick={() => { if (!editing) setExpanded(!expanded); }}
-          className="flex items-center gap-3 min-w-0 flex-1"
-        >
-          <div className="w-9 h-9 rounded-lg bg-[#1a1a1a] text-white flex items-center justify-center text-[11px] font-medium flex-shrink-0">
-            {DAY_SHORT[lesson.dayOfWeek]}
-          </div>
-          <div className="min-w-0">
-            <p className="text-[13px] font-medium text-[#1a1a1a] truncate">
-              {lesson.clientName}
-            </p>
-            <p className="text-[11px] text-[#7a756d]">
-              {DAY_NAMES[lesson.dayOfWeek]}s at {formatTime(lesson.hour)}
-            </p>
-          </div>
-        </button>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          {!editing && (
-            <button
-              onClick={(e) => { e.stopPropagation(); startEditing(); }}
-              className="p-1.5 hover:bg-[#f0ede8] rounded-lg transition-colors"
-              title="Edit"
-            >
-              <Pencil className="h-3.5 w-3.5 text-[#a39e95]" />
-            </button>
-          )}
-          <span className="text-[10px] text-[#a39e95]">
-            {activeDates}/{upcoming.length} wks
-          </span>
-          <button onClick={() => { if (!editing) setExpanded(!expanded); }}>
-            <ChevronDown
-              className={cn(
-                "h-4 w-4 text-[#a39e95] transition-transform",
-                expanded && "rotate-180"
-              )}
-            />
-          </button>
-        </div>
-      </div>
-
-      {/* Expanded details */}
-      {expanded && (
-        <div className="px-4 pb-4 border-t border-[#f0ede8]">
-
-          {/* Inline edit form */}
-          {editing && (
-            <div className="mt-3 mb-4 space-y-3 bg-[#faf9f7] rounded-lg p-3 border border-[#e8e5df]">
-              <div>
-                <label className="block text-[10px] tracking-[0.12em] uppercase text-[#a39e95] mb-1">
-                  Client Name
-                </label>
-                <input
-                  type="text"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-[#e8e5df] rounded-lg text-[16px] sm:text-[13px] text-[#1a1a1a] focus:ring-1 focus:ring-[#1a1a1a] focus:border-[#1a1a1a] outline-none"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[10px] tracking-[0.12em] uppercase text-[#a39e95] mb-1">
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    value={editEmail}
-                    onChange={(e) => setEditEmail(e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-[#e8e5df] rounded-lg text-[16px] sm:text-[13px] text-[#1a1a1a] placeholder:text-[#c4bfb8] focus:ring-1 focus:ring-[#1a1a1a] focus:border-[#1a1a1a] outline-none"
-                    placeholder="Optional"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] tracking-[0.12em] uppercase text-[#a39e95] mb-1">
-                    Phone
-                  </label>
-                  <input
-                    type="tel"
-                    value={editPhone}
-                    onChange={(e) => setEditPhone(e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-[#e8e5df] rounded-lg text-[16px] sm:text-[13px] text-[#1a1a1a] placeholder:text-[#c4bfb8] focus:ring-1 focus:ring-[#1a1a1a] focus:border-[#1a1a1a] outline-none"
-                    placeholder="Optional"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[10px] tracking-[0.12em] uppercase text-[#a39e95] mb-1">
-                    Day
-                  </label>
-                  <select
-                    value={editDay}
-                    onChange={(e) => {
-                      const newDay = Number(e.target.value);
-                      setEditDay(newDay);
-                      const newHours = getHoursForDay(newDay);
-                      if (!newHours.includes(editHour)) {
-                        setEditHour(newHours[0]);
-                      }
-                    }}
-                    className="w-full px-3 py-2 bg-white border border-[#e8e5df] rounded-lg text-[13px] text-[#1a1a1a] focus:ring-1 focus:ring-[#1a1a1a] focus:border-[#1a1a1a] outline-none appearance-none"
-                  >
-                    {DAY_NAMES.map((name, i) => (
-                      <option key={i} value={i}>{name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[10px] tracking-[0.12em] uppercase text-[#a39e95] mb-1">
-                    Time
-                  </label>
-                  <select
-                    value={editHour}
-                    onChange={(e) => setEditHour(Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-white border border-[#e8e5df] rounded-lg text-[13px] text-[#1a1a1a] focus:ring-1 focus:ring-[#1a1a1a] focus:border-[#1a1a1a] outline-none appearance-none"
-                  >
-                    {editHours.map((h) => (
-                      <option key={h} value={h}>{formatTime(h)}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div className="flex gap-2 pt-1">
-                <button
-                  onClick={() => setEditing(false)}
-                  className="flex-1 py-2 border border-[#e8e5df] text-[#6b665e] rounded-lg text-[12px] font-medium hover:bg-[#f0ede8] transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={saveEdit}
-                  disabled={!editName.trim()}
-                  className="flex-1 py-2 bg-[#1a1a1a] text-white rounded-lg text-[12px] font-medium hover:bg-[#333] transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5"
-                >
-                  <Check className="h-3.5 w-3.5" />
-                  Save
-                </button>
-              </div>
+    <div className="mt-3 p-4 bg-[#faf9f7] border border-[#e8e5df] rounded-xl">
+      {mode === "info" && (
+        <>
+          {/* Header with actions */}
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <p className="text-[13px] font-medium text-[#1a1a1a]">{lesson.clientName}</p>
+              <p className="text-[11px] text-[#7a756d]">
+                {DAY_NAMES[lesson.dayOfWeek]}s at {formatTime(lesson.hour)}
+              </p>
             </div>
-          )}
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={startEditing}
+                type="button"
+                className="flex items-center gap-1 px-2.5 py-1.5 bg-[#1a1a1a] text-white rounded-lg text-[11px] font-medium hover:bg-[#333] transition-colors"
+              >
+                <Pencil className="h-3 w-3" />
+                Edit
+              </button>
+              <button
+                onClick={onClose}
+                type="button"
+                className="p-1.5 hover:bg-[#e8e5df] rounded-lg transition-colors"
+              >
+                <X className="h-4 w-4 text-[#a39e95]" />
+              </button>
+            </div>
+          </div>
 
-          <p className="text-[10px] tracking-[0.12em] uppercase text-[#a39e95] mt-3 mb-2">
+          {/* Upcoming weeks */}
+          <p className="text-[10px] tracking-[0.12em] uppercase text-[#a39e95] mb-2">
             Next {WEEKS_AHEAD} weeks
           </p>
           {upcoming.length === 0 ? (
@@ -688,32 +668,16 @@ function RecurringLessonCard({
               {upcoming.map(({ dateStr, cancelled }) => {
                 const d = new Date(dateStr + "T12:00:00");
                 return (
-                  <div
-                    key={dateStr}
-                    className="flex items-center justify-between py-1.5"
-                  >
-                    <span
-                      className={cn(
-                        "text-[12px]",
-                        cancelled
-                          ? "text-[#c4bfb8] line-through"
-                          : "text-[#1a1a1a]"
-                      )}
-                    >
+                  <div key={dateStr} className="flex items-center justify-between py-1">
+                    <span className={cn("text-[12px]", cancelled ? "text-[#c4bfb8] line-through" : "text-[#1a1a1a]")}>
                       {format(d, "EEE, MMM d")}
                     </span>
                     {cancelled ? (
-                      <button
-                        onClick={() => onRestoreDate(lesson.id, dateStr)}
-                        className="text-[11px] text-[#6b665e] hover:text-[#1a1a1a] font-medium transition-colors"
-                      >
+                      <button onClick={() => onRestoreDate(lesson.id, dateStr)} className="text-[11px] text-[#6b665e] hover:text-[#1a1a1a] font-medium transition-colors">
                         Restore
                       </button>
                     ) : (
-                      <button
-                        onClick={() => onCancelDate(lesson.id, dateStr)}
-                        className="text-[11px] text-[#b05454] hover:text-[#991b1b] font-medium transition-colors"
-                      >
+                      <button onClick={() => onCancelDate(lesson.id, dateStr)} className="text-[11px] text-[#b05454] hover:text-[#991b1b] font-medium transition-colors">
                         Cancel week
                       </button>
                     )}
@@ -724,7 +688,7 @@ function RecurringLessonCard({
           )}
 
           {/* Delete */}
-          <div className="mt-4 pt-3 border-t border-[#f0ede8]">
+          <div className="mt-3 pt-3 border-t border-[#e8e5df]">
             {!showConfirmDelete ? (
               <button
                 onClick={() => setShowConfirmDelete(true)}
@@ -736,20 +700,55 @@ function RecurringLessonCard({
             ) : (
               <div className="flex items-center gap-2">
                 <span className="text-[11px] text-[#6b665e]">Are you sure?</span>
-                <button
-                  onClick={() => onDelete(lesson.id)}
-                  className="px-3 py-1 bg-[#991b1b] text-white rounded-md text-[11px] font-medium hover:bg-[#7f1d1d] transition-colors"
-                >
+                <button onClick={() => { onDelete(lesson.id); onClose(); }} className="px-3 py-1 bg-[#991b1b] text-white rounded-md text-[11px] font-medium hover:bg-[#7f1d1d] transition-colors">
                   Delete
                 </button>
-                <button
-                  onClick={() => setShowConfirmDelete(false)}
-                  className="px-3 py-1 border border-[#e8e5df] text-[#6b665e] rounded-md text-[11px] font-medium hover:bg-[#f0ede8] transition-colors"
-                >
+                <button onClick={() => setShowConfirmDelete(false)} className="px-3 py-1 border border-[#e8e5df] text-[#6b665e] rounded-md text-[11px] font-medium hover:bg-[#f0ede8] transition-colors">
                   No
                 </button>
               </div>
             )}
+          </div>
+        </>
+      )}
+
+      {mode === "edit" && (
+        <div className="space-y-3">
+          <p className="text-[10px] tracking-[0.12em] uppercase text-[#6b665e] font-medium">Edit Recurring Lesson</p>
+          <div>
+            <label className="block text-[10px] tracking-[0.12em] uppercase text-[#a39e95] mb-1">Client Name</label>
+            <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} className="w-full px-3 py-2 bg-white border border-[#e8e5df] rounded-lg text-[16px] sm:text-[13px] text-[#1a1a1a] focus:ring-1 focus:ring-[#1a1a1a] focus:border-[#1a1a1a] outline-none" autoFocus />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[10px] tracking-[0.12em] uppercase text-[#a39e95] mb-1">Email</label>
+              <input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} className="w-full px-3 py-2 bg-white border border-[#e8e5df] rounded-lg text-[16px] sm:text-[13px] text-[#1a1a1a] placeholder:text-[#c4bfb8] focus:ring-1 focus:ring-[#1a1a1a] focus:border-[#1a1a1a] outline-none" placeholder="Optional" />
+            </div>
+            <div>
+              <label className="block text-[10px] tracking-[0.12em] uppercase text-[#a39e95] mb-1">Phone</label>
+              <input type="tel" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} className="w-full px-3 py-2 bg-white border border-[#e8e5df] rounded-lg text-[16px] sm:text-[13px] text-[#1a1a1a] placeholder:text-[#c4bfb8] focus:ring-1 focus:ring-[#1a1a1a] focus:border-[#1a1a1a] outline-none" placeholder="Optional" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[10px] tracking-[0.12em] uppercase text-[#a39e95] mb-1">Day</label>
+              <select value={editDay} onChange={(e) => { const d = Number(e.target.value); setEditDay(d); const h = getHoursForDay(d); if (!h.includes(editHour)) setEditHour(h[0]); }} className="w-full px-3 py-2 bg-white border border-[#e8e5df] rounded-lg text-[13px] text-[#1a1a1a] focus:ring-1 focus:ring-[#1a1a1a] focus:border-[#1a1a1a] outline-none appearance-none">
+                {DAY_NAMES.map((name, i) => <option key={i} value={i}>{name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] tracking-[0.12em] uppercase text-[#a39e95] mb-1">Time</label>
+              <select value={editHour} onChange={(e) => setEditHour(Number(e.target.value))} className="w-full px-3 py-2 bg-white border border-[#e8e5df] rounded-lg text-[13px] text-[#1a1a1a] focus:ring-1 focus:ring-[#1a1a1a] focus:border-[#1a1a1a] outline-none appearance-none">
+                {editHours.map((h) => <option key={h} value={h}>{formatTime(h)}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="flex gap-2 pt-1">
+            <button onClick={() => setMode("info")} className="flex-1 py-2 border border-[#e8e5df] text-[#6b665e] rounded-lg text-[12px] font-medium hover:bg-[#f0ede8] transition-colors">Cancel</button>
+            <button onClick={saveEdit} disabled={!editName.trim()} className="flex-1 py-2 bg-[#1a1a1a] text-white rounded-lg text-[12px] font-medium hover:bg-[#333] transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5">
+              <Check className="h-3.5 w-3.5" />
+              Save
+            </button>
           </div>
         </div>
       )}
