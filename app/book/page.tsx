@@ -83,13 +83,6 @@ export default function BookPage() {
               </p>
             </div>
             <div className="flex items-center gap-4">
-              <Link
-                href="/ladder"
-                className="flex items-center gap-1.5 text-[#8a8477] hover:text-[#1a1a1a] text-[12px] font-medium transition-colors"
-              >
-                <Trophy className="h-3.5 w-3.5" />
-                Ladder
-              </Link>
               {isAdminMode && (
                 <>
                   <Link
