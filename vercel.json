@@ -1,4 +1,10 @@
 {
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "rewrites": [
+    {
+      "source": "/claude/:path*",
+      "destination": "https://tennis-booking-production-9732.up.railway.app/:path*"
+    }
+  ]
 }
 
