@@ -62,14 +62,6 @@ export default function BioPage() {
             A native New Yorker, Derek has over 15 years of coaching experience from the beginner to Division I and professional levels and loves working with players of all ages and abilities. A national doubles champion as both a junior and an adult, Derek was ranked as high as #1 in New York and the Eastern Section, before playing #1 singles and doubles at Division I Clemson University where he achieved a top 25 ITA ranking and an ATP singles ranking while competing professionally.
           </p>
 
-          <div className="mt-10 text-center">
-            <Link
-              href="/book"
-              className="inline-flex items-center px-6 py-3 bg-[#1a1a1a] text-white rounded-xl text-[13px] font-medium hover:bg-[#333] transition-colors active:scale-95"
-            >
-              Book a Lesson
-            </Link>
-          </div>
         </div>
       </main>
     </div>
