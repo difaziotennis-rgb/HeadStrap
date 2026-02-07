@@ -71,15 +71,6 @@ export default function ClubPage() {
 
   return (
     <div className="min-h-screen bg-[#f7f7f5]">
-      {/* Header */}
-      <header className="bg-[#faf9f7] border-b border-[#e8e5df] sticky top-0 z-40">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4">
-          <div className="flex items-center justify-between">
-            <p className="text-[10px] tracking-[0.25em] uppercase text-[#b0a99f]">DiFazio Tennis</p>
-          </div>
-        </div>
-      </header>
-
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
         {/* Title Section */}
