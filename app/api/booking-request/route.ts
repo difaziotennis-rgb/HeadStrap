@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { Booking } from "@/lib/types";
 import { sendEmail } from "@/lib/send-email";
+import { adminRequestEmail } from "@/lib/email-templates";
 
 // Simple encoding for the booking token (in production, use proper JWT)
 function encodeBookingToken(booking: Booking): string {
@@ -28,136 +29,17 @@ export async function POST(request: Request) {
     
     const confirmUrl = `${baseUrl}/confirm-booking?token=${token}`;
 
-    // Format the booking date
-    const bookingDate = new Date(booking.date + "T12:00:00");
-    const formattedDate = bookingDate.toLocaleDateString("en-US", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-
-    const hour12 = booking.hour > 12 ? booking.hour - 12 : booking.hour === 0 ? 12 : booking.hour;
-    const ampm = booking.hour >= 12 ? "PM" : "AM";
-    const formattedTime = `${hour12}:00 ${ampm}`;
-
     const notificationEmail = "difaziotennis@gmail.com";
-    const subject = `🎾 New Lesson Request: ${booking.clientName || "Client"} - ${formattedDate} at ${formattedTime}`;
 
-    // Email body (HTML) for admin
-    const htmlBody = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background-color: #2d5016; color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center; }
-            .content { background-color: #f9f9f9; padding: 20px; border: 1px solid #ddd; border-radius: 0 0 8px 8px; }
-            .booking-details { background-color: white; padding: 15px; margin: 15px 0; border-radius: 5px; border-left: 4px solid #2d5016; }
-            .detail-row { margin: 10px 0; }
-            .label { font-weight: bold; color: #555; display: inline-block; width: 100px; }
-            .value { color: #333; }
-            .accept-button { 
-              display: inline-block; 
-              background-color: #2d5016; 
-              color: white !important; 
-              padding: 15px 40px; 
-              text-decoration: none; 
-              border-radius: 8px; 
-              font-weight: bold;
-              font-size: 18px;
-              margin: 20px 0;
-            }
-            .accept-button:hover { background-color: #3d6a1f; }
-            .button-container { text-align: center; margin: 30px 0; }
-            .footer { margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #777; }
-            .warning { background-color: #fff3cd; border: 1px solid #ffc107; padding: 10px; border-radius: 5px; margin: 15px 0; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h2>🎾 New Lesson Request</h2>
-              <p style="margin: 0; opacity: 0.9;">Action Required</p>
-            </div>
-            <div class="content">
-              <p>You have a new lesson booking request! Please review the details below and click <strong>Accept</strong> to confirm.</p>
-              
-              <div class="booking-details">
-                <div class="detail-row">
-                  <span class="label">Client:</span>
-                  <span class="value">${booking.clientName || "Not provided"}</span>
-                </div>
-                <div class="detail-row">
-                  <span class="label">Email:</span>
-                  <span class="value">${booking.clientEmail}</span>
-                </div>
-                <div class="detail-row">
-                  <span class="label">Phone:</span>
-                  <span class="value">${booking.clientPhone || "Not provided"}</span>
-                </div>
-                <div class="detail-row">
-                  <span class="label">Date:</span>
-                  <span class="value"><strong>${formattedDate}</strong></span>
-                </div>
-                <div class="detail-row">
-                  <span class="label">Time:</span>
-                  <span class="value"><strong>${formattedTime}</strong></span>
-                </div>
-                <div class="detail-row">
-                  <span class="label">Amount:</span>
-                  <span class="value">$${booking.amount}</span>
-                </div>
-              </div>
-
-              <div class="button-container">
-                <a href="${confirmUrl}" class="accept-button">✓ Accept Lesson</a>
-              </div>
-
-              <div class="warning">
-                <strong>⚠️ Note:</strong> Clicking Accept will:
-                <ul style="margin: 5px 0 0 0; padding-left: 20px;">
-                  <li>Confirm the booking</li>
-                  <li>Send a confirmation email to the client at ${booking.clientEmail}</li>
-                  <li>Send a confirmation email to you</li>
-                </ul>
-              </div>
-
-              <div class="footer">
-                <p>This request was submitted on ${new Date(booking.createdAt).toLocaleString()}</p>
-                <p>Request ID: ${booking.id}</p>
-              </div>
-            </div>
-          </div>
-        </body>
-      </html>
-    `;
-
-    // Plain text version
-    const textBody = `
-New Tennis Lesson Request
-
-Client: ${booking.clientName || "Not provided"}
-Email: ${booking.clientEmail}
-Phone: ${booking.clientPhone || "Not provided"}
-Date: ${formattedDate}
-Time: ${formattedTime}
-Amount: $${booking.amount}
-
-To ACCEPT this lesson, click here:
-${confirmUrl}
-
-Request submitted: ${new Date(booking.createdAt).toLocaleString()}
-Request ID: ${booking.id}
-    `.trim();
+    // Generate email from template
+    const email = adminRequestEmail(booking, confirmUrl);
 
     // Send email via Gmail SMTP
     const result = await sendEmail({
       to: notificationEmail,
-      subject,
-      html: htmlBody,
-      text: textBody,
+      subject: email.subject,
+      html: email.html,
+      text: email.text,
     });
 
     if (!result.success) {
