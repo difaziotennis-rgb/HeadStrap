@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { timeSlots, bookings, initializeMockData } from "@/lib/mock-data";
 import { Booking, TimeSlot } from "@/lib/types";
+import { PAYMENT_CONFIG } from "@/lib/payment-config";
 
 export async function POST() {
   try {
@@ -44,7 +45,7 @@ export async function POST() {
       status: "confirmed",
       createdAt: new Date().toISOString(),
       paymentStatus: "pending",
-      amount: 160,
+      amount: PAYMENT_CONFIG.lessonRate,
     };
     bookings.set(booking1.id, booking1);
     slot1.booked = true;
@@ -87,7 +88,7 @@ export async function POST() {
       status: "confirmed",
       createdAt: new Date().toISOString(),
       paymentStatus: "pending",
-      amount: 160,
+      amount: PAYMENT_CONFIG.lessonRate,
     };
     bookings.set(booking2.id, booking2);
     slot2.booked = true;

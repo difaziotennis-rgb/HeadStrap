@@ -1,6 +1,7 @@
 // Test script to create multiple bookings and verify functionality
 import { timeSlots, bookings, initializeMockData } from './lib/mock-data';
 import { Booking, TimeSlot } from './lib/types';
+import { PAYMENT_CONFIG } from './lib/payment-config';
 
 // Initialize data
 initializeMockData();
@@ -27,7 +28,7 @@ if (slot1) {
     status: "confirmed",
     createdAt: new Date().toISOString(),
     paymentStatus: "pending",
-    amount: 160,
+    amount: PAYMENT_CONFIG.lessonRate,
   };
   
   bookings.set(booking1.id, booking1);
@@ -63,7 +64,7 @@ if (slot2) {
     status: "confirmed",
     createdAt: new Date().toISOString(),
     paymentStatus: "pending",
-    amount: 160,
+    amount: PAYMENT_CONFIG.lessonRate,
   };
   
   bookings.set(booking2.id, booking2);
@@ -99,7 +100,7 @@ if (slot3) {
     status: "confirmed",
     createdAt: new Date().toISOString(),
     paymentStatus: "paid",
-    amount: 160,
+    amount: PAYMENT_CONFIG.lessonRate,
   };
   
   bookings.set(booking3.id, booking3);
@@ -135,7 +136,7 @@ if (slot4) {
     status: "confirmed",
     createdAt: new Date().toISOString(),
     paymentStatus: "pending",
-    amount: 160,
+    amount: PAYMENT_CONFIG.lessonRate,
   };
   
   bookings.set(booking4.id, booking4);
@@ -161,7 +162,7 @@ if (slot4) {
     status: "confirmed",
     createdAt: new Date().toISOString(),
     paymentStatus: "pending",
-    amount: 160,
+    amount: PAYMENT_CONFIG.lessonRate,
   };
   bookings.set(booking4.id, booking4);
   
@@ -201,7 +202,7 @@ if (slot5) {
     status: "confirmed",
     createdAt: new Date().toISOString(),
     paymentStatus: "pending",
-    amount: 160,
+    amount: PAYMENT_CONFIG.lessonRate,
   };
   
   bookings.set(booking5.id, booking5);

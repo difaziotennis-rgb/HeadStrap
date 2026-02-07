@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Save, CalendarDays, LogOut, Trophy } from "lucide-react";
-import { PAYMENT_CONFIG } from "@/lib/payment-config";
+import { PAYMENT_CONFIG, getLessonRate } from "@/lib/payment-config";
 
 interface PaymentSettings {
   paypalEmail: string;
@@ -24,7 +24,7 @@ export default function PaymentSettingsPage() {
     paypalEmail: "",
     paypalMeUsername: "",
     venmoHandle: "",
-    lessonRate: "160",
+    lessonRate: String(PAYMENT_CONFIG.lessonRate),
     notificationEmail: "",
     notes: "",
   });
@@ -45,7 +45,7 @@ export default function PaymentSettingsPage() {
       paypalEmail: PAYMENT_CONFIG.paypalEmail || "",
       paypalMeUsername: PAYMENT_CONFIG.paypalMeUsername || "",
       venmoHandle: PAYMENT_CONFIG.venmoHandle || "",
-      lessonRate: "160",
+      lessonRate: String(PAYMENT_CONFIG.lessonRate),
       notificationEmail: PAYMENT_CONFIG.notificationEmail || "",
       notes: "",
     };
