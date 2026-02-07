@@ -78,6 +78,10 @@ export function AdminCalendar() {
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
 
+  // Quick-book state
+  const [bookingSlotId, setBookingSlotId] = useState<string | null>(null);
+  const [bookName, setBookName] = useState("");
+
   // ── Load from localStorage on mount ────────────────────────
   useEffect(() => {
     const saved = loadSlots();
@@ -130,6 +134,42 @@ export function AdminCalendar() {
     } else {
       setSaveMessage("Error saving — please try again");
     }
+  }
+
+  // ── Quick-book a slot directly ─────────────────────────────
+  function handleQuickBook() {
+    if (!bookingSlotId || !bookName.trim()) return;
+    const slot = slots[bookingSlotId] ?? getSlotsForDate(selectedDate!).find((s) => s.id === bookingSlotId);
+    if (!slot) return;
+    const booked: TimeSlot = {
+      ...slot,
+      available: true,
+      booked: true,
+      bookedBy: bookName.trim(),
+    };
+    const updated = { ...slots, [booked.id]: booked };
+    setSlots(updated);
+    // Save immediately
+    const toSave: Record<string, TimeSlot> = {};
+    for (const [id, s] of Object.entries(updated)) {
+      if (s.available || s.booked) {
+        toSave[id] = s;
+      }
+    }
+    saveSlots(toSave);
+    setBookingSlotId(null);
+    setBookName("");
+    setSaveMessage("Slot booked!");
+    setTimeout(() => setSaveMessage(null), 3000);
+  }
+
+  function handleUnbook(slotId: string) {
+    const slot = slots[slotId];
+    if (!slot) return;
+    const updated: TimeSlot = { ...slot, booked: false, bookedBy: undefined, bookedEmail: undefined, bookedPhone: undefined, notes: undefined };
+    setSlots((prev) => ({ ...prev, [slotId]: updated }));
+    setHasUnsavedChanges(true);
+    setSaveMessage(null);
   }
 
   // ── Calendar grid setup ────────────────────────────────────
@@ -287,33 +327,106 @@ export function AdminCalendar() {
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
             {getSlotsForDate(selectedDate).map((slot) => {
               const isRecurring = slot.booked && slot.notes?.startsWith("Recurring:");
+              const isManuallyBooked = slot.booked && !isRecurring;
               return (
-                <button
-                  key={slot.id}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleToggleSlot(slot);
-                  }}
-                  disabled={slot.booked}
-                  type="button"
-                  className={cn(
-                    "py-2.5 px-3 rounded-lg border transition-all text-[13px] flex flex-col items-center justify-center gap-0.5 active:scale-95",
-                    isRecurring && "bg-[#f5f3f0] border-[#c4bfb8] text-[#6b665e] cursor-not-allowed",
-                    slot.booked && !isRecurring && "bg-[#fef2f2] border-[#fecaca] text-[#991b1b] cursor-not-allowed",
-                    !slot.booked && slot.available && "bg-[#1a1a1a] border-[#1a1a1a] text-white hover:bg-[#333] cursor-pointer",
-                    !slot.booked && !slot.available && "bg-transparent border-[#d9d5cf] text-[#7a756d] hover:border-[#a39e95] hover:bg-[#f0ede8] cursor-pointer"
+                <div key={slot.id} className="relative group">
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (!slot.booked) handleToggleSlot(slot);
+                    }}
+                    disabled={slot.booked}
+                    type="button"
+                    className={cn(
+                      "w-full py-2.5 px-3 rounded-lg border transition-all text-[13px] flex flex-col items-center justify-center gap-0.5 active:scale-95",
+                      isRecurring && "bg-[#f5f3f0] border-[#c4bfb8] text-[#6b665e] cursor-not-allowed",
+                      isManuallyBooked && "bg-[#fef2f2] border-[#fecaca] text-[#991b1b] cursor-not-allowed",
+                      !slot.booked && slot.available && "bg-[#1a1a1a] border-[#1a1a1a] text-white hover:bg-[#333] cursor-pointer",
+                      !slot.booked && !slot.available && "bg-transparent border-[#d9d5cf] text-[#7a756d] hover:border-[#a39e95] hover:bg-[#f0ede8] cursor-pointer"
+                    )}
+                  >
+                    <span>{formatTime(slot.hour)}</span>
+                    {isRecurring && slot.bookedBy && (
+                      <span className="text-[9px] text-[#a39e95] truncate max-w-full">{slot.bookedBy.split(" ")[0]}</span>
+                    )}
+                    {isManuallyBooked && slot.bookedBy && (
+                      <span className="text-[9px] text-[#991b1b]/60 truncate max-w-full">{slot.bookedBy.split(" ")[0]}</span>
+                    )}
+                    {isManuallyBooked && !slot.bookedBy && <X className="h-3.5 w-3.5" />}
+                    {!slot.booked && slot.available && <Check className="h-3.5 w-3.5" />}
+                  </button>
+                  {/* Book button on available slots */}
+                  {!slot.booked && slot.available && (
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setBookingSlotId(slot.id);
+                        setBookName("");
+                      }}
+                      type="button"
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-[#6b665e] text-white rounded-full flex items-center justify-center text-[9px] font-bold opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#1a1a1a] sm:opacity-0 sm:group-hover:opacity-100"
+                      title="Book this slot"
+                    >
+                      B
+                    </button>
                   )}
-                >
-                  <span>{formatTime(slot.hour)}</span>
-                  {isRecurring && slot.bookedBy && (
-                    <span className="text-[9px] text-[#a39e95] truncate max-w-full">{slot.bookedBy.split(" ")[0]}</span>
+                  {/* Unbook button on manually booked slots */}
+                  {isManuallyBooked && (
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleUnbook(slot.id);
+                      }}
+                      type="button"
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-[#991b1b] text-white rounded-full flex items-center justify-center text-[9px] opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#7f1d1d] sm:opacity-0 sm:group-hover:opacity-100"
+                      title="Unbook this slot"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
                   )}
-                  {slot.booked && !isRecurring && <X className="h-3.5 w-3.5" />}
-                  {!slot.booked && slot.available && <Check className="h-3.5 w-3.5" />}
-                </button>
+                </div>
               );
             })}
           </div>
+
+          {/* Quick-book inline form */}
+          {bookingSlotId && (
+            <div className="mt-3 p-3 bg-[#faf9f7] border border-[#e8e5df] rounded-xl">
+              <p className="text-[10px] tracking-[0.12em] uppercase text-[#6b665e] font-medium mb-2">
+                Book {formatTime(
+                  getSlotsForDate(selectedDate).find((s) => s.id === bookingSlotId)?.hour ?? 0
+                )} — enter client name
+              </p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={bookName}
+                  onChange={(e) => setBookName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") handleQuickBook(); }}
+                  className="flex-1 px-3 py-2 bg-white border border-[#e8e5df] rounded-lg text-[16px] sm:text-[13px] text-[#1a1a1a] placeholder:text-[#c4bfb8] focus:ring-1 focus:ring-[#1a1a1a] focus:border-[#1a1a1a] outline-none"
+                  placeholder="Client name"
+                  autoFocus
+                />
+                <button
+                  onClick={handleQuickBook}
+                  disabled={!bookName.trim()}
+                  type="button"
+                  className="px-4 py-2 bg-[#1a1a1a] text-white rounded-lg text-[12px] font-medium hover:bg-[#333] transition-colors disabled:opacity-40"
+                >
+                  Book
+                </button>
+                <button
+                  onClick={() => { setBookingSlotId(null); setBookName(""); }}
+                  type="button"
+                  className="px-3 py-2 border border-[#e8e5df] text-[#6b665e] rounded-lg text-[12px] hover:bg-[#f0ede8] transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Save button below time slots */}
           <div className="mt-5 flex items-center justify-between">
