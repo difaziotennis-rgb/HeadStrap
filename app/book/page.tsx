@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Calendar } from "@/components/calendar";
 import { BookingModal } from "@/components/booking-modal";
@@ -25,6 +25,7 @@ export default function BookPage() {
   const [adminPassword, setAdminPassword] = useState("");
   const [adminError, setAdminError] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
+  const adminLoginRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -227,7 +228,12 @@ export default function BookPage() {
             <div className="max-w-sm mx-auto mt-8 pt-6 border-t border-[#e8e5df]">
               {!showAdminLogin ? (
                 <button
-                  onClick={() => setShowAdminLogin(true)}
+                  onClick={() => {
+                    setShowAdminLogin(true);
+                    setTimeout(() => {
+                      adminLoginRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+                    }, 100);
+                  }}
                   className="flex items-center justify-center gap-1.5 text-[11px] text-[#c4bfb8] hover:text-[#8a8477] transition-colors mx-auto"
                   aria-label="Open admin login form"
                 >
@@ -235,7 +241,7 @@ export default function BookPage() {
                   <span>Admin</span>
                 </button>
               ) : (
-                <div className="bg-[#faf9f7] rounded-xl border border-[#e8e5df] p-5">
+                <div ref={adminLoginRef} className="bg-[#faf9f7] rounded-xl border border-[#e8e5df] p-5">
                   <p className="text-[10px] tracking-[0.12em] uppercase text-[#a39e95] mb-4 text-center">
                     Admin Login
                   </p>
