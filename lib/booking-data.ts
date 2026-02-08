@@ -3,6 +3,40 @@ import { getHoursForDay } from "./utils";
 import { getBookingClient } from "./supabase/booking-client";
 
 // ────────────────────────────────────────────────────────────
+// localStorage fallback keys (for when Supabase fails)
+// ────────────────────────────────────────────────────────────
+const LS_SLOTS_KEY = "difazio_admin_slots";
+const LS_BOOKINGS_KEY = "difazio_bookings";
+const LS_RECURRING_KEY = "difazio_recurring";
+
+function lsReadSlots(): Record<string, TimeSlot> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(LS_SLOTS_KEY);
+    if (raw) return JSON.parse(raw) as Record<string, TimeSlot>;
+  } catch {}
+  return {};
+}
+
+function lsReadBookings(): Record<string, Booking> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(LS_BOOKINGS_KEY);
+    if (raw) return JSON.parse(raw) as Record<string, Booking>;
+  } catch {}
+  return {};
+}
+
+function lsReadRecurring(): RecurringLesson[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(LS_RECURRING_KEY);
+    if (raw) return JSON.parse(raw) as RecurringLesson[];
+  } catch {}
+  return [];
+}
+
+// ────────────────────────────────────────────────────────────
 // Helper: convert DB row to TimeSlot
 // ────────────────────────────────────────────────────────────
 function rowToSlot(row: any): TimeSlot {
@@ -100,39 +134,79 @@ function recurringToRow(lesson: RecurringLesson) {
 // TIME SLOTS — Read
 // ────────────────────────────────────────────────────────────
 
-/** Read ALL persisted slots from Supabase. */
+/** Read ALL persisted slots from Supabase, falling back to localStorage. */
 export async function readAllSlots(): Promise<Record<string, TimeSlot>> {
-  const supabase = getBookingClient();
-  const { data, error } = await supabase.from("time_slots").select("*");
-  if (error) {
-    console.error("[booking-data] readAllSlots error:", error);
+  try {
+    const supabase = getBookingClient();
+    const { data, error } = await supabase.from("time_slots").select("*");
+    if (error) {
+      console.error("[booking-data] readAllSlots Supabase error:", error);
+      // Fall back to localStorage
+      return lsReadSlots();
+    }
+    if (data && data.length > 0) {
+      const result: Record<string, TimeSlot> = {};
+      for (const row of data) {
+        const slot = rowToSlot(row);
+        result[slot.id] = slot;
+      }
+      return result;
+    }
+    // Supabase returned empty — fall back to localStorage (might have un-migrated data)
+    const lsSlots = lsReadSlots();
+    if (Object.keys(lsSlots).length > 0) {
+      console.log("[booking-data] Supabase empty, using localStorage fallback");
+      return lsSlots;
+    }
     return {};
+  } catch (e) {
+    console.error("[booking-data] readAllSlots error:", e);
+    return lsReadSlots();
   }
-  const result: Record<string, TimeSlot> = {};
-  for (const row of data ?? []) {
-    const slot = rowToSlot(row);
-    result[slot.id] = slot;
-  }
-  return result;
 }
 
 /** Read slots for a specific date string (YYYY-MM-DD). */
 export async function readSlotsForDate(dateStr: string): Promise<Record<string, TimeSlot>> {
-  const supabase = getBookingClient();
-  const { data, error } = await supabase
-    .from("time_slots")
-    .select("*")
-    .eq("date", dateStr);
-  if (error) {
-    console.error("[booking-data] readSlotsForDate error:", error);
-    return {};
+  try {
+    const supabase = getBookingClient();
+    const { data, error } = await supabase
+      .from("time_slots")
+      .select("*")
+      .eq("date", dateStr);
+    if (error) {
+      console.error("[booking-data] readSlotsForDate Supabase error:", error);
+      // Fall back: filter localStorage slots by date
+      const all = lsReadSlots();
+      const result: Record<string, TimeSlot> = {};
+      for (const [id, slot] of Object.entries(all)) {
+        if (slot.date === dateStr) result[id] = slot;
+      }
+      return result;
+    }
+    if (data && data.length > 0) {
+      const result: Record<string, TimeSlot> = {};
+      for (const row of data) {
+        const slot = rowToSlot(row);
+        result[slot.id] = slot;
+      }
+      return result;
+    }
+    // Check localStorage fallback
+    const all = lsReadSlots();
+    const result: Record<string, TimeSlot> = {};
+    for (const [id, slot] of Object.entries(all)) {
+      if (slot.date === dateStr) result[id] = slot;
+    }
+    return result;
+  } catch (e) {
+    console.error("[booking-data] readSlotsForDate error:", e);
+    const all = lsReadSlots();
+    const result: Record<string, TimeSlot> = {};
+    for (const [id, slot] of Object.entries(all)) {
+      if (slot.date === dateStr) result[id] = slot;
+    }
+    return result;
   }
-  const result: Record<string, TimeSlot> = {};
-  for (const row of data ?? []) {
-    const slot = rowToSlot(row);
-    result[slot.id] = slot;
-  }
-  return result;
 }
 
 /** Read slots for a date range. */
@@ -282,18 +356,26 @@ export async function getSlotsForDate(date: Date): Promise<TimeSlot[]> {
 // ────────────────────────────────────────────────────────────
 
 export async function readAllBookings(): Promise<Record<string, Booking>> {
-  const supabase = getBookingClient();
-  const { data, error } = await supabase.from("bookings").select("*");
-  if (error) {
-    console.error("[booking-data] readAllBookings error:", error);
-    return {};
+  try {
+    const supabase = getBookingClient();
+    const { data, error } = await supabase.from("bookings").select("*");
+    if (error) {
+      console.error("[booking-data] readAllBookings Supabase error:", error);
+      return lsReadBookings();
+    }
+    if (data && data.length > 0) {
+      const result: Record<string, Booking> = {};
+      for (const row of data) {
+        const booking = rowToBooking(row);
+        result[booking.id] = booking;
+      }
+      return result;
+    }
+    return lsReadBookings();
+  } catch (e) {
+    console.error("[booking-data] readAllBookings error:", e);
+    return lsReadBookings();
   }
-  const result: Record<string, Booking> = {};
-  for (const row of data ?? []) {
-    const booking = rowToBooking(row);
-    result[booking.id] = booking;
-  }
-  return result;
 }
 
 export async function readBooking(id: string): Promise<Booking | null> {
@@ -324,17 +406,31 @@ export async function writeBooking(booking: Booking): Promise<boolean> {
 // ────────────────────────────────────────────────────────────
 
 export async function readAllRecurring(): Promise<RecurringLesson[]> {
-  const supabase = getBookingClient();
-  const { data, error } = await supabase
-    .from("recurring_lessons")
-    .select("*")
-    .order("day_of_week", { ascending: true })
-    .order("hour", { ascending: true });
-  if (error) {
-    console.error("[booking-data] readAllRecurring error:", error);
+  try {
+    const supabase = getBookingClient();
+    const { data, error } = await supabase
+      .from("recurring_lessons")
+      .select("*")
+      .order("day_of_week", { ascending: true })
+      .order("hour", { ascending: true });
+    if (error) {
+      console.error("[booking-data] readAllRecurring Supabase error:", error);
+      return lsReadRecurring();
+    }
+    if (data && data.length > 0) {
+      return data.map(rowToRecurring);
+    }
+    // Fall back to localStorage
+    const lsData = lsReadRecurring();
+    if (lsData.length > 0) {
+      console.log("[booking-data] Supabase recurring empty, using localStorage fallback");
+      return lsData;
+    }
     return [];
+  } catch (e) {
+    console.error("[booking-data] readAllRecurring error:", e);
+    return lsReadRecurring();
   }
-  return (data ?? []).map(rowToRecurring);
 }
 
 export async function writeRecurring(lesson: RecurringLesson): Promise<boolean> {
@@ -385,8 +481,17 @@ const MIGRATION_FLAG = "difazio_migrated_to_supabase";
 
 export async function migrateFromLocalStorage(): Promise<void> {
   if (typeof window === "undefined") return;
+  // Always attempt migration if there's localStorage data,
+  // even if previously attempted (in case it failed silently)
+  const hasLocalData =
+    localStorage.getItem(LS_SLOTS_KEY) ||
+    localStorage.getItem(LS_BOOKINGS_KEY) ||
+    localStorage.getItem(LS_RECURRING_KEY);
+
+  if (!hasLocalData) return;
   if (localStorage.getItem(MIGRATION_FLAG) === "true") return;
 
+  console.log("[migration] Starting localStorage → Supabase migration...");
   const supabase = getBookingClient();
 
   // Migrate time slots
