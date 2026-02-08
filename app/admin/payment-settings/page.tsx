@@ -21,9 +21,11 @@ export default function PaymentSettingsPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
-  const [clients, setClients] = useState<{ name: string; email: string }[]>([]);
+  const [clients, setClients] = useState<{ name: string; email: string; phone: string }[]>([]);
   const [clientsLoaded, setClientsLoaded] = useState(false);
   const [copiedEmails, setCopiedEmails] = useState(false);
+  const [showClientList, setShowClientList] = useState(false);
+  const [expandedClient, setExpandedClient] = useState<number | null>(null);
 
   const [formData, setFormData] = useState<PaymentSettings>({
     paypalEmail: "",
@@ -41,62 +43,59 @@ export default function PaymentSettingsPage() {
     } else {
       setIsAuthenticated(true);
       loadPaymentSettings();
-      loadClients();
     }
   }, [router]);
 
+  // Load clients only when the list is opened
+  useEffect(() => {
+    if (showClientList && !clientsLoaded) {
+      loadClients();
+    }
+  }, [showClientList]);
+
   const loadClients = async () => {
-    const clientMap = new Map<string, string>(); // name → email
+    const clientMap = new Map<string, { email: string; phone: string }>();
+
+    function addClient(name: string, email: string, phone: string) {
+      if (!name) return;
+      const key = name.toLowerCase().trim();
+      const existing = clientMap.get(key);
+      if (!existing) {
+        clientMap.set(key, { email: email.trim(), phone: phone.trim() });
+      } else {
+        // Fill in missing info
+        if (!existing.email && email.trim()) existing.email = email.trim();
+        if (!existing.phone && phone.trim()) existing.phone = phone.trim();
+      }
+    }
 
     // From booked time slots
     const slots = await readAllSlots();
     for (const slot of Object.values(slots)) {
       if (slot.booked && slot.bookedBy) {
-        const name = slot.bookedBy.trim();
-        const email = slot.bookedEmail?.trim() || "";
-        if (name && !clientMap.has(name.toLowerCase())) {
-          clientMap.set(name.toLowerCase(), email);
-        }
-        // If we already have the name but no email, update with email if available
-        if (name && email && clientMap.get(name.toLowerCase()) === "") {
-          clientMap.set(name.toLowerCase(), email);
-        }
+        addClient(slot.bookedBy, slot.bookedEmail || "", slot.bookedPhone || "");
       }
     }
 
     // From recurring lessons
     const recurring = await readAllRecurring();
     for (const lesson of recurring) {
-      const name = lesson.clientName.trim();
-      const email = lesson.clientEmail?.trim() || "";
-      if (name && !clientMap.has(name.toLowerCase())) {
-        clientMap.set(name.toLowerCase(), email);
-      }
-      if (name && email && clientMap.get(name.toLowerCase()) === "") {
-        clientMap.set(name.toLowerCase(), email);
-      }
+      addClient(lesson.clientName, lesson.clientEmail || "", lesson.clientPhone || "");
     }
 
     // From bookings
     const bookings = await readAllBookings();
     for (const booking of Object.values(bookings)) {
-      const name = booking.clientName?.trim();
-      const email = booking.clientEmail?.trim() || "";
-      if (name && !clientMap.has(name.toLowerCase())) {
-        clientMap.set(name.toLowerCase(), email);
-      }
-      if (name && email && clientMap.get(name.toLowerCase()) === "") {
-        clientMap.set(name.toLowerCase(), email);
-      }
+      addClient(booking.clientName, booking.clientEmail || "", booking.clientPhone || "");
     }
 
     // Convert to sorted array
     const list = Array.from(clientMap.entries())
-      .map(([key, email]) => {
-        // Capitalize name properly
-        const name = key.replace(/\b\w/g, (c) => c.toUpperCase());
-        return { name, email };
-      })
+      .map(([key, info]) => ({
+        name: key.replace(/\b\w/g, (c) => c.toUpperCase()),
+        email: info.email,
+        phone: info.phone,
+      }))
       .sort((a, b) => a.name.localeCompare(b.name));
 
     setClients(list);
@@ -390,65 +389,102 @@ export default function PaymentSettingsPage() {
           </div>
         </form>
 
-        {/* Client List */}
+        {/* Client List Toggle */}
         <div className="mt-10 mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-2xl sm:text-3xl font-light tracking-tight text-[#1a1a1a] mb-1">
-                Client List
-              </h2>
-              <p className="text-[12px] text-[#7a756d]">
-                {clientsLoaded ? `${clients.length} client${clients.length !== 1 ? "s" : ""}` : "Loading..."}
-              </p>
+          <button
+            onClick={() => setShowClientList(!showClientList)}
+            type="button"
+            className="w-full flex items-center justify-between bg-white rounded-2xl shadow-sm border border-[#e8e5df] p-5 sm:p-6 hover:bg-[#faf9f7] transition-colors active:scale-[0.99]"
+          >
+            <div className="flex items-center gap-3">
+              <Users className="h-5 w-5 text-[#6b665e]" />
+              <div className="text-left">
+                <p className="text-[14px] font-medium text-[#1a1a1a]">Client List</p>
+                <p className="text-[11px] text-[#7a756d]">
+                  {clientsLoaded ? `${clients.length} client${clients.length !== 1 ? "s" : ""}` : "View all clients"}
+                </p>
+              </div>
             </div>
-            {clientsLoaded && clients.some((c) => c.email) && (
-              <button
-                onClick={handleCopyEmails}
-                type="button"
-                className="flex items-center gap-1.5 px-4 py-2 bg-[#1a1a1a] text-white rounded-lg text-[12px] font-medium hover:bg-[#333] transition-colors active:scale-95"
-              >
-                {copiedEmails ? (
-                  <>
-                    <Check className="h-3.5 w-3.5" />
-                    Copied!
-                  </>
-                ) : (
-                  <>
-                    <Copy className="h-3.5 w-3.5" />
-                    Copy All Emails
-                  </>
-                )}
-              </button>
-            )}
-          </div>
+            <span className="text-[#a39e95] text-[18px]">{showClientList ? "−" : "+"}</span>
+          </button>
 
-          {clientsLoaded && clients.length > 0 ? (
-            <div className="bg-white rounded-2xl shadow-sm border border-[#e8e5df] divide-y divide-[#e8e5df]">
-              {clients.map((client, i) => (
-                <div key={i} className="flex items-center justify-between px-5 py-3">
-                  <div>
-                    <p className="text-[13px] font-medium text-[#1a1a1a]">{client.name}</p>
-                    {client.email && (
-                      <p className="text-[11px] text-[#7a756d] mt-0.5">{client.email}</p>
+          {showClientList && (
+            <div className="mt-3">
+              {/* Copy All Emails button */}
+              {clientsLoaded && clients.some((c) => c.email) && (
+                <div className="mb-3">
+                  <button
+                    onClick={handleCopyEmails}
+                    type="button"
+                    className="flex items-center gap-1.5 px-4 py-2 bg-[#1a1a1a] text-white rounded-lg text-[12px] font-medium hover:bg-[#333] transition-colors active:scale-95"
+                  >
+                    {copiedEmails ? (
+                      <>
+                        <Check className="h-3.5 w-3.5" />
+                        Emails Copied!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-3.5 w-3.5" />
+                        Copy All Emails
+                      </>
                     )}
-                  </div>
-                  {client.email && (
-                    <a
-                      href={`mailto:${client.email}`}
-                      className="text-[11px] text-[#8a8477] hover:text-[#1a1a1a] font-medium transition-colors"
-                    >
-                      Email
-                    </a>
-                  )}
+                  </button>
                 </div>
-              ))}
+              )}
+
+              {clientsLoaded && clients.length > 0 ? (
+                <div className="bg-white rounded-2xl shadow-sm border border-[#e8e5df] divide-y divide-[#e8e5df]">
+                  {clients.map((client, i) => (
+                    <div key={i}>
+                      <button
+                        onClick={() => setExpandedClient(expandedClient === i ? null : i)}
+                        type="button"
+                        className="w-full flex items-center justify-between px-5 py-3 hover:bg-[#faf9f7] transition-colors"
+                      >
+                        <p className="text-[13px] font-medium text-[#1a1a1a]">{client.name}</p>
+                        <span className="text-[#a39e95] text-[14px]">{expandedClient === i ? "−" : "+"}</span>
+                      </button>
+                      {expandedClient === i && (
+                        <div className="px-5 pb-4 pt-0 space-y-2">
+                          {client.email ? (
+                            <div className="flex items-center justify-between">
+                              <p className="text-[12px] text-[#7a756d]">{client.email}</p>
+                              <a
+                                href={`mailto:${client.email}`}
+                                className="text-[11px] text-[#1a1a1a] bg-[#f0ede8] hover:bg-[#e8e5df] px-3 py-1 rounded-md font-medium transition-colors"
+                              >
+                                Email
+                              </a>
+                            </div>
+                          ) : (
+                            <p className="text-[12px] text-[#c4bfb8] italic">No email on file</p>
+                          )}
+                          {client.phone ? (
+                            <div className="flex items-center justify-between">
+                              <p className="text-[12px] text-[#7a756d]">{client.phone}</p>
+                              <a
+                                href={`tel:${client.phone}`}
+                                className="text-[11px] text-[#1a1a1a] bg-[#f0ede8] hover:bg-[#e8e5df] px-3 py-1 rounded-md font-medium transition-colors"
+                              >
+                                Call
+                              </a>
+                            </div>
+                          ) : (
+                            <p className="text-[12px] text-[#c4bfb8] italic">No phone on file</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : clientsLoaded ? (
+                <div className="bg-white rounded-2xl shadow-sm border border-[#e8e5df] p-8 text-center">
+                  <p className="text-[13px] text-[#7a756d]">No clients yet</p>
+                </div>
+              ) : null}
             </div>
-          ) : clientsLoaded ? (
-            <div className="bg-white rounded-2xl shadow-sm border border-[#e8e5df] p-8 text-center">
-              <Users className="h-8 w-8 text-[#c4bfb8] mx-auto mb-2" />
-              <p className="text-[13px] text-[#7a756d]">No clients yet</p>
-            </div>
-          ) : null}
+          )}
         </div>
 
         {/* Info Note */}
