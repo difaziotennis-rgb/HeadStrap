@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Save, CalendarDays, LogOut, Trophy, Users, Copy, Check } from "lucide-react";
 import { PAYMENT_CONFIG, getLessonRate } from "@/lib/payment-config";
 import { readAllSlots, readAllRecurring, readAllBookings } from "@/lib/booking-data";
+import { getBookingClient } from "@/lib/supabase/booking-client";
 
 interface PaymentSettings {
   paypalEmail: string;
@@ -87,6 +88,21 @@ export default function PaymentSettingsPage() {
     const bookings = await readAllBookings();
     for (const booking of Object.values(bookings)) {
       addClient(booking.clientName, booking.clientEmail || "", booking.clientPhone || "");
+    }
+
+    // From ladder players
+    try {
+      const supabase = getBookingClient();
+      const { data: players } = await supabase
+        .from("players")
+        .select("name, email, phone_number");
+      if (players) {
+        for (const p of players) {
+          addClient(p.name || "", p.email || "", p.phone_number || "");
+        }
+      }
+    } catch (e) {
+      console.error("[loadClients] Failed to fetch ladder players:", e);
     }
 
     // Convert to sorted array
