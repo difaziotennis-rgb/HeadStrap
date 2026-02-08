@@ -46,7 +46,7 @@ export default function BioPage() {
       </header>
 
       {/* Content */}
-      <main className="relative z-10 max-w-2xl mx-auto px-4 sm:px-6 pt-10 sm:pt-14 pb-16">
+      <main className="relative z-10 max-w-2xl mx-auto px-4 sm:px-6 pt-16 sm:pt-20 pb-16">
         <div className="text-center">
           <p className="text-[10px] tracking-[0.2em] uppercase text-white/50 mb-2">
             Tennis Professional
