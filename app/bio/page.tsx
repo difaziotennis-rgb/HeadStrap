@@ -41,7 +41,7 @@ export default function BioPage() {
             src="/derek-bio.png"
             alt="Derek DiFazio"
             fill
-            className="object-cover object-[center_40%]"
+            className="object-cover object-[center_10%]"
             priority
           />
           <div className="absolute inset-0 bg-gradient-to-t from-[#f7f7f5]/60 via-transparent to-transparent" />
