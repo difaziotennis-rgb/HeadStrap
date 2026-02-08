@@ -36,7 +36,7 @@ export default function BioPage() {
       {/* Content */}
       <main className="max-w-3xl mx-auto px-4 sm:px-6">
         {/* Photo */}
-        <div className="relative w-full aspect-[3/4] sm:aspect-[4/3] rounded-b-2xl overflow-hidden mb-10">
+        <div className="relative w-full aspect-[1/1] sm:aspect-[2/1] rounded-b-2xl overflow-hidden mb-10">
           <Image
             src="/derek-bio.png"
             alt="Derek DiFazio"
