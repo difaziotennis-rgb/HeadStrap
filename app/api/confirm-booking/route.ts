@@ -4,6 +4,7 @@ import { Booking } from "@/lib/types";
 import { sendEmail } from "@/lib/send-email";
 import { clientConfirmationEmail, adminConfirmationEmail } from "@/lib/email-templates";
 import { formatTime } from "@/lib/utils";
+import { getBookingServerClient } from "@/lib/supabase/booking-server";
 
 // Decode the booking token
 function decodeBookingToken(token: string): Booking | null {
@@ -38,6 +39,51 @@ export async function POST(request: Request) {
 
     const adminEmail = "difaziotennis@gmail.com";
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+
+    // ── Persist booking & mark time slot as booked in Supabase ──
+    const supabase = getBookingServerClient();
+
+    // 1. Save the booking with status "confirmed"
+    const confirmedBooking = { ...booking, status: "confirmed" as const };
+    const { error: bookingErr } = await supabase
+      .from("bookings")
+      .upsert({
+        id: confirmedBooking.id,
+        time_slot_id: confirmedBooking.timeSlotId,
+        date: confirmedBooking.date,
+        hour: confirmedBooking.hour,
+        client_name: confirmedBooking.clientName,
+        client_email: confirmedBooking.clientEmail,
+        client_phone: confirmedBooking.clientPhone,
+        status: confirmedBooking.status,
+        created_at: confirmedBooking.createdAt,
+        payment_status: confirmedBooking.paymentStatus || null,
+        amount: confirmedBooking.amount,
+      }, { onConflict: "id" });
+
+    if (bookingErr) {
+      console.error("[confirm-booking] Failed to save booking:", bookingErr);
+    }
+
+    // 2. Mark the time slot as booked with client info
+    const slotId = confirmedBooking.timeSlotId || `${confirmedBooking.date}-${confirmedBooking.hour}`;
+    const { error: slotErr } = await supabase
+      .from("time_slots")
+      .upsert({
+        id: slotId,
+        date: confirmedBooking.date,
+        hour: confirmedBooking.hour,
+        available: true,
+        booked: true,
+        booked_by: confirmedBooking.clientName || null,
+        booked_email: confirmedBooking.clientEmail || null,
+        booked_phone: confirmedBooking.clientPhone || null,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "id" });
+
+    if (slotErr) {
+      console.error("[confirm-booking] Failed to mark time slot as booked:", slotErr);
+    }
 
     // Create Stripe checkout session for the email payment link
     let stripeCheckoutUrl = "";
