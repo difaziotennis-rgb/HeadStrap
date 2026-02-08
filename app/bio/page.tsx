@@ -47,7 +47,7 @@ export default function BioPage() {
 
       {/* Content */}
       <main className="relative z-10 max-w-2xl mx-auto px-4 sm:px-6 pt-8 sm:pt-12 pb-16">
-        <div className="text-center">
+        <div className="text-left">
           <p className="text-[10px] tracking-[0.2em] uppercase text-white/50 mb-2">
             Tennis Professional
           </p>
@@ -65,7 +65,7 @@ export default function BioPage() {
             </p>
           </div>
 
-          <div className="w-8 h-px bg-white/20 mx-auto mb-8" />
+          <div className="w-8 h-px bg-white/20 mb-8" />
 
           <p className="text-[15px] sm:text-[16px] leading-[1.9] text-white/80">
             A native New Yorker, Derek has over 15 years of coaching experience from the beginner to Division I and professional levels and loves working with players of all ages and abilities. A national doubles champion as both a junior and an adult, Derek was ranked as high as #1 in New York and the Eastern Section, before playing #1 singles and doubles at Division I Clemson University where he achieved a top 25 ITA ranking and an ATP singles ranking while competing professionally.
