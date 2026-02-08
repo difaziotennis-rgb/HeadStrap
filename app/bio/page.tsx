@@ -45,7 +45,7 @@ export default function BioPage() {
             priority
           />
           <div className="absolute inset-0 bg-gradient-to-t from-[#f7f7f5]/60 via-transparent to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-b from-[#f7f7f5]/40 via-transparent to-transparent h-1/4" />
+          <div className="absolute inset-x-0 top-0 h-1/3 bg-gradient-to-b from-[#f7f7f5]/60 to-transparent" />
         </div>
 
         {/* Bio content */}
