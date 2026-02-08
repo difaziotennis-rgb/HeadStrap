@@ -12,7 +12,7 @@ export default function BioPage() {
           src="/derek-bio.png"
           alt="Derek DiFazio"
           fill
-          className="object-cover object-[center_10%]"
+          className="object-cover object-[center_5%] scale-110"
           priority
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/80" />
@@ -46,7 +46,7 @@ export default function BioPage() {
       </header>
 
       {/* Content */}
-      <main className="relative z-10 max-w-2xl mx-auto px-4 sm:px-6 pt-24 sm:pt-36 pb-16">
+      <main className="relative z-10 max-w-2xl mx-auto px-4 sm:px-6 pt-8 sm:pt-12 pb-16">
         <div className="text-center">
           <p className="text-[10px] tracking-[0.2em] uppercase text-white/50 mb-2">
             Tennis Professional
@@ -74,8 +74,9 @@ export default function BioPage() {
       </main>
 
       {/* Footer */}
-      <footer className="relative z-10 border-t border-white/10">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+      <footer className="relative z-10">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 pb-8">
+          <div className="border-t border-white/10 mb-5" />
           <div className="text-center">
             <p className="text-[11px] text-white/40 tracking-wide">
               DiFazio Tennis · Rhinebeck, NY

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Leaderboard } from '@/components/leaderboard'
 import { Club } from '@/lib/types/database'
-import { Mail, CalendarDays, LogOut, Lock, Settings, Trophy } from 'lucide-react'
+import { Mail, LogOut, Lock, Settings, Trophy } from 'lucide-react'
 
 const CLUB_SLUG = 'rhinebeck-tennis-club'
 
@@ -61,10 +61,15 @@ export default function LadderPage() {
             <p className="text-[10px] tracking-[0.25em] uppercase text-[#b0a99f]">DiFazio Tennis</p>
             <div className="flex items-center gap-4">
               <Link
-                href="/book"
-                className="flex items-center gap-1.5 text-[#8a8477] hover:text-[#1a1a1a] text-[12px] font-medium transition-colors"
+                href="/bio"
+                className="text-[#8a8477] hover:text-[#1a1a1a] text-[12px] font-medium transition-colors"
               >
-                <CalendarDays className="h-3.5 w-3.5" />
+                Bio
+              </Link>
+              <Link
+                href="/book"
+                className="text-[#8a8477] hover:text-[#1a1a1a] text-[12px] font-medium transition-colors"
+              >
                 Book
               </Link>
               {isAdmin && (
