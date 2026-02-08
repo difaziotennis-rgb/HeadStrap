@@ -4,14 +4,28 @@ import { getBookingServerClient } from "@/lib/supabase/booking-server";
 export async function GET() {
   const results: Record<string, any> = {};
 
-  // Check env vars
+  const url = process.env.NEXT_PUBLIC_LESSON_SUPABASE_URL || "";
+  const key = process.env.NEXT_PUBLIC_LESSON_SUPABASE_ANON_KEY || "";
+
+  // Check env vars (show partial URL for debugging)
   results.envVars = {
-    NEXT_PUBLIC_LESSON_SUPABASE_URL: process.env.NEXT_PUBLIC_LESSON_SUPABASE_URL ? "SET" : "NOT SET",
-    NEXT_PUBLIC_LESSON_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_LESSON_SUPABASE_ANON_KEY ? "SET" : "NOT SET",
+    url: url ? url.substring(0, 30) + "..." : "NOT SET",
+    keyPrefix: key ? key.substring(0, 20) + "..." : "NOT SET",
   };
 
   try {
     const supabase = getBookingServerClient();
+
+    // Test existing students table (should work if connection is right)
+    const { data: students, error: studentsErr } = await supabase
+      .from("students")
+      .select("id")
+      .limit(1);
+    results.studentsTable = {
+      found: !studentsErr,
+      count: students?.length ?? 0,
+      error: studentsErr?.message ?? null,
+    };
 
     // Test time_slots table
     const { data: slots, error: slotsErr } = await supabase
@@ -19,9 +33,9 @@ export async function GET() {
       .select("id")
       .limit(5);
     results.timeSlots = {
+      found: !slotsErr,
       count: slots?.length ?? 0,
       error: slotsErr?.message ?? null,
-      sample: slots?.map((s: any) => s.id) ?? [],
     };
 
     // Test bookings table
@@ -30,6 +44,7 @@ export async function GET() {
       .select("id")
       .limit(5);
     results.bookings = {
+      found: !bookingsErr,
       count: bookings?.length ?? 0,
       error: bookingsErr?.message ?? null,
     };
@@ -40,6 +55,7 @@ export async function GET() {
       .select("id")
       .limit(5);
     results.recurringLessons = {
+      found: !recurringErr,
       count: recurring?.length ?? 0,
       error: recurringErr?.message ?? null,
     };
