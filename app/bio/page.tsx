@@ -36,12 +36,12 @@ export default function BioPage() {
       {/* Content */}
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-10 sm:py-16">
         {/* Photo */}
-        <div className="relative w-full aspect-[3/2] sm:aspect-[2/1] rounded-2xl overflow-hidden mb-10">
+        <div className="relative w-full aspect-[4/3] sm:aspect-[3/2] rounded-2xl overflow-hidden mb-10 mt-2 sm:mt-4">
           <Image
             src="/derek-bio.png"
             alt="Derek DiFazio"
             fill
-            className="object-cover object-[center_20%]"
+            className="object-cover object-[center_25%]"
             priority
           />
           <div className="absolute inset-0 bg-gradient-to-t from-[#f7f7f5]/60 via-transparent to-transparent" />
