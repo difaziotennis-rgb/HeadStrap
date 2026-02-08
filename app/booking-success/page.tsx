@@ -4,13 +4,7 @@ import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { CheckCircle, Calendar, Clock, DollarSign, CreditCard } from "lucide-react";
 import { Booking } from "@/lib/types";
-import {
-  bookings,
-  readSlotsFromStorage,
-  writeSlotToStorage,
-  writeBookingToStorage,
-  readBookingsFromStorage,
-} from "@/lib/mock-data";
+import { readBooking, writeBooking, readAllSlots, writeSlot } from "@/lib/booking-data";
 import { formatTime } from "@/lib/utils";
 import { format } from "date-fns";
 import { PaymentModal } from "@/components/payment-modal";
@@ -24,33 +18,24 @@ function BookingSuccessContent() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   useEffect(() => {
-    if (bookingId) {
-      // Try to get from Map first
-      let found = bookings.get(bookingId);
-      
-      // If not found in Map, try sessionStorage
+    if (!bookingId) return;
+
+    async function loadBooking() {
+      // Try Supabase first
+      let found = await readBooking(bookingId!);
+
+      // Fall back to sessionStorage (for in-flight bookings)
       if (!found) {
         const stored = sessionStorage.getItem(`booking_${bookingId}`);
         if (stored) {
           try {
-            const parsed = JSON.parse(stored) as Booking;
-            found = parsed;
-            bookings.set(bookingId, parsed);
-          } catch (e) {
-            // Invalid booking data
+            found = JSON.parse(stored) as Booking;
+          } catch {
+            // Invalid
           }
         }
       }
 
-      // Also check localStorage bookings
-      if (!found) {
-        const persistedBookings = readBookingsFromStorage();
-        if (persistedBookings[bookingId]) {
-          found = persistedBookings[bookingId];
-          bookings.set(bookingId, found);
-        }
-      }
-      
       if (found) {
         setBooking(found);
         if (paymentStatus === "success" && found.paymentStatus === "pending") {
@@ -58,15 +43,15 @@ function BookingSuccessContent() {
           found.status = "confirmed";
 
           // Persist booking
-          writeBookingToStorage(found);
+          await writeBooking(found);
           sessionStorage.setItem(`booking_${bookingId}`, JSON.stringify(found));
-          
-          // Mark the time slot as booked and persist to localStorage
+
+          // Mark the time slot as booked
           const slotId = `${found.date}-${found.hour}`;
-          const storedSlots = readSlotsFromStorage();
-          const existingSlot = storedSlots[slotId];
+          const allSlots = await readAllSlots();
+          const existingSlot = allSlots[slotId];
           if (existingSlot) {
-            writeSlotToStorage({
+            await writeSlot({
               ...existingSlot,
               booked: true,
               bookedBy: found.clientName,
@@ -74,8 +59,7 @@ function BookingSuccessContent() {
               bookedPhone: found.clientPhone,
             });
           } else {
-            // Slot wasn't in storage yet — create it
-            writeSlotToStorage({
+            await writeSlot({
               id: slotId,
               date: found.date,
               hour: found.hour,
@@ -86,7 +70,7 @@ function BookingSuccessContent() {
               bookedPhone: found.clientPhone,
             });
           }
-            
+
           // Send email notification
           fetch("/api/send-email", {
             method: "POST",
@@ -99,13 +83,13 @@ function BookingSuccessContent() {
         }
       } else {
         setTimeout(() => {
-          if (!booking) {
-            alert("Booking not found. Redirecting back to booking page.");
-            router.push("/book");
-          }
+          alert("Booking not found. Redirecting back to booking page.");
+          router.push("/book");
         }, 2000);
       }
     }
+
+    loadBooking();
   }, [bookingId, router, paymentStatus]);
 
   if (!booking) {
@@ -164,7 +148,7 @@ function BookingSuccessContent() {
         </div>
 
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
-          <h3 className="font-semibold text-primary-800 mb-2">What's Next?</h3>
+          <h3 className="font-semibold text-primary-800 mb-2">What&apos;s Next?</h3>
           {booking.paymentStatus === "paid" ? (
             <p className="text-sm text-earth-700 mb-3">
               ✅ <strong>Payment received!</strong> Your lesson is confirmed and paid.
@@ -173,7 +157,7 @@ function BookingSuccessContent() {
             <>
               {booking.clientEmail ? (
                 <p className="text-sm text-earth-700 mb-3">
-                  You'll receive a confirmation email at <strong>{booking.clientEmail}</strong> with lesson details.
+                  You&apos;ll receive a confirmation email at <strong>{booking.clientEmail}</strong> with lesson details.
                 </p>
               ) : (
                 <p className="text-sm text-earth-700 mb-3">
@@ -222,10 +206,10 @@ function BookingSuccessContent() {
           booking={booking}
           isOpen={showPaymentModal}
           onClose={() => setShowPaymentModal(false)}
-          onPaymentSuccess={() => {
+          onPaymentSuccess={async () => {
             if (booking) {
               const updated = { ...booking, paymentStatus: "paid" as const };
-              writeBookingToStorage(updated);
+              await writeBooking(updated);
               sessionStorage.setItem(`booking_${booking.id}`, JSON.stringify(updated));
               setBooking(updated);
             }
@@ -250,4 +234,3 @@ export default function BookingSuccessPage() {
     </Suspense>
   );
 }
-

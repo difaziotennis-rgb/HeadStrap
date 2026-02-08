@@ -15,33 +15,7 @@ import { ChevronLeft, ChevronRight, X, Pencil, Trash2, Check } from "lucide-reac
 import { TimeSlot } from "@/lib/types";
 import { formatTime, getHoursForDay } from "@/lib/utils";
 import { cn } from "@/lib/utils";
-
-const STORAGE_KEY = "difazio_admin_slots";
-
-function loadSlots(): Record<string, TimeSlot> {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw) as Record<string, TimeSlot>;
-  } catch (e) {
-    console.error("loadSlots error:", e);
-  }
-  return {};
-}
-
-function saveSlots(slots: Record<string, TimeSlot>): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(slots));
-  } catch (e) {
-    console.error("saveSlots error:", e);
-  }
-}
-
-function buildDateStr(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
+import { readAllSlots, writeSlots, deleteSlot, buildDateStr } from "@/lib/booking-data";
 
 export function AdminDashboard() {
   const [weekStart, setWeekStart] = useState(() =>
@@ -58,8 +32,10 @@ export function AdminDashboard() {
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    setSlots(loadSlots());
-    setLoaded(true);
+    readAllSlots().then((data) => {
+      setSlots(data);
+      setLoaded(true);
+    });
   }, []);
 
   const weekEnd = endOfWeek(weekStart, { weekStartsOn: 0 });
@@ -101,7 +77,7 @@ export function AdminDashboard() {
     setEditHour(0);
   }
 
-  function handleSaveEdit() {
+  async function handleSaveEdit() {
     if (!activeSlotId || !editName.trim()) return;
     const slot = slots[activeSlotId];
     if (!slot) return;
@@ -120,26 +96,29 @@ export function AdminDashboard() {
         hour: editHour,
         bookedBy: editName.trim(),
       };
+      // Persist: delete old, upsert new
+      await deleteSlot(activeSlotId);
+      await writeSlots([updated[newId]]);
     } else {
       updated[activeSlotId] = {
         ...slot,
         bookedBy: editName.trim(),
       };
+      await writeSlots([updated[activeSlotId]]);
     }
 
     setSlots(updated);
-    saveSlots(updated);
     closeAction();
     setStatusMsg("Lesson updated");
     setTimeout(() => setStatusMsg(null), 3000);
   }
 
-  function handleDelete() {
+  async function handleDelete() {
     if (!activeSlotId) return;
     const updated = { ...slots };
     delete updated[activeSlotId];
     setSlots(updated);
-    saveSlots(updated);
+    await deleteSlot(activeSlotId);
     closeAction();
     setStatusMsg("Lesson removed");
     setTimeout(() => setStatusMsg(null), 3000);

@@ -6,26 +6,7 @@ import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
 import { TimeSlot } from "@/lib/types";
 import { formatTime, isPastDate, isToday, getHoursForDay } from "@/lib/utils";
 import { cn } from "@/lib/utils";
-
-// Same key the admin calendar uses
-const STORAGE_KEY = "difazio_admin_slots";
-
-function loadSlots(): Record<string, TimeSlot> {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw) as Record<string, TimeSlot>;
-  } catch (e) {
-    console.error("loadSlots error:", e);
-  }
-  return {};
-}
-
-function buildDateStr(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
+import { readAllSlots, buildDateStr } from "@/lib/booking-data";
 
 interface CalendarProps {
   onDateSelect: (date: Date) => void;
@@ -40,10 +21,12 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
   const [savedSlots, setSavedSlots] = useState<Record<string, TimeSlot>>({});
   const [loaded, setLoaded] = useState(false);
 
-  // Load saved slots from localStorage on mount
+  // Load saved slots from Supabase on mount
   useEffect(() => {
-    setSavedSlots(loadSlots());
-    setLoaded(true);
+    readAllSlots().then((slots) => {
+      setSavedSlots(slots);
+      setLoaded(true);
+    });
   }, []);
 
   // Sync selectedDate prop

@@ -6,61 +6,21 @@ import { RecurringLesson, TimeSlot } from "@/lib/types";
 import { formatTime, getHoursForDay } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { format, addWeeks, eachDayOfInterval, getDay } from "date-fns";
+import {
+  readAllRecurring,
+  writeRecurring,
+  writeAllRecurring,
+  deleteRecurring,
+  readAllSlots,
+  writeSlots,
+  deleteSlot,
+  deleteSlotsWithNotes,
+  buildDateStr,
+} from "@/lib/booking-data";
 
-// ─── localStorage keys ───────────────────────────────────────
-const RECURRING_KEY = "difazio_recurring";
-const SLOTS_KEY = "difazio_admin_slots";
 const WEEKS_AHEAD = 8;
-
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const DAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-// ─── localStorage helpers ────────────────────────────────────
-function loadRecurring(): RecurringLesson[] {
-  try {
-    const raw = localStorage.getItem(RECURRING_KEY);
-    if (raw) return JSON.parse(raw) as RecurringLesson[];
-  } catch (e) {
-    console.error("loadRecurring error:", e);
-  }
-  return [];
-}
-
-function saveRecurring(lessons: RecurringLesson[]): boolean {
-  try {
-    const json = JSON.stringify(lessons);
-    localStorage.setItem(RECURRING_KEY, json);
-    return localStorage.getItem(RECURRING_KEY) === json;
-  } catch (e) {
-    console.error("saveRecurring error:", e);
-    return false;
-  }
-}
-
-function loadSlots(): Record<string, TimeSlot> {
-  try {
-    const raw = localStorage.getItem(SLOTS_KEY);
-    if (raw) return JSON.parse(raw) as Record<string, TimeSlot>;
-  } catch (e) {
-    console.error("loadSlots error:", e);
-  }
-  return {};
-}
-
-function saveSlots(slots: Record<string, TimeSlot>): void {
-  try {
-    localStorage.setItem(SLOTS_KEY, JSON.stringify(slots));
-  } catch (e) {
-    console.error("saveSlots error:", e);
-  }
-}
-
-function buildDateStr(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
 
 /** Get the rolling window: today → 8 weeks from today */
 function getRollingEnd(): Date {
@@ -71,13 +31,14 @@ function getRollingEnd(): Date {
  * Stamp all recurring lesson occurrences into the slots storage
  * for the rolling 8-week window from today.
  */
-function stampRecurringToSlots(lessons: RecurringLesson[]) {
-  const slots = loadSlots();
+async function stampRecurringToSlots(lessons: RecurringLesson[]) {
+  const allSlots = await readAllSlots();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const end = getRollingEnd();
 
   const allDays = eachDayOfInterval({ start: today, end });
+  const toUpsert: TimeSlot[] = [];
 
   for (const lesson of lessons) {
     for (const day of allDays) {
@@ -87,10 +48,10 @@ function stampRecurringToSlots(lessons: RecurringLesson[]) {
 
       const id = `${dateStr}-${lesson.hour}`;
       // Don't overwrite a slot that was booked by a non-recurring client
-      const existing = slots[id];
+      const existing = allSlots[id];
       if (existing?.booked && !existing?.notes?.startsWith("Recurring:")) continue;
 
-      slots[id] = {
+      const slot: TimeSlot = {
         id,
         date: dateStr,
         hour: lesson.hour,
@@ -101,33 +62,27 @@ function stampRecurringToSlots(lessons: RecurringLesson[]) {
         bookedPhone: lesson.clientPhone,
         notes: `Recurring: ${lesson.id}`,
       };
+      allSlots[id] = slot;
+      toUpsert.push(slot);
     }
   }
 
-  saveSlots(slots);
+  if (toUpsert.length > 0) {
+    await writeSlots(toUpsert);
+  }
 }
 
 /**
  * Remove slots owned by a specific recurring lesson across all time.
  */
-function removeRecurringSlotsForLesson(lesson: RecurringLesson) {
-  const slots = loadSlots();
-  const keysToDelete: string[] = [];
-  for (const key of Object.keys(slots)) {
-    if (slots[key]?.notes === `Recurring: ${lesson.id}`) {
-      keysToDelete.push(key);
-    }
-  }
-  for (const key of keysToDelete) {
-    delete slots[key];
-  }
-  saveSlots(slots);
+async function removeRecurringSlotsForLesson(lesson: RecurringLesson) {
+  await deleteSlotsWithNotes(`Recurring: ${lesson.id}`);
 }
 
 /**
  * Prune cancelled dates that are in the past (house-keeping).
  */
-function pruneOldCancellations(lessons: RecurringLesson[]): RecurringLesson[] {
+async function pruneOldCancellations(lessons: RecurringLesson[]): Promise<RecurringLesson[]> {
   const todayStr = buildDateStr(new Date());
   let changed = false;
   const pruned = lessons.map((l) => {
@@ -135,7 +90,7 @@ function pruneOldCancellations(lessons: RecurringLesson[]): RecurringLesson[] {
     if (filtered.length !== l.cancelledDates.length) changed = true;
     return { ...l, cancelledDates: filtered };
   });
-  if (changed) saveRecurring(pruned);
+  if (changed) await writeAllRecurring(pruned);
   return changed ? pruned : lessons;
 }
 
@@ -155,18 +110,21 @@ export function AdminRecurring() {
   const [expandedLessonId, setExpandedLessonId] = useState<string | null>(null);
 
   useEffect(() => {
-    let data = loadRecurring();
-    // Prune old cancelled dates
-    data = pruneOldCancellations(data);
-    setLessons(data);
-    // Auto-refresh: re-stamp the next 8 weeks on every load
-    if (data.length > 0) {
-      stampRecurringToSlots(data);
+    async function load() {
+      let data = await readAllRecurring();
+      // Prune old cancelled dates
+      data = await pruneOldCancellations(data);
+      setLessons(data);
+      // Auto-refresh: re-stamp the next 8 weeks on every load
+      if (data.length > 0) {
+        await stampRecurringToSlots(data);
+      }
+      setLoaded(true);
     }
-    setLoaded(true);
+    load();
   }, []);
 
-  function handleAdd() {
+  async function handleAdd() {
     if (!formName.trim()) return;
 
     const today = new Date();
@@ -187,8 +145,8 @@ export function AdminRecurring() {
 
     const updated = [...lessons, newLesson];
     setLessons(updated);
-    saveRecurring(updated);
-    stampRecurringToSlots(updated);
+    await writeRecurring(newLesson);
+    await stampRecurringToSlots(updated);
 
     // Reset form
     setFormName("");
@@ -199,21 +157,21 @@ export function AdminRecurring() {
     setTimeout(() => setSaveMsg(null), 3000);
   }
 
-  function handleDelete(id: string) {
+  async function handleDelete(id: string) {
     const lesson = lessons.find((l) => l.id === id);
     if (!lesson) return;
 
     // Remove all slots this recurring lesson created
-    removeRecurringSlotsForLesson(lesson);
+    await removeRecurringSlotsForLesson(lesson);
+    await deleteRecurring(id);
 
     const updated = lessons.filter((l) => l.id !== id);
     setLessons(updated);
-    saveRecurring(updated);
     setSaveMsg("Recurring lesson removed");
     setTimeout(() => setSaveMsg(null), 3000);
   }
 
-  function handleCancelDate(lessonId: string, dateStr: string) {
+  async function handleCancelDate(lessonId: string, dateStr: string) {
     const updated = lessons.map((l) => {
       if (l.id !== lessonId) return l;
       return {
@@ -222,25 +180,20 @@ export function AdminRecurring() {
       };
     });
     setLessons(updated);
-    saveRecurring(updated);
 
-    // Remove this specific slot
-    const slots = loadSlots();
     const lesson = updated.find((l) => l.id === lessonId);
     if (lesson) {
+      await writeRecurring(lesson);
+      // Remove this specific slot
       const slotId = `${dateStr}-${lesson.hour}`;
-      const slot = slots[slotId];
-      if (slot?.notes?.includes(lessonId)) {
-        delete slots[slotId];
-      }
-      saveSlots(slots);
+      await deleteSlot(slotId);
     }
 
     setSaveMsg("Week cancelled");
     setTimeout(() => setSaveMsg(null), 3000);
   }
 
-  function handleRestoreDate(lessonId: string, dateStr: string) {
+  async function handleRestoreDate(lessonId: string, dateStr: string) {
     const updated = lessons.map((l) => {
       if (l.id !== lessonId) return l;
       return {
@@ -249,20 +202,24 @@ export function AdminRecurring() {
       };
     });
     setLessons(updated);
-    saveRecurring(updated);
-    stampRecurringToSlots(updated);
+
+    const lesson = updated.find((l) => l.id === lessonId);
+    if (lesson) {
+      await writeRecurring(lesson);
+    }
+    await stampRecurringToSlots(updated);
 
     setSaveMsg("Week restored");
     setTimeout(() => setSaveMsg(null), 3000);
   }
 
-  function handleEdit(id: string, updates: { clientName?: string; clientEmail?: string; clientPhone?: string; dayOfWeek?: number; hour?: number }) {
+  async function handleEdit(id: string, updates: { clientName?: string; clientEmail?: string; clientPhone?: string; dayOfWeek?: number; hour?: number }) {
     const oldLesson = lessons.find((l) => l.id === id);
     if (!oldLesson) return;
 
     // If day or hour changed, remove old slots first
     if (updates.dayOfWeek !== undefined || updates.hour !== undefined) {
-      removeRecurringSlotsForLesson(oldLesson);
+      await removeRecurringSlotsForLesson(oldLesson);
     }
 
     const updated = lessons.map((l) => {
@@ -270,10 +227,14 @@ export function AdminRecurring() {
       return { ...l, ...updates };
     });
     setLessons(updated);
-    saveRecurring(updated);
+
+    const updatedLesson = updated.find((l) => l.id === id);
+    if (updatedLesson) {
+      await writeRecurring(updatedLesson);
+    }
 
     // Re-stamp if day/hour/name changed
-    stampRecurringToSlots(updated);
+    await stampRecurringToSlots(updated);
 
     setSaveMsg("Recurring lesson updated");
     setTimeout(() => setSaveMsg(null), 3000);

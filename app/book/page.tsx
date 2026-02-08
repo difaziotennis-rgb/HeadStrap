@@ -8,7 +8,7 @@ import { AdminCalendar } from "@/components/admin-calendar";
 import { AdminDashboard } from "@/components/admin-dashboard";
 import { AdminRecurring } from "@/components/admin-recurring";
 import { TimeSlot } from "@/lib/types";
-import { initializeMockData } from "@/lib/mock-data";
+import { migrateFromLocalStorage } from "@/lib/booking-data";
 import { LogOut, Lock, Trophy, LayoutDashboard, CalendarDays, Repeat } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -28,7 +28,8 @@ export default function BookPage() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      initializeMockData();
+      // Migrate any existing localStorage data to Supabase (one-time)
+      migrateFromLocalStorage();
       const auth = sessionStorage.getItem("adminAuth");
       if (auth === "true") {
         setIsAdminMode(true);

@@ -16,45 +16,9 @@ import { ChevronLeft, ChevronRight, Check, X, Save } from "lucide-react";
 import { TimeSlot } from "@/lib/types";
 import { formatTime, isPastDate, getHoursForDay } from "@/lib/utils";
 import { cn } from "@/lib/utils";
-
-// ─── localStorage key ────────────────────────────────────────
-const STORAGE_KEY = "difazio_admin_slots";
-
-// ─── Direct localStorage helpers (no abstractions) ──────────
-function loadSlots(): Record<string, TimeSlot> {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      return parsed as Record<string, TimeSlot>;
-    }
-  } catch (e) {
-    console.error("loadSlots error:", e);
-  }
-  return {};
-}
-
-function saveSlots(slots: Record<string, TimeSlot>): boolean {
-  try {
-    const json = JSON.stringify(slots);
-    localStorage.setItem(STORAGE_KEY, json);
-    // Verify it was saved
-    const verify = localStorage.getItem(STORAGE_KEY);
-    return verify === json;
-  } catch (e) {
-    console.error("saveSlots error:", e);
-    return false;
-  }
-}
+import { readAllSlots, writeSlots, writeSlot, buildDateStr } from "@/lib/booking-data";
 
 // ─── Build default slots for a date ─────────────────────────
-function buildDateStr(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
-
 function defaultSlotsForDate(date: Date): TimeSlot[] {
   const dateStr = buildDateStr(date);
   const hours = getHoursForDay(date.getDay());
@@ -77,16 +41,18 @@ export function AdminCalendar() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   // Quick-book state
   const [bookingSlotId, setBookingSlotId] = useState<string | null>(null);
   const [bookName, setBookName] = useState("");
 
-  // ── Load from localStorage on mount ────────────────────────
+  // ── Load from Supabase on mount ────────────────────────────
   useEffect(() => {
-    const saved = loadSlots();
-    setSlots(saved);
-    setLoaded(true);
+    readAllSlots().then((saved) => {
+      setSlots(saved);
+      setLoaded(true);
+    });
   }, []);
 
   // ── Get merged slots for a date (saved + defaults) ─────────
@@ -117,16 +83,13 @@ export function AdminCalendar() {
     setSaveMessage(null);
   }
 
-  // ── SAVE to localStorage ───────────────────────────────────
-  function handleSave() {
-    // Only persist slots that are available or booked (skip empty defaults)
-    const toSave: Record<string, TimeSlot> = {};
-    for (const [id, slot] of Object.entries(slots)) {
-      if (slot.available || slot.booked) {
-        toSave[id] = slot;
-      }
-    }
-    const success = saveSlots(toSave);
+  // ── SAVE to Supabase ────────────────────────────────────────
+  async function handleSave() {
+    setSaving(true);
+    // Collect all slots that have been touched
+    const allSlots = Object.values(slots);
+    const success = await writeSlots(allSlots);
+    setSaving(false);
     if (success) {
       setHasUnsavedChanges(false);
       setSaveMessage("Saved!");
@@ -137,7 +100,7 @@ export function AdminCalendar() {
   }
 
   // ── Quick-book a slot directly ─────────────────────────────
-  function handleQuickBook() {
+  async function handleQuickBook() {
     if (!bookingSlotId || !bookName.trim()) return;
     const slot = slots[bookingSlotId] ?? getSlotsForDate(selectedDate!).find((s) => s.id === bookingSlotId);
     if (!slot) return;
@@ -149,21 +112,15 @@ export function AdminCalendar() {
     };
     const updated = { ...slots, [booked.id]: booked };
     setSlots(updated);
-    // Save immediately
-    const toSave: Record<string, TimeSlot> = {};
-    for (const [id, s] of Object.entries(updated)) {
-      if (s.available || s.booked) {
-        toSave[id] = s;
-      }
-    }
-    saveSlots(toSave);
+    // Save immediately to Supabase
+    await writeSlot(booked);
     setBookingSlotId(null);
     setBookName("");
     setSaveMessage("Slot booked!");
     setTimeout(() => setSaveMessage(null), 3000);
   }
 
-  function handleUnbook(slotId: string) {
+  async function handleUnbook(slotId: string) {
     const slot = slots[slotId];
     if (!slot) return;
     const updated: TimeSlot = { ...slot, booked: false, bookedBy: undefined, bookedEmail: undefined, bookedPhone: undefined, notes: undefined };
@@ -189,11 +146,12 @@ export function AdminCalendar() {
           <span className="text-[13px]">You have unsaved changes</span>
           <button
             onClick={handleSave}
+            disabled={saving}
             type="button"
-            className="flex items-center gap-1.5 bg-white text-[#1a1a1a] px-4 py-1.5 rounded-lg text-[13px] font-medium hover:bg-[#f0ede8] transition-colors active:scale-95"
+            className="flex items-center gap-1.5 bg-white text-[#1a1a1a] px-4 py-1.5 rounded-lg text-[13px] font-medium hover:bg-[#f0ede8] transition-colors active:scale-95 disabled:opacity-50"
           >
             <Save className="h-3.5 w-3.5" />
-            Save Availability
+            {saving ? "Saving…" : "Save Availability"}
           </button>
         </div>
       )}
@@ -450,6 +408,7 @@ export function AdminCalendar() {
             </div>
             <button
               onClick={handleSave}
+              disabled={saving}
               type="button"
               className={cn(
                 "flex items-center gap-1.5 px-5 py-2 rounded-lg text-[13px] font-medium transition-colors active:scale-95",
@@ -459,7 +418,7 @@ export function AdminCalendar() {
               )}
             >
               <Save className="h-3.5 w-3.5" />
-              {hasUnsavedChanges ? "Save" : "Saved"}
+              {saving ? "Saving…" : hasUnsavedChanges ? "Save" : "Saved"}
             </button>
           </div>
         </div>
