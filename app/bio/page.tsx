@@ -34,30 +34,31 @@ export default function BioPage() {
       </header>
 
       {/* Content */}
-      <main className="max-w-2xl mx-auto px-4 sm:px-6 py-10 sm:py-16">
-        <div className="bg-white rounded-2xl shadow-sm border border-[#e8e5df] p-6 sm:p-10">
-          {/* Photo */}
-          <div className="w-32 h-40 sm:w-40 sm:h-48 rounded-2xl overflow-hidden mx-auto mb-8 border border-[#e8e5df]">
-            <Image
-              src="/derek-bio.png"
-              alt="Derek DiFazio"
-              width={160}
-              height={192}
-              className="w-full h-full object-cover object-top"
-              priority
-            />
-          </div>
+      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-10 sm:py-16">
+        {/* Photo */}
+        <div className="relative w-full aspect-[3/2] sm:aspect-[2.5/1] rounded-2xl overflow-hidden mb-10">
+          <Image
+            src="/derek-bio.png"
+            alt="Derek DiFazio"
+            fill
+            className="object-cover object-[center_15%]"
+            priority
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#f7f7f5] via-transparent to-transparent" />
+        </div>
 
-          <h1 className="text-[24px] sm:text-[30px] font-light tracking-tight text-[#1a1a1a] text-center mb-2">
-            Derek DiFazio
-          </h1>
-          <p className="text-[12px] tracking-[0.15em] uppercase text-[#b0a99f] text-center mb-8">
+        {/* Bio content */}
+        <div className="px-2 sm:px-6">
+          <p className="text-[10px] tracking-[0.2em] uppercase text-[#b0a99f] mb-2">
             Tennis Professional
           </p>
+          <h1 className="text-[26px] sm:text-[32px] font-light tracking-tight text-[#1a1a1a] mb-6">
+            Derek DiFazio
+          </h1>
 
-          <div className="w-12 h-px bg-[#e8e5df] mx-auto mb-8" />
+          <div className="w-10 h-px bg-[#e8e5df] mb-8" />
 
-          <p className="text-[15px] sm:text-[16px] leading-[1.8] text-[#4a4540] text-center">
+          <p className="text-[15px] sm:text-[16px] leading-[1.9] text-[#4a4540]">
             A native New Yorker, Derek has over 15 years of coaching experience from the beginner to Division I and professional levels and loves working with players of all ages and abilities. A national doubles champion as both a junior and an adult, Derek was ranked as high as #1 in New York and the Eastern Section, before playing #1 singles and doubles at Division I Clemson University where he achieved a top 25 ITA ranking and an ATP singles ranking while competing professionally.
           </p>
         </div>
