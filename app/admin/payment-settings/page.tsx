@@ -6,7 +6,6 @@ import Link from "next/link";
 import { Save, CalendarDays, LogOut, Trophy, Users, Copy, Check } from "lucide-react";
 import { PAYMENT_CONFIG, getLessonRate } from "@/lib/payment-config";
 import { readAllSlots, readAllRecurring, readAllBookings } from "@/lib/booking-data";
-import { getBookingClient } from "@/lib/supabase/booking-client";
 
 interface PaymentSettings {
   paypalEmail: string;
@@ -90,15 +89,17 @@ export default function PaymentSettingsPage() {
       addClient(booking.clientName, booking.clientEmail || "", booking.clientPhone || "");
     }
 
-    // From ladder players
+    // From ladder players (different Supabase instance, so use existing API)
     try {
-      const supabase = getBookingClient();
-      const { data: players } = await supabase
-        .from("players")
-        .select("name, email, phone_number");
-      if (players) {
-        for (const p of players) {
-          addClient(p.name || "", p.email || "", p.phone_number || "");
+      const clubRes = await fetch("/api/clubs/rhinebeck-tennis-club");
+      if (clubRes.ok) {
+        const club = await clubRes.json();
+        const ladderRes = await fetch(`/api/ladder?club_id=${club.id}`);
+        if (ladderRes.ok) {
+          const players = await ladderRes.json();
+          for (const p of players) {
+            addClient(p.name || "", p.email || "", p.phone_number || "");
+          }
         }
       }
     } catch (e) {
