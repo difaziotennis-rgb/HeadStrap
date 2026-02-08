@@ -34,9 +34,9 @@ export default function BioPage() {
       </header>
 
       {/* Content */}
-      <main className="max-w-3xl mx-auto px-4 sm:px-6">
+      <main className="max-w-3xl mx-auto px-4 sm:px-6 pt-4 sm:pt-6">
         {/* Photo */}
-        <div className="relative w-full aspect-[4/3] sm:aspect-[5/2] rounded-b-2xl overflow-hidden mb-10">
+        <div className="relative w-full aspect-[4/3] sm:aspect-[5/2] rounded-2xl overflow-hidden mb-10">
           <Image
             src="/derek-bio.png"
             alt="Derek DiFazio"
@@ -71,6 +71,32 @@ export default function BioPage() {
           </p>
         </div>
       </main>
+
+      {/* Footer */}
+      <footer className="border-t border-[#e8e5df] mt-12">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+          <div className="text-center">
+            <p className="text-[11px] text-[#b0a99f] tracking-wide">
+              DiFazio Tennis · Rhinebeck, NY
+            </p>
+            <p className="text-[11px] text-[#c4bfb8] mt-1.5">
+              <a
+                href="mailto:difaziotennis@gmail.com"
+                className="hover:text-[#8a8477] transition-colors"
+              >
+                difaziotennis@gmail.com
+              </a>
+              {" · "}
+              <a
+                href="tel:6319015220"
+                className="hover:text-[#8a8477] transition-colors"
+              >
+                631-901-5220
+              </a>
+            </p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
