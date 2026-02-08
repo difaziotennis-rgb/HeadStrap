@@ -36,15 +36,16 @@ export default function BioPage() {
       {/* Content */}
       <main className="max-w-3xl mx-auto px-4 sm:px-6">
         {/* Photo */}
-        <div className="relative w-full aspect-[3/4] sm:aspect-[1/1] rounded-b-2xl overflow-hidden mb-10">
+        <div className="relative w-full aspect-[3/4] sm:aspect-[4/3] rounded-b-2xl overflow-hidden mb-10">
           <Image
             src="/derek-bio.png"
             alt="Derek DiFazio"
             fill
-            className="object-cover object-[center_15%]"
+            className="object-cover object-[center_30%] scale-[1.05]"
             priority
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#f7f7f5]/50 via-transparent to-[#f7f7f5]/30" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#f7f7f5]/60 via-transparent to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#f7f7f5]/40 via-transparent to-transparent h-1/4" />
         </div>
 
         {/* Bio content */}
@@ -61,18 +62,15 @@ export default function BioPage() {
           <p className="text-[15px] sm:text-[16px] leading-[1.9] text-[#4a4540]">
             A native New Yorker, Derek has over 15 years of coaching experience from the beginner to Division I and professional levels and loves working with players of all ages and abilities. A national doubles champion as both a junior and an adult, Derek was ranked as high as #1 in New York and the Eastern Section, before playing #1 singles and doubles at Division I Clemson University where he achieved a top 25 ITA ranking and an ATP singles ranking while competing professionally.
           </p>
-        </div>
 
-        {/* Quote */}
-        <div className="mt-14 mb-16 px-6 sm:px-12 text-center">
-          <div className="text-[28px] sm:text-[32px] leading-none text-[#d9d5cf] font-serif mb-3">&ldquo;</div>
-          <p className="text-[16px] sm:text-[18px] leading-[1.8] text-[#6b665e] italic font-light">
-            Every player has potential — my job is to help them find it and build on it, one lesson at a time.
-          </p>
-          <div className="w-8 h-px bg-[#e8e5df] mx-auto mt-5 mb-3" />
-          <p className="text-[11px] tracking-[0.15em] uppercase text-[#b0a99f]">
-            Derek DiFazio
-          </p>
+          {/* Quote */}
+          <div className="mt-12 mb-4">
+            <div className="w-6 h-px bg-[#d9d5cf] mx-auto mb-6" />
+            <p className="text-[17px] sm:text-[20px] font-light italic tracking-tight text-[#6b665e] leading-relaxed">
+              &ldquo;Movement is medicine. Play is essential.&rdquo;
+            </p>
+            <div className="w-6 h-px bg-[#d9d5cf] mx-auto mt-6" />
+          </div>
         </div>
       </main>
     </div>
