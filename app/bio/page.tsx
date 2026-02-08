@@ -36,19 +36,19 @@ export default function BioPage() {
       {/* Content */}
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-10 sm:py-16">
         {/* Photo */}
-        <div className="relative w-full aspect-[3/2] sm:aspect-[2.5/1] rounded-2xl overflow-hidden mb-10">
+        <div className="relative w-full aspect-[3/2] sm:aspect-[2/1] rounded-2xl overflow-hidden mb-10">
           <Image
             src="/derek-bio.png"
             alt="Derek DiFazio"
             fill
-            className="object-cover object-[center_15%]"
+            className="object-cover object-[center_20%]"
             priority
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#f7f7f5] via-transparent to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#f7f7f5]/60 via-transparent to-transparent" />
         </div>
 
         {/* Bio content */}
-        <div className="px-2 sm:px-6">
+        <div className="px-2 sm:px-6 text-center">
           <p className="text-[10px] tracking-[0.2em] uppercase text-[#b0a99f] mb-2">
             Tennis Professional
           </p>
@@ -56,7 +56,7 @@ export default function BioPage() {
             Derek DiFazio
           </h1>
 
-          <div className="w-10 h-px bg-[#e8e5df] mb-8" />
+          <div className="w-10 h-px bg-[#e8e5df] mx-auto mb-8" />
 
           <p className="text-[15px] sm:text-[16px] leading-[1.9] text-[#4a4540]">
             A native New Yorker, Derek has over 15 years of coaching experience from the beginner to Division I and professional levels and loves working with players of all ages and abilities. A national doubles champion as both a junior and an adult, Derek was ranked as high as #1 in New York and the Eastern Section, before playing #1 singles and doubles at Division I Clemson University where he achieved a top 25 ITA ranking and an ATP singles ranking while competing professionally.
