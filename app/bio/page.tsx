@@ -59,7 +59,8 @@ export default function BioPage() {
 
           {/* Quote */}
           <div className="mb-10">
-            <p className="text-[22px] sm:text-[28px] font-extralight tracking-tight text-[#1a1a1a] leading-snug">
+            <span className="text-[28px] sm:text-[36px] font-extralight leading-none text-[#d9d5cf] block mb-2">&ldquo;</span>
+            <p className="text-[18px] sm:text-[22px] font-extralight tracking-tight text-[#1a1a1a] leading-snug">
               Movement is medicine.
               <br />
               <span className="text-[#7a756d]">Play is essential.</span>
