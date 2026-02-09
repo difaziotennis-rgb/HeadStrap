@@ -235,9 +235,146 @@ A confirmation has been sent to the client.
   return { subject, html, text };
 }
 
+// ─── COURT UNAVAILABLE / ALTERNATIVES EMAIL (to client) ─────────
+
+export function courtUnavailableEmail(
+  booking: Booking,
+  alternativeSlots: { date: string; hour: number }[]
+) {
+  const date = formatBookingDate(booking.date);
+  const time = formatTime(booking.hour);
+
+  const altRows = alternativeSlots
+    .map((s) => {
+      const d = formatBookingDate(s.date);
+      const t = formatTime(s.hour);
+      return `
+        <div class="detail-row">
+          <span class="detail-value" style="text-align:left; width:100%;">${d} at ${t}</span>
+        </div>`;
+    })
+    .join("");
+
+  const altText = alternativeSlots
+    .map((s) => `  - ${formatBookingDate(s.date)} at ${formatTime(s.hour)}`)
+    .join("\n");
+
+  const html = emailWrapper(`
+    <div class="header">
+      <div class="brand">DiFazio Tennis</div>
+      <h1>Scheduling update</h1>
+    </div>
+
+    <div class="body">
+      <p>Hi ${booking.clientName || "there"},</p>
+      <p>Unfortunately the court is not available for your requested time on <strong>${date} at ${time}</strong>. I apologize for the inconvenience.</p>
+
+      ${alternativeSlots.length > 0 ? `
+        <p>Here are some upcoming times that work:</p>
+        <div class="detail-grid">
+          ${altRows}
+        </div>
+
+        <div class="btn-container">
+          <a href="https://difaziotennis.com/book" class="btn btn-primary">Book a New Time</a>
+        </div>
+        <p class="muted" style="text-align:center;">Click above to select one of these times, or any other available slot.</p>
+      ` : `
+        <div class="btn-container">
+          <a href="https://difaziotennis.com/book" class="btn btn-primary">View Available Times</a>
+        </div>
+      `}
+    </div>
+
+    <div class="footer">
+      <div class="footer-text">
+        DiFazio Tennis &middot; Rhinebeck, NY<br>
+        <a href="mailto:difaziotennis@gmail.com" style="color:#8a8477;">difaziotennis@gmail.com</a> &middot; <a href="tel:6319015220" style="color:#8a8477;">631-901-5220</a>
+      </div>
+    </div>
+  `);
+
+  const text = `
+Hi ${booking.clientName || "there"},
+
+Unfortunately the court is not available for your requested time on ${date} at ${time}. I apologize for the inconvenience.
+
+${alternativeSlots.length > 0 ? `Here are some upcoming times that work:\n${altText}\n\nBook a new time: https://difaziotennis.com/book` : `View available times: https://difaziotennis.com/book`}
+
+DiFazio Tennis - Rhinebeck, NY
+difaziotennis@gmail.com | 631-901-5220
+  `.trim();
+
+  const subject = `Scheduling Update - ${date} at ${time}`;
+
+  return { subject, html, text };
+}
+
+// ─── ADMIN DECLINE CONFIRMATION EMAIL ───────────────────────────
+
+export function adminDeclineConfirmationEmail(
+  booking: Booking,
+  alternativeSlots: { date: string; hour: number }[]
+) {
+  const date = formatBookingDate(booking.date);
+  const time = formatTime(booking.hour);
+
+  const altList = alternativeSlots
+    .map((s) => `${formatBookingDate(s.date)} at ${formatTime(s.hour)}`)
+    .join(", ");
+
+  const html = emailWrapper(`
+    <div class="header">
+      <div class="brand">DiFazio Tennis</div>
+      <div style="display:flex; align-items:center; gap:10px; margin-top:6px;">
+        <h1>Lesson declined</h1>
+        <span class="tag tag-amber">Court Unavailable</span>
+      </div>
+    </div>
+
+    <div class="body">
+      <p>You declined this lesson due to court unavailability. The client has been notified${alternativeSlots.length > 0 ? " with alternative times" : ""}.</p>
+
+      <div class="detail-grid">
+        <div class="detail-row">
+          <span class="detail-label">Client</span>
+          <span class="detail-value">${booking.clientName || "Not provided"}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Requested</span>
+          <span class="detail-value">${date} at ${time}</span>
+        </div>
+        ${alternativeSlots.length > 0 ? `
+        <div class="detail-row">
+          <span class="detail-label">Alternatives Sent</span>
+          <span class="detail-value" style="font-size:12px;">${altList}</span>
+        </div>` : ""}
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="footer-text">Declined ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</div>
+    </div>
+  `);
+
+  const text = `
+Lesson Declined (Court Unavailable)
+
+Client: ${booking.clientName || "Not provided"}
+Requested: ${date} at ${time}
+${alternativeSlots.length > 0 ? `Alternatives sent: ${altList}` : "No alternatives available"}
+
+The client has been notified.
+  `.trim();
+
+  const subject = `Declined: ${booking.clientName || "Client"} - ${date} at ${time} (court unavailable)`;
+
+  return { subject, html, text };
+}
+
 // ─── ADMIN LESSON REQUEST EMAIL ──────────────────────────────────
 
-export function adminRequestEmail(booking: Booking, confirmUrl: string) {
+export function adminRequestEmail(booking: Booking, confirmUrl: string, declineUrl?: string) {
   const date = formatBookingDate(booking.date);
   const time = formatTime(booking.hour);
 
@@ -281,11 +418,12 @@ export function adminRequestEmail(booking: Booking, confirmUrl: string) {
         </div>
       </div>
 
-      <div class="btn-container">
+      <div class="btn-container" style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
         <a href="${confirmUrl}" class="btn btn-primary">Accept Lesson</a>
+        ${declineUrl ? `<a href="${declineUrl}" class="btn btn-outline" style="color:#92400e !important; border-color:#e8c87a;">Court Unavailable</a>` : ""}
       </div>
 
-      <p class="muted" style="text-align:center;">Accepting will send a confirmation email with payment links to the client.</p>
+      <p class="muted" style="text-align:center;">Accept sends a confirmation with payment links. Court Unavailable notifies the client and suggests alternative times.</p>
     </div>
 
     <div class="footer">
@@ -304,6 +442,7 @@ Time: ${time}
 Amount: $${booking.amount}
 
 Accept this lesson: ${confirmUrl}
+${declineUrl ? `\nCourt unavailable? Notify client with alternatives: ${declineUrl}` : ""}
   `.trim();
 
   const subject = `New Lesson Request: ${booking.clientName || "Client"} - ${date} at ${time}`;

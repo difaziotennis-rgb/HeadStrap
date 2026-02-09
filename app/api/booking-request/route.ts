@@ -28,11 +28,12 @@ export async function POST(request: Request) {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
     
     const confirmUrl = `${baseUrl}/confirm-booking?token=${token}`;
+    const declineUrl = `${baseUrl}/decline-booking?token=${token}`;
 
     const notificationEmail = "difaziotennis@gmail.com";
 
     // Generate email from template
-    const email = adminRequestEmail(booking, confirmUrl);
+    const email = adminRequestEmail(booking, confirmUrl, declineUrl);
 
     // Send email via Gmail SMTP
     const result = await sendEmail({
