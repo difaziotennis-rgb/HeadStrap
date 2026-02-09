@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, CheckCircle, Mail, Loader2 } from "lucide-react";
+import { X, CheckCircle, Mail, Loader2, ChevronDown } from "lucide-react";
 import { TimeSlot, Booking } from "@/lib/types";
 import { formatTime } from "@/lib/utils";
 import { getLessonRate } from "@/lib/payment-config";
@@ -24,7 +24,58 @@ export function BookingModal({ slot, isOpen, onClose, onBookingComplete }: Booki
   const [error, setError] = useState("");
   const [requestSubmitted, setRequestSubmitted] = useState(false);
 
+  // Member code state
+  const [showMemberCode, setShowMemberCode] = useState(false);
+  const [memberCode, setMemberCode] = useState("");
+  const [memberValidated, setMemberValidated] = useState(false);
+  const [memberId, setMemberId] = useState("");
+  const [memberValidating, setMemberValidating] = useState(false);
+  const [memberError, setMemberError] = useState("");
+
   if (!isOpen) return null;
+
+  const validateMemberCode = async (code: string) => {
+    if (!code.trim()) {
+      setMemberValidated(false);
+      setMemberId("");
+      setMemberError("");
+      return;
+    }
+
+    setMemberValidating(true);
+    setMemberError("");
+
+    try {
+      const res = await fetch("/api/validate-member", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberCode: code.trim() }),
+      });
+
+      const data = await res.json();
+
+      if (data.valid && data.member) {
+        setMemberValidated(true);
+        setMemberId(data.member.id);
+        // Auto-fill form fields from member data
+        setFormData({
+          name: data.member.name || formData.name,
+          email: data.member.email || formData.email,
+          phone: data.member.phone || formData.phone,
+        });
+        setMemberError("");
+      } else {
+        setMemberValidated(false);
+        setMemberId("");
+        setMemberError(data.error || "Invalid member code");
+      }
+    } catch {
+      setMemberValidated(false);
+      setMemberError("Could not validate code");
+    } finally {
+      setMemberValidating(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,6 +115,7 @@ export function BookingModal({ slot, isOpen, onClose, onBookingComplete }: Booki
         createdAt: new Date().toISOString(),
         paymentStatus: "pending",
         amount: getLessonRate(),
+        ...(memberValidated && memberCode.trim() ? { memberCode: memberCode.trim().toUpperCase(), memberId } : {}),
       };
 
       // Send booking request to admin
@@ -93,6 +145,11 @@ export function BookingModal({ slot, isOpen, onClose, onBookingComplete }: Booki
   const handleClose = () => {
     setFormData({ name: "", email: "", phone: "" });
     setRequestSubmitted(false);
+    setMemberCode("");
+    setMemberValidated(false);
+    setMemberId("");
+    setShowMemberCode(false);
+    setMemberError("");
     setError("");
     onClose();
     if (requestSubmitted) {
@@ -143,7 +200,11 @@ export function BookingModal({ slot, isOpen, onClose, onBookingComplete }: Booki
           {/* Note */}
           <div className="px-8 py-5">
             <p className="text-[13px] text-[#6b665e] leading-relaxed text-center">
-              A confirmation email will be sent to <span className="text-[#1a1a1a] font-medium">{formData.email}</span> once your lesson is accepted.
+              {memberValidated ? (
+                <>A confirmation will be sent to <span className="text-[#1a1a1a] font-medium">{formData.email}</span>. Your card on file will be charged upon completion of your lesson.</>
+              ) : (
+                <>A confirmation email will be sent to <span className="text-[#1a1a1a] font-medium">{formData.email}</span> once your lesson is accepted.</>
+              )}
             </p>
           </div>
 
@@ -272,6 +333,94 @@ export function BookingModal({ slot, isOpen, onClose, onBookingComplete }: Booki
                 aria-required="false"
               />
             </div>
+          </div>
+
+          {/* Subtle member code section */}
+          <div className="mt-3 pt-3 border-t border-[#f0ede8]">
+            {!showMemberCode ? (
+              <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setShowMemberCode(true)}
+                  className="text-[11px] text-[#b0a99f] hover:text-[#8a8477] transition-colors"
+                >
+                  Have a member code?
+                </button>
+                <a
+                  href="/become-a-member"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[11px] text-[#b0a99f] hover:text-[#8a8477] transition-colors"
+                >
+                  Become a member
+                </a>
+              </div>
+            ) : (
+              <div>
+                <label className="block text-[10px] tracking-[0.12em] uppercase text-[#a39e95] mb-1.5">
+                  Member Code
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={memberCode}
+                    onChange={(e) => {
+                      const val = e.target.value.toUpperCase();
+                      setMemberCode(val);
+                      if (val.length >= 6) {
+                        validateMemberCode(val);
+                      } else {
+                        setMemberValidated(false);
+                        setMemberId("");
+                        setMemberError("");
+                      }
+                    }}
+                    className={`w-full px-3 py-2 bg-white border rounded-lg text-[16px] sm:text-[13px] text-[#1a1a1a] placeholder:text-[#c4bfb8] focus:ring-1 outline-none transition-all font-mono tracking-wider ${
+                      memberValidated
+                        ? "border-[#2d5016] focus:ring-[#2d5016] focus:border-[#2d5016]"
+                        : memberError
+                        ? "border-[#fecaca] focus:ring-[#991b1b] focus:border-[#991b1b]"
+                        : "border-[#e8e5df] focus:ring-[#1a1a1a] focus:border-[#1a1a1a]"
+                    }`}
+                    placeholder="DT-XXXX"
+                    maxLength={7}
+                  />
+                  {memberValidating && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-[#a39e95]" />
+                    </div>
+                  )}
+                  {memberValidated && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <CheckCircle className="h-3.5 w-3.5 text-[#2d5016]" />
+                    </div>
+                  )}
+                </div>
+                {memberValidated && (
+                  <p className="text-[10px] text-[#2d5016] mt-1">
+                    Card on file will be charged after your lesson.
+                  </p>
+                )}
+                {memberError && (
+                  <p className="text-[10px] text-[#991b1b] mt-1">{memberError}</p>
+                )}
+                {!memberValidated && !memberError && (
+                  <div className="flex items-center justify-between mt-1">
+                    <p className="text-[10px] text-[#b0a99f]">
+                      Skip manual payment every time
+                    </p>
+                    <a
+                      href="/become-a-member"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[10px] text-[#b0a99f] hover:text-[#8a8477] transition-colors underline"
+                    >
+                      Get a code
+                    </a>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {error && (

@@ -22,6 +22,19 @@ export interface Booking {
   createdAt: string;
   paymentStatus?: "pending" | "paid" | "refunded";
   amount: number;
+  memberCode?: string;
+  memberId?: string;
+}
+
+export interface Member {
+  id: string;
+  member_code: string;
+  stripe_customer_id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  active: boolean;
+  created_at: string;
 }
 
 export interface AdminUser {

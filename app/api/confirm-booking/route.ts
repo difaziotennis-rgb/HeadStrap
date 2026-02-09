@@ -42,6 +42,7 @@ export async function POST(request: Request) {
 
     // ── Persist booking & mark time slot as booked in Supabase ──
     const supabase = getBookingServerClient();
+    const isMember = !!booking.memberCode;
 
     // 1. Save the booking with status "confirmed"
     const confirmedBooking = { ...booking, status: "confirmed" as const };
@@ -59,6 +60,8 @@ export async function POST(request: Request) {
         created_at: confirmedBooking.createdAt,
         payment_status: confirmedBooking.paymentStatus || null,
         amount: confirmedBooking.amount,
+        member_code: confirmedBooking.memberCode || null,
+        member_id: confirmedBooking.memberId || null,
       }, { onConflict: "id" });
 
     if (bookingErr) {
@@ -85,10 +88,21 @@ export async function POST(request: Request) {
       console.error("[confirm-booking] Failed to mark time slot as booked:", slotErr);
     }
 
-    // Create Stripe checkout session for the email payment link
+    // For members, build a charge URL instead of Stripe checkout
+    // For non-members, create Stripe checkout session for the email payment link
     let stripeCheckoutUrl = "";
+    let chargeUrl = "";
     const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
-    if (stripeSecretKey) {
+
+    if (isMember && booking.memberId) {
+      // Build a charge URL the admin can click after the lesson
+      const chargeToken = Buffer.from(JSON.stringify({
+        bookingId: booking.id,
+        memberId: booking.memberId,
+        amount: booking.amount,
+      })).toString("base64url");
+      chargeUrl = `${baseUrl}/charge-member?token=${chargeToken}`;
+    } else if (stripeSecretKey) {
       try {
         const stripe = new Stripe(stripeSecretKey, { apiVersion: "2025-12-15.clover" });
         const session = await stripe.checkout.sessions.create({
@@ -123,7 +137,7 @@ export async function POST(request: Request) {
 
     // Generate emails from templates
     const clientEmail = clientConfirmationEmail(booking, stripeCheckoutUrl);
-    const adminEmailContent = adminConfirmationEmail(booking);
+    const adminEmailContent = adminConfirmationEmail(booking, chargeUrl);
 
     // Send confirmation email to client
     const clientResult = await sendEmail({

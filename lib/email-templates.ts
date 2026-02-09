@@ -85,6 +85,79 @@ function getPaymentLinks(booking: Booking, formattedDate: string, formattedTime:
 export function clientConfirmationEmail(booking: Booking, stripeCheckoutUrl?: string) {
   const date = formatBookingDate(booking.date);
   const time = formatTime(booking.hour);
+  const isMember = !!booking.memberCode;
+
+  // Member confirmation — no payment links, just auto-charge note
+  if (isMember) {
+    const html = emailWrapper(`
+      <div class="header">
+        <div class="brand">DiFazio Tennis</div>
+        <h1>Your lesson is confirmed</h1>
+      </div>
+
+      <div class="body">
+        <p>Hi ${booking.clientName || "there"}, your private lesson has been confirmed. Details below.</p>
+
+        <div class="detail-grid">
+          <div class="detail-row">
+            <span class="detail-label">Date</span>
+            <span class="detail-value">${date}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Time</span>
+            <span class="detail-value">${time}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Duration</span>
+            <span class="detail-value">1 hour</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Location</span>
+            <span class="detail-value">Rhinebeck Tennis Club</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Lesson fee</span>
+            <span class="detail-value">$${booking.amount}</span>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div style="text-align:center; padding:16px 20px; background:#f7f7f5; border-radius:10px; border:1px solid #e8e5df;">
+          <p style="font-size:13px; color:#2d5016; font-weight:600; margin:0 0 4px;">Member — Auto-Pay Enabled</p>
+          <p style="font-size:12px; color:#8a8477; margin:0;">Your card on file will be charged $${booking.amount} upon completion of your lesson.</p>
+        </div>
+      </div>
+
+      <div class="footer">
+        <div class="footer-text">
+          DiFazio Tennis &middot; Rhinebeck, NY<br>
+          <a href="mailto:difaziotennis@gmail.com" style="color:#8a8477;">difaziotennis@gmail.com</a> &middot; <a href="tel:6319015220" style="color:#8a8477;">631-901-5220</a>
+        </div>
+      </div>
+    `);
+
+    const text = `
+Your lesson is confirmed!
+
+Hi ${booking.clientName || "there"},
+
+Date: ${date}
+Time: ${time}
+Duration: 1 hour
+Location: Rhinebeck Tennis Club
+Fee: $${booking.amount}
+
+PAYMENT: Your card on file will be charged $${booking.amount} upon completion of your lesson.
+
+DiFazio Tennis - Rhinebeck, NY
+difaziotennis@gmail.com | 631-901-5220
+    `.trim();
+
+    return { subject: `Lesson Confirmed - ${date} at ${time}`, html, text };
+  }
+
+  // Non-member confirmation — payment links as usual
   const { venmo, paypal } = getPaymentLinks(booking, date, time);
 
   const html = emailWrapper(`
@@ -167,9 +240,10 @@ difaziotennis@gmail.com | 631-901-5220
 
 // ─── ADMIN CONFIRMATION EMAIL ────────────────────────────────────
 
-export function adminConfirmationEmail(booking: Booking) {
+export function adminConfirmationEmail(booking: Booking, chargeUrl?: string) {
   const date = formatBookingDate(booking.date);
   const time = formatTime(booking.hour);
+  const isMember = !!booking.memberCode;
 
   const html = emailWrapper(`
     <div class="header">
@@ -181,7 +255,7 @@ export function adminConfirmationEmail(booking: Booking) {
     </div>
 
     <div class="body">
-      <p>You accepted this lesson. A confirmation with payment links has been sent to the client.</p>
+      <p>You accepted this lesson. ${isMember ? "The client is a member — their card on file will be charged when you're ready." : "A confirmation with payment links has been sent to the client."}</p>
 
       <div class="detail-grid">
         <div class="detail-row">
@@ -209,7 +283,19 @@ export function adminConfirmationEmail(booking: Booking) {
           <span class="detail-label">Amount</span>
           <span class="detail-value">$${booking.amount}</span>
         </div>
+        ${isMember ? `
+        <div class="detail-row">
+          <span class="detail-label">Member</span>
+          <span class="detail-value">${booking.memberCode}</span>
+        </div>` : ""}
       </div>
+
+      ${isMember && chargeUrl ? `
+        <div class="btn-container">
+          <a href="${chargeUrl}" class="btn btn-primary">Charge $${booking.amount}</a>
+        </div>
+        <p class="muted" style="text-align:center;">Tap after the lesson to charge the client's card on file.</p>
+      ` : ""}
     </div>
 
     <div class="footer">
@@ -226,8 +312,10 @@ Phone: ${booking.clientPhone || "Not provided"}
 Date: ${date}
 Time: ${time}
 Amount: $${booking.amount}
+${isMember ? `Member: ${booking.memberCode}` : ""}
 
-A confirmation has been sent to the client.
+${isMember ? "Client is a member — charge their card after the lesson." : "A confirmation has been sent to the client."}
+${isMember && chargeUrl ? `\nCharge client: ${chargeUrl}` : ""}
   `.trim();
 
   const subject = `Confirmed: ${booking.clientName || "Client"} - ${date} at ${time}`;
@@ -417,6 +505,11 @@ export function adminRequestEmail(booking: Booking, confirmUrl: string, declineU
           <span class="detail-label">Amount</span>
           <span class="detail-value">$${booking.amount}</span>
         </div>
+        ${booking.memberCode ? `
+        <div class="detail-row">
+          <span class="detail-label">Member</span>
+          <span class="detail-value" style="color:#2d5016; font-weight:600;">${booking.memberCode} — auto-pay</span>
+        </div>` : ""}
       </div>
 
       <div class="btn-container" style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
@@ -424,7 +517,7 @@ export function adminRequestEmail(booking: Booking, confirmUrl: string, declineU
         ${declineUrl ? `<a href="${declineUrl}" class="btn btn-outline" style="color:#92400e !important; border-color:#e8c87a;">Court Unavailable</a>` : ""}
       </div>
 
-      <p class="muted" style="text-align:center;">Accept sends a confirmation with payment links. Court Unavailable notifies the client and suggests alternative times.</p>
+      <p class="muted" style="text-align:center;">${booking.memberCode ? "Accept confirms the lesson. Client is a member — card on file will be charged after the lesson." : "Accept sends a confirmation with payment links. Court Unavailable notifies the client and suggests alternative times."}</p>
     </div>
 
     <div class="footer">
@@ -441,6 +534,7 @@ Phone: ${booking.clientPhone || "Not provided"}
 Date: ${date}
 Time: ${time}
 Amount: $${booking.amount}
+${booking.memberCode ? `Member: ${booking.memberCode} (auto-pay)` : ""}
 
 Accept this lesson: ${confirmUrl}
 ${declineUrl ? `\nCourt unavailable? Notify client with alternatives: ${declineUrl}` : ""}
