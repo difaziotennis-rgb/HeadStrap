@@ -534,7 +534,7 @@ export default function JuniorsPage() {
                     placeholder="e.g. beginner, played one season, etc."
                   />
                   <p className="text-[10px] text-[#a39e95] mt-1">
-                    A few words about your child's level helps us place them in the right group.
+                    A few words about your child's level helps us place them appropriately.
                   </p>
                 </div>
               </div>
