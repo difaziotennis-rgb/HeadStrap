@@ -1,20 +1,22 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Calendar } from "@/components/calendar";
 import { BookingModal } from "@/components/booking-modal";
 import { AdminCalendar } from "@/components/admin-calendar";
 import { AdminDashboard } from "@/components/admin-dashboard";
 import { AdminRecurring } from "@/components/admin-recurring";
 import { TimeSlot } from "@/lib/types";
-import { migrateFromLocalStorage } from "@/lib/booking-data";
+import { migrateFromLocalStorage, readSlotsForDate } from "@/lib/booking-data";
 import { LogOut, Lock, Trophy, LayoutDashboard, CalendarDays, Repeat } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type AdminTab = "dashboard" | "calendar" | "recurring";
 
-export default function BookPage() {
+function BookPageContent() {
+  const searchParams = useSearchParams();
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -26,6 +28,7 @@ export default function BookPage() {
   const [adminError, setAdminError] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
   const adminLoginRef = useRef<HTMLDivElement>(null);
+  const hasHandledDeepLink = useRef(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -37,6 +40,29 @@ export default function BookPage() {
       }
     }
   }, []);
+
+  // Handle deep link from email (e.g. /book?date=2026-02-11&hour=10)
+  useEffect(() => {
+    if (hasHandledDeepLink.current) return;
+    const dateParam = searchParams.get("date");
+    const hourParam = searchParams.get("hour");
+    if (dateParam && hourParam) {
+      hasHandledDeepLink.current = true;
+      const hour = parseFloat(hourParam);
+      const date = new Date(dateParam + "T12:00:00");
+      setSelectedDate(date);
+
+      // Fetch the slot for this date/hour and open the booking modal
+      readSlotsForDate(dateParam).then((slots) => {
+        const slotId = `${dateParam}-${hour}`;
+        const slot = slots[slotId];
+        if (slot && slot.available && !slot.booked) {
+          setSelectedSlot(slot);
+          setIsModalOpen(true);
+        }
+      });
+    }
+  }, [searchParams]);
 
   const handleDateSelect = (date: Date) => setSelectedDate(date);
 
@@ -301,5 +327,17 @@ export default function BookPage() {
         </div>
       </footer>
     </div>
+  );
+}
+
+export default function BookPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#f7f7f5] flex items-center justify-center">
+        <p className="text-[13px] text-[#7a756d]">Loading...</p>
+      </div>
+    }>
+      <BookPageContent />
+    </Suspense>
   );
 }

@@ -248,15 +248,17 @@ export function courtUnavailableEmail(
     .map((s) => {
       const d = formatBookingDate(s.date);
       const t = formatTime(s.hour);
+      const bookUrl = `https://difaziotennis.com/book?date=${s.date}&hour=${s.hour}`;
       return `
-        <div class="detail-row">
-          <span class="detail-value" style="text-align:left; width:100%;">${d} at ${t}</span>
-        </div>`;
+        <a href="${bookUrl}" style="display:block; padding:12px 16px; border-bottom:1px solid #f5f3f0; text-decoration:none; color:#1a1a1a; font-size:14px; font-weight:500; transition:background 0.15s;">
+          ${d} at ${t}
+          <span style="float:right; font-size:12px; color:#2d5016; font-weight:600;">Book &rarr;</span>
+        </a>`;
     })
     .join("");
 
   const altText = alternativeSlots
-    .map((s) => `  - ${formatBookingDate(s.date)} at ${formatTime(s.hour)}`)
+    .map((s) => `  - ${formatBookingDate(s.date)} at ${formatTime(s.hour)}: https://difaziotennis.com/book?date=${s.date}&hour=${s.hour}`)
     .join("\n");
 
   const html = emailWrapper(`
@@ -271,14 +273,14 @@ export function courtUnavailableEmail(
 
       ${alternativeSlots.length > 0 ? `
         <p>Here are some upcoming available times that you may be interested in:</p>
-        <div class="detail-grid">
+        <div style="margin:20px 0; border:1px solid #e8e5df; border-radius:10px; overflow:hidden;">
           ${altRows}
         </div>
 
+        <p class="muted" style="text-align:center;">Tap any time above to book it, or browse all available times below.</p>
         <div class="btn-container">
-          <a href="https://difaziotennis.com/book" class="btn btn-primary">Book a New Time</a>
+          <a href="https://difaziotennis.com/book" class="btn btn-primary">View All Available Times</a>
         </div>
-        <p class="muted" style="text-align:center;">Click above to select one of these times, or any other available slot.</p>
       ` : `
         <div class="btn-container">
           <a href="https://difaziotennis.com/book" class="btn btn-primary">View Available Times</a>
