@@ -58,39 +58,78 @@ export default function JuniorsPage() {
     parentEmail: "",
     parentPhone: "",
     experience: "",
-    registrationType: "weekly" as "weekly" | "dropin",
-    selectedWeeks: [] as string[],
-    selectedDay: "",
     notes: "",
   });
+  // Track which individual days are selected, keyed by date string
+  const [selectedDays, setSelectedDays] = useState<Record<string, boolean>>({});
+  // Track which weeks are expanded in the UI
+  const [expandedWeeks, setExpandedWeeks] = useState<Record<string, boolean>>({});
   const [submitted, setSubmitted] = useState(false);
   const [sending, setSending] = useState(false);
 
-  const toggleWeek = (startDate: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      selectedWeeks: prev.selectedWeeks.includes(startDate)
-        ? prev.selectedWeeks.filter((w) => w !== startDate)
-        : [...prev.selectedWeeks, startDate],
-    }));
+  const toggleWeekExpanded = (startDate: string, weekDays: string[]) => {
+    const isExpanded = expandedWeeks[startDate];
+    if (isExpanded) {
+      // Collapse: remove all days for this week
+      setExpandedWeeks((prev) => ({ ...prev, [startDate]: false }));
+      setSelectedDays((prev) => {
+        const next = { ...prev };
+        weekDays.forEach((d) => delete next[d]);
+        return next;
+      });
+    } else {
+      // Expand: select all days for this week by default
+      setExpandedWeeks((prev) => ({ ...prev, [startDate]: true }));
+      setSelectedDays((prev) => {
+        const next = { ...prev };
+        weekDays.forEach((d) => (next[d] = true));
+        return next;
+      });
+    }
   };
 
-  const totalPrice =
-    formData.registrationType === "weekly"
-      ? formData.selectedWeeks.length * WEEKLY_PRICE
-      : DROPIN_PRICE;
+  const toggleDay = (date: string) => {
+    setSelectedDays((prev) => {
+      const next = { ...prev };
+      if (next[date]) {
+        delete next[date];
+      } else {
+        next[date] = true;
+      }
+      return next;
+    });
+  };
+
+  // Calculate pricing: for each week, if all 3 days are selected → weekly rate; otherwise each day is drop-in
+  const { totalPrice, weeklyCount, dropinCount, totalDays } = useMemo(() => {
+    let weekly = 0;
+    let dropin = 0;
+    const allSelected = Object.keys(selectedDays).filter((d) => selectedDays[d]);
+
+    for (const week of weeks) {
+      const selectedInWeek = week.days.filter((d) => selectedDays[d]);
+      if (selectedInWeek.length === week.days.length && week.days.length === 3) {
+        weekly++;
+      } else {
+        dropin += selectedInWeek.length;
+      }
+    }
+
+    return {
+      totalPrice: weekly * WEEKLY_PRICE + dropin * DROPIN_PRICE,
+      weeklyCount: weekly,
+      dropinCount: dropin,
+      totalDays: allSelected.length,
+    };
+  }, [selectedDays, weeks]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (
-      formData.registrationType === "weekly" &&
-      formData.selectedWeeks.length === 0
-    ) {
-      return;
-    }
+    if (totalDays === 0) return;
 
     setSending(true);
+
+    const allSelected = Object.keys(selectedDays).filter((d) => selectedDays[d]).sort();
 
     try {
       const res = await fetch("/api/junior-registration", {
@@ -98,7 +137,14 @@ export default function JuniorsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
+          selectedDays: allSelected,
+          weeklyCount,
+          dropinCount,
           totalPrice,
+          registrationType: dropinCount > 0 ? "mixed" : "weekly",
+          selectedWeeks: weeks
+            .filter((w) => w.days.every((d) => selectedDays[d]) && w.days.length === 3)
+            .map((w) => w.startDate),
         }),
       });
 
@@ -111,25 +157,6 @@ export default function JuniorsPage() {
       setSending(false);
     }
   };
-
-  // All clinic days for drop-in picker
-  const allDays = useMemo(() => {
-    const days: { date: string; label: string }[] = [];
-    for (const week of weeks) {
-      for (const d of week.days) {
-        const dt = new Date(d + "T12:00:00");
-        days.push({
-          date: d,
-          label: dt.toLocaleDateString("en-US", {
-            weekday: "long",
-            month: "long",
-            day: "numeric",
-          }),
-        });
-      }
-    }
-    return days;
-  }, [weeks]);
 
   return (
     <div className="min-h-screen bg-[#f7f7f5]">
@@ -337,7 +364,7 @@ export default function JuniorsPage() {
             Register
           </h2>
           <p className="text-[13px] text-[#7a756d] text-center mb-8">
-            Choose your weeks or drop in for a single session.
+            Select full weeks or individual days below.
           </p>
 
           {submitted ? (
@@ -355,110 +382,104 @@ export default function JuniorsPage() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Registration Type */}
-              <div className="bg-white rounded-2xl border border-[#e8e5df] p-5">
-                <p className="text-[10px] tracking-[0.15em] uppercase text-[#7a756d] font-medium mb-3">
-                  Registration Type
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setFormData({ ...formData, registrationType: "weekly", selectedDay: "" })
-                    }
-                    className={`py-3 px-4 rounded-xl text-[13px] font-medium transition-all border ${
-                      formData.registrationType === "weekly"
-                        ? "bg-[#2d5016] text-white border-[#2d5016]"
-                        : "bg-[#faf9f7] text-[#1a1a1a] border-[#e8e5df] hover:border-[#c4bfb8]"
-                    }`}
-                  >
-                    <span className="block text-[16px] font-light">${WEEKLY_PRICE}</span>
-                    <span className={`text-[11px] ${formData.registrationType === "weekly" ? "text-white/70" : "text-[#a39e95]"}`}>per week</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setFormData({ ...formData, registrationType: "dropin", selectedWeeks: [] })
-                    }
-                    className={`py-3 px-4 rounded-xl text-[13px] font-medium transition-all border ${
-                      formData.registrationType === "dropin"
-                        ? "bg-[#2d5016] text-white border-[#2d5016]"
-                        : "bg-[#faf9f7] text-[#1a1a1a] border-[#e8e5df] hover:border-[#c4bfb8]"
-                    }`}
-                  >
-                    <span className="block text-[16px] font-light">${DROPIN_PRICE}</span>
-                    <span className={`text-[11px] ${formData.registrationType === "dropin" ? "text-white/70" : "text-[#a39e95]"}`}>drop-in</span>
-                  </button>
-                </div>
-              </div>
-
               {/* Week Selection */}
-              {formData.registrationType === "weekly" && (
-                <div className="bg-white rounded-2xl border border-[#e8e5df] p-5">
-                  <p className="text-[10px] tracking-[0.15em] uppercase text-[#7a756d] font-medium mb-1">
-                    Select Weeks
-                  </p>
-                  <p className="text-[11px] text-[#a39e95] mb-3">
-                    Tap to select the weeks you'd like to attend.
-                  </p>
-                  <div className="space-y-1.5 max-h-[280px] overflow-y-auto">
-                    {weeks.map((week) => (
-                      <button
-                        key={week.startDate}
-                        type="button"
-                        onClick={() => toggleWeek(week.startDate)}
-                        className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-[13px] transition-all border ${
-                          formData.selectedWeeks.includes(week.startDate)
-                            ? "bg-[#e8f5e1] border-[#2d5016]/30 text-[#1a1a1a]"
-                            : "bg-[#faf9f7] border-transparent text-[#7a756d] hover:bg-[#f0ede8]"
-                        }`}
-                      >
-                        <span className="font-medium">{week.label}</span>
-                        {formData.selectedWeeks.includes(week.startDate) && (
-                          <CheckCircle className="h-4 w-4 text-[#2d5016]" />
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                  {formData.selectedWeeks.length > 0 && (
-                    <div className="mt-3 pt-3 border-t border-[#f0ede8] flex items-center justify-between">
-                      <span className="text-[12px] text-[#7a756d]">
-                        {formData.selectedWeeks.length} week{formData.selectedWeeks.length !== 1 ? "s" : ""} selected
-                      </span>
-                      <span className="text-[14px] font-medium text-[#1a1a1a]">
-                        ${totalPrice}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              )}
+              <div className="bg-white rounded-2xl border border-[#e8e5df] p-5">
+                <p className="text-[10px] tracking-[0.15em] uppercase text-[#7a756d] font-medium mb-1">
+                  Select Weeks & Days
+                </p>
+                <p className="text-[11px] text-[#a39e95] mb-3">
+                  Tap a week to add it. All 3 days = ${WEEKLY_PRICE}/week. Individual days = ${DROPIN_PRICE} each.
+                </p>
+                <div className="space-y-1.5 max-h-[380px] overflow-y-auto">
+                  {weeks.map((week) => {
+                    const isExpanded = expandedWeeks[week.startDate];
+                    const selectedInWeek = week.days.filter((d) => selectedDays[d]);
+                    const isFullWeek = selectedInWeek.length === week.days.length && week.days.length === 3;
 
-              {/* Drop-in Day Selection */}
-              {formData.registrationType === "dropin" && (
-                <div className="bg-white rounded-2xl border border-[#e8e5df] p-5">
-                  <p className="text-[10px] tracking-[0.15em] uppercase text-[#7a756d] font-medium mb-1">
-                    Select a Day
-                  </p>
-                  <p className="text-[11px] text-[#a39e95] mb-3">
-                    Choose which day you'd like to drop in.
-                  </p>
-                  <select
-                    required
-                    value={formData.selectedDay}
-                    onChange={(e) =>
-                      setFormData({ ...formData, selectedDay: e.target.value })
-                    }
-                    className="w-full px-3 py-2.5 bg-[#faf9f7] border border-[#e8e5df] rounded-lg text-[16px] sm:text-[14px] text-[#1a1a1a] focus:ring-1 focus:ring-[#2d5016] focus:border-[#2d5016] outline-none transition-all appearance-none"
-                  >
-                    <option value="">Choose a date...</option>
-                    {allDays.map((d) => (
-                      <option key={d.date} value={d.date}>
-                        {d.label}
-                      </option>
-                    ))}
-                  </select>
+                    return (
+                      <div key={week.startDate}>
+                        <button
+                          type="button"
+                          onClick={() => toggleWeekExpanded(week.startDate, week.days)}
+                          className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-[13px] transition-all border ${
+                            isExpanded
+                              ? "bg-[#e8f5e1] border-[#2d5016]/30 text-[#1a1a1a]"
+                              : "bg-[#faf9f7] border-transparent text-[#7a756d] hover:bg-[#f0ede8]"
+                          }`}
+                        >
+                          <span className="font-medium">{week.label}</span>
+                          <span className="flex items-center gap-2">
+                            {isExpanded && (
+                              <span className="text-[11px] text-[#2d5016] font-medium">
+                                {isFullWeek ? `$${WEEKLY_PRICE}` : `$${selectedInWeek.length * DROPIN_PRICE}`}
+                              </span>
+                            )}
+                            {isExpanded ? (
+                              <CheckCircle className="h-4 w-4 text-[#2d5016]" />
+                            ) : (
+                              <span className="text-[14px] text-[#c4bfb8]">+</span>
+                            )}
+                          </span>
+                        </button>
+                        {isExpanded && (
+                          <div className="ml-3 mt-1 mb-2 space-y-1">
+                            {week.days.map((day) => {
+                              const dt = new Date(day + "T12:00:00");
+                              const dayLabel = dt.toLocaleDateString("en-US", {
+                                weekday: "short",
+                                month: "short",
+                                day: "numeric",
+                              });
+                              const isChecked = selectedDays[day];
+
+                              return (
+                                <button
+                                  key={day}
+                                  type="button"
+                                  onClick={() => toggleDay(day)}
+                                  className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-[12px] transition-all ${
+                                    isChecked
+                                      ? "bg-[#f0fae8] text-[#1a1a1a]"
+                                      : "bg-[#faf9f7] text-[#a39e95]"
+                                  }`}
+                                >
+                                  <span className={isChecked ? "font-medium" : ""}>{dayLabel}</span>
+                                  <span
+                                    className={`w-4 h-4 rounded border flex items-center justify-center text-[10px] ${
+                                      isChecked
+                                        ? "bg-[#2d5016] border-[#2d5016] text-white"
+                                        : "border-[#d9d5cf] bg-white"
+                                    }`}
+                                  >
+                                    {isChecked && "✓"}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                            {selectedInWeek.length > 0 && selectedInWeek.length < 3 && (
+                              <p className="text-[10px] text-[#a39e95] px-3 pt-1">
+                                Select all 3 days to get the weekly rate (${WEEKLY_PRICE} vs ${selectedInWeek.length * DROPIN_PRICE})
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-              )}
+                {totalDays > 0 && (
+                  <div className="mt-3 pt-3 border-t border-[#f0ede8] flex items-center justify-between">
+                    <span className="text-[12px] text-[#7a756d]">
+                      {weeklyCount > 0 && `${weeklyCount} full week${weeklyCount !== 1 ? "s" : ""}`}
+                      {weeklyCount > 0 && dropinCount > 0 && " + "}
+                      {dropinCount > 0 && `${dropinCount} individual day${dropinCount !== 1 ? "s" : ""}`}
+                    </span>
+                    <span className="text-[14px] font-medium text-[#1a1a1a]">
+                      ${totalPrice}
+                    </span>
+                  </div>
+                )}
+              </div>
 
               {/* Child Info */}
               <div className="bg-white rounded-2xl border border-[#e8e5df] p-5 space-y-3">
@@ -594,17 +615,14 @@ export default function JuniorsPage() {
                   ${totalPrice}
                 </p>
                 <p className="text-[12px] text-white/40 mb-4">
-                  {formData.registrationType === "weekly"
-                    ? `${formData.selectedWeeks.length} week${formData.selectedWeeks.length !== 1 ? "s" : ""} × $${WEEKLY_PRICE}`
-                    : "Single day drop-in"}
+                  {weeklyCount > 0 && `${weeklyCount} week${weeklyCount !== 1 ? "s" : ""} × $${WEEKLY_PRICE}`}
+                  {weeklyCount > 0 && dropinCount > 0 && " + "}
+                  {dropinCount > 0 && `${dropinCount} day${dropinCount !== 1 ? "s" : ""} × $${DROPIN_PRICE}`}
+                  {totalDays === 0 && "Select days above"}
                 </p>
                 <button
                   type="submit"
-                  disabled={
-                    sending ||
-                    (formData.registrationType === "weekly" && formData.selectedWeeks.length === 0) ||
-                    (formData.registrationType === "dropin" && !formData.selectedDay)
-                  }
+                  disabled={sending || totalDays === 0}
                   className="w-full py-3.5 bg-[#2d5016] text-white rounded-xl text-[14px] font-semibold hover:bg-[#3a6a1e] transition-colors disabled:opacity-40 active:scale-[0.99]"
                 >
                   {sending ? "Registering..." : "Register Now"}
@@ -636,8 +654,8 @@ export default function JuniorsPage() {
                 a: "A racquet (we have loaners if needed), water bottle, sneakers, and sunscreen. Athletic clothing recommended.",
               },
               {
-                q: "What's the difference between weekly and drop-in?",
-                a: `Weekly registration ($${WEEKLY_PRICE}/week) covers all 3 sessions that week (Sun, Wed, Fri) and guarantees your spot. Drop-in ($${DROPIN_PRICE}/session) is for single days on a space-available basis.`,
+                q: "How does pricing work?",
+                a: `Select all 3 days in a week (Sun, Wed, Fri) and you get the weekly rate of $${WEEKLY_PRICE}. If you only want certain days, each individual session is $${DROPIN_PRICE}. You can mix and match — some full weeks and some individual days.`,
               },
               {
                 q: "What happens if it rains?",
