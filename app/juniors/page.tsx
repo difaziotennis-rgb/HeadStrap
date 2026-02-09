@@ -133,21 +133,32 @@ export default function JuniorsPage() {
             </p>
           </div>
 
-          {/* Coach */}
+          {/* Coaches */}
           <div className="bg-white rounded-2xl border border-[#e8e5df] p-6">
             <div className="flex items-center gap-2.5 mb-4">
-              <User className="h-5 w-5 text-[#2d5016]" />
+              <Users className="h-5 w-5 text-[#2d5016]" />
               <h3 className="text-[10px] tracking-[0.15em] uppercase text-[#7a756d] font-medium">
-                Your Coach
+                Your Coaches
               </h3>
             </div>
-            <p className="text-[15px] text-[#1a1a1a] font-medium mb-1">
-              Derek DiFazio
-            </p>
-            <p className="text-[14px] text-[#7a756d]">USPTA Certified Professional</p>
-            <p className="text-[13px] text-[#a39e95] mt-3">
-              15+ years coaching experience. Former Division I player at Clemson University and national doubles champion.
-            </p>
+            <div className="space-y-4">
+              <div>
+                <p className="text-[15px] text-[#1a1a1a] font-medium mb-0.5">
+                  Derek DiFazio
+                </p>
+                <p className="text-[13px] text-[#a39e95]">
+                  15+ years coaching experience. Former Division I player at Clemson University and national doubles champion.
+                </p>
+              </div>
+              <div className="border-t border-[#f0ede8] pt-4">
+                <p className="text-[15px] text-[#1a1a1a] font-medium mb-0.5">
+                  Jonah Berkowitz
+                </p>
+                <p className="text-[13px] text-[#a39e95]">
+                  Rhinebeck native with years of experience coaching all ages. Went undefeated in match play at FDR High School, played at Brown University.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
