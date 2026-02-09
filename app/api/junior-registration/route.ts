@@ -11,6 +11,8 @@ export async function POST(request: Request) {
       parentEmail,
       parentPhone,
       experience,
+      ageGroup,
+      ageGroupLabel,
       registrationType,
       selectedWeeks,
       selectedDay,
@@ -22,6 +24,8 @@ export async function POST(request: Request) {
     const scheduleDetail = registrationType === "weekly"
       ? `${(selectedWeeks || []).length} week(s)`
       : `Drop-in: ${selectedDay || "TBD"}`;
+    const timeSlot = ageGroup === "6-11" ? "11:00 AM – 12:00 PM" : "12:00 – 1:00 PM";
+    const groupLabel = ageGroupLabel || (ageGroup === "6-11" ? "Ages 6–11" : "Ages 12–16");
 
     if (!childName || !parentName || !parentEmail) {
       return NextResponse.json(
@@ -69,6 +73,8 @@ export async function POST(request: Request) {
       <div style="margin:20px 0;">
         <div class="row"><span class="label">Player</span><span class="value">${childName}</span></div>
         <div class="row"><span class="label">Age</span><span class="value">${childAge || "Not provided"}</span></div>
+        <div class="row"><span class="label">Group</span><span class="value">${groupLabel}</span></div>
+        <div class="row"><span class="label">Time</span><span class="value">${timeSlot}</span></div>
         <div class="row"><span class="label">Experience</span><span class="value">${experience || "Not specified"}</span></div>
         <div class="row"><span class="label">Type</span><span class="value">${typeLabel} — ${scheduleDetail}</span></div>
         <div class="row"><span class="label">Total</span><span class="value">$${totalPrice || 0}</span></div>
@@ -90,6 +96,8 @@ export async function POST(request: Request) {
 
 Player: ${childName}
 Age: ${childAge || "Not provided"}
+Group: ${groupLabel}
+Time: ${timeSlot}
 Experience: ${experience || "Not specified"}
 Type: ${typeLabel} — ${scheduleDetail}
 Total: $${totalPrice || 0}
@@ -132,8 +140,9 @@ Notes: ${notes || "None"}`;
       <p>Thanks for registering ${childName} for the Junior Summer Clinic! Here's a summary of your registration.</p>
       <div style="margin:20px 0;">
         <div class="row"><span class="label">Player</span><span class="value">${childName}</span></div>
+        <div class="row"><span class="label">Group</span><span class="value">${groupLabel}</span></div>
         <div class="row"><span class="label">Schedule</span><span class="value">Sun / Wed / Fri</span></div>
-        <div class="row"><span class="label">Time</span><span class="value">11:00 AM – 12:30 PM</span></div>
+        <div class="row"><span class="label">Time</span><span class="value">${timeSlot}</span></div>
         <div class="row"><span class="label">Registration</span><span class="value">${typeLabel} — ${scheduleDetail}</span></div>
         <div class="row"><span class="label">Total</span><span class="value">$${totalPrice || 0}</span></div>
         <div class="row"><span class="label">Location</span><span class="value">Rhinebeck Tennis Club</span></div>
@@ -157,8 +166,9 @@ Hi ${parentName},
 
 Thanks for registering ${childName} for the Junior Summer Clinic!
 
+Group: ${groupLabel}
 Schedule: Sunday, Wednesday, Friday
-Time: 11:00 AM – 12:30 PM
+Time: ${timeSlot}
 Registration: ${typeLabel} — ${scheduleDetail}
 Total: $${totalPrice || 0}
 Location: Rhinebeck Tennis Club, Rhinebeck, NY

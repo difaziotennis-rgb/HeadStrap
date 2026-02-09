@@ -54,6 +54,7 @@ export default function JuniorsPage() {
   const [formData, setFormData] = useState({
     childName: "",
     childAge: "",
+    ageGroup: "" as "" | "6-11" | "12-16",
     parentName: "",
     parentEmail: "",
     parentPhone: "",
@@ -125,7 +126,7 @@ export default function JuniorsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (totalDays === 0) return;
+    if (totalDays === 0 || !formData.ageGroup) return;
 
     setSending(true);
 
@@ -137,6 +138,8 @@ export default function JuniorsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
+          ageGroup: formData.ageGroup,
+          ageGroupLabel: formData.ageGroup === "6-11" ? "Ages 6–11 (11:00 AM – 12:00 PM)" : "Ages 12–16 (12:00 – 1:00 PM)",
           selectedDays: allSelected,
           weeklyCount,
           dropinCount,
@@ -171,7 +174,7 @@ export default function JuniorsPage() {
             Junior Summer Clinic
           </h1>
           <p className="text-[15px] sm:text-[17px] text-white/60 font-light max-w-md mx-auto leading-relaxed">
-            A fun, skills-based tennis program for young players of all levels.
+            A fun, skills-based tennis program for ages 6–16 with two age groups.
           </p>
 
           <div className="mt-10 flex flex-wrap items-center justify-center gap-6 text-[13px] text-white/50">
@@ -185,7 +188,16 @@ export default function JuniorsPage() {
             </span>
             <span className="flex items-center gap-1.5">
               <Clock className="h-4 w-4 text-[#8a8477]" />
-              11:00 AM – 12:30 PM
+              11 AM – 1 PM
+            </span>
+          </div>
+
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-4 text-[12px]">
+            <span className="bg-white/10 text-white/70 px-4 py-1.5 rounded-full">
+              Ages 6–11 · 11:00 AM – 12:00 PM
+            </span>
+            <span className="bg-white/10 text-white/70 px-4 py-1.5 rounded-full">
+              Ages 12–16 · 12:00 – 1:00 PM
             </span>
           </div>
 
@@ -244,7 +256,12 @@ export default function JuniorsPage() {
             <p className="text-[15px] text-[#1a1a1a] font-medium mb-1">
               Sunday, Wednesday, Friday
             </p>
-            <p className="text-[14px] text-[#7a756d]">11:00 AM – 12:30 PM</p>
+            <p className="text-[14px] text-[#7a756d]">
+              Ages 6–11: 11:00 AM – 12:00 PM
+            </p>
+            <p className="text-[14px] text-[#7a756d]">
+              Ages 12–16: 12:00 – 1:00 PM
+            </p>
             <p className="text-[13px] text-[#a39e95] mt-3">
               10 weeks from June 28 through September 2. Register by the week or drop in for a single session.
             </p>
@@ -276,11 +293,11 @@ export default function JuniorsPage() {
               </h3>
             </div>
             <p className="text-[15px] text-[#1a1a1a] font-medium mb-1">
-              Ages 6–16
+              Two Age Groups
             </p>
-            <p className="text-[14px] text-[#7a756d]">All skill levels welcome</p>
+            <p className="text-[14px] text-[#7a756d]">Ages 6–11 and Ages 12–16</p>
             <p className="text-[13px] text-[#a39e95] mt-3">
-              Beginners through advanced players. Groups are organized by age and ability.
+              All skill levels welcome. The younger group runs 11 AM – 12 PM, the middle/high school group runs 12 – 1 PM.
             </p>
           </div>
 
@@ -522,6 +539,37 @@ export default function JuniorsPage() {
                 </div>
                 <div>
                   <label className="block text-[11px] text-[#7a756d] mb-1">
+                    Age Group
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, ageGroup: "6-11" })}
+                      className={`py-2.5 px-3 rounded-lg text-[13px] font-medium transition-all border ${
+                        formData.ageGroup === "6-11"
+                          ? "bg-[#2d5016] text-white border-[#2d5016]"
+                          : "bg-[#faf9f7] text-[#1a1a1a] border-[#e8e5df] hover:border-[#c4bfb8]"
+                      }`}
+                    >
+                      <span className="block">Ages 6–11</span>
+                      <span className={`text-[10px] ${formData.ageGroup === "6-11" ? "text-white/60" : "text-[#a39e95]"}`}>11:00 AM – 12:00 PM</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, ageGroup: "12-16" })}
+                      className={`py-2.5 px-3 rounded-lg text-[13px] font-medium transition-all border ${
+                        formData.ageGroup === "12-16"
+                          ? "bg-[#2d5016] text-white border-[#2d5016]"
+                          : "bg-[#faf9f7] text-[#1a1a1a] border-[#e8e5df] hover:border-[#c4bfb8]"
+                      }`}
+                    >
+                      <span className="block">Ages 12–16</span>
+                      <span className={`text-[10px] ${formData.ageGroup === "12-16" ? "text-white/60" : "text-[#a39e95]"}`}>12:00 – 1:00 PM</span>
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[11px] text-[#7a756d] mb-1">
                     Experience Level
                   </label>
                   <input
@@ -663,7 +711,7 @@ export default function JuniorsPage() {
               },
               {
                 q: "What ages are accepted?",
-                a: "The clinic is for ages 6–16. Players are grouped by age and skill level for the best learning experience.",
+                a: "The clinic is for ages 6–16. The younger group (ages 6–11) runs from 11:00 AM – 12:00 PM, and the middle/high school group (ages 12–16) runs from 12:00 – 1:00 PM.",
               },
             ].map((item, i) => (
               <FAQItem key={i} question={item.q} answer={item.a} />
