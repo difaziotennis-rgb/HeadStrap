@@ -279,7 +279,7 @@ export default function JuniorsPage() {
                   Jonah Berkowitz
                 </p>
                 <p className="text-[13px] text-[#a39e95]">
-                  Rhinebeck native with years of experience coaching all ages. Went undefeated in match play at FDR High School, played at Brown University.
+                  Hudson Valley native with years of experience coaching all ages. Went undefeated in match play at FDR High School, played at Brown University.
                 </p>
               </div>
             </div>
