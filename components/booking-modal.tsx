@@ -365,9 +365,9 @@ export function BookingModal({ slot, isOpen, onClose, onBookingComplete }: Booki
                     type="text"
                     value={memberCode}
                     onChange={(e) => {
-                      const val = e.target.value.toUpperCase();
+                      const val = e.target.value.replace(/\D/g, ""); // digits only
                       setMemberCode(val);
-                      if (val.length >= 6) {
+                      if (val.length >= 4) {
                         validateMemberCode(val);
                       } else {
                         setMemberValidated(false);
@@ -382,8 +382,8 @@ export function BookingModal({ slot, isOpen, onClose, onBookingComplete }: Booki
                         ? "border-[#fecaca] focus:ring-[#991b1b] focus:border-[#991b1b]"
                         : "border-[#e8e5df] focus:ring-[#1a1a1a] focus:border-[#1a1a1a]"
                     }`}
-                    placeholder="DT-XXXX"
-                    maxLength={7}
+                    placeholder="1234"
+                    maxLength={4}
                   />
                   {memberValidating && (
                     <div className="absolute right-3 top-1/2 -translate-y-1/2">

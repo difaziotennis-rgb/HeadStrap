@@ -4,12 +4,9 @@ import { getBookingServerClient } from "@/lib/supabase/booking-server";
 import { sendEmail } from "@/lib/send-email";
 
 function generateMemberCode(): string {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // No I, O, 0, 1 to avoid confusion
-  let code = "DT-";
-  for (let i = 0; i < 4; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return code;
+  // 4-digit numeric code (1000–9999)
+  const num = Math.floor(1000 + Math.random() * 9000);
+  return num.toString();
 }
 
 function memberWelcomeEmail(name: string, memberCode: string) {
