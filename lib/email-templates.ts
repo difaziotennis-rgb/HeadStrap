@@ -250,9 +250,8 @@ export function courtUnavailableEmail(
       const t = formatTime(s.hour);
       const bookUrl = `https://difaziotennis.com/book?date=${s.date}&hour=${s.hour}`;
       return `
-        <a href="${bookUrl}" style="display:block; padding:12px 16px; border-bottom:1px solid #f5f3f0; text-decoration:none; color:#1a1a1a; font-size:14px; font-weight:500; transition:background 0.15s;">
+        <a href="${bookUrl}" style="display:block; padding:12px 16px; border-bottom:1px solid #f5f3f0; text-decoration:none; color:#2d5016; font-size:14px; font-weight:500;">
           ${d} at ${t}
-          <span style="float:right; font-size:12px; color:#2d5016; font-weight:600;">Book &rarr;</span>
         </a>`;
     })
     .join("");
@@ -269,7 +268,7 @@ export function courtUnavailableEmail(
 
     <div class="body">
       <p>Hi ${booking.clientName || "there"},</p>
-      <p>Unfortunately the indoor court is not available for your requested time on <strong>${date} at ${time}</strong>. I apologize for the inconvenience.</p>
+      <p>Unfortunately the indoor court is not available for your requested time on <strong>${date} at ${time}</strong>. Apologies for the inconvenience.</p>
 
       ${alternativeSlots.length > 0 ? `
         <p>Here are some upcoming available times that you may be interested in:</p>
@@ -299,7 +298,7 @@ export function courtUnavailableEmail(
   const text = `
 Hi ${booking.clientName || "there"},
 
-Unfortunately the indoor court is not available for your requested time on ${date} at ${time}. I apologize for the inconvenience.
+Unfortunately the indoor court is not available for your requested time on ${date} at ${time}. Apologies for the inconvenience.
 
 ${alternativeSlots.length > 0 ? `Here are some upcoming available times that you may be interested in:\n${altText}\n\nBook a new time: https://difaziotennis.com/book` : `View available times: https://difaziotennis.com/book`}
 
