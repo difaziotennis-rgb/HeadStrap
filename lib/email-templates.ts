@@ -267,10 +267,10 @@ export function courtUnavailableEmail(
 
     <div class="body">
       <p>Hi ${booking.clientName || "there"},</p>
-      <p>Unfortunately the court is not available for your requested time on <strong>${date} at ${time}</strong>. I apologize for the inconvenience.</p>
+      <p>Unfortunately the indoor court is not available for your requested time on <strong>${date} at ${time}</strong>. I apologize for the inconvenience.</p>
 
       ${alternativeSlots.length > 0 ? `
-        <p>Here are some upcoming times that work:</p>
+        <p>Here are some upcoming available times that you may be interested in:</p>
         <div class="detail-grid">
           ${altRows}
         </div>
@@ -297,9 +297,9 @@ export function courtUnavailableEmail(
   const text = `
 Hi ${booking.clientName || "there"},
 
-Unfortunately the court is not available for your requested time on ${date} at ${time}. I apologize for the inconvenience.
+Unfortunately the indoor court is not available for your requested time on ${date} at ${time}. I apologize for the inconvenience.
 
-${alternativeSlots.length > 0 ? `Here are some upcoming times that work:\n${altText}\n\nBook a new time: https://difaziotennis.com/book` : `View available times: https://difaziotennis.com/book`}
+${alternativeSlots.length > 0 ? `Here are some upcoming available times that you may be interested in:\n${altText}\n\nBook a new time: https://difaziotennis.com/book` : `View available times: https://difaziotennis.com/book`}
 
 DiFazio Tennis - Rhinebeck, NY
 difaziotennis@gmail.com | 631-901-5220
