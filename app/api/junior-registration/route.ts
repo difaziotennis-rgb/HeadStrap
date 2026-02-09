@@ -11,8 +11,17 @@ export async function POST(request: Request) {
       parentEmail,
       parentPhone,
       experience,
+      registrationType,
+      selectedWeeks,
+      selectedDay,
+      totalPrice,
       notes,
     } = data;
+
+    const typeLabel = registrationType === "weekly" ? "Weekly" : "Drop-in";
+    const scheduleDetail = registrationType === "weekly"
+      ? `${(selectedWeeks || []).length} week(s)`
+      : `Drop-in: ${selectedDay || "TBD"}`;
 
     if (!childName || !parentName || !parentEmail) {
       return NextResponse.json(
@@ -61,6 +70,8 @@ export async function POST(request: Request) {
         <div class="row"><span class="label">Player</span><span class="value">${childName}</span></div>
         <div class="row"><span class="label">Age</span><span class="value">${childAge || "Not provided"}</span></div>
         <div class="row"><span class="label">Experience</span><span class="value">${experience || "Not specified"}</span></div>
+        <div class="row"><span class="label">Type</span><span class="value">${typeLabel} — ${scheduleDetail}</span></div>
+        <div class="row"><span class="label">Total</span><span class="value">$${totalPrice || 0}</span></div>
         <div class="row"><span class="label">Parent</span><span class="value">${parentName}</span></div>
         <div class="row"><span class="label">Email</span><span class="value"><a href="mailto:${parentEmail}" style="color:#2d5016; text-decoration:none;">${parentEmail}</a></span></div>
         ${parentPhone ? `<div class="row"><span class="label">Phone</span><span class="value"><a href="tel:${parentPhone}" style="color:#2d5016; text-decoration:none;">${parentPhone}</a></span></div>` : ""}
@@ -80,6 +91,8 @@ export async function POST(request: Request) {
 Player: ${childName}
 Age: ${childAge || "Not provided"}
 Experience: ${experience || "Not specified"}
+Type: ${typeLabel} — ${scheduleDetail}
+Total: $${totalPrice || 0}
 Parent: ${parentName}
 Email: ${parentEmail}
 Phone: ${parentPhone || "Not provided"}
@@ -119,8 +132,10 @@ Notes: ${notes || "None"}`;
       <p>Thanks for registering ${childName} for the Junior Summer Clinic! Here's a summary of your registration.</p>
       <div style="margin:20px 0;">
         <div class="row"><span class="label">Player</span><span class="value">${childName}</span></div>
-        <div class="row"><span class="label">Schedule</span><span class="value">Mon / Wed / Fri</span></div>
-        <div class="row"><span class="label">Time</span><span class="value">10:00 AM – 12:30 PM</span></div>
+        <div class="row"><span class="label">Schedule</span><span class="value">Sun / Wed / Fri</span></div>
+        <div class="row"><span class="label">Time</span><span class="value">11:00 AM – 12:30 PM</span></div>
+        <div class="row"><span class="label">Registration</span><span class="value">${typeLabel} — ${scheduleDetail}</span></div>
+        <div class="row"><span class="label">Total</span><span class="value">$${totalPrice || 0}</span></div>
         <div class="row"><span class="label">Location</span><span class="value">Rhinebeck Tennis Club</span></div>
       </div>
       <p>We'll follow up with additional details including start date, what to bring, and payment information. In the meantime, feel free to reach out with any questions!</p>
@@ -142,8 +157,10 @@ Hi ${parentName},
 
 Thanks for registering ${childName} for the Junior Summer Clinic!
 
-Schedule: Monday, Wednesday, Friday
-Time: 10:00 AM – 12:30 PM
+Schedule: Sunday, Wednesday, Friday
+Time: 11:00 AM – 12:30 PM
+Registration: ${typeLabel} — ${scheduleDetail}
+Total: $${totalPrice || 0}
 Location: Rhinebeck Tennis Club, Rhinebeck, NY
 
 We'll follow up with additional details including start date, what to bring, and payment information.

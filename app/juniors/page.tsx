@@ -1,9 +1,56 @@
 "use client";
 
-import { useState } from "react";
-import { Sun, Calendar, Clock, MapPin, Users, ChevronDown, CheckCircle, Mail, Phone, User } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Sun, Calendar, Clock, MapPin, Users, ChevronDown, CheckCircle, DollarSign, User } from "lucide-react";
+
+// Generate all clinic weeks (Sun-Fri) from June 28 to Sept 2, 2026
+function getClinicWeeks() {
+  const weeks: { label: string; startDate: string; days: string[] }[] = [];
+  const start = new Date(2026, 5, 28); // June 28, 2026 (Sunday)
+  const end = new Date(2026, 8, 2); // Sept 2, 2026
+
+  let current = new Date(start);
+  while (current <= end) {
+    // Find the Sunday of this week
+    const sun = new Date(current);
+    while (sun.getDay() !== 0) sun.setDate(sun.getDate() - 1);
+
+    const wed = new Date(sun);
+    wed.setDate(wed.getDate() + 3);
+    const fri = new Date(sun);
+    fri.setDate(fri.getDate() + 5);
+
+    const fmt = (d: Date) =>
+      d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const isoFmt = (d: Date) => d.toISOString().split("T")[0];
+
+    // Only include if at least one day is in range
+    const days: string[] = [];
+    if (sun >= start && sun <= end) days.push(isoFmt(sun));
+    if (wed >= start && wed <= end) days.push(isoFmt(wed));
+    if (fri >= start && fri <= end) days.push(isoFmt(fri));
+
+    if (days.length > 0) {
+      weeks.push({
+        label: `${fmt(sun)} – ${fmt(fri)}`,
+        startDate: isoFmt(sun),
+        days,
+      });
+    }
+
+    // Move to next Sunday
+    current = new Date(sun);
+    current.setDate(current.getDate() + 7);
+  }
+  return weeks;
+}
+
+const WEEKLY_PRICE = 175;
+const DROPIN_PRICE = 75;
 
 export default function JuniorsPage() {
+  const weeks = useMemo(() => getClinicWeeks(), []);
+
   const [formData, setFormData] = useState({
     childName: "",
     childAge: "",
@@ -11,20 +58,48 @@ export default function JuniorsPage() {
     parentEmail: "",
     parentPhone: "",
     experience: "",
+    registrationType: "weekly" as "weekly" | "dropin",
+    selectedWeeks: [] as string[],
+    selectedDay: "",
     notes: "",
   });
   const [submitted, setSubmitted] = useState(false);
   const [sending, setSending] = useState(false);
 
+  const toggleWeek = (startDate: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      selectedWeeks: prev.selectedWeeks.includes(startDate)
+        ? prev.selectedWeeks.filter((w) => w !== startDate)
+        : [...prev.selectedWeeks, startDate],
+    }));
+  };
+
+  const totalPrice =
+    formData.registrationType === "weekly"
+      ? formData.selectedWeeks.length * WEEKLY_PRICE
+      : DROPIN_PRICE;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (
+      formData.registrationType === "weekly" &&
+      formData.selectedWeeks.length === 0
+    ) {
+      return;
+    }
+
     setSending(true);
 
     try {
       const res = await fetch("/api/junior-registration", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          totalPrice,
+        }),
       });
 
       if (res.ok) {
@@ -36,6 +111,25 @@ export default function JuniorsPage() {
       setSending(false);
     }
   };
+
+  // All clinic days for drop-in picker
+  const allDays = useMemo(() => {
+    const days: { date: string; label: string }[] = [];
+    for (const week of weeks) {
+      for (const d of week.days) {
+        const dt = new Date(d + "T12:00:00");
+        days.push({
+          date: d,
+          label: dt.toLocaleDateString("en-US", {
+            weekday: "long",
+            month: "long",
+            day: "numeric",
+          }),
+        });
+      }
+    }
+    return days;
+  }, [weeks]);
 
   return (
     <div className="min-h-screen bg-[#f7f7f5]">
@@ -56,15 +150,15 @@ export default function JuniorsPage() {
           <div className="mt-10 flex flex-wrap items-center justify-center gap-6 text-[13px] text-white/50">
             <span className="flex items-center gap-1.5">
               <Sun className="h-4 w-4 text-[#8a8477]" />
-              Summer 2026
+              June 28 – Sept 2
             </span>
             <span className="flex items-center gap-1.5">
               <Calendar className="h-4 w-4 text-[#8a8477]" />
-              Mon / Wed / Fri
+              Sun / Wed / Fri
             </span>
             <span className="flex items-center gap-1.5">
               <Clock className="h-4 w-4 text-[#8a8477]" />
-              10:00 AM – 12:30 PM
+              11:00 AM – 12:30 PM
             </span>
           </div>
 
@@ -75,6 +169,36 @@ export default function JuniorsPage() {
             >
               Register Now
             </a>
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing */}
+      <section className="bg-[#faf9f7] border-b border-[#e8e5df]">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10">
+          <div className="grid sm:grid-cols-2 gap-4 max-w-lg mx-auto">
+            <div className="bg-white rounded-2xl border border-[#e8e5df] p-6 text-center">
+              <p className="text-[10px] tracking-[0.15em] uppercase text-[#7a756d] font-medium mb-2">
+                Weekly Rate
+              </p>
+              <p className="text-[32px] font-light text-[#1a1a1a] tracking-tight">
+                ${WEEKLY_PRICE}
+              </p>
+              <p className="text-[13px] text-[#a39e95] mt-1">
+                per week · 3 sessions
+              </p>
+            </div>
+            <div className="bg-white rounded-2xl border border-[#e8e5df] p-6 text-center">
+              <p className="text-[10px] tracking-[0.15em] uppercase text-[#7a756d] font-medium mb-2">
+                Drop-In
+              </p>
+              <p className="text-[32px] font-light text-[#1a1a1a] tracking-tight">
+                ${DROPIN_PRICE}
+              </p>
+              <p className="text-[13px] text-[#a39e95] mt-1">
+                per session · single day
+              </p>
+            </div>
           </div>
         </div>
       </section>
@@ -91,11 +215,11 @@ export default function JuniorsPage() {
               </h3>
             </div>
             <p className="text-[15px] text-[#1a1a1a] font-medium mb-1">
-              Monday, Wednesday, Friday
+              Sunday, Wednesday, Friday
             </p>
-            <p className="text-[14px] text-[#7a756d]">10:00 AM – 12:30 PM</p>
+            <p className="text-[14px] text-[#7a756d]">11:00 AM – 12:30 PM</p>
             <p className="text-[13px] text-[#a39e95] mt-3">
-              Sessions run throughout the summer. Drop in for individual days or register for the full program.
+              10 weeks from June 28 through September 2. Register by the week or drop in for a single session.
             </p>
           </div>
 
@@ -188,10 +312,7 @@ export default function JuniorsPage() {
                 desc: "Review what we learned, set goals, and cool down together.",
               },
             ].map((item, i) => (
-              <div
-                key={i}
-                className="flex gap-4 items-start"
-              >
+              <div key={i} className="flex gap-4 items-start">
                 <span className="text-[12px] font-medium text-[#2d5016] bg-[#e8f5e1] w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
                   {i + 1}
                 </span>
@@ -216,7 +337,7 @@ export default function JuniorsPage() {
             Register
           </h2>
           <p className="text-[13px] text-[#7a756d] text-center mb-8">
-            Sign up below and we'll be in touch with everything you need to know.
+            Choose your weeks or drop in for a single session.
           </p>
 
           {submitted ? (
@@ -226,12 +347,119 @@ export default function JuniorsPage() {
                 You're registered!
               </h3>
               <p className="text-[13px] text-[#7a756d]">
-                Thanks for signing up{formData.childName ? ` ${formData.childName}` : ""}! We'll send a confirmation email to{" "}
+                Thanks for signing up
+                {formData.childName ? ` ${formData.childName}` : ""}! We'll
+                send a confirmation email to{" "}
                 <strong>{formData.parentEmail}</strong> with all the details.
               </p>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Registration Type */}
+              <div className="bg-white rounded-2xl border border-[#e8e5df] p-5">
+                <p className="text-[10px] tracking-[0.15em] uppercase text-[#7a756d] font-medium mb-3">
+                  Registration Type
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFormData({ ...formData, registrationType: "weekly", selectedDay: "" })
+                    }
+                    className={`py-3 px-4 rounded-xl text-[13px] font-medium transition-all border ${
+                      formData.registrationType === "weekly"
+                        ? "bg-[#2d5016] text-white border-[#2d5016]"
+                        : "bg-[#faf9f7] text-[#1a1a1a] border-[#e8e5df] hover:border-[#c4bfb8]"
+                    }`}
+                  >
+                    <span className="block text-[16px] font-light">${WEEKLY_PRICE}</span>
+                    <span className={`text-[11px] ${formData.registrationType === "weekly" ? "text-white/70" : "text-[#a39e95]"}`}>per week</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFormData({ ...formData, registrationType: "dropin", selectedWeeks: [] })
+                    }
+                    className={`py-3 px-4 rounded-xl text-[13px] font-medium transition-all border ${
+                      formData.registrationType === "dropin"
+                        ? "bg-[#2d5016] text-white border-[#2d5016]"
+                        : "bg-[#faf9f7] text-[#1a1a1a] border-[#e8e5df] hover:border-[#c4bfb8]"
+                    }`}
+                  >
+                    <span className="block text-[16px] font-light">${DROPIN_PRICE}</span>
+                    <span className={`text-[11px] ${formData.registrationType === "dropin" ? "text-white/70" : "text-[#a39e95]"}`}>drop-in</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Week Selection */}
+              {formData.registrationType === "weekly" && (
+                <div className="bg-white rounded-2xl border border-[#e8e5df] p-5">
+                  <p className="text-[10px] tracking-[0.15em] uppercase text-[#7a756d] font-medium mb-1">
+                    Select Weeks
+                  </p>
+                  <p className="text-[11px] text-[#a39e95] mb-3">
+                    Tap to select the weeks you'd like to attend.
+                  </p>
+                  <div className="space-y-1.5 max-h-[280px] overflow-y-auto">
+                    {weeks.map((week) => (
+                      <button
+                        key={week.startDate}
+                        type="button"
+                        onClick={() => toggleWeek(week.startDate)}
+                        className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-[13px] transition-all border ${
+                          formData.selectedWeeks.includes(week.startDate)
+                            ? "bg-[#e8f5e1] border-[#2d5016]/30 text-[#1a1a1a]"
+                            : "bg-[#faf9f7] border-transparent text-[#7a756d] hover:bg-[#f0ede8]"
+                        }`}
+                      >
+                        <span className="font-medium">{week.label}</span>
+                        {formData.selectedWeeks.includes(week.startDate) && (
+                          <CheckCircle className="h-4 w-4 text-[#2d5016]" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                  {formData.selectedWeeks.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-[#f0ede8] flex items-center justify-between">
+                      <span className="text-[12px] text-[#7a756d]">
+                        {formData.selectedWeeks.length} week{formData.selectedWeeks.length !== 1 ? "s" : ""} selected
+                      </span>
+                      <span className="text-[14px] font-medium text-[#1a1a1a]">
+                        ${totalPrice}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Drop-in Day Selection */}
+              {formData.registrationType === "dropin" && (
+                <div className="bg-white rounded-2xl border border-[#e8e5df] p-5">
+                  <p className="text-[10px] tracking-[0.15em] uppercase text-[#7a756d] font-medium mb-1">
+                    Select a Day
+                  </p>
+                  <p className="text-[11px] text-[#a39e95] mb-3">
+                    Choose which day you'd like to drop in.
+                  </p>
+                  <select
+                    required
+                    value={formData.selectedDay}
+                    onChange={(e) =>
+                      setFormData({ ...formData, selectedDay: e.target.value })
+                    }
+                    className="w-full px-3 py-2.5 bg-[#faf9f7] border border-[#e8e5df] rounded-lg text-[16px] sm:text-[14px] text-[#1a1a1a] focus:ring-1 focus:ring-[#2d5016] focus:border-[#2d5016] outline-none transition-all appearance-none"
+                  >
+                    <option value="">Choose a date...</option>
+                    {allDays.map((d) => (
+                      <option key={d.date} value={d.date}>
+                        {d.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               {/* Child Info */}
               <div className="bg-white rounded-2xl border border-[#e8e5df] p-5 space-y-3">
                 <p className="text-[10px] tracking-[0.15em] uppercase text-[#7a756d] font-medium">
@@ -357,16 +585,34 @@ export default function JuniorsPage() {
                 />
               </div>
 
-              <button
-                type="submit"
-                disabled={sending}
-                className="w-full py-3.5 bg-[#2d5016] text-white rounded-xl text-[14px] font-semibold hover:bg-[#3a6a1e] transition-colors disabled:opacity-50 active:scale-[0.99]"
-              >
-                {sending ? "Registering..." : "Register for Summer Clinic"}
-              </button>
+              {/* Total & Submit */}
+              <div className="bg-[#1a1a1a] rounded-2xl p-5 text-center">
+                <p className="text-[11px] tracking-[0.1em] uppercase text-white/50 mb-1">
+                  Total
+                </p>
+                <p className="text-[28px] font-light text-white tracking-tight">
+                  ${totalPrice}
+                </p>
+                <p className="text-[12px] text-white/40 mb-4">
+                  {formData.registrationType === "weekly"
+                    ? `${formData.selectedWeeks.length} week${formData.selectedWeeks.length !== 1 ? "s" : ""} × $${WEEKLY_PRICE}`
+                    : "Single day drop-in"}
+                </p>
+                <button
+                  type="submit"
+                  disabled={
+                    sending ||
+                    (formData.registrationType === "weekly" && formData.selectedWeeks.length === 0) ||
+                    (formData.registrationType === "dropin" && !formData.selectedDay)
+                  }
+                  className="w-full py-3.5 bg-[#2d5016] text-white rounded-xl text-[14px] font-semibold hover:bg-[#3a6a1e] transition-colors disabled:opacity-40 active:scale-[0.99]"
+                >
+                  {sending ? "Registering..." : "Register Now"}
+                </button>
+              </div>
 
               <p className="text-[11px] text-[#a39e95] text-center">
-                Registration is free. Payment details will be shared after sign-up.
+                Payment details will be shared after registration.
               </p>
             </form>
           )}
@@ -390,8 +636,8 @@ export default function JuniorsPage() {
                 a: "A racquet (we have loaners if needed), water bottle, sneakers, and sunscreen. Athletic clothing recommended.",
               },
               {
-                q: "Can my child attend just some of the days?",
-                a: "Yes — drop-in days are available. Full-program registration gets priority and the best rate.",
+                q: "What's the difference between weekly and drop-in?",
+                a: `Weekly registration ($${WEEKLY_PRICE}/week) covers all 3 sessions that week (Sun, Wed, Fri) and guarantees your spot. Drop-in ($${DROPIN_PRICE}/session) is for single days on a space-available basis.`,
               },
               {
                 q: "What happens if it rains?",
