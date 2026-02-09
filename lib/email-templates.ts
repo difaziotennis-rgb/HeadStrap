@@ -276,7 +276,7 @@ export function courtUnavailableEmail(
           ${altRows}
         </div>
 
-        <p class="muted" style="text-align:center;">Tap any time above to book it, or browse all available times below.</p>
+        <p class="muted" style="text-align:center;">Select any time above, or view all available times below.</p>
         <div class="btn-container">
           <a href="https://difaziotennis.com/book" class="btn btn-primary">View All Available Times</a>
         </div>
