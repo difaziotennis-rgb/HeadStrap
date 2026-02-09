@@ -3,11 +3,11 @@
 import { useState, useMemo } from "react";
 import { Sun, Calendar, Clock, MapPin, Users, ChevronDown, CheckCircle, DollarSign, User } from "lucide-react";
 
-// Generate all clinic weeks (Sun-Fri) from June 28 to July 31, 2026
+// Generate all clinic weeks (Sun-Fri) from June 28 to Sept 2, 2026
 function getClinicWeeks() {
   const weeks: { label: string; startDate: string; days: string[] }[] = [];
   const start = new Date(2026, 5, 28); // June 28, 2026 (Sunday)
-  const end = new Date(2026, 6, 31); // July 31, 2026
+  const end = new Date(2026, 8, 2); // Sept 2, 2026
 
   let current = new Date(start);
   while (current <= end) {
@@ -180,7 +180,7 @@ export default function JuniorsPage() {
           <div className="mt-10 flex flex-wrap items-center justify-center gap-6 text-[13px] text-white/50">
             <span className="flex items-center gap-1.5">
               <Sun className="h-4 w-4 text-[#8a8477]" />
-              June 28 – July 31
+              June 28 – Sept 2
             </span>
             <span className="flex items-center gap-1.5">
               <Calendar className="h-4 w-4 text-[#8a8477]" />
@@ -263,7 +263,7 @@ export default function JuniorsPage() {
               Ages 12–16: 12:00 – 1:00 PM
             </p>
             <p className="text-[13px] text-[#a39e95] mt-3">
-              5 weeks from June 28 through July 31. Register by the week or drop in for a single session.
+              10 weeks from June 28 through September 2. Register by the week or drop in for a single session.
             </p>
           </div>
 
