@@ -519,23 +519,23 @@ export default function JuniorsPage() {
                       placeholder="Age"
                     />
                   </div>
-                  <div>
-                    <label className="block text-[11px] text-[#7a756d] mb-1">
-                      Experience
-                    </label>
-                    <select
-                      value={formData.experience}
-                      onChange={(e) =>
-                        setFormData({ ...formData, experience: e.target.value })
-                      }
-                      className="w-full px-3 py-2.5 bg-[#faf9f7] border border-[#e8e5df] rounded-lg text-[16px] sm:text-[14px] text-[#1a1a1a] focus:ring-1 focus:ring-[#2d5016] focus:border-[#2d5016] outline-none transition-all appearance-none"
-                    >
-                      <option value="">Select</option>
-                      <option value="beginner">Beginner</option>
-                      <option value="intermediate">Intermediate</option>
-                      <option value="advanced">Advanced</option>
-                    </select>
-                  </div>
+                </div>
+                <div>
+                  <label className="block text-[11px] text-[#7a756d] mb-1">
+                    Experience Level
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.experience}
+                    onChange={(e) =>
+                      setFormData({ ...formData, experience: e.target.value })
+                    }
+                    className="w-full px-3 py-2.5 bg-[#faf9f7] border border-[#e8e5df] rounded-lg text-[16px] sm:text-[14px] text-[#1a1a1a] placeholder:text-[#c4bfb8] focus:ring-1 focus:ring-[#2d5016] focus:border-[#2d5016] outline-none transition-all"
+                    placeholder="e.g. beginner, played one season, etc."
+                  />
+                  <p className="text-[10px] text-[#a39e95] mt-1">
+                    A few words about your child's level helps us place them in the right group.
+                  </p>
                 </div>
               </div>
 
