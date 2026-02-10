@@ -57,7 +57,7 @@ export default function EventsPage() {
                   Memorial Day Mixed Doubles
                 </h2>
                 <p className="text-[13px] text-[#8a8477] mt-1">
-                  Memorial Day 2026 · Rhinebeck Tennis Club
+                  Saturday, May 23, 2026 · Rhinebeck Tennis Club
                 </p>
                 <div className="mt-5 inline-block px-4 py-2 bg-[#faf9f7] border border-[#e8e5df] rounded-lg">
                   <p className="text-[13px] text-[#7a756d] font-medium">
