@@ -125,7 +125,7 @@ export function clientConfirmationEmail(booking: Booking, stripeCheckoutUrl?: st
 
         <div style="text-align:center; padding:16px 20px; background:#f7f7f5; border-radius:10px; border:1px solid #e8e5df;">
           <p style="font-size:13px; color:#2d5016; font-weight:600; margin:0 0 4px;">Member — Auto-Pay Enabled</p>
-          <p style="font-size:12px; color:#8a8477; margin:0;">Your card on file will be charged $${booking.amount} upon completion of your lesson.</p>
+          <p style="font-size:12px; color:#8a8477; margin:0;">Your card on file will be charged $${booking.amount} the morning after your lesson.</p>
         </div>
       </div>
 
@@ -148,7 +148,7 @@ Duration: 1 hour
 Location: Rhinebeck Tennis Club
 Fee: $${booking.amount}
 
-PAYMENT: Your card on file will be charged $${booking.amount} upon completion of your lesson.
+PAYMENT: Your card on file will be charged $${booking.amount} the morning after your lesson.
 
 DiFazio Tennis - Rhinebeck, NY
 difaziotennis@gmail.com | 631-901-5220
@@ -255,7 +255,7 @@ export function adminConfirmationEmail(booking: Booking, chargeUrl?: string, can
     </div>
 
     <div class="body">
-      <p>You accepted this lesson. ${isMember ? "The client's card on file will be charged automatically after the lesson ends." : "A confirmation with payment links has been sent to the client."}</p>
+      <p>You accepted this lesson. ${isMember ? "The client's card on file will be charged automatically at 10 AM the morning after the lesson." : "A confirmation with payment links has been sent to the client."}</p>
 
       <div class="detail-grid">
         <div class="detail-row">
@@ -290,7 +290,7 @@ export function adminConfirmationEmail(booking: Booking, chargeUrl?: string, can
         </div>
         <div class="detail-row">
           <span class="detail-label">Payment</span>
-          <span class="detail-value" style="color:#2d5016;">Auto-charge after lesson</span>
+          <span class="detail-value" style="color:#2d5016;">Auto-charge next morning</span>
         </div>` : ""}
       </div>
 
@@ -299,7 +299,7 @@ export function adminConfirmationEmail(booking: Booking, chargeUrl?: string, can
           ${chargeUrl ? `<a href="${chargeUrl}" class="btn btn-primary">Charge Now</a>` : ""}
           ${cancelAutoChargeUrl ? `<a href="${cancelAutoChargeUrl}" class="btn btn-outline" style="color:#92400e !important; border-color:#e8c87a;">Cancel Auto-Charge</a>` : ""}
         </div>
-        <p class="muted" style="text-align:center;">Payment will be charged automatically after the lesson. Use "Cancel Auto-Charge" if the lesson is cancelled or you want to handle payment differently.</p>
+        <p class="muted" style="text-align:center;">Payment will be charged automatically at 10 AM the next morning. Use "Cancel Auto-Charge" if the lesson is cancelled or you want to handle payment differently.</p>
       ` : ""}
     </div>
 
@@ -319,7 +319,7 @@ Time: ${time}
 Amount: $${booking.amount}
 ${isMember ? `Member: ${booking.memberCode}\nPayment: Auto-charge after lesson` : ""}
 
-${isMember ? "Client's card will be charged automatically after the lesson." : "A confirmation has been sent to the client."}
+${isMember ? "Client's card will be charged automatically at 10 AM the next morning." : "A confirmation has been sent to the client."}
 ${isMember && chargeUrl ? `\nCharge now (manual): ${chargeUrl}` : ""}
 ${isMember && cancelAutoChargeUrl ? `Cancel auto-charge: ${cancelAutoChargeUrl}` : ""}
   `.trim();

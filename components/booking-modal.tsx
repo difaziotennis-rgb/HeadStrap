@@ -201,7 +201,7 @@ export function BookingModal({ slot, isOpen, onClose, onBookingComplete }: Booki
           <div className="px-8 py-5">
             <p className="text-[13px] text-[#6b665e] leading-relaxed text-center">
               {memberValidated ? (
-                <>A confirmation will be sent to <span className="text-[#1a1a1a] font-medium">{formData.email}</span>. Your card on file will be charged upon completion of your lesson.</>
+                <>A confirmation will be sent to <span className="text-[#1a1a1a] font-medium">{formData.email}</span>. Your card on file will be charged the morning after your lesson.</>
               ) : (
                 <>A confirmation email will be sent to <span className="text-[#1a1a1a] font-medium">{formData.email}</span> once your lesson is accepted.</>
               )}
@@ -398,7 +398,7 @@ export function BookingModal({ slot, isOpen, onClose, onBookingComplete }: Booki
                 </div>
                 {memberValidated && (
                   <p className="text-[10px] text-[#2d5016] mt-1">
-                    Card on file will be charged after your lesson.
+                    Card on file will be charged the morning after your lesson.
                   </p>
                 )}
                 {memberError && (
