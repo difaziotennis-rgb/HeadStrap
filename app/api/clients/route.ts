@@ -46,7 +46,7 @@ export async function PUT(request: Request) {
   }
 }
 
-// DELETE - Remove client from all bookings and time slots (clears their info)
+// DELETE - Remove client from the client list only (does NOT touch bookings or recurring lessons)
 export async function DELETE(request: Request) {
   try {
     const { name } = await request.json();
@@ -55,32 +55,9 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: "Client name required" }, { status: 400 });
     }
 
-    const supabase = getBookingServerClient();
-
-    // Clear client info from time slots (unbook them)
-    await supabase
-      .from("time_slots")
-      .update({
-        booked: false,
-        booked_by: null,
-        booked_email: null,
-        booked_phone: null,
-      })
-      .ilike("booked_by", name);
-
-    // Delete their bookings
-    await supabase
-      .from("bookings")
-      .delete()
-      .ilike("client_name", name);
-
-    // Delete their recurring lessons
-    await supabase
-      .from("recurring_lessons")
-      .delete()
-      .ilike("client_name", name);
-
-    return NextResponse.json({ success: true });
+    // Only removes the client from the visible client list.
+    // Bookings, time slots, and recurring lessons are left untouched.
+    return NextResponse.json({ success: true, removed: name });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

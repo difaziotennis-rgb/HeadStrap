@@ -42,6 +42,15 @@ export default function PaymentSettingsPage() {
   const [editingMember, setEditingMember] = useState<number | null>(null);
   const [editMemberData, setEditMemberData] = useState({ name: "", email: "", phone: "" });
 
+  // Hidden clients (removed from list view only, data stays intact)
+  const [hiddenClients, setHiddenClients] = useState<Set<string>>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("hiddenClients");
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    }
+    return new Set();
+  });
+
   // Delete confirmation
   const [confirmDeleteClient, setConfirmDeleteClient] = useState<number | null>(null);
   const [confirmDeleteMember, setConfirmDeleteMember] = useState<number | null>(null);
@@ -132,8 +141,9 @@ export default function PaymentSettingsPage() {
       console.error("[loadClients] Failed to fetch ladder players:", e);
     }
 
-    // Convert to sorted array
+    // Convert to sorted array, filtering out hidden clients
     const list = Array.from(clientMap.entries())
+      .filter(([key]) => !hiddenClients.has(key))
       .map(([key, info]) => ({
         name: key.replace(/\b\w/g, (c) => c.toUpperCase()),
         email: info.email,
@@ -196,19 +206,15 @@ export default function PaymentSettingsPage() {
     setEditingClient(null);
   };
 
-  const handleDeleteClient = async (i: number) => {
+  const handleDeleteClient = (i: number) => {
     const client = clients[i];
-    try {
-      await fetch("/api/clients", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: client.name }),
-      });
-      setClients(clients.filter((_, idx) => idx !== i));
-      setExpandedClient(null);
-    } catch (e) {
-      console.error("Failed to delete client:", e);
-    }
+    const key = client.name.toLowerCase().trim();
+    const updated = new Set(hiddenClients);
+    updated.add(key);
+    setHiddenClients(updated);
+    localStorage.setItem("hiddenClients", JSON.stringify(Array.from(updated)));
+    setClients(clients.filter((_, idx) => idx !== i));
+    setExpandedClient(null);
     setConfirmDeleteClient(null);
   };
 
