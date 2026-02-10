@@ -3,9 +3,10 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Save, CalendarDays, LogOut, Trophy, Users, Copy, Check } from "lucide-react";
+import { Save, CalendarDays, LogOut, Trophy, Users, Copy, Check, CreditCard, Pencil, Trash2, X as XIcon } from "lucide-react";
 import { PAYMENT_CONFIG, getLessonRate } from "@/lib/payment-config";
 import { readAllSlots, readAllRecurring, readAllBookings } from "@/lib/booking-data";
+import { Member } from "@/lib/types";
 
 interface PaymentSettings {
   paypalEmail: string;
@@ -26,6 +27,24 @@ export default function PaymentSettingsPage() {
   const [copiedEmails, setCopiedEmails] = useState(false);
   const [showClientList, setShowClientList] = useState(false);
   const [expandedClient, setExpandedClient] = useState<number | null>(null);
+
+  // Members state
+  const [members, setMembers] = useState<Member[]>([]);
+  const [membersLoaded, setMembersLoaded] = useState(false);
+  const [showMemberList, setShowMemberList] = useState(false);
+  const [expandedMember, setExpandedMember] = useState<number | null>(null);
+
+  // Edit state for clients
+  const [editingClient, setEditingClient] = useState<number | null>(null);
+  const [editClientData, setEditClientData] = useState({ name: "", email: "", phone: "" });
+
+  // Edit state for members
+  const [editingMember, setEditingMember] = useState<number | null>(null);
+  const [editMemberData, setEditMemberData] = useState({ name: "", email: "", phone: "" });
+
+  // Delete confirmation
+  const [confirmDeleteClient, setConfirmDeleteClient] = useState<number | null>(null);
+  const [confirmDeleteMember, setConfirmDeleteMember] = useState<number | null>(null);
 
   const [formData, setFormData] = useState<PaymentSettings>({
     paypalEmail: "",
@@ -52,6 +71,13 @@ export default function PaymentSettingsPage() {
       loadClients();
     }
   }, [showClientList]);
+
+  // Load members only when the list is opened
+  useEffect(() => {
+    if (showMemberList && !membersLoaded) {
+      loadMembers();
+    }
+  }, [showMemberList]);
 
   const loadClients = async () => {
     const clientMap = new Map<string, { email: string; phone: string }>();
@@ -127,6 +153,107 @@ export default function PaymentSettingsPage() {
     navigator.clipboard.writeText(emails.join(", "));
     setCopiedEmails(true);
     setTimeout(() => setCopiedEmails(false), 3000);
+  };
+
+  const loadMembers = async () => {
+    try {
+      const res = await fetch("/api/members");
+      if (res.ok) {
+        const data = await res.json();
+        setMembers(data);
+      }
+    } catch (e) {
+      console.error("Failed to load members:", e);
+    }
+    setMembersLoaded(true);
+  };
+
+  // Client edit/delete handlers
+  const handleEditClient = (i: number) => {
+    setEditingClient(i);
+    setEditClientData({ name: clients[i].name, email: clients[i].email, phone: clients[i].phone });
+  };
+
+  const handleSaveClient = async (i: number) => {
+    const original = clients[i];
+    try {
+      await fetch("/api/clients", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          originalName: original.name,
+          name: editClientData.name,
+          email: editClientData.email,
+          phone: editClientData.phone,
+        }),
+      });
+      const updated = [...clients];
+      updated[i] = { ...editClientData };
+      setClients(updated);
+    } catch (e) {
+      console.error("Failed to update client:", e);
+    }
+    setEditingClient(null);
+  };
+
+  const handleDeleteClient = async (i: number) => {
+    const client = clients[i];
+    try {
+      await fetch("/api/clients", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: client.name }),
+      });
+      setClients(clients.filter((_, idx) => idx !== i));
+      setExpandedClient(null);
+    } catch (e) {
+      console.error("Failed to delete client:", e);
+    }
+    setConfirmDeleteClient(null);
+  };
+
+  // Member edit/delete handlers
+  const handleEditMember = (i: number) => {
+    setEditingMember(i);
+    setEditMemberData({ name: members[i].name, email: members[i].email, phone: members[i].phone || "" });
+  };
+
+  const handleSaveMember = async (i: number) => {
+    const member = members[i];
+    try {
+      await fetch("/api/members", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: member.id,
+          name: editMemberData.name,
+          email: editMemberData.email,
+          phone: editMemberData.phone,
+        }),
+      });
+      const updated = [...members];
+      updated[i] = { ...updated[i], name: editMemberData.name, email: editMemberData.email, phone: editMemberData.phone };
+      setMembers(updated);
+    } catch (e) {
+      console.error("Failed to update member:", e);
+    }
+    setEditingMember(null);
+  };
+
+  const handleDeleteMember = async (i: number) => {
+    const member = members[i];
+    try {
+      await fetch("/api/members", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: member.id }),
+      });
+      setMembers(members.filter((_, idx) => idx !== i));
+      setExpandedMember(null);
+    } catch (e) {
+      console.error("Failed to delete member:", e);
+    }
+    setConfirmDeleteMember(null);
   };
 
   const loadPaymentSettings = () => {
@@ -455,7 +582,7 @@ export default function PaymentSettingsPage() {
                   {clients.map((client, i) => (
                     <div key={i}>
                       <button
-                        onClick={() => setExpandedClient(expandedClient === i ? null : i)}
+                        onClick={() => { setExpandedClient(expandedClient === i ? null : i); setEditingClient(null); setConfirmDeleteClient(null); }}
                         type="button"
                         className="w-full flex items-center justify-between px-5 py-3 hover:bg-[#faf9f7] transition-colors"
                       >
@@ -463,32 +590,52 @@ export default function PaymentSettingsPage() {
                         <span className="text-[#a39e95] text-[14px]">{expandedClient === i ? "−" : "+"}</span>
                       </button>
                       {expandedClient === i && (
-                        <div className="px-5 pb-4 pt-0 space-y-2">
-                          {client.email ? (
-                            <div className="flex items-center justify-between">
-                              <p className="text-[12px] text-[#7a756d]">{client.email}</p>
-                              <a
-                                href={`mailto:${client.email}`}
-                                className="text-[11px] text-[#1a1a1a] bg-[#f0ede8] hover:bg-[#e8e5df] px-3 py-1 rounded-md font-medium transition-colors"
-                              >
-                                Email
-                              </a>
+                        <div className="px-5 pb-4 pt-0">
+                          {editingClient === i ? (
+                            <div className="space-y-2">
+                              <input value={editClientData.name} onChange={(e) => setEditClientData({ ...editClientData, name: e.target.value })} placeholder="Name" className="w-full px-2.5 py-1.5 border border-[#e8e5df] rounded-md text-[12px] text-[#1a1a1a] bg-[#faf9f7] outline-none focus:ring-1 focus:ring-[#1a1a1a]" />
+                              <input value={editClientData.email} onChange={(e) => setEditClientData({ ...editClientData, email: e.target.value })} placeholder="Email" className="w-full px-2.5 py-1.5 border border-[#e8e5df] rounded-md text-[12px] text-[#1a1a1a] bg-[#faf9f7] outline-none focus:ring-1 focus:ring-[#1a1a1a]" />
+                              <input value={editClientData.phone} onChange={(e) => setEditClientData({ ...editClientData, phone: e.target.value })} placeholder="Phone" className="w-full px-2.5 py-1.5 border border-[#e8e5df] rounded-md text-[12px] text-[#1a1a1a] bg-[#faf9f7] outline-none focus:ring-1 focus:ring-[#1a1a1a]" />
+                              <div className="flex gap-2 pt-1">
+                                <button onClick={() => handleSaveClient(i)} type="button" className="px-3 py-1.5 bg-[#1a1a1a] text-white rounded-md text-[11px] font-medium hover:bg-[#333] transition-colors">Save</button>
+                                <button onClick={() => setEditingClient(null)} type="button" className="px-3 py-1.5 border border-[#e8e5df] text-[#6b665e] rounded-md text-[11px] font-medium hover:bg-[#f0ede8] transition-colors">Cancel</button>
+                              </div>
                             </div>
                           ) : (
-                            <p className="text-[12px] text-[#c4bfb8] italic">No email on file</p>
-                          )}
-                          {client.phone ? (
-                            <div className="flex items-center justify-between">
-                              <p className="text-[12px] text-[#7a756d]">{client.phone}</p>
-                              <a
-                                href={`tel:${client.phone}`}
-                                className="text-[11px] text-[#1a1a1a] bg-[#f0ede8] hover:bg-[#e8e5df] px-3 py-1 rounded-md font-medium transition-colors"
-                              >
-                                Call
-                              </a>
+                            <div className="space-y-2">
+                              {client.email ? (
+                                <div className="flex items-center justify-between">
+                                  <p className="text-[12px] text-[#7a756d]">{client.email}</p>
+                                  <a href={`mailto:${client.email}`} className="text-[11px] text-[#1a1a1a] bg-[#f0ede8] hover:bg-[#e8e5df] px-3 py-1 rounded-md font-medium transition-colors">Email</a>
+                                </div>
+                              ) : (
+                                <p className="text-[12px] text-[#c4bfb8] italic">No email on file</p>
+                              )}
+                              {client.phone ? (
+                                <div className="flex items-center justify-between">
+                                  <p className="text-[12px] text-[#7a756d]">{client.phone}</p>
+                                  <a href={`tel:${client.phone}`} className="text-[11px] text-[#1a1a1a] bg-[#f0ede8] hover:bg-[#e8e5df] px-3 py-1 rounded-md font-medium transition-colors">Call</a>
+                                </div>
+                              ) : (
+                                <p className="text-[12px] text-[#c4bfb8] italic">No phone on file</p>
+                              )}
+                              <div className="flex gap-2 pt-2 border-t border-[#f0ede8]">
+                                <button onClick={() => handleEditClient(i)} type="button" className="flex items-center gap-1 px-3 py-1.5 text-[11px] text-[#6b665e] bg-[#f0ede8] hover:bg-[#e8e5df] rounded-md font-medium transition-colors">
+                                  <Pencil className="h-3 w-3" /> Edit
+                                </button>
+                                {confirmDeleteClient === i ? (
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[11px] text-[#991b1b]">Delete?</span>
+                                    <button onClick={() => handleDeleteClient(i)} type="button" className="px-3 py-1.5 text-[11px] text-white bg-[#991b1b] hover:bg-[#7f1d1d] rounded-md font-medium transition-colors">Yes</button>
+                                    <button onClick={() => setConfirmDeleteClient(null)} type="button" className="px-3 py-1.5 text-[11px] text-[#6b665e] bg-[#f0ede8] hover:bg-[#e8e5df] rounded-md font-medium transition-colors">No</button>
+                                  </div>
+                                ) : (
+                                  <button onClick={() => setConfirmDeleteClient(i)} type="button" className="flex items-center gap-1 px-3 py-1.5 text-[11px] text-[#991b1b] bg-[#fef2f2] hover:bg-[#fecaca] rounded-md font-medium transition-colors">
+                                    <Trash2 className="h-3 w-3" /> Delete
+                                  </button>
+                                )}
+                              </div>
                             </div>
-                          ) : (
-                            <p className="text-[12px] text-[#c4bfb8] italic">No phone on file</p>
                           )}
                         </div>
                       )}
@@ -498,6 +645,121 @@ export default function PaymentSettingsPage() {
               ) : clientsLoaded ? (
                 <div className="bg-white rounded-2xl shadow-sm border border-[#e8e5df] p-8 text-center">
                   <p className="text-[13px] text-[#7a756d]">No clients yet</p>
+                </div>
+              ) : null}
+            </div>
+          )}
+        </div>
+
+        {/* Member List Toggle */}
+        <div className="mt-5 mb-8">
+          <button
+            onClick={() => setShowMemberList(!showMemberList)}
+            type="button"
+            className="w-full flex items-center justify-between bg-white rounded-2xl shadow-sm border border-[#e8e5df] p-5 sm:p-6 hover:bg-[#faf9f7] transition-colors active:scale-[0.99]"
+          >
+            <div className="flex items-center gap-3">
+              <CreditCard className="h-5 w-5 text-[#6b665e]" />
+              <div className="text-left">
+                <p className="text-[14px] font-medium text-[#1a1a1a]">Members</p>
+                <p className="text-[11px] text-[#7a756d]">
+                  {membersLoaded ? `${members.length} member${members.length !== 1 ? "s" : ""}` : "View all members"}
+                </p>
+              </div>
+            </div>
+            <span className="text-[#a39e95] text-[18px]">{showMemberList ? "−" : "+"}</span>
+          </button>
+
+          {showMemberList && (
+            <div className="mt-3">
+              {membersLoaded && members.length > 0 ? (
+                <div className="bg-white rounded-2xl shadow-sm border border-[#e8e5df] divide-y divide-[#e8e5df]">
+                  {members.map((member, i) => (
+                    <div key={member.id}>
+                      <button
+                        onClick={() => { setExpandedMember(expandedMember === i ? null : i); setEditingMember(null); setConfirmDeleteMember(null); }}
+                        type="button"
+                        className="w-full flex items-center justify-between px-5 py-3 hover:bg-[#faf9f7] transition-colors"
+                      >
+                        <div className="flex items-center gap-2">
+                          <p className="text-[13px] font-medium text-[#1a1a1a]">{member.name}</p>
+                          <span className="text-[10px] font-mono text-[#8a8477] bg-[#f0ede8] px-1.5 py-0.5 rounded">{member.member_code}</span>
+                          {!member.active && <span className="text-[10px] text-[#991b1b] bg-[#fef2f2] px-1.5 py-0.5 rounded">Inactive</span>}
+                        </div>
+                        <span className="text-[#a39e95] text-[14px]">{expandedMember === i ? "−" : "+"}</span>
+                      </button>
+                      {expandedMember === i && (
+                        <div className="px-5 pb-4 pt-0">
+                          {editingMember === i ? (
+                            <div className="space-y-2">
+                              <input value={editMemberData.name} onChange={(e) => setEditMemberData({ ...editMemberData, name: e.target.value })} placeholder="Name" className="w-full px-2.5 py-1.5 border border-[#e8e5df] rounded-md text-[12px] text-[#1a1a1a] bg-[#faf9f7] outline-none focus:ring-1 focus:ring-[#1a1a1a]" />
+                              <input value={editMemberData.email} onChange={(e) => setEditMemberData({ ...editMemberData, email: e.target.value })} placeholder="Email" className="w-full px-2.5 py-1.5 border border-[#e8e5df] rounded-md text-[12px] text-[#1a1a1a] bg-[#faf9f7] outline-none focus:ring-1 focus:ring-[#1a1a1a]" />
+                              <input value={editMemberData.phone} onChange={(e) => setEditMemberData({ ...editMemberData, phone: e.target.value })} placeholder="Phone" className="w-full px-2.5 py-1.5 border border-[#e8e5df] rounded-md text-[12px] text-[#1a1a1a] bg-[#faf9f7] outline-none focus:ring-1 focus:ring-[#1a1a1a]" />
+                              <div className="flex gap-2 pt-1">
+                                <button onClick={() => handleSaveMember(i)} type="button" className="px-3 py-1.5 bg-[#1a1a1a] text-white rounded-md text-[11px] font-medium hover:bg-[#333] transition-colors">Save</button>
+                                <button onClick={() => setEditingMember(null)} type="button" className="px-3 py-1.5 border border-[#e8e5df] text-[#6b665e] rounded-md text-[11px] font-medium hover:bg-[#f0ede8] transition-colors">Cancel</button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <p className="text-[10px] tracking-[0.1em] uppercase text-[#a39e95]">Member Code</p>
+                                <p className="text-[12px] font-mono font-medium text-[#1a1a1a]">{member.member_code}</p>
+                              </div>
+                              {member.email ? (
+                                <div className="flex items-center justify-between">
+                                  <p className="text-[12px] text-[#7a756d]">{member.email}</p>
+                                  <a href={`mailto:${member.email}`} className="text-[11px] text-[#1a1a1a] bg-[#f0ede8] hover:bg-[#e8e5df] px-3 py-1 rounded-md font-medium transition-colors">Email</a>
+                                </div>
+                              ) : (
+                                <p className="text-[12px] text-[#c4bfb8] italic">No email on file</p>
+                              )}
+                              {member.phone ? (
+                                <div className="flex items-center justify-between">
+                                  <p className="text-[12px] text-[#7a756d]">{member.phone}</p>
+                                  <a href={`tel:${member.phone}`} className="text-[11px] text-[#1a1a1a] bg-[#f0ede8] hover:bg-[#e8e5df] px-3 py-1 rounded-md font-medium transition-colors">Call</a>
+                                </div>
+                              ) : (
+                                <p className="text-[12px] text-[#c4bfb8] italic">No phone on file</p>
+                              )}
+                              <div className="flex items-center justify-between">
+                                <p className="text-[10px] tracking-[0.1em] uppercase text-[#a39e95]">Status</p>
+                                <p className={`text-[12px] font-medium ${member.active ? "text-[#2d5016]" : "text-[#991b1b]"}`}>
+                                  {member.active ? "Active" : "Inactive"}
+                                </p>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <p className="text-[10px] tracking-[0.1em] uppercase text-[#a39e95]">Joined</p>
+                                <p className="text-[12px] text-[#7a756d]">
+                                  {new Date(member.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                                </p>
+                              </div>
+                              <div className="flex gap-2 pt-2 border-t border-[#f0ede8]">
+                                <button onClick={() => handleEditMember(i)} type="button" className="flex items-center gap-1 px-3 py-1.5 text-[11px] text-[#6b665e] bg-[#f0ede8] hover:bg-[#e8e5df] rounded-md font-medium transition-colors">
+                                  <Pencil className="h-3 w-3" /> Edit
+                                </button>
+                                {confirmDeleteMember === i ? (
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[11px] text-[#991b1b]">Delete?</span>
+                                    <button onClick={() => handleDeleteMember(i)} type="button" className="px-3 py-1.5 text-[11px] text-white bg-[#991b1b] hover:bg-[#7f1d1d] rounded-md font-medium transition-colors">Yes</button>
+                                    <button onClick={() => setConfirmDeleteMember(null)} type="button" className="px-3 py-1.5 text-[11px] text-[#6b665e] bg-[#f0ede8] hover:bg-[#e8e5df] rounded-md font-medium transition-colors">No</button>
+                                  </div>
+                                ) : (
+                                  <button onClick={() => setConfirmDeleteMember(i)} type="button" className="flex items-center gap-1 px-3 py-1.5 text-[11px] text-[#991b1b] bg-[#fef2f2] hover:bg-[#fecaca] rounded-md font-medium transition-colors">
+                                    <Trash2 className="h-3 w-3" /> Delete
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : membersLoaded ? (
+                <div className="bg-white rounded-2xl shadow-sm border border-[#e8e5df] p-8 text-center">
+                  <p className="text-[13px] text-[#7a756d]">No members yet</p>
                 </div>
               ) : null}
             </div>
