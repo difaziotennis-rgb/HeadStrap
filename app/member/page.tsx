@@ -196,7 +196,7 @@ export default function MemberPage() {
       <header className="bg-[#faf9f7] border-b border-[#e8e5df] sticky top-0 z-40">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between">
-            <p className="text-[10px] tracking-[0.25em] uppercase text-[#b0a99f]">DiFazio Tennis</p>
+            <Link href="/book" className="text-[10px] tracking-[0.25em] uppercase text-[#b0a99f] hover:text-[#8a8477] transition-colors">DiFazio Tennis</Link>
             <div className="flex items-center gap-4">
               <Link
                 href="/book"

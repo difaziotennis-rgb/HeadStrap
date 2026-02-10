@@ -23,9 +23,9 @@ export default function BioPage() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-[10px] tracking-[0.25em] uppercase text-white/50">
+              <Link href="/book" className="text-[10px] tracking-[0.25em] uppercase text-white/50 hover:text-white/70 transition-colors">
                 DiFazio Tennis
-              </p>
+              </Link>
             </div>
             <div className="flex items-center gap-4">
               <Link
