@@ -121,6 +121,12 @@ function BookPageContent() {
                     Bio
                   </Link>
                   <Link
+                    href="/events"
+                    className="text-[#8a8477] hover:text-[#1a1a1a] text-[12px] font-medium transition-colors"
+                  >
+                    Events
+                  </Link>
+                  <Link
                     href="/ladder"
                     className="text-[#8a8477] hover:text-[#1a1a1a] text-[12px] font-medium transition-colors"
                   >
