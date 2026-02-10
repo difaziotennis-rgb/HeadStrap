@@ -329,6 +329,27 @@ export default function MemberPage() {
           </div>
         </div>
 
+        {/* Events */}
+        <div className="mb-6">
+          <div className="bg-white rounded-2xl shadow-sm border border-[#e8e5df] overflow-hidden">
+            <div className="px-5 sm:px-6 pt-5 pb-3">
+              <h2 className="text-[10px] tracking-[0.15em] uppercase text-[#7a756d] font-medium">
+                Events
+              </h2>
+            </div>
+            <div className="px-5 sm:px-6 pb-5">
+              <div className="border border-[#e8e5df] rounded-xl p-4">
+                <p className="text-[14px] font-medium text-[#1a1a1a]">
+                  Memorial Day Mixed Doubles
+                </p>
+                <p className="text-[12px] text-[#b0a99f] mt-1">
+                  Details coming soon
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Clinics placeholder */}
         <div className="mb-6">
           <div className="bg-white rounded-2xl shadow-sm border border-[#e8e5df] overflow-hidden">
