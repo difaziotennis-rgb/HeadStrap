@@ -291,22 +291,6 @@ export default function MemberPage() {
                   )}
                 </div>
 
-                {/* Total paid */}
-                <div className="flex items-center justify-between py-3">
-                  <span className="text-[12px] text-[#8a8477]">Total paid</span>
-                  <span className="text-[13px] font-medium text-[#1a1a1a]">
-                    ${payments.totalPaid.toLocaleString()}
-                  </span>
-                </div>
-
-                {/* Lessons paid */}
-                <div className="flex items-center justify-between py-3">
-                  <span className="text-[12px] text-[#8a8477]">Lessons completed</span>
-                  <span className="text-[13px] font-medium text-[#1a1a1a]">
-                    {payments.totalLessons}
-                  </span>
-                </div>
-
                 {/* Member since */}
                 <div className="flex items-center justify-between py-3">
                   <span className="text-[12px] text-[#8a8477]">Member since</span>
