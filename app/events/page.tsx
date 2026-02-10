@@ -43,9 +43,6 @@ export default function EventsPage() {
           <h1 className="text-2xl sm:text-3xl font-light tracking-tight text-[#1a1a1a] mb-2">
             Events
           </h1>
-          <p className="text-[13px] text-[#8a8477]">
-            Upcoming events hosted by DiFazio Tennis
-          </p>
         </div>
 
         {/* Memorial Day Mixed Doubles */}
