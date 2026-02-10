@@ -364,7 +364,7 @@ export default function PaymentSettingsPage() {
           <p className="text-[12px] text-[#7a756d]">
             These are the payment methods included in client confirmation emails.
           </p>
-        </div>
+              </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* Venmo */}
