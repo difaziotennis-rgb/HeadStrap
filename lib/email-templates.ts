@@ -240,7 +240,7 @@ difaziotennis@gmail.com | 631-901-5220
 
 // ─── ADMIN CONFIRMATION EMAIL ────────────────────────────────────
 
-export function adminConfirmationEmail(booking: Booking, chargeUrl?: string) {
+export function adminConfirmationEmail(booking: Booking, chargeUrl?: string, cancelAutoChargeUrl?: string) {
   const date = formatBookingDate(booking.date);
   const time = formatTime(booking.hour);
   const isMember = !!booking.memberCode;
@@ -255,7 +255,7 @@ export function adminConfirmationEmail(booking: Booking, chargeUrl?: string) {
     </div>
 
     <div class="body">
-      <p>You accepted this lesson. ${isMember ? "The client is a member — their card on file will be charged when you're ready." : "A confirmation with payment links has been sent to the client."}</p>
+      <p>You accepted this lesson. ${isMember ? "The client's card on file will be charged automatically after the lesson ends." : "A confirmation with payment links has been sent to the client."}</p>
 
       <div class="detail-grid">
         <div class="detail-row">
@@ -287,14 +287,19 @@ export function adminConfirmationEmail(booking: Booking, chargeUrl?: string) {
         <div class="detail-row">
           <span class="detail-label">Member</span>
           <span class="detail-value">${booking.memberCode}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Payment</span>
+          <span class="detail-value" style="color:#2d5016;">Auto-charge after lesson</span>
         </div>` : ""}
       </div>
 
-      ${isMember && chargeUrl ? `
-        <div class="btn-container">
-          <a href="${chargeUrl}" class="btn btn-primary">Charge $${booking.amount}</a>
+      ${isMember ? `
+        <div class="btn-container" style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+          ${chargeUrl ? `<a href="${chargeUrl}" class="btn btn-primary">Charge Now</a>` : ""}
+          ${cancelAutoChargeUrl ? `<a href="${cancelAutoChargeUrl}" class="btn btn-outline" style="color:#92400e !important; border-color:#e8c87a;">Cancel Auto-Charge</a>` : ""}
         </div>
-        <p class="muted" style="text-align:center;">Tap after the lesson to charge the client's card on file.</p>
+        <p class="muted" style="text-align:center;">Payment will be charged automatically after the lesson. Use "Cancel Auto-Charge" if the lesson is cancelled or you want to handle payment differently.</p>
       ` : ""}
     </div>
 
@@ -312,10 +317,11 @@ Phone: ${booking.clientPhone || "Not provided"}
 Date: ${date}
 Time: ${time}
 Amount: $${booking.amount}
-${isMember ? `Member: ${booking.memberCode}` : ""}
+${isMember ? `Member: ${booking.memberCode}\nPayment: Auto-charge after lesson` : ""}
 
-${isMember ? "Client is a member — charge their card after the lesson." : "A confirmation has been sent to the client."}
-${isMember && chargeUrl ? `\nCharge client: ${chargeUrl}` : ""}
+${isMember ? "Client's card will be charged automatically after the lesson." : "A confirmation has been sent to the client."}
+${isMember && chargeUrl ? `\nCharge now (manual): ${chargeUrl}` : ""}
+${isMember && cancelAutoChargeUrl ? `Cancel auto-charge: ${cancelAutoChargeUrl}` : ""}
   `.trim();
 
   const subject = `Confirmed: ${booking.clientName || "Client"} - ${date} at ${time}`;

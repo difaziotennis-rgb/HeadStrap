@@ -45,6 +45,16 @@ export async function POST(request: Request) {
     const isMember = !!booking.memberCode;
 
     // 1. Save the booking with status "confirmed"
+    // For members, schedule auto-charge 1 hour after lesson start (i.e. when lesson ends)
+    let autoChargeAt: string | null = null;
+    if (isMember) {
+      const lessonDate = new Date(`${booking.date}T00:00:00`);
+      const lessonHour = Math.floor(booking.hour);
+      const lessonMinutes = Math.round((booking.hour - lessonHour) * 60);
+      lessonDate.setHours(lessonHour + 1, lessonMinutes, 0, 0); // 1 hour after start
+      autoChargeAt = lessonDate.toISOString();
+    }
+
     const confirmedBooking = { ...booking, status: "confirmed" as const };
     const { error: bookingErr } = await supabase
       .from("bookings")
@@ -62,6 +72,8 @@ export async function POST(request: Request) {
         amount: confirmedBooking.amount,
         member_code: confirmedBooking.memberCode || null,
         member_id: confirmedBooking.memberId || null,
+        auto_charge_at: autoChargeAt,
+        auto_charge_cancelled: false,
       }, { onConflict: "id" });
 
     if (bookingErr) {
@@ -94,14 +106,17 @@ export async function POST(request: Request) {
     let chargeUrl = "";
     const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 
+    let cancelAutoChargeUrl = "";
+
     if (isMember && booking.memberId) {
-      // Build a charge URL the admin can click after the lesson
+      // Build a charge URL the admin can click after the lesson (manual fallback)
       const chargeToken = Buffer.from(JSON.stringify({
         bookingId: booking.id,
         memberId: booking.memberId,
         amount: booking.amount,
       })).toString("base64url");
       chargeUrl = `${baseUrl}/charge-member?token=${chargeToken}`;
+      cancelAutoChargeUrl = `${baseUrl}/cancel-auto-charge?bookingId=${booking.id}`;
     } else if (stripeSecretKey) {
       try {
         const stripe = new Stripe(stripeSecretKey, { apiVersion: "2025-12-15.clover" });
@@ -137,7 +152,7 @@ export async function POST(request: Request) {
 
     // Generate emails from templates
     const clientEmail = clientConfirmationEmail(booking, stripeCheckoutUrl);
-    const adminEmailContent = adminConfirmationEmail(booking, chargeUrl);
+    const adminEmailContent = adminConfirmationEmail(booking, chargeUrl, cancelAutoChargeUrl);
 
     // Send confirmation email to client
     const clientResult = await sendEmail({
