@@ -249,6 +249,18 @@ function BookPageContent() {
             </p>
           </div>
 
+          {/* Member Login Link */}
+          {!isAdminMode && (
+            <div className="mt-4 text-center">
+              <Link
+                href="/member"
+                className="text-[11px] text-[#c4bfb8] hover:text-[#8a8477] transition-colors"
+              >
+                Member Login
+              </Link>
+            </div>
+          )}
+
           {/* Admin Login Section */}
           {!isAdminMode && (
             <div className="max-w-sm mx-auto mt-8 pt-6 border-t border-[#e8e5df]">
