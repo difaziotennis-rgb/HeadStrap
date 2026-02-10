@@ -60,6 +60,7 @@ export default function MemberPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
+  const [updatingCard, setUpdatingCard] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,6 +97,26 @@ export default function MemberPage() {
     setDashboard(null);
     setMemberCode("");
     sessionStorage.removeItem("memberCode");
+  };
+
+  const handleUpdateCard = async () => {
+    setUpdatingCard(true);
+    try {
+      const code = memberCode || sessionStorage.getItem("memberCode");
+      const res = await fetch("/api/update-member-card", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberCode: code }),
+      });
+      const data = await res.json();
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+      } else {
+        setUpdatingCard(false);
+      }
+    } catch {
+      setUpdatingCard(false);
+    }
   };
 
   // Login screen
@@ -300,14 +321,15 @@ export default function MemberPage() {
                 </div>
               </div>
 
-              {/* Update card link */}
+              {/* Update card button */}
               <div className="mt-4 pt-3 border-t border-[#f0ede8]">
-                <Link
-                  href="/become-a-member"
-                  className="text-[11px] text-[#8a8477] hover:text-[#1a1a1a] transition-colors"
+                <button
+                  onClick={handleUpdateCard}
+                  disabled={updatingCard}
+                  className="text-[11px] text-[#8a8477] hover:text-[#1a1a1a] transition-colors disabled:opacity-50"
                 >
-                  Update card on file →
-                </Link>
+                  {updatingCard ? "Redirecting to Stripe..." : "Update card on file →"}
+                </button>
               </div>
             </div>
           </div>
