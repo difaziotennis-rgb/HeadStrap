@@ -3,6 +3,8 @@ import Stripe from "stripe";
 import { getBookingServerClient } from "@/lib/supabase/booking-server";
 import { sendEmail } from "@/lib/send-email";
 
+export const dynamic = "force-dynamic";
+
 function generateMemberCode(): string {
   // 4-digit numeric code (1000–9999)
   const num = Math.floor(1000 + Math.random() * 9000);
