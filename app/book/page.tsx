@@ -234,6 +234,18 @@ function BookPageContent() {
       {/* Footer */}
       <footer className="border-t border-[#e8e5df] mt-8">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+          {/* Member Login Link */}
+          {!isAdminMode && (
+            <div className="mb-4 text-center">
+              <Link
+                href="/member"
+                className="text-[11px] text-[#c4bfb8] hover:text-[#8a8477] transition-colors"
+              >
+                Member Login
+              </Link>
+            </div>
+          )}
+
           <div className="text-center">
             <p className="text-[11px] text-[#b0a99f] tracking-wide">
               DiFazio Tennis · Rhinebeck, NY
@@ -254,18 +266,6 @@ function BookPageContent() {
               </a>
             </p>
           </div>
-
-          {/* Member Login Link */}
-          {!isAdminMode && (
-            <div className="mt-4 text-center">
-              <Link
-                href="/member"
-                className="text-[11px] text-[#c4bfb8] hover:text-[#8a8477] transition-colors"
-              >
-                Member Login
-              </Link>
-            </div>
-          )}
 
           {/* Admin Login Section */}
           {!isAdminMode && (
