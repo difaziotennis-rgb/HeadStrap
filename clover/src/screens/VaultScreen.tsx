@@ -6,6 +6,8 @@ import {
   ScrollView,
   RefreshControl,
   Animated,
+  TouchableOpacity,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -17,19 +19,27 @@ import {
   DollarSign,
   ChevronRight,
   Mic,
+  Info,
+  CircleDollarSign,
+  ArrowUpRight,
+  Package,
+  AlertCircle,
 } from "lucide-react-native";
-import { getEarnings } from "../services/mockBackend";
+import { getEarnings, requestPayout, getUser } from "../services/mockBackend";
 import { COLORS } from "../constants/theme";
 import { Earnings, Session } from "../types";
 
 export default function VaultScreen() {
   const [earnings, setEarnings] = useState<Earnings | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [hasPayoutMethod, setHasPayoutMethod] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   const loadEarnings = useCallback(async () => {
     const data = await getEarnings();
     setEarnings(data);
+    const user = await getUser();
+    setHasPayoutMethod(user?.payoutMethod !== "none" && !!user?.payoutMethod);
   }, []);
 
   useEffect(() => {
@@ -47,6 +57,23 @@ export default function VaultScreen() {
     setRefreshing(false);
   };
 
+  const handleRequestPayout = async () => {
+    if (!earnings || earnings.pendingPayout <= 0) {
+      Alert.alert("No Payout Available", "You don't have any pending earnings from sold data.");
+      return;
+    }
+    if (!hasPayoutMethod) {
+      Alert.alert(
+        "Set Up Payments",
+        "Please connect your payment method in Settings before requesting a payout."
+      );
+      return;
+    }
+    await requestPayout(earnings.pendingPayout);
+    Alert.alert("Payout Requested", `$${earnings.pendingPayout.toFixed(2)} payout is being processed.`);
+    await loadEarnings();
+  };
+
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
     return d.toLocaleDateString("en-US", {
@@ -55,6 +82,23 @@ export default function VaultScreen() {
       hour: "2-digit",
       minute: "2-digit",
     });
+  };
+
+  const getStatusBadge = (status: Session["dataSaleStatus"]) => {
+    switch (status) {
+      case "pending_upload":
+        return { label: "UPLOADING", color: COLORS.yellow };
+      case "uploaded":
+        return { label: "PENDING SALE", color: COLORS.slate400 };
+      case "listed":
+        return { label: "LISTED", color: "#60A5FA" };
+      case "sold":
+        return { label: "SOLD", color: COLORS.emerald };
+      case "paid_out":
+        return { label: "PAID", color: COLORS.mint300 };
+      default:
+        return { label: "UNKNOWN", color: COLORS.slate500 };
+    }
   };
 
   if (!earnings) return null;
@@ -83,30 +127,97 @@ export default function VaultScreen() {
             }
             contentContainerStyle={styles.scrollContent}
           >
-            {/* Total Earnings Card */}
+            {/* Estimated Earnings Card */}
             <View style={styles.earningsCard}>
               <LinearGradient
                 colors={["rgba(72,187,120,0.15)", "rgba(72,187,120,0.05)"]}
                 style={styles.earningsCardGradient}
               >
-                <Text style={styles.earningsLabel}>TOTAL EARNINGS</Text>
+                <View style={styles.earningsLabelRow}>
+                  <Text style={styles.earningsLabel}>ESTIMATED EARNINGS</Text>
+                  <View style={styles.estBadge}>
+                    <Text style={styles.estBadgeText}>EST.</Text>
+                  </View>
+                </View>
                 <View style={styles.earningsAmountRow}>
                   <DollarSign
-                    size={32}
+                    size={28}
                     color={COLORS.emerald}
                     strokeWidth={2.5}
                   />
                   <Text style={styles.earningsAmount}>
-                    {earnings.totalUserShare.toFixed(2)}
+                    {earnings.totalEstimated.toFixed(2)}
                   </Text>
                 </View>
-                <View style={styles.earningsSub}>
-                  <TrendingUp size={14} color={COLORS.mint300} />
-                  <Text style={styles.earningsSubText}>
-                    Your 60% share of ${earnings.totalEarned.toFixed(2)} total
+                <View style={styles.disclaimerRow}>
+                  <Info size={12} color={COLORS.slate500} />
+                  <Text style={styles.disclaimerText}>
+                    Based on average market rates. Actual amount determined when data is sold.
                   </Text>
                 </View>
               </LinearGradient>
+            </View>
+
+            {/* Actual Earnings Card */}
+            <View style={styles.actualCard}>
+              <View style={styles.actualCardInner}>
+                <Text style={styles.actualLabel}>ACTUAL EARNINGS</Text>
+                <View style={styles.actualAmountRow}>
+                  <DollarSign size={24} color={COLORS.white} strokeWidth={2.5} />
+                  <Text style={styles.actualAmount}>
+                    {earnings.totalActualEarned.toFixed(2)}
+                  </Text>
+                </View>
+                <Text style={styles.actualSub}>
+                  From sold data • 60% of sale price goes to you
+                </Text>
+
+                {/* Payout breakdown */}
+                <View style={styles.payoutGrid}>
+                  <View style={styles.payoutItem}>
+                    <CircleDollarSign size={16} color={COLORS.emerald} />
+                    <Text style={styles.payoutItemLabel}>Your Share</Text>
+                    <Text style={styles.payoutItemValue}>
+                      ${earnings.totalUserPayouts.toFixed(2)}
+                    </Text>
+                  </View>
+                  <View style={styles.payoutItem}>
+                    <ArrowUpRight size={16} color={COLORS.mint300} />
+                    <Text style={styles.payoutItemLabel}>Paid Out</Text>
+                    <Text style={styles.payoutItemValue}>
+                      ${earnings.paidOut.toFixed(2)}
+                    </Text>
+                  </View>
+                  <View style={styles.payoutItem}>
+                    <Package size={16} color={COLORS.yellow} />
+                    <Text style={styles.payoutItemLabel}>Pending</Text>
+                    <Text style={[styles.payoutItemValue, { color: COLORS.yellow }]}>
+                      ${earnings.pendingPayout.toFixed(2)}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Request Payout Button */}
+                {earnings.pendingPayout > 0 && (
+                  <TouchableOpacity
+                    style={styles.payoutButton}
+                    onPress={handleRequestPayout}
+                    activeOpacity={0.8}
+                  >
+                    <LinearGradient
+                      colors={[COLORS.emerald, COLORS.mint500]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.payoutButtonGradient}
+                    >
+                      <DollarSign size={18} color={COLORS.white} />
+                      <Text style={styles.payoutButtonText}>
+                        Request Payout — ${earnings.pendingPayout.toFixed(2)}
+                      </Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
 
             {/* Data Contributed */}
@@ -127,40 +238,27 @@ export default function VaultScreen() {
               </View>
             </View>
 
-            {/* Profit Split Visualization */}
+            {/* Revenue Split Visualization */}
             <View style={styles.splitCard}>
-              <Text style={styles.splitTitle}>PROFIT SPLIT</Text>
+              <Text style={styles.splitTitle}>REVENUE SPLIT (AFTER SALE)</Text>
               <View style={styles.splitBarContainer}>
                 <View style={styles.splitBarUser}>
                   <Text style={styles.splitBarText}>
-                    60% — ${earnings.totalUserShare.toFixed(2)}
+                    60% — ${earnings.totalUserPayouts.toFixed(2)}
                   </Text>
                 </View>
                 <View style={styles.splitBarPlatform}>
                   <Text style={styles.splitBarTextPlatform}>
-                    40% — ${earnings.totalPlatformShare.toFixed(2)}
+                    40% — ${earnings.totalPlatformRevenue.toFixed(2)}
                   </Text>
                 </View>
               </View>
-              <View style={styles.splitLegend}>
-                <View style={styles.legendItem}>
-                  <View
-                    style={[
-                      styles.legendDot,
-                      { backgroundColor: COLORS.emerald },
-                    ]}
-                  />
-                  <Text style={styles.legendText}>Your Earnings</Text>
-                </View>
-                <View style={styles.legendItem}>
-                  <View
-                    style={[
-                      styles.legendDot,
-                      { backgroundColor: COLORS.slate600 },
-                    ]}
-                  />
-                  <Text style={styles.legendText}>Platform Fee</Text>
-                </View>
+              <View style={styles.splitNote}>
+                <AlertCircle size={12} color={COLORS.slate500} />
+                <Text style={styles.splitNoteText}>
+                  Revenue split only applies after your data is sold to a buyer.
+                  Unsold data has no split.
+                </Text>
               </View>
             </View>
 
@@ -172,32 +270,49 @@ export default function VaultScreen() {
               </Text>
             </View>
 
-            {earnings.sessions.map((session: Session) => (
-              <View key={session.id} style={styles.historyItem}>
-                <View style={styles.historyLeft}>
-                  <View style={styles.historyIconBg}>
-                    <Mic size={16} color={COLORS.emerald} />
+            {earnings.sessions.map((session: Session) => {
+              const badge = getStatusBadge(session.dataSaleStatus);
+              return (
+                <View key={session.id} style={styles.historyItem}>
+                  <View style={styles.historyLeft}>
+                    <View style={styles.historyIconBg}>
+                      <Mic size={16} color={COLORS.emerald} />
+                    </View>
+                    <View style={styles.historyDetails}>
+                      <Text style={styles.historyType}>{session.type}</Text>
+                      <Text style={styles.historyDate}>
+                        {formatDate(session.startTime)}
+                      </Text>
+                      <View style={[styles.statusBadge, { backgroundColor: `${badge.color}20` }]}>
+                        <View style={[styles.statusDot, { backgroundColor: badge.color }]} />
+                        <Text style={[styles.statusText, { color: badge.color }]}>
+                          {badge.label}
+                        </Text>
+                      </View>
+                    </View>
                   </View>
-                  <View>
-                    <Text style={styles.historyType}>{session.type}</Text>
-                    <Text style={styles.historyDate}>
-                      {formatDate(session.startTime)}
-                    </Text>
+                  <View style={styles.historyRight}>
+                    <View style={styles.historyEarnings}>
+                      <Text style={styles.historyDuration}>
+                        {session.durationMinutes} min
+                      </Text>
+                      {session.actualEarnings > 0 ? (
+                        <Text style={styles.historyAmountActual}>
+                          ${session.userPayout.toFixed(2)}
+                        </Text>
+                      ) : (
+                        <Text style={styles.historyAmountEstimated}>
+                          ~${session.estimatedEarnings.toFixed(2)}
+                        </Text>
+                      )}
+                      <Text style={styles.historyEarningType}>
+                        {session.actualEarnings > 0 ? "actual" : "est."}
+                      </Text>
+                    </View>
                   </View>
                 </View>
-                <View style={styles.historyRight}>
-                  <View style={styles.historyEarnings}>
-                    <Text style={styles.historyDuration}>
-                      {session.durationMinutes} min
-                    </Text>
-                    <Text style={styles.historyAmount}>
-                      ${session.userShare.toFixed(2)}
-                    </Text>
-                  </View>
-                  <ChevronRight size={16} color={COLORS.slate500} />
-                </View>
-              </View>
-            ))}
+              );
+            })}
 
             <View style={{ height: 40 }} />
           </ScrollView>
@@ -226,22 +341,40 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
   },
+  // Estimated Earnings
   earningsCard: {
     borderRadius: 20,
     overflow: "hidden",
-    marginBottom: 16,
+    marginBottom: 12,
     borderWidth: 1,
     borderColor: "rgba(72,187,120,0.2)",
   },
   earningsCardGradient: {
-    padding: 24,
+    padding: 20,
+  },
+  earningsLabelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 6,
   },
   earningsLabel: {
     color: COLORS.emerald,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 3,
-    marginBottom: 8,
+  },
+  estBadge: {
+    backgroundColor: "rgba(246, 224, 94, 0.15)",
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  estBadgeText: {
+    color: COLORS.yellow,
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 1,
   },
   earningsAmountRow: {
     flexDirection: "row",
@@ -249,21 +382,98 @@ const styles = StyleSheet.create({
   },
   earningsAmount: {
     color: COLORS.white,
-    fontSize: 52,
+    fontSize: 44,
     fontWeight: "800",
     letterSpacing: -2,
   },
-  earningsSub: {
+  disclaimerRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: 6,
     marginTop: 8,
   },
-  earningsSubText: {
-    color: COLORS.mint300,
-    fontSize: 13,
-    fontWeight: "500",
+  disclaimerText: {
+    color: COLORS.slate500,
+    fontSize: 11,
+    lineHeight: 16,
+    flex: 1,
   },
+  // Actual Earnings
+  actualCard: {
+    borderRadius: 20,
+    overflow: "hidden",
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+  },
+  actualCardInner: {
+    padding: 20,
+    backgroundColor: "rgba(255,255,255,0.03)",
+  },
+  actualLabel: {
+    color: COLORS.slate400,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 3,
+    marginBottom: 6,
+  },
+  actualAmountRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  actualAmount: {
+    color: COLORS.white,
+    fontSize: 36,
+    fontWeight: "800",
+    letterSpacing: -1,
+  },
+  actualSub: {
+    color: COLORS.slate500,
+    fontSize: 12,
+    marginTop: 4,
+    marginBottom: 16,
+  },
+  payoutGrid: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 14,
+  },
+  payoutItem: {
+    flex: 1,
+    backgroundColor: "rgba(255,255,255,0.04)",
+    borderRadius: 12,
+    padding: 12,
+    alignItems: "center",
+    gap: 6,
+  },
+  payoutItemLabel: {
+    color: COLORS.slate500,
+    fontSize: 10,
+    fontWeight: "600",
+  },
+  payoutItemValue: {
+    color: COLORS.white,
+    fontSize: 15,
+    fontWeight: "800",
+  },
+  payoutButton: {
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  payoutButtonGradient: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    height: 48,
+    borderRadius: 12,
+  },
+  payoutButtonText: {
+    color: COLORS.white,
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  // Stats
   statsRow: {
     flexDirection: "row",
     gap: 12,
@@ -289,6 +499,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "500",
   },
+  // Split
   splitCard: {
     backgroundColor: "rgba(255,255,255,0.04)",
     borderRadius: 16,
@@ -309,7 +520,7 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 10,
     overflow: "hidden",
-    marginBottom: 14,
+    marginBottom: 12,
   },
   splitBarUser: {
     flex: 6,
@@ -333,25 +544,18 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "600",
   },
-  splitLegend: {
+  splitNote: {
     flexDirection: "row",
-    gap: 20,
-  },
-  legendItem: {
-    flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: 6,
   },
-  legendDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+  splitNoteText: {
+    color: COLORS.slate500,
+    fontSize: 11,
+    lineHeight: 16,
+    flex: 1,
   },
-  legendText: {
-    color: COLORS.slate400,
-    fontSize: 12,
-    fontWeight: "500",
-  },
+  // History
   historyHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -394,6 +598,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  historyDetails: {
+    flex: 1,
+  },
   historyType: {
     color: COLORS.white,
     fontSize: 14,
@@ -404,10 +611,28 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 2,
   },
-  historyRight: {
+  statusBadge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    alignSelf: "flex-start",
+    gap: 4,
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    marginTop: 4,
+  },
+  statusDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+  },
+  statusText: {
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 1,
+  },
+  historyRight: {
+    alignItems: "flex-end",
   },
   historyEarnings: {
     alignItems: "flex-end",
@@ -417,10 +642,23 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "500",
   },
-  historyAmount: {
+  historyAmountActual: {
     color: COLORS.emerald,
     fontSize: 16,
     fontWeight: "700",
     marginTop: 2,
+  },
+  historyAmountEstimated: {
+    color: COLORS.slate400,
+    fontSize: 16,
+    fontWeight: "700",
+    marginTop: 2,
+  },
+  historyEarningType: {
+    color: COLORS.slate500,
+    fontSize: 9,
+    fontWeight: "600",
+    letterSpacing: 1,
+    marginTop: 1,
   },
 });

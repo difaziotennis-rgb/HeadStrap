@@ -1,16 +1,18 @@
 import React, { useEffect, useRef } from "react";
 import { View, Text, Animated, StyleSheet } from "react-native";
-import { DollarSign, TrendingUp } from "lucide-react-native";
+import { DollarSign, TrendingUp, Info } from "lucide-react-native";
 import { COLORS } from "../constants/theme";
 
 interface EarningsMeterProps {
   amount: number;
   label?: string;
+  isEstimate?: boolean;
 }
 
 export default function EarningsMeter({
   amount,
   label = "SESSION EARNINGS",
+  isEstimate = true,
 }: EarningsMeterProps) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
@@ -40,14 +42,30 @@ export default function EarningsMeter({
       <View style={styles.header}>
         <TrendingUp size={14} color={COLORS.emerald} />
         <Text style={styles.label}>{label}</Text>
+        {isEstimate && (
+          <View style={styles.estimateBadge}>
+            <Text style={styles.estimateText}>EST.</Text>
+          </View>
+        )}
       </View>
       <View style={styles.amountRow}>
         <DollarSign size={28} color={COLORS.emerald} strokeWidth={2.5} />
         <Text style={styles.amount}>{amount.toFixed(2)}</Text>
       </View>
+      {isEstimate && (
+        <View style={styles.disclaimerRow}>
+          <Info size={11} color={COLORS.slate500} />
+          <Text style={styles.disclaimerText}>
+            Estimated based on avg market rates. Actual earnings are calculated
+            when your data is sold.
+          </Text>
+        </View>
+      )}
       <View style={styles.rateRow}>
         <View style={styles.rateDot} />
-        <Text style={styles.rateText}>$0.28/min • 60% to you</Text>
+        <Text style={styles.rateText}>
+          ~$0.28/min est. • 60/40 split after sale
+        </Text>
       </View>
     </Animated.View>
   );
@@ -74,6 +92,19 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 2,
   },
+  estimateBadge: {
+    backgroundColor: "rgba(246, 224, 94, 0.15)",
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginLeft: 4,
+  },
+  estimateText: {
+    color: COLORS.yellow,
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 1,
+  },
   amountRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -84,11 +115,24 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: -1,
   },
+  disclaimerRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 5,
+    marginTop: 6,
+    paddingRight: 8,
+  },
+  disclaimerText: {
+    color: COLORS.slate500,
+    fontSize: 10,
+    lineHeight: 14,
+    flex: 1,
+  },
   rateRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    marginTop: 4,
+    marginTop: 6,
   },
   rateDot: {
     width: 6,

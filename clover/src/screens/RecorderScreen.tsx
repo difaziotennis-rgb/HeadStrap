@@ -6,16 +6,16 @@ import {
   TouchableOpacity,
   Animated,
   Dimensions,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
 import {
   X,
   Pause,
   Play,
   Camera,
   Mic,
-  CircleDot,
+  SwitchCamera,
 } from "lucide-react-native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import StoplightBar from "../components/StoplightBar";
@@ -27,11 +27,84 @@ import {
 import { COLORS } from "../constants/theme";
 import { RootStackParamList, StoplightStatus } from "../types";
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "Recorder">;
 };
+
+// Web-only camera component using getUserMedia
+function WebCamera({
+  facingMode,
+  style,
+}: {
+  facingMode: "user" | "environment";
+  style?: any;
+}) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function startCamera() {
+      try {
+        // Stop any existing stream
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach((t) => t.stop());
+        }
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode },
+          audio: false,
+        });
+        if (cancelled) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play();
+        }
+      } catch (e) {
+        console.log("Camera access denied or unavailable:", e);
+      }
+    }
+
+    if (Platform.OS === "web") {
+      startCamera();
+    }
+
+    return () => {
+      cancelled = true;
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+      }
+    };
+  }, [facingMode]);
+
+  if (Platform.OS !== "web") {
+    return <View style={[style, { backgroundColor: "#000" }]} />;
+  }
+
+  return (
+    <video
+      ref={videoRef as any}
+      autoPlay
+      playsInline
+      muted
+      style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        width: "100%",
+        height: "100%",
+        objectFit: "cover",
+        ...(facingMode === "user" ? { transform: "scaleX(-1)" } : {}),
+      }}
+    />
+  );
+}
 
 export default function RecorderScreen({ navigation }: Props) {
   const [isPaused, setIsPaused] = useState(false);
@@ -40,9 +113,11 @@ export default function RecorderScreen({ navigation }: Props) {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [earnings, setEarnings] = useState(0);
   const [dataMB, setDataMB] = useState(0);
+  const [facingMode, setFacingMode] = useState<"user" | "environment">(
+    "environment"
+  );
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const recordDotAnim = useRef(new Animated.Value(1)).current;
-  const scanlineAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     // Record dot blink
@@ -61,15 +136,6 @@ export default function RecorderScreen({ navigation }: Props) {
       ])
     ).start();
 
-    // Scanline effect
-    Animated.loop(
-      Animated.timing(scanlineAnim, {
-        toValue: 1,
-        duration: 4000,
-        useNativeDriver: true,
-      })
-    ).start();
-
     startTimer();
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -83,7 +149,7 @@ export default function RecorderScreen({ navigation }: Props) {
         const minutes = newElapsed / 60;
         updateCurrentSession(minutes).then((session) => {
           if (session) {
-            setEarnings(session.userShare);
+            setEarnings(session.estimatedEarnings);
             setDataMB(session.dataSizeMB);
           }
         });
@@ -116,6 +182,10 @@ export default function RecorderScreen({ navigation }: Props) {
     navigation.goBack();
   }, [navigation]);
 
+  const flipCamera = () => {
+    setFacingMode((prev) => (prev === "user" ? "environment" : "user"));
+  };
+
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
@@ -125,47 +195,31 @@ export default function RecorderScreen({ navigation }: Props) {
       .padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
-  const scanlineTranslate = scanlineAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [-SCREEN_HEIGHT, SCREEN_HEIGHT],
-  });
-
   return (
     <View style={styles.container}>
-      {/* Simulated camera background */}
-      <LinearGradient
-        colors={["#0a0f0a", "#0d150d", "#0a0f0a"]}
-        style={styles.cameraBackground}
-      >
-        {/* Grid overlay */}
-        <View style={styles.gridOverlay}>
-          <View style={[styles.gridLine, styles.gridH1]} />
-          <View style={[styles.gridLine, styles.gridH2]} />
-          <View style={[styles.gridLine, styles.gridV1]} />
-          <View style={[styles.gridLine, styles.gridV2]} />
-        </View>
+      {/* Live camera feed */}
+      <WebCamera facingMode={facingMode} style={styles.cameraBackground} />
 
-        {/* Scan line */}
-        <Animated.View
-          style={[
-            styles.scanLine,
-            { transform: [{ translateY: scanlineTranslate }] },
-          ]}
-        />
+      {/* Grid overlay on top of camera */}
+      <View style={styles.gridOverlay}>
+        <View style={[styles.gridLine, styles.gridH1]} />
+        <View style={[styles.gridLine, styles.gridH2]} />
+        <View style={[styles.gridLine, styles.gridV1]} />
+        <View style={[styles.gridLine, styles.gridV2]} />
+      </View>
 
-        {/* Corner brackets */}
-        <View style={[styles.bracket, styles.bracketTL]} />
-        <View style={[styles.bracket, styles.bracketTR]} />
-        <View style={[styles.bracket, styles.bracketBL]} />
-        <View style={[styles.bracket, styles.bracketBR]} />
+      {/* Corner brackets */}
+      <View style={[styles.bracket, styles.bracketTL]} />
+      <View style={[styles.bracket, styles.bracketTR]} />
+      <View style={[styles.bracket, styles.bracketBL]} />
+      <View style={[styles.bracket, styles.bracketBR]} />
 
-        {/* Center crosshair */}
-        <View style={styles.crosshair}>
-          <View style={styles.crosshairH} />
-          <View style={styles.crosshairV} />
-          <View style={styles.crosshairDot} />
-        </View>
-      </LinearGradient>
+      {/* Center crosshair */}
+      <View style={styles.crosshair}>
+        <View style={styles.crosshairH} />
+        <View style={styles.crosshairV} />
+        <View style={styles.crosshairDot} />
+      </View>
 
       {/* Top overlay */}
       <SafeAreaView style={styles.topOverlay}>
@@ -248,9 +302,13 @@ export default function RecorderScreen({ navigation }: Props) {
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.controlButton} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.controlButton}
+            onPress={flipCamera}
+            activeOpacity={0.7}
+          >
             <View style={styles.cameraButton}>
-              <Camera size={24} color={COLORS.slate300} />
+              <SwitchCamera size={24} color={COLORS.slate300} />
             </View>
             <Text style={styles.controlLabel}>Flip</Text>
           </TouchableOpacity>
@@ -294,17 +352,6 @@ const styles = StyleSheet.create({
     width: 1,
     height: "100%",
     left: "66%",
-  },
-  scanLine: {
-    position: "absolute",
-    width: "100%",
-    height: 1,
-    backgroundColor: COLORS.emerald,
-    opacity: 0.3,
-    shadowColor: COLORS.emerald,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 8,
   },
   bracket: {
     position: "absolute",

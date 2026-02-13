@@ -1,12 +1,12 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, StyleSheet } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import {
   CirclePlay,
   Vault,
-  Clover,
+  Settings,
 } from "lucide-react-native";
 import { COLORS } from "../constants/theme";
 import { RootStackParamList, MainTabParamList } from "../types";
@@ -16,6 +16,7 @@ import HumanVerificationScreen from "../screens/HumanVerificationScreen";
 import CalibrationScreen from "../screens/CalibrationScreen";
 import DashboardScreen from "../screens/DashboardScreen";
 import VaultScreen from "../screens/VaultScreen";
+import SettingsScreen from "../screens/SettingsScreen";
 import RecorderScreen from "../screens/RecorderScreen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -64,6 +65,19 @@ function MainTabs() {
           tabBarIcon: ({ color, size }) => (
             <View style={styles.tabIconContainer}>
               <Vault size={size} color={color} strokeWidth={1.5} />
+              {color === COLORS.emerald && <View style={styles.activeIndicator} />}
+            </View>
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{
+          tabBarLabel: "SETTINGS",
+          tabBarIcon: ({ color, size }) => (
+            <View style={styles.tabIconContainer}>
+              <Settings size={size} color={color} strokeWidth={1.5} />
               {color === COLORS.emerald && <View style={styles.activeIndicator} />}
             </View>
           ),

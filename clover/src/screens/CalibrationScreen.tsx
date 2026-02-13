@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   Animated,
+  ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -71,86 +72,93 @@ export default function CalibrationScreen({ navigation }: Props) {
       style={styles.gradient}
     >
       <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <Crosshair size={20} color={COLORS.emerald} />
-          <Text style={styles.headerText}>CAMERA CALIBRATION</Text>
-        </View>
-
-        {/* Illustration: Phone on forehead */}
-        <Animated.View
-          style={[
-            styles.illustration,
-            { transform: [{ translateY: floatAnim }] },
-          ]}
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
         >
-          {/* Head silhouette */}
-          <View style={styles.headOuter}>
-            <View style={styles.head}>
-              <View style={styles.face}>
-                <View style={styles.eyeRow}>
-                  <Eye size={18} color={COLORS.slate400} />
-                  <Eye size={18} color={COLORS.slate400} />
+          <TouchableOpacity
+            style={styles.continueButton}
+            onPress={handleContinue}
+            activeOpacity={0.8}
+          >
+            <LinearGradient
+              colors={[COLORS.emerald, COLORS.mint500]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.buttonGradient}
+            >
+              <Text style={styles.buttonText}>I'm Ready</Text>
+              <ChevronRight size={22} color={COLORS.white} />
+            </LinearGradient>
+          </TouchableOpacity>
+
+          <View style={styles.header}>
+            <Crosshair size={20} color={COLORS.emerald} />
+            <Text style={styles.headerText}>CAMERA CALIBRATION</Text>
+          </View>
+
+          {/* Illustration: Phone on forehead */}
+          <Animated.View
+            style={[
+              styles.illustration,
+              { transform: [{ translateY: floatAnim }] },
+            ]}
+          >
+            {/* Head silhouette */}
+            <View style={styles.headOuter}>
+              <View style={styles.head}>
+                <View style={styles.face}>
+                  <View style={styles.eyeRow}>
+                    <Eye size={18} color={COLORS.slate400} />
+                    <Eye size={18} color={COLORS.slate400} />
+                  </View>
                 </View>
               </View>
+              {/* Phone on forehead */}
+              <Animated.View
+                style={[
+                  styles.phoneOnHead,
+                  { transform: [{ scale: pulseAnim }] },
+                ]}
+              >
+                <View style={styles.phoneBody}>
+                  <Smartphone size={32} color={COLORS.emerald} strokeWidth={1.5} />
+                  <View style={styles.phoneGlow} />
+                </View>
+                <View style={styles.phoneCameraIndicator}>
+                  <View style={styles.cameraDot} />
+                </View>
+              </Animated.View>
+              {/* Strap lines */}
+              <View style={[styles.strap, styles.strapLeft]} />
+              <View style={[styles.strap, styles.strapRight]} />
             </View>
-            {/* Phone on forehead */}
-            <Animated.View
-              style={[
-                styles.phoneOnHead,
-                { transform: [{ scale: pulseAnim }] },
-              ]}
-            >
-              <View style={styles.phoneBody}>
-                <Smartphone size={32} color={COLORS.emerald} strokeWidth={1.5} />
-                <View style={styles.phoneGlow} />
+          </Animated.View>
+
+          <Text style={styles.title}>Secure Your Device</Text>
+          <Text style={styles.subtitle}>
+            Attach your phone to a headband or helmet mount with the camera facing
+            forward. This ensures hands-free, POV recording of your professional
+            work.
+          </Text>
+
+          {/* Checklist */}
+          <View style={styles.checklist}>
+            {[
+              "Camera faces forward, not down",
+              "Phone is secure and won't shift",
+              "Field of view covers your workspace",
+              "Good lighting in the environment",
+            ].map((item, i) => (
+              <View key={i} style={styles.checkItem}>
+                <CheckCircle2 size={18} color={COLORS.emerald} />
+                <Text style={styles.checkText}>{item}</Text>
               </View>
-              <View style={styles.phoneCameraIndicator}>
-                <View style={styles.cameraDot} />
-              </View>
-            </Animated.View>
-            {/* Strap lines */}
-            <View style={[styles.strap, styles.strapLeft]} />
-            <View style={[styles.strap, styles.strapRight]} />
+            ))}
           </View>
-        </Animated.View>
 
-        <Text style={styles.title}>Secure Your Device</Text>
-        <Text style={styles.subtitle}>
-          Attach your phone to a headband or helmet mount with the camera facing
-          forward. This ensures hands-free, POV recording of your professional
-          work.
-        </Text>
-
-        {/* Checklist */}
-        <View style={styles.checklist}>
-          {[
-            "Camera faces forward, not down",
-            "Phone is secure and won't shift",
-            "Field of view covers your workspace",
-            "Good lighting in the environment",
-          ].map((item, i) => (
-            <View key={i} style={styles.checkItem}>
-              <CheckCircle2 size={18} color={COLORS.emerald} />
-              <Text style={styles.checkText}>{item}</Text>
-            </View>
-          ))}
-        </View>
-
-        <TouchableOpacity
-          style={styles.continueButton}
-          onPress={handleContinue}
-          activeOpacity={0.8}
-        >
-          <LinearGradient
-            colors={[COLORS.emerald, COLORS.mint500]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.buttonGradient}
-          >
-            <Text style={styles.buttonText}>I'm Ready</Text>
-            <ChevronRight size={22} color={COLORS.white} />
-          </LinearGradient>
-        </TouchableOpacity>
+          <View style={{ height: 40 }} />
+        </ScrollView>
       </SafeAreaView>
     </LinearGradient>
   );
@@ -160,15 +168,17 @@ const styles = StyleSheet.create({
   gradient: { flex: 1 },
   container: {
     flex: 1,
+  },
+  scrollContent: {
     alignItems: "center",
     paddingHorizontal: 28,
-    paddingTop: 40,
+    paddingTop: 20,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    marginBottom: 36,
+    marginBottom: 20,
   },
   headerText: {
     color: COLORS.emerald,
@@ -178,13 +188,13 @@ const styles = StyleSheet.create({
   },
   illustration: {
     alignItems: "center",
-    marginBottom: 36,
+    marginBottom: 20,
   },
   headOuter: {
     alignItems: "center",
     justifyContent: "center",
-    width: 160,
-    height: 200,
+    width: 140,
+    height: 170,
   },
   head: {
     width: 120,
@@ -270,12 +280,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     textAlign: "center",
     lineHeight: 23,
-    marginBottom: 28,
+    marginBottom: 16,
   },
   checklist: {
     width: "100%",
-    gap: 14,
-    marginBottom: 36,
+    gap: 10,
+    marginBottom: 20,
   },
   checkItem: {
     flexDirection: "row",

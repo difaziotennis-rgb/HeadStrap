@@ -54,7 +54,7 @@ export default function DashboardScreen({ navigation }: Props) {
       if (session && session.status === "recording") {
         setCurrentSession(session);
         setIsRecording(true);
-        setSessionEarnings(session.totalEarned);
+        setSessionEarnings(session.estimatedEarnings);
       }
     });
 
@@ -79,7 +79,7 @@ export default function DashboardScreen({ navigation }: Props) {
         const minutes = newElapsed / 60;
         updateCurrentSession(minutes).then((updated) => {
           if (updated) {
-            setSessionEarnings(updated.userShare);
+            setSessionEarnings(updated.estimatedEarnings);
           }
         });
         return newElapsed;
@@ -139,7 +139,8 @@ export default function DashboardScreen({ navigation }: Props) {
           {/* Earnings Meter */}
           <EarningsMeter
             amount={sessionEarnings}
-            label={isRecording ? "LIVE EARNINGS" : "SESSION EARNINGS"}
+            label={isRecording ? "LIVE ESTIMATE" : "ESTIMATED EARNINGS"}
+            isEstimate={true}
           />
 
           {/* Timer */}
@@ -195,13 +196,13 @@ export default function DashboardScreen({ navigation }: Props) {
           {/* Quick Stats */}
           <View style={styles.quickStats}>
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>$0.28</Text>
-              <Text style={styles.statLabel}>per min</Text>
+              <Text style={styles.statValue}>~$0.28</Text>
+              <Text style={styles.statLabel}>est/min</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
               <Text style={styles.statValue}>60%</Text>
-              <Text style={styles.statLabel}>your cut</Text>
+              <Text style={styles.statLabel}>after sale</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
