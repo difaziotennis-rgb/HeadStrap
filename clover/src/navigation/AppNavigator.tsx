@@ -18,6 +18,8 @@ import DashboardScreen from "../screens/DashboardScreen";
 import VaultScreen from "../screens/VaultScreen";
 import SettingsScreen from "../screens/SettingsScreen";
 import RecorderScreen from "../screens/RecorderScreen";
+import PrivacyPolicyScreen from "../screens/PrivacyPolicyScreen";
+import TermsOfServiceScreen from "../screens/TermsOfServiceScreen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -111,6 +113,16 @@ export default function AppNavigator() {
             animation: "slide_from_bottom",
             gestureEnabled: false,
           }}
+        />
+        <Stack.Screen
+          name="PrivacyPolicy"
+          component={PrivacyPolicyScreen}
+          options={{ animation: "slide_from_right" }}
+        />
+        <Stack.Screen
+          name="TermsOfService"
+          component={TermsOfServiceScreen}
+          options={{ animation: "slide_from_right" }}
         />
       </Stack.Navigator>
     </NavigationContainer>

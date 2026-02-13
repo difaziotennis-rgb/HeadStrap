@@ -13,11 +13,13 @@
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
+    "@types/stripe": "^8.0.416",
     "bcryptjs": "latest",
     "cors": "latest",
     "dotenv": "latest",
     "express": "latest",
     "jsonwebtoken": "latest",
+    "stripe": "^20.3.1",
     "swagger-jsdoc": "latest",
     "swagger-ui-express": "latest",
     "uuid": "latest"

@@ -348,12 +348,58 @@ router.post("/payouts/request", async (req: AuthRequest, res) => {
  *     security: [{ bearerAuth: [] }]
  *     responses:
  *       200:
- *         description: Onboarding URL
+ *         description: Onboarding URL and account ID
  */
 router.post("/payments/connect", async (req: AuthRequest, res) => {
   try {
     const result = await paymentService.createConnectAccount(req.userId!);
     return ok(res, result);
+  } catch (e: any) {
+    return fail(res, e.message, 500);
+  }
+});
+
+/**
+ * @openapi
+ * /api/user/payments/status:
+ *   get:
+ *     tags: [User]
+ *     summary: Check Stripe Connect account status
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200:
+ *         description: Account status
+ */
+router.get("/payments/status", async (req: AuthRequest, res) => {
+  try {
+    const user = await prisma.user.findUnique({ where: { id: req.userId } });
+    if (!user || !user.stripeConnectId) {
+      return ok(res, { connected: false, ready: false, details_submitted: false, payouts_enabled: false });
+    }
+    const status = await paymentService.checkAccountStatus(user.stripeConnectId);
+    return ok(res, { connected: true, ...status });
+  } catch (e: any) {
+    return fail(res, e.message, 500);
+  }
+});
+
+/**
+ * @openapi
+ * /api/user/payments/dashboard:
+ *   get:
+ *     tags: [User]
+ *     summary: Get Stripe Express dashboard link
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200:
+ *         description: Dashboard URL
+ */
+router.get("/payments/dashboard", async (req: AuthRequest, res) => {
+  try {
+    const user = await prisma.user.findUnique({ where: { id: req.userId } });
+    if (!user?.stripeConnectId) return fail(res, "No Stripe account connected");
+    const url = await paymentService.createDashboardLink(user.stripeConnectId);
+    return ok(res, { url });
   } catch (e: any) {
     return fail(res, e.message, 500);
   }

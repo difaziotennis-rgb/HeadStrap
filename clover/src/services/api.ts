@@ -187,13 +187,16 @@ export async function requestPayout(amount: number): Promise<Payout> {
 // ─── Payment Service ───────────────────────────────
 
 export const paymentService = {
-  async createConnectAccount(_userId: string): Promise<{ onboardingUrl: string }> {
+  async createConnectAccount(_userId: string): Promise<{ onboardingUrl: string; accountId: string; mock: boolean }> {
     return await apiFetch("/user/payments/connect", { method: "POST" });
   },
 
-  async processPayout(payoutId: string, amount: number, stripeConnectId: string) {
-    // This is admin-side, but keeping the interface for compatibility
-    return { success: true, transferId: `tr_mock_${Date.now()}` };
+  async getAccountStatus(): Promise<{ connected: boolean; ready: boolean; details_submitted: boolean; payouts_enabled: boolean }> {
+    return await apiFetch("/user/payments/status");
+  },
+
+  async getDashboardLink(): Promise<{ url: string | null }> {
+    return await apiFetch("/user/payments/dashboard");
   },
 
   async getPayoutStatus(payoutId: string) {

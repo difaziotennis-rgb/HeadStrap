@@ -79,6 +79,8 @@ export type RootStackParamList = {
   Calibration: undefined;
   MainTabs: undefined;
   Recorder: undefined;
+  PrivacyPolicy: undefined;
+  TermsOfService: undefined;
 };
 
 export type MainTabParamList = {

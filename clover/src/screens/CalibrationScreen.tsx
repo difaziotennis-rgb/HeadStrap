@@ -62,7 +62,11 @@ export default function CalibrationScreen({ navigation }: Props) {
   }, []);
 
   const handleContinue = async () => {
-    await updateUser({ calibrated: true });
+    try {
+      await updateUser({ calibrated: true });
+    } catch {
+      // Continue even if API is unavailable
+    }
     navigation.replace("MainTabs");
   };
 

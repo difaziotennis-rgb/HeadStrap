@@ -91,7 +91,11 @@ export default function HumanVerificationScreen({ navigation }: Props) {
   };
 
   const handleContinue = async () => {
-    await updateUser({ verified: true });
+    try {
+      await updateUser({ verified: true });
+    } catch {
+      // Continue even if API is unavailable
+    }
     navigation.replace("Calibration");
   };
 

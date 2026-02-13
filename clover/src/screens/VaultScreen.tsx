@@ -66,13 +66,35 @@ export default function VaultScreen() {
     if (!hasPayoutMethod) {
       Alert.alert(
         "Set Up Payments",
-        "Please connect your payment method in Settings before requesting a payout."
+        "Please connect your Stripe account in Settings before requesting a payout.",
+        [{ text: "OK" }]
       );
       return;
     }
-    await requestPayout(earnings.pendingPayout);
-    Alert.alert("Payout Requested", `$${earnings.pendingPayout.toFixed(2)} payout is being processed.`);
-    await loadEarnings();
+
+    // Confirm before requesting
+    Alert.alert(
+      "Request Payout",
+      `Request a payout of $${earnings.pendingPayout.toFixed(2)} to your connected Stripe account?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Request Payout",
+          onPress: async () => {
+            try {
+              const payout = await requestPayout(earnings.pendingPayout);
+              Alert.alert(
+                "Payout Requested",
+                `Your $${payout.amount.toFixed(2)} payout has been submitted and will be processed via Stripe. You'll receive the funds in 3-7 business days.`
+              );
+              await loadEarnings();
+            } catch (e: any) {
+              Alert.alert("Payout Failed", e?.message || "Something went wrong. Please try again.");
+            }
+          },
+        },
+      ]
+    );
   };
 
   const formatDate = (dateStr: string) => {

@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Alert,
   Animated,
+  Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -22,6 +23,7 @@ import {
   ExternalLink,
   AlertCircle,
 } from "lucide-react-native";
+import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import {
   getUser,
@@ -37,7 +39,8 @@ type Props = {
   navigation?: NativeStackNavigationProp<RootStackParamList>;
 };
 
-export default function SettingsScreen({ navigation }: Props) {
+export default function SettingsScreen({ navigation: navProp }: Props) {
+  const rootNav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [user, setUser] = useState<User | null>(null);
   const [connectingStripe, setConnectingStripe] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -61,17 +64,44 @@ export default function SettingsScreen({ navigation }: Props) {
     setConnectingStripe(true);
     try {
       const result = await paymentService.createConnectAccount(user.id);
-      // In production, this would open the Stripe onboarding URL
-      // Linking.openURL(result.onboardingUrl);
-      Alert.alert(
-        "Stripe Connected",
-        "Your payment account has been set up. You can now receive payouts when your data is sold."
-      );
+
+      if (result.mock) {
+        // Mock mode — just show confirmation
+        Alert.alert(
+          "Stripe Connected (Test Mode)",
+          "Your payment account has been set up in test mode. In production, this will open Stripe onboarding."
+        );
+      } else {
+        // Real Stripe — open the onboarding URL
+        const canOpen = await Linking.canOpenURL(result.onboardingUrl);
+        if (canOpen) {
+          await Linking.openURL(result.onboardingUrl);
+        } else {
+          Alert.alert(
+            "Stripe Onboarding",
+            `Please open this URL to complete setup:\n\n${result.onboardingUrl}`
+          );
+        }
+      }
+
       await loadUser();
-    } catch (e) {
-      Alert.alert("Error", "Failed to set up payment account.");
+    } catch (e: any) {
+      Alert.alert("Error", e?.message || "Failed to set up payment account.");
     } finally {
       setConnectingStripe(false);
+    }
+  };
+
+  const handleManageStripe = async () => {
+    try {
+      const { url } = await paymentService.getDashboardLink();
+      if (url) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert("Dashboard", "Stripe Express dashboard is not available in test mode.");
+      }
+    } catch {
+      Alert.alert("Error", "Could not open Stripe dashboard.");
     }
   };
 
@@ -126,23 +156,33 @@ export default function SettingsScreen({ navigation }: Props) {
             <Text style={styles.sectionTitle}>PAYMENT METHOD</Text>
             <View style={styles.card}>
               {isStripeConnected ? (
-                <View style={styles.connectedRow}>
-                  <View style={styles.connectedLeft}>
-                    <View style={styles.connectedIcon}>
-                      <CheckCircle2 size={24} color={COLORS.emerald} />
+                <View>
+                  <View style={styles.connectedRow}>
+                    <View style={styles.connectedLeft}>
+                      <View style={styles.connectedIcon}>
+                        <CheckCircle2 size={24} color={COLORS.emerald} />
+                      </View>
+                      <View>
+                        <Text style={styles.connectedTitle}>
+                          Stripe Connected
+                        </Text>
+                        <Text style={styles.connectedSub}>
+                          Account: {user?.stripeConnectId?.slice(0, 16)}...
+                        </Text>
+                      </View>
                     </View>
-                    <View>
-                      <Text style={styles.connectedTitle}>
-                        Stripe Connected
-                      </Text>
-                      <Text style={styles.connectedSub}>
-                        Account: {user?.stripeConnectId?.slice(0, 12)}...
-                      </Text>
+                    <View style={styles.activeBadge}>
+                      <Text style={styles.activeBadgeText}>ACTIVE</Text>
                     </View>
                   </View>
-                  <View style={styles.activeBadge}>
-                    <Text style={styles.activeBadgeText}>ACTIVE</Text>
-                  </View>
+                  <TouchableOpacity
+                    style={styles.manageButton}
+                    onPress={handleManageStripe}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.manageButtonText}>Manage Stripe Account</Text>
+                    <ExternalLink size={14} color={COLORS.emerald} />
+                  </TouchableOpacity>
                 </View>
               ) : (
                 <>
@@ -241,23 +281,29 @@ export default function SettingsScreen({ navigation }: Props) {
 
               <View style={styles.menuDivider} />
 
-              <View style={styles.menuItem}>
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => rootNav.navigate("PrivacyPolicy")}
+              >
                 <View style={styles.menuLeft}>
                   <Shield size={20} color={COLORS.emerald} />
                   <Text style={styles.menuText}>Privacy Policy</Text>
                 </View>
                 <ChevronRight size={18} color={COLORS.slate500} />
-              </View>
+              </TouchableOpacity>
 
               <View style={styles.menuDivider} />
 
-              <View style={styles.menuItem}>
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => rootNav.navigate("TermsOfService")}
+              >
                 <View style={styles.menuLeft}>
                   <FileText size={20} color={COLORS.emerald} />
                   <Text style={styles.menuText}>Terms of Service</Text>
                 </View>
                 <ChevronRight size={18} color={COLORS.slate500} />
-              </View>
+              </TouchableOpacity>
             </View>
 
             {/* Earnings Note */}
@@ -364,6 +410,23 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "800",
     letterSpacing: 1,
+  },
+  manageButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    marginTop: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: "rgba(72,187,120,0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(72,187,120,0.15)",
+  },
+  manageButtonText: {
+    color: COLORS.emerald,
+    fontSize: 13,
+    fontWeight: "600",
   },
   // Setup state
   setupRow: {
