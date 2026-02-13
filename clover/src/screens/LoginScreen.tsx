@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -30,19 +31,32 @@ export default function LoginScreen({ navigation }: Props) {
   const [loading, setLoading] = useState(false);
 
   const handleAuth = async () => {
+    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedName = name.trim();
+
+    if (!trimmedEmail) {
+      Alert.alert("Email Required", "Please enter your email address.");
+      return;
+    }
+    if (isSignup && !trimmedName) {
+      Alert.alert("Name Required", "Please enter your name.");
+      return;
+    }
+    if (!password || password.length < 6) {
+      Alert.alert("Password Required", "Password must be at least 6 characters.");
+      return;
+    }
+
     setLoading(true);
     try {
-      const useEmail = email || "user@clover.app";
-      const useName = name || "Clover User";
-
       if (isSignup) {
-        await signup(useEmail, password, useName);
+        await signup(trimmedEmail, password, trimmedName || "Clover User");
         navigation.replace("HumanVerification");
       } else {
-        let user = await login(useEmail, password);
+        const user = await login(trimmedEmail, password);
         if (!user) {
-          // Auto-create account so login always works
-          user = await signup(useEmail, password, useName);
+          Alert.alert("Login Failed", "Invalid email or password. Need an account? Tap Sign Up below.");
+          return;
         }
         if (!user.verified) {
           navigation.replace("HumanVerification");
@@ -52,9 +66,8 @@ export default function LoginScreen({ navigation }: Props) {
           navigation.replace("MainTabs");
         }
       }
-    } catch (e) {
-      // Just go through anyway
-      navigation.replace("HumanVerification");
+    } catch (e: any) {
+      Alert.alert("Error", e?.message || "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }

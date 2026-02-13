@@ -2,9 +2,15 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { User, Session, Earnings, Payout } from "../types";
 
 // ─── Configuration ─────────────────────────────────
-// Change this to your deployed backend URL when ready
-// Uses localhost:4000 by default. Update for production.
-const API_BASE = "http://localhost:4000/api";
+// Set EXPO_PUBLIC_API_URL in your environment or .env to override.
+// Falls back to localhost:4000 for local development.
+// Examples:
+//   EXPO_PUBLIC_API_URL=https://api.cloverdata.io/api
+//   EXPO_PUBLIC_API_URL=https://clover-backend.railway.app/api
+const API_BASE = (
+  (typeof process !== "undefined" && process.env?.EXPO_PUBLIC_API_URL) ||
+  "http://localhost:4000/api"
+);
 
 const TOKEN_KEY = "@clover_jwt";
 const CURRENT_SESSION_KEY = "@clover_current_session_id";
@@ -147,6 +153,26 @@ export async function updateCurrentSession(elapsedMinutes: number): Promise<Sess
     }) as Session;
   } catch {
     return null;
+  }
+}
+
+export async function uploadRecording(sessionId: string, blob: Blob): Promise<void> {
+  const token = await getToken();
+  const formData = new FormData();
+  const extension = blob.type.includes("mp4") ? "mp4" : "webm";
+  formData.append("recording", blob as any, `recording-${sessionId}.${extension}`);
+
+  const res = await fetch(`${API_BASE}/user/sessions/${sessionId}/upload`, {
+    method: "POST",
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: formData,
+  });
+
+  const json = await res.json();
+  if (!json.success) {
+    throw new Error(json.error || "Upload failed");
   }
 }
 

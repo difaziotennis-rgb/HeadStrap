@@ -35,15 +35,22 @@ router.post("/signup", async (req, res) => {
       return fail(res, "Email and name are required");
     }
 
-    const existing = await prisma.user.findUnique({ where: { email } });
+    if (!password || password.length < 6) {
+      return fail(res, "Password must be at least 6 characters");
+    }
+
+    // Normalize email
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (existing) {
       return fail(res, "Email already registered", 409);
     }
 
-    const passwordHash = await bcrypt.hash(password || "default", 10);
+    const passwordHash = await bcrypt.hash(password, 10);
 
     const user = await prisma.user.create({
-      data: { email, name, passwordHash },
+      data: { email: normalizedEmail, name: name.trim(), passwordHash },
     });
 
     const token = signToken(user.id);
@@ -77,7 +84,7 @@ router.post("/signup", async (req, res) => {
  *         application/json:
  *           schema:
  *             type: object
- *             required: [email]
+ *             required: [email, password]
  *             properties:
  *               email: { type: string }
  *               password: { type: string }
@@ -92,35 +99,20 @@ router.post("/login", async (req, res) => {
     if (!email) {
       return fail(res, "Email is required");
     }
-
-    const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) {
-      // Auto-create for easy testing (same pattern as current frontend)
-      const passwordHash = await bcrypt.hash(password || "default", 10);
-      const newUser = await prisma.user.create({
-        data: { email, name: email.split("@")[0], passwordHash },
-      });
-      const token = signToken(newUser.id);
-      return ok(res, {
-        token,
-        user: {
-          id: newUser.id,
-          email: newUser.email,
-          name: newUser.name,
-          verified: newUser.verified,
-          calibrated: newUser.calibrated,
-          payoutMethod: newUser.payoutMethod,
-          createdAt: newUser.createdAt.toISOString(),
-        },
-      });
+    if (!password) {
+      return fail(res, "Password is required");
     }
 
-    // Validate password (skip if empty — easy testing mode)
-    if (password) {
-      const valid = await bcrypt.compare(password, user.passwordHash);
-      if (!valid) {
-        return fail(res, "Invalid password", 401);
-      }
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+    if (!user) {
+      return fail(res, "Invalid email or password", 401);
+    }
+
+    const valid = await bcrypt.compare(password, user.passwordHash);
+    if (!valid) {
+      return fail(res, "Invalid email or password", 401);
     }
 
     const token = signToken(user.id);

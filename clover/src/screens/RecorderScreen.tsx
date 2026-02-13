@@ -13,7 +13,6 @@ import {
   X,
   Pause,
   Play,
-  Camera,
   Mic,
   SwitchCamera,
 } from "lucide-react-native";
@@ -23,6 +22,7 @@ import AudioWaveform from "../components/AudioWaveform";
 import {
   updateCurrentSession,
   endSession,
+  uploadRecording,
 } from "../services/api";
 import { COLORS } from "../constants/theme";
 import { RootStackParamList, StoplightStatus } from "../types";
@@ -33,13 +33,17 @@ type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "Recorder">;
 };
 
-// Web-only camera component using getUserMedia
+// ─── Web Camera + Recording Component ──────────────
+// Uses getUserMedia for preview and MediaRecorder to capture video+audio
+
 function WebCamera({
   facingMode,
   style,
+  onStreamReady,
 }: {
   facingMode: "user" | "environment";
   style?: any;
+  onStreamReady?: (stream: MediaStream) => void;
 }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -49,13 +53,12 @@ function WebCamera({
 
     async function startCamera() {
       try {
-        // Stop any existing stream
         if (streamRef.current) {
           streamRef.current.getTracks().forEach((t) => t.stop());
         }
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode },
-          audio: false,
+          video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: true, // Capture audio for narration
         });
         if (cancelled) {
           stream.getTracks().forEach((t) => t.stop());
@@ -66,6 +69,7 @@ function WebCamera({
           videoRef.current.srcObject = stream;
           videoRef.current.play();
         }
+        onStreamReady?.(stream);
       } catch (e) {
         console.log("Camera access denied or unavailable:", e);
       }
@@ -116,8 +120,15 @@ export default function RecorderScreen({ navigation }: Props) {
   const [facingMode, setFacingMode] = useState<"user" | "environment">(
     "environment"
   );
+  const [isSaving, setIsSaving] = useState(false);
+
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const recordDotAnim = useRef(new Animated.Value(1)).current;
+
+  // MediaRecorder refs (web only)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordedChunksRef = useRef<Blob[]>([]);
+  const streamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     // Record dot blink
@@ -139,8 +150,96 @@ export default function RecorderScreen({ navigation }: Props) {
     startTimer();
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
+      stopMediaRecorder();
     };
   }, []);
+
+  // ─── MediaRecorder helpers ───────────────────────
+
+  const handleStreamReady = useCallback((stream: MediaStream) => {
+    streamRef.current = stream;
+    startMediaRecorder(stream);
+  }, []);
+
+  const startMediaRecorder = (stream: MediaStream) => {
+    if (Platform.OS !== "web") return;
+
+    try {
+      recordedChunksRef.current = [];
+
+      // Pick the best available codec
+      const mimeType = [
+        "video/webm;codecs=vp9,opus",
+        "video/webm;codecs=vp8,opus",
+        "video/webm",
+        "video/mp4",
+      ].find((type) => {
+        try {
+          return MediaRecorder.isTypeSupported(type);
+        } catch {
+          return false;
+        }
+      }) || "";
+
+      const recorder = new MediaRecorder(stream, {
+        mimeType: mimeType || undefined,
+        videoBitsPerSecond: 2_500_000, // 2.5 Mbps for good quality
+      });
+
+      recorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          recordedChunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.start(1000); // Collect data in 1-second chunks
+      mediaRecorderRef.current = recorder;
+      console.log("[Recorder] MediaRecorder started:", mimeType);
+    } catch (err) {
+      console.error("[Recorder] Failed to start MediaRecorder:", err);
+    }
+  };
+
+  const stopMediaRecorder = (): Promise<Blob | null> => {
+    return new Promise((resolve) => {
+      const recorder = mediaRecorderRef.current;
+      if (!recorder || recorder.state === "inactive") {
+        resolve(null);
+        return;
+      }
+
+      recorder.onstop = () => {
+        const chunks = recordedChunksRef.current;
+        if (chunks.length === 0) {
+          resolve(null);
+          return;
+        }
+        const mimeType = recorder.mimeType || "video/webm";
+        const blob = new Blob(chunks, { type: mimeType });
+        recordedChunksRef.current = [];
+        console.log(`[Recorder] Recording stopped: ${(blob.size / 1024 / 1024).toFixed(1)} MB`);
+        resolve(blob);
+      };
+
+      recorder.stop();
+    });
+  };
+
+  const pauseMediaRecorder = () => {
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state === "recording") {
+      recorder.pause();
+    }
+  };
+
+  const resumeMediaRecorder = () => {
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state === "paused") {
+      recorder.resume();
+    }
+  };
+
+  // ─── Timer ──────────────────────────────────────
 
   const startTimer = () => {
     timerRef.current = setInterval(() => {
@@ -162,10 +261,12 @@ export default function RecorderScreen({ navigation }: Props) {
     if (isPaused) {
       setIsPaused(false);
       setStoplightStatus("green");
+      resumeMediaRecorder();
       startTimer();
     } else {
       setIsPaused(true);
       setStoplightStatus("yellow");
+      pauseMediaRecorder();
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
@@ -174,17 +275,45 @@ export default function RecorderScreen({ navigation }: Props) {
   };
 
   const handleStop = useCallback(async () => {
+    if (isSaving) return; // Prevent double-tap
+    setIsSaving(true);
+    setStoplightStatus("yellow");
+
+    // Stop timer
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
-    try {
-      await endSession();
-    } catch {
-      // API unavailable — still navigate back
+
+    // Stop recording and get the blob
+    const recordingBlob = await stopMediaRecorder();
+
+    // Stop the camera stream
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
     }
+
+    // End the session on the backend
+    try {
+      const session = await endSession();
+
+      // Upload the recording if we have one
+      if (recordingBlob && session) {
+        try {
+          await uploadRecording(session.id, recordingBlob);
+          console.log(`[Recorder] Uploaded ${(recordingBlob.size / 1024 / 1024).toFixed(1)} MB for session ${session.id}`);
+        } catch (uploadErr) {
+          console.error("[Recorder] Upload failed (will retry later):", uploadErr);
+          // In production, queue for retry. For now, the session is saved.
+        }
+      }
+    } catch {
+      // API unavailable — recording is lost but UX continues
+    }
+
     navigation.goBack();
-  }, [navigation]);
+  }, [navigation, isSaving]);
 
   const flipCamera = () => {
     setFacingMode((prev) => (prev === "user" ? "environment" : "user"));
@@ -201,8 +330,12 @@ export default function RecorderScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      {/* Live camera feed */}
-      <WebCamera facingMode={facingMode} style={styles.cameraBackground} />
+      {/* Live camera feed + recording */}
+      <WebCamera
+        facingMode={facingMode}
+        style={styles.cameraBackground}
+        onStreamReady={handleStreamReady}
+      />
 
       {/* Grid overlay on top of camera */}
       <View style={styles.gridOverlay}>
@@ -237,7 +370,7 @@ export default function RecorderScreen({ navigation }: Props) {
             style={[styles.recordDot, { opacity: recordDotAnim }]}
           />
           <Text style={styles.recordText}>
-            {isPaused ? "PAUSED" : "REC"}
+            {isSaving ? "SAVING..." : isPaused ? "PAUSED" : "REC"}
           </Text>
           <Text style={styles.timeText}>{formatTime(elapsedSeconds)}</Text>
         </View>
@@ -268,7 +401,7 @@ export default function RecorderScreen({ navigation }: Props) {
             <Mic size={14} color={COLORS.emerald} />
             <Text style={styles.waveformLabel}>NARRATION</Text>
           </View>
-          <AudioWaveform active={!isPaused} height={50} barCount={40} />
+          <AudioWaveform active={!isPaused && !isSaving} height={50} barCount={40} />
         </View>
 
         {/* Controls */}
@@ -277,22 +410,27 @@ export default function RecorderScreen({ navigation }: Props) {
             style={styles.controlButton}
             onPress={handleStop}
             activeOpacity={0.7}
+            disabled={isSaving}
           >
-            <View style={styles.stopButton}>
+            <View style={[styles.stopButton, isSaving && { opacity: 0.5 }]}>
               <X size={24} color={COLORS.red} />
             </View>
-            <Text style={styles.controlLabel}>Stop</Text>
+            <Text style={styles.controlLabel}>
+              {isSaving ? "Saving..." : "Stop"}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.controlButton}
             onPress={togglePause}
             activeOpacity={0.7}
+            disabled={isSaving}
           >
             <View
               style={[
                 styles.pauseButton,
                 isPaused && styles.pauseButtonActive,
+                isSaving && { opacity: 0.5 },
               ]}
             >
               {isPaused ? (
@@ -310,8 +448,9 @@ export default function RecorderScreen({ navigation }: Props) {
             style={styles.controlButton}
             onPress={flipCamera}
             activeOpacity={0.7}
+            disabled={isSaving}
           >
-            <View style={styles.cameraButton}>
+            <View style={[styles.cameraButton, isSaving && { opacity: 0.5 }]}>
               <SwitchCamera size={24} color={COLORS.slate300} />
             </View>
             <Text style={styles.controlLabel}>Flip</Text>

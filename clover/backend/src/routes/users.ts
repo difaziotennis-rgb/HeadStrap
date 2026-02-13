@@ -1,4 +1,7 @@
 import { Router } from "express";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 import prisma from "../lib/prisma";
 import { ok, fail } from "../lib/response";
 import { requireUser, AuthRequest } from "../middleware/auth";
@@ -7,6 +10,21 @@ import { dataService } from "../services/data";
 import { paymentService } from "../services/payments";
 
 const router = Router();
+
+// Configure multer for recording uploads
+const UPLOADS_DIR = path.join(process.cwd(), "uploads");
+if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: UPLOADS_DIR,
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname) || ".webm";
+      cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
+    },
+  }),
+  limits: { fileSize: 500 * 1024 * 1024 }, // 500 MB max
+});
 
 // All routes require JWT auth
 router.use(requireUser);
@@ -241,6 +259,68 @@ router.post("/sessions/:id/end", async (req: AuthRequest, res) => {
     dataService.queueUpload(id).catch((e) => console.error("[Upload queue error]", e));
 
     return ok(res, updated);
+  } catch (e: any) {
+    return fail(res, e.message, 500);
+  }
+});
+
+// ─── Recording Upload ───────────────────────────────
+
+/**
+ * @openapi
+ * /api/user/sessions/{id}/upload:
+ *   post:
+ *     tags: [User]
+ *     summary: Upload a recording file for a session
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               recording: { type: string, format: binary }
+ *     responses:
+ *       200:
+ *         description: Recording uploaded
+ */
+router.post("/sessions/:id/upload", upload.single("recording"), async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params;
+
+    const session = await prisma.session.findFirst({
+      where: { id, userId: req.userId },
+    });
+    if (!session) return fail(res, "Session not found", 404);
+
+    const file = req.file;
+    if (!file) return fail(res, "No recording file provided");
+
+    const fileSizeMB = +(file.size / 1024 / 1024).toFixed(1);
+    const localPath = file.path;
+
+    // Update session with actual file info
+    await prisma.session.update({
+      where: { id },
+      data: {
+        dataSizeMB: fileSizeMB,
+        cloudStorageKey: localPath, // Local path for now; replaced with Azure URL when uploaded
+        uploadedToCloud: false,
+        dataSaleStatus: "pending_upload",
+      },
+    });
+
+    console.log(`[Upload] Session ${id}: ${fileSizeMB} MB saved to ${localPath}`);
+
+    // Queue for cloud upload in background (when Azure is configured)
+    dataService.queueUpload(id).catch((e) => console.error("[Upload queue error]", e));
+
+    return ok(res, { fileSizeMB, localPath: file.filename });
   } catch (e: any) {
     return fail(res, e.message, 500);
   }
