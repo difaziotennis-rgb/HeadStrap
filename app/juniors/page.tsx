@@ -139,7 +139,7 @@ export default function JuniorsPage() {
         body: JSON.stringify({
           ...formData,
           ageGroup: formData.ageGroup,
-          ageGroupLabel: formData.ageGroup === "6-11" ? "Ages 6–11 (2:00 – 3:00 PM)" : "Ages 12–16 (3:00 – 4:00 PM)",
+          ageGroupLabel: formData.ageGroup === "6-11" ? "Ages 6–11 (Sat 10:30–11:30 AM, Wed/Fri 11 AM–12 PM)" : "Ages 12–16 (Sat 11:30 AM–12:30 PM, Wed/Fri 12–1 PM)",
           selectedDays: allSelected,
           weeklyCount,
           dropinCount,
@@ -188,16 +188,16 @@ export default function JuniorsPage() {
             </span>
             <span className="flex items-center gap-1.5">
               <Clock className="h-4 w-4 text-[#8a8477]" />
-              2 PM – 4 PM
+              10:30 AM – 1 PM
             </span>
           </div>
 
           <div className="mt-6 flex flex-wrap items-center justify-center gap-4 text-[12px]">
             <span className="bg-white/10 text-white/70 px-4 py-1.5 rounded-full">
-              Ages 6–11 · 2:00 – 3:00 PM
+              Sat · 10:30 AM – 12:30 PM
             </span>
             <span className="bg-white/10 text-white/70 px-4 py-1.5 rounded-full">
-              Ages 12–16 · 3:00 – 4:00 PM
+              Wed & Fri · 11:00 AM – 1:00 PM
             </span>
           </div>
 
@@ -256,11 +256,19 @@ export default function JuniorsPage() {
             <p className="text-[15px] text-[#1a1a1a] font-medium mb-1">
               Saturday, Wednesday, Friday
             </p>
+            <p className="text-[13px] text-[#7a756d] font-medium mt-2">Saturday</p>
             <p className="text-[14px] text-[#7a756d]">
-              Ages 6–11: 2:00 – 3:00 PM
+              Ages 6–11: 10:30 – 11:30 AM
             </p>
             <p className="text-[14px] text-[#7a756d]">
-              Ages 12–16: 3:00 – 4:00 PM
+              Ages 12–16: 11:30 AM – 12:30 PM
+            </p>
+            <p className="text-[13px] text-[#7a756d] font-medium mt-2">Wednesday & Friday</p>
+            <p className="text-[14px] text-[#7a756d]">
+              Ages 6–11: 11:00 AM – 12:00 PM
+            </p>
+            <p className="text-[14px] text-[#7a756d]">
+              Ages 12–16: 12:00 – 1:00 PM
             </p>
             <p className="text-[13px] text-[#a39e95] mt-3">
               10 weeks from June 27 through September 2. Register by the week or drop in for a single session.
@@ -297,7 +305,7 @@ export default function JuniorsPage() {
             </p>
             <p className="text-[14px] text-[#7a756d]">Ages 6–11 and Ages 12–16</p>
             <p className="text-[13px] text-[#a39e95] mt-3">
-              All skill levels welcome. The younger group runs 2:00 – 3:00 PM, the middle/high school group runs 3:00 – 4:00 PM.
+              All skill levels welcome. Saturdays run 10:30 AM – 12:30 PM, Wednesday & Friday run 11 AM – 1 PM. Each session is split by age group.
             </p>
           </div>
 
@@ -552,7 +560,7 @@ export default function JuniorsPage() {
                       }`}
                     >
                       <span className="block">Ages 6–11</span>
-                      <span className={`text-[10px] ${formData.ageGroup === "6-11" ? "text-white/60" : "text-[#a39e95]"}`}>2:00 – 3:00 PM</span>
+                      <span className={`text-[10px] ${formData.ageGroup === "6-11" ? "text-white/60" : "text-[#a39e95]"}`}>Sat 10:30–11:30 AM · Wed/Fri 11 AM–12 PM</span>
                     </button>
                     <button
                       type="button"
@@ -564,7 +572,7 @@ export default function JuniorsPage() {
                       }`}
                     >
                       <span className="block">Ages 12–16</span>
-                      <span className={`text-[10px] ${formData.ageGroup === "12-16" ? "text-white/60" : "text-[#a39e95]"}`}>3:00 – 4:00 PM</span>
+                      <span className={`text-[10px] ${formData.ageGroup === "12-16" ? "text-white/60" : "text-[#a39e95]"}`}>Sat 11:30 AM–12:30 PM · Wed/Fri 12–1 PM</span>
                     </button>
                   </div>
                 </div>
@@ -711,7 +719,7 @@ export default function JuniorsPage() {
               },
               {
                 q: "What ages are accepted?",
-                a: "The clinic is for ages 6–16. The younger group (ages 6–11) runs from 2:00 – 3:00 PM, and the middle/high school group (ages 12–16) runs from 3:00 – 4:00 PM.",
+                a: "The clinic is for ages 6–16. On Saturdays, ages 6–11 run 10:30–11:30 AM and ages 12–16 run 11:30 AM–12:30 PM. On Wednesday & Friday, ages 6–11 run 11 AM–12 PM and ages 12–16 run 12–1 PM.",
               },
             ].map((item, i) => (
               <FAQItem key={i} question={item.q} answer={item.a} />
