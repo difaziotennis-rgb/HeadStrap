@@ -9,11 +9,26 @@ const KEYS = {
   DATA_PACKAGES: "@clover_data_packages",
 };
 
-// Estimated rate — clearly communicated as an estimate
-const EST_RATE_PER_MINUTE = 0.28; // ~$16.80/hour estimated
-const USER_SPLIT = 0.6;
-const PLATFORM_SPLIT = 0.4;
+// Estimated rates — narrated data is worth significantly more
+const EST_RATE_NARRATED = 0.28; // ~$16.80/hour — premium (narrated)
+const EST_RATE_SILENT = 0.12; // ~$7.20/hour — standard (unnarrated)
+
+// Revenue splits — narrated gets a better deal
+const NARRATED_USER_SPLIT = 0.6; // 60% to user
+const NARRATED_PLATFORM_SPLIT = 0.4;
+const SILENT_USER_SPLIT = 0.4; // 40% to user
+const SILENT_PLATFORM_SPLIT = 0.6;
+
 const MB_PER_MINUTE = 45; // simulated data rate
+
+/** Get the estimated rate and split for a session based on narration */
+export function getSessionRates(narrated: boolean) {
+  return {
+    estRate: narrated ? EST_RATE_NARRATED : EST_RATE_SILENT,
+    userSplit: narrated ? NARRATED_USER_SPLIT : SILENT_USER_SPLIT,
+    platformSplit: narrated ? NARRATED_PLATFORM_SPLIT : SILENT_PLATFORM_SPLIT,
+  };
+}
 
 // Job types for random session generation
 const JOB_TYPES = [
@@ -103,7 +118,9 @@ async function seedDemoSessions(): Promise<void> {
 
   for (let i = 0; i < 8; i++) {
     const durationMinutes = Math.floor(Math.random() * 90) + 15;
-    const estimatedEarnings = +(durationMinutes * EST_RATE_PER_MINUTE).toFixed(2);
+    const narrated = Math.random() > 0.3; // ~70% narrated
+    const rates = getSessionRates(narrated);
+    const estimatedEarnings = +(durationMinutes * rates.estRate).toFixed(2);
     const startTime = new Date(
       now - (i + 1) * 86400000 - Math.random() * 43200000
     ).toISOString();
@@ -123,11 +140,11 @@ async function seedDemoSessions(): Promise<void> {
       ).toISOString(),
       durationMinutes,
       dataSizeMB: +(durationMinutes * MB_PER_MINUTE).toFixed(1),
-      narrationEnabled: Math.random() > 0.3,
+      narrationEnabled: narrated,
       estimatedEarnings,
       actualEarnings: actualPrice,
-      userPayout: isSold ? +(actualPrice * USER_SPLIT).toFixed(2) : 0,
-      platformRevenue: isSold ? +(actualPrice * PLATFORM_SPLIT).toFixed(2) : 0,
+      userPayout: isSold ? +(actualPrice * rates.userSplit).toFixed(2) : 0,
+      platformRevenue: isSold ? +(actualPrice * rates.platformSplit).toFixed(2) : 0,
       dataSaleStatus: isSold
         ? i >= 5
           ? "paid_out"
@@ -167,6 +184,7 @@ export async function getSessions(): Promise<Session[]> {
   // Migrate old session format to new format
   return raw.map((s) => ({
     ...s,
+    narrationEnabled: s.narrationEnabled ?? true,
     estimatedEarnings: s.estimatedEarnings ?? s.totalEarned ?? 0,
     actualEarnings: s.actualEarnings ?? 0,
     userPayout: s.userPayout ?? s.userShare ?? 0,
@@ -214,7 +232,8 @@ export async function updateCurrentSession(
   session.durationMinutes = +elapsedMinutes.toFixed(2);
   session.dataSizeMB = +(elapsedMinutes * MB_PER_MINUTE).toFixed(1);
   // Only estimated earnings during recording — actual comes after data sale
-  session.estimatedEarnings = +(elapsedMinutes * EST_RATE_PER_MINUTE).toFixed(2);
+  const rates = getSessionRates(session.narrationEnabled);
+  session.estimatedEarnings = +(elapsedMinutes * rates.estRate).toFixed(2);
 
   await AsyncStorage.setItem(KEYS.CURRENT_SESSION, JSON.stringify(session));
   return session;
@@ -503,9 +522,10 @@ export const dataCollectionService = {
       if (sessionIds.includes(session.id)) {
         const proportion = session.durationMinutes / totalMinutes;
         const sessionPrice = +(totalSalePrice * proportion).toFixed(2);
+        const rates = getSessionRates(session.narrationEnabled);
         session.actualEarnings = sessionPrice;
-        session.userPayout = +(sessionPrice * USER_SPLIT).toFixed(2);
-        session.platformRevenue = +(sessionPrice * PLATFORM_SPLIT).toFixed(2);
+        session.userPayout = +(sessionPrice * rates.userSplit).toFixed(2);
+        session.platformRevenue = +(sessionPrice * rates.platformSplit).toFixed(2);
         session.dataSaleStatus = "sold";
       }
     }

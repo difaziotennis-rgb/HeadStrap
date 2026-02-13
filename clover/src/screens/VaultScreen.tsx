@@ -19,6 +19,7 @@ import {
   DollarSign,
   ChevronRight,
   Mic,
+  MicOff,
   Info,
   CircleDollarSign,
   ArrowUpRight,
@@ -169,7 +170,7 @@ export default function VaultScreen() {
                   </Text>
                 </View>
                 <Text style={styles.actualSub}>
-                  From sold data • 60% of sale price goes to you
+                  From sold data • 60% (narrated) / 40% (silent) of sale price
                 </Text>
 
                 {/* Payout breakdown */}
@@ -241,23 +242,44 @@ export default function VaultScreen() {
             {/* Revenue Split Visualization */}
             <View style={styles.splitCard}>
               <Text style={styles.splitTitle}>REVENUE SPLIT (AFTER SALE)</Text>
-              <View style={styles.splitBarContainer}>
-                <View style={styles.splitBarUser}>
-                  <Text style={styles.splitBarText}>
-                    60% — ${earnings.totalUserPayouts.toFixed(2)}
-                  </Text>
+
+              <View style={styles.splitSection}>
+                <View style={styles.splitSectionHeader}>
+                  <Mic size={12} color={COLORS.emerald} />
+                  <Text style={styles.splitSectionLabel}>NARRATED RECORDINGS</Text>
                 </View>
-                <View style={styles.splitBarPlatform}>
-                  <Text style={styles.splitBarTextPlatform}>
-                    40% — ${earnings.totalPlatformRevenue.toFixed(2)}
-                  </Text>
+                <View style={styles.splitBarContainer}>
+                  <View style={[styles.splitBarUser, { flex: 6 }]}>
+                    <Text style={styles.splitBarText}>60% you</Text>
+                  </View>
+                  <View style={[styles.splitBarPlatform, { flex: 4 }]}>
+                    <Text style={styles.splitBarTextPlatform}>40%</Text>
+                  </View>
                 </View>
               </View>
-              <View style={styles.splitNote}>
+
+              <View style={[styles.splitSection, { marginTop: 10 }]}>
+                <View style={styles.splitSectionHeader}>
+                  <MicOff size={12} color={COLORS.slate500} />
+                  <Text style={[styles.splitSectionLabel, { color: COLORS.slate500 }]}>
+                    SILENT RECORDINGS
+                  </Text>
+                </View>
+                <View style={styles.splitBarContainer}>
+                  <View style={[styles.splitBarUser, { flex: 4, backgroundColor: COLORS.slate500 }]}>
+                    <Text style={styles.splitBarText}>40% you</Text>
+                  </View>
+                  <View style={[styles.splitBarPlatform, { flex: 6 }]}>
+                    <Text style={styles.splitBarTextPlatform}>60%</Text>
+                  </View>
+                </View>
+              </View>
+
+              <View style={[styles.splitNote, { marginTop: 12 }]}>
                 <AlertCircle size={12} color={COLORS.slate500} />
                 <Text style={styles.splitNoteText}>
-                  Revenue split only applies after your data is sold to a buyer.
-                  Unsold data has no split.
+                  Narrated recordings earn a higher split because they're more
+                  valuable for AI training. Enable narration to maximize your payout.
                 </Text>
               </View>
             </View>
@@ -275,11 +297,35 @@ export default function VaultScreen() {
               return (
                 <View key={session.id} style={styles.historyItem}>
                   <View style={styles.historyLeft}>
-                    <View style={styles.historyIconBg}>
-                      <Mic size={16} color={COLORS.emerald} />
+                    <View style={[
+                      styles.historyIconBg,
+                      !session.narrationEnabled && { backgroundColor: "rgba(255,255,255,0.06)" },
+                    ]}>
+                      {session.narrationEnabled ? (
+                        <Mic size={16} color={COLORS.emerald} />
+                      ) : (
+                        <MicOff size={16} color={COLORS.slate500} />
+                      )}
                     </View>
                     <View style={styles.historyDetails}>
-                      <Text style={styles.historyType}>{session.type}</Text>
+                      <View style={styles.historyTypeRow}>
+                        <Text style={styles.historyType}>{session.type}</Text>
+                        <View style={[
+                          styles.narrationBadge,
+                          session.narrationEnabled
+                            ? styles.narrationBadgeOn
+                            : styles.narrationBadgeOff,
+                        ]}>
+                          <Text style={[
+                            styles.narrationBadgeText,
+                            { color: session.narrationEnabled ? COLORS.emerald : COLORS.slate500 },
+                          ]}>
+                            {session.narrationEnabled
+                              ? `60/40`
+                              : `40/60`}
+                          </Text>
+                        </View>
+                      </View>
                       <Text style={styles.historyDate}>
                         {formatDate(session.startTime)}
                       </Text>
@@ -515,12 +561,24 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     marginBottom: 14,
   },
+  splitSection: {},
+  splitSectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginBottom: 6,
+  },
+  splitSectionLabel: {
+    color: COLORS.emerald,
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 1.5,
+  },
   splitBarContainer: {
     flexDirection: "row",
-    height: 40,
-    borderRadius: 10,
+    height: 32,
+    borderRadius: 8,
     overflow: "hidden",
-    marginBottom: 12,
   },
   splitBarUser: {
     flex: 6,
@@ -601,10 +659,31 @@ const styles = StyleSheet.create({
   historyDetails: {
     flex: 1,
   },
+  historyTypeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
   historyType: {
     color: COLORS.white,
     fontSize: 14,
     fontWeight: "600",
+  },
+  narrationBadge: {
+    borderRadius: 4,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+  },
+  narrationBadgeOn: {
+    backgroundColor: "rgba(72,187,120,0.12)",
+  },
+  narrationBadgeOff: {
+    backgroundColor: "rgba(255,255,255,0.06)",
+  },
+  narrationBadgeText: {
+    fontSize: 8,
+    fontWeight: "700",
+    letterSpacing: 0.5,
   },
   historyDate: {
     color: COLORS.slate500,

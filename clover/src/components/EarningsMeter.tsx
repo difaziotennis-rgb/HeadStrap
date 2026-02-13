@@ -7,12 +7,14 @@ interface EarningsMeterProps {
   amount: number;
   label?: string;
   isEstimate?: boolean;
+  narrated?: boolean;
 }
 
 export default function EarningsMeter({
   amount,
   label = "SESSION EARNINGS",
   isEstimate = true,
+  narrated = true,
 }: EarningsMeterProps) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
@@ -62,9 +64,11 @@ export default function EarningsMeter({
         </View>
       )}
       <View style={styles.rateRow}>
-        <View style={styles.rateDot} />
+        <View style={[styles.rateDot, !narrated && { backgroundColor: COLORS.slate500 }]} />
         <Text style={styles.rateText}>
-          ~$0.28/min est. • 60/40 split after sale
+          {narrated
+            ? "~$0.28/min est. • 60/40 split after sale"
+            : "~$0.12/min est. • 40/60 split (no narration)"}
         </Text>
       </View>
     </Animated.View>
