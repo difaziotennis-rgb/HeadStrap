@@ -17,6 +17,7 @@ import {
   Clock,
 } from "lucide-react-native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useFocusEffect } from "@react-navigation/native";
 import GlowButton from "../components/GlowButton";
 import EarningsMeter from "../components/EarningsMeter";
 import CloverLogo from "../components/CloverLogo";
@@ -62,6 +63,25 @@ export default function DashboardScreen({ navigation }: Props) {
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
+
+  // When screen regains focus (e.g. returning from Recorder), sync state
+  useFocusEffect(
+    useCallback(() => {
+      getCurrentSession().then((session) => {
+        if (!session || session.status !== "recording") {
+          // Recording was stopped elsewhere (e.g. from RecorderScreen)
+          if (timerRef.current) {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
+          }
+          setIsRecording(false);
+          setCurrentSession(null);
+          setElapsedSeconds(0);
+          setSessionEarnings(0);
+        }
+      });
+    }, [])
+  );
 
   const startRecording = useCallback(async () => {
     const session = await startSession(
