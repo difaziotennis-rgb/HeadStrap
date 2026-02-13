@@ -186,17 +186,15 @@ export default function JuniorsPage() {
               <Calendar className="h-4 w-4 text-[#8a8477]" />
               Sat / Wed / Fri
             </span>
-            <span className="flex items-center gap-1.5">
-              <Clock className="h-4 w-4 text-[#8a8477]" />
-              10:30 AM – 1 PM
-            </span>
           </div>
 
           <div className="mt-6 flex flex-wrap items-center justify-center gap-4 text-[12px]">
-            <span className="bg-white/10 text-white/70 px-4 py-1.5 rounded-full">
+            <span className="bg-white/10 text-white/70 px-4 py-1.5 rounded-full flex items-center gap-1.5">
+              <Clock className="h-3.5 w-3.5 text-[#8a8477]" />
               Sat · 10:30 AM – 12:30 PM
             </span>
-            <span className="bg-white/10 text-white/70 px-4 py-1.5 rounded-full">
+            <span className="bg-white/10 text-white/70 px-4 py-1.5 rounded-full flex items-center gap-1.5">
+              <Clock className="h-3.5 w-3.5 text-[#8a8477]" />
               Wed & Fri · 11:00 AM – 1:00 PM
             </span>
           </div>
