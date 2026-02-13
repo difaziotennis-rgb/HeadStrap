@@ -1,0 +1,507 @@
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Animated,
+  Dimensions,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
+import {
+  X,
+  Pause,
+  Play,
+  Camera,
+  Mic,
+  CircleDot,
+} from "lucide-react-native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import StoplightBar from "../components/StoplightBar";
+import AudioWaveform from "../components/AudioWaveform";
+import {
+  updateCurrentSession,
+  endSession,
+} from "../services/mockBackend";
+import { COLORS } from "../constants/theme";
+import { RootStackParamList, StoplightStatus } from "../types";
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+
+type Props = {
+  navigation: NativeStackNavigationProp<RootStackParamList, "Recorder">;
+};
+
+export default function RecorderScreen({ navigation }: Props) {
+  const [isPaused, setIsPaused] = useState(false);
+  const [stoplightStatus, setStoplightStatus] =
+    useState<StoplightStatus>("green");
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [earnings, setEarnings] = useState(0);
+  const [dataMB, setDataMB] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const recordDotAnim = useRef(new Animated.Value(1)).current;
+  const scanlineAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Record dot blink
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(recordDotAnim, {
+          toValue: 0.2,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(recordDotAnim, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+
+    // Scanline effect
+    Animated.loop(
+      Animated.timing(scanlineAnim, {
+        toValue: 1,
+        duration: 4000,
+        useNativeDriver: true,
+      })
+    ).start();
+
+    startTimer();
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, []);
+
+  const startTimer = () => {
+    timerRef.current = setInterval(() => {
+      setElapsedSeconds((prev) => {
+        const newElapsed = prev + 1;
+        const minutes = newElapsed / 60;
+        updateCurrentSession(minutes).then((session) => {
+          if (session) {
+            setEarnings(session.userShare);
+            setDataMB(session.dataSizeMB);
+          }
+        });
+        return newElapsed;
+      });
+    }, 1000);
+  };
+
+  const togglePause = () => {
+    if (isPaused) {
+      setIsPaused(false);
+      setStoplightStatus("green");
+      startTimer();
+    } else {
+      setIsPaused(true);
+      setStoplightStatus("yellow");
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    }
+  };
+
+  const handleStop = useCallback(async () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    await endSession();
+    navigation.goBack();
+  }, [navigation]);
+
+  const formatTime = (seconds: number) => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return `${h.toString().padStart(2, "0")}:${m
+      .toString()
+      .padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+  };
+
+  const scanlineTranslate = scanlineAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-SCREEN_HEIGHT, SCREEN_HEIGHT],
+  });
+
+  return (
+    <View style={styles.container}>
+      {/* Simulated camera background */}
+      <LinearGradient
+        colors={["#0a0f0a", "#0d150d", "#0a0f0a"]}
+        style={styles.cameraBackground}
+      >
+        {/* Grid overlay */}
+        <View style={styles.gridOverlay}>
+          <View style={[styles.gridLine, styles.gridH1]} />
+          <View style={[styles.gridLine, styles.gridH2]} />
+          <View style={[styles.gridLine, styles.gridV1]} />
+          <View style={[styles.gridLine, styles.gridV2]} />
+        </View>
+
+        {/* Scan line */}
+        <Animated.View
+          style={[
+            styles.scanLine,
+            { transform: [{ translateY: scanlineTranslate }] },
+          ]}
+        />
+
+        {/* Corner brackets */}
+        <View style={[styles.bracket, styles.bracketTL]} />
+        <View style={[styles.bracket, styles.bracketTR]} />
+        <View style={[styles.bracket, styles.bracketBL]} />
+        <View style={[styles.bracket, styles.bracketBR]} />
+
+        {/* Center crosshair */}
+        <View style={styles.crosshair}>
+          <View style={styles.crosshairH} />
+          <View style={styles.crosshairV} />
+          <View style={styles.crosshairDot} />
+        </View>
+      </LinearGradient>
+
+      {/* Top overlay */}
+      <SafeAreaView style={styles.topOverlay}>
+        <View style={styles.topBar}>
+          <StoplightBar status={stoplightStatus} />
+        </View>
+
+        {/* Recording indicator */}
+        <View style={styles.recordingRow}>
+          <Animated.View
+            style={[styles.recordDot, { opacity: recordDotAnim }]}
+          />
+          <Text style={styles.recordText}>
+            {isPaused ? "PAUSED" : "REC"}
+          </Text>
+          <Text style={styles.timeText}>{formatTime(elapsedSeconds)}</Text>
+        </View>
+
+        {/* Live stats */}
+        <View style={styles.liveStats}>
+          <View style={styles.liveStat}>
+            <Text style={styles.liveStatLabel}>EARNED</Text>
+            <Text style={styles.liveStatValue}>${earnings.toFixed(2)}</Text>
+          </View>
+          <View style={styles.liveStatDivider} />
+          <View style={styles.liveStat}>
+            <Text style={styles.liveStatLabel}>DATA</Text>
+            <Text style={styles.liveStatValue}>
+              {dataMB > 1024
+                ? `${(dataMB / 1024).toFixed(1)} GB`
+                : `${dataMB.toFixed(0)} MB`}
+            </Text>
+          </View>
+        </View>
+      </SafeAreaView>
+
+      {/* Bottom overlay */}
+      <View style={styles.bottomOverlay}>
+        {/* Audio waveform */}
+        <View style={styles.waveformContainer}>
+          <View style={styles.waveformHeader}>
+            <Mic size={14} color={COLORS.emerald} />
+            <Text style={styles.waveformLabel}>NARRATION</Text>
+          </View>
+          <AudioWaveform active={!isPaused} height={50} barCount={40} />
+        </View>
+
+        {/* Controls */}
+        <View style={styles.controls}>
+          <TouchableOpacity
+            style={styles.controlButton}
+            onPress={handleStop}
+            activeOpacity={0.7}
+          >
+            <View style={styles.stopButton}>
+              <X size={24} color={COLORS.red} />
+            </View>
+            <Text style={styles.controlLabel}>Stop</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.controlButton}
+            onPress={togglePause}
+            activeOpacity={0.7}
+          >
+            <View
+              style={[
+                styles.pauseButton,
+                isPaused && styles.pauseButtonActive,
+              ]}
+            >
+              {isPaused ? (
+                <Play size={28} color={COLORS.emerald} />
+              ) : (
+                <Pause size={28} color={COLORS.white} />
+              )}
+            </View>
+            <Text style={styles.controlLabel}>
+              {isPaused ? "Resume" : "Pause"}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.controlButton} activeOpacity={0.7}>
+            <View style={styles.cameraButton}>
+              <Camera size={24} color={COLORS.slate300} />
+            </View>
+            <Text style={styles.controlLabel}>Flip</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#000",
+  },
+  cameraBackground: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  gridOverlay: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  gridLine: {
+    position: "absolute",
+    backgroundColor: "rgba(72, 187, 120, 0.07)",
+  },
+  gridH1: {
+    width: "100%",
+    height: 1,
+    top: "33%",
+  },
+  gridH2: {
+    width: "100%",
+    height: 1,
+    top: "66%",
+  },
+  gridV1: {
+    width: 1,
+    height: "100%",
+    left: "33%",
+  },
+  gridV2: {
+    width: 1,
+    height: "100%",
+    left: "66%",
+  },
+  scanLine: {
+    position: "absolute",
+    width: "100%",
+    height: 1,
+    backgroundColor: COLORS.emerald,
+    opacity: 0.3,
+    shadowColor: COLORS.emerald,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 8,
+  },
+  bracket: {
+    position: "absolute",
+    width: 40,
+    height: 40,
+    borderColor: COLORS.emerald,
+  },
+  bracketTL: {
+    top: 100,
+    left: 20,
+    borderTopWidth: 2,
+    borderLeftWidth: 2,
+  },
+  bracketTR: {
+    top: 100,
+    right: 20,
+    borderTopWidth: 2,
+    borderRightWidth: 2,
+  },
+  bracketBL: {
+    bottom: 200,
+    left: 20,
+    borderBottomWidth: 2,
+    borderLeftWidth: 2,
+  },
+  bracketBR: {
+    bottom: 200,
+    right: 20,
+    borderBottomWidth: 2,
+    borderRightWidth: 2,
+  },
+  crosshair: {
+    position: "absolute",
+    top: "45%",
+    alignSelf: "center",
+    width: 30,
+    height: 30,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  crosshairH: {
+    position: "absolute",
+    width: 30,
+    height: 1,
+    backgroundColor: "rgba(72, 187, 120, 0.4)",
+  },
+  crosshairV: {
+    position: "absolute",
+    width: 1,
+    height: 30,
+    backgroundColor: "rgba(72, 187, 120, 0.4)",
+  },
+  crosshairDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: COLORS.emerald,
+  },
+  topOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 16,
+  },
+  topBar: {
+    marginTop: 8,
+  },
+  recordingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 12,
+    alignSelf: "center",
+  },
+  recordDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: COLORS.red,
+  },
+  recordText: {
+    color: COLORS.red,
+    fontSize: 13,
+    fontWeight: "800",
+    letterSpacing: 2,
+  },
+  timeText: {
+    color: COLORS.white,
+    fontSize: 13,
+    fontWeight: "600",
+    fontVariant: ["tabular-nums"],
+    letterSpacing: 2,
+    marginLeft: 8,
+  },
+  liveStats: {
+    flexDirection: "row",
+    alignSelf: "center",
+    backgroundColor: "rgba(0,0,0,0.6)",
+    borderRadius: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    marginTop: 12,
+    gap: 16,
+  },
+  liveStat: {
+    alignItems: "center",
+  },
+  liveStatLabel: {
+    color: COLORS.slate400,
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 2,
+  },
+  liveStatValue: {
+    color: COLORS.emerald,
+    fontSize: 18,
+    fontWeight: "800",
+    marginTop: 2,
+  },
+  liveStatDivider: {
+    width: 1,
+    backgroundColor: "rgba(255,255,255,0.1)",
+  },
+  bottomOverlay: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 20,
+    paddingBottom: 50,
+  },
+  waveformContainer: {
+    backgroundColor: "rgba(0,0,0,0.7)",
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 20,
+  },
+  waveformHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 10,
+  },
+  waveformLabel: {
+    color: COLORS.emerald,
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 2,
+  },
+  controls: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 36,
+  },
+  controlButton: {
+    alignItems: "center",
+    gap: 8,
+  },
+  stopButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "rgba(252, 129, 129, 0.15)",
+    borderWidth: 2,
+    borderColor: "rgba(252, 129, 129, 0.3)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pauseButton: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pauseButtonActive: {
+    borderColor: COLORS.emerald,
+    backgroundColor: "rgba(72, 187, 120, 0.15)",
+  },
+  cameraButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  controlLabel: {
+    color: COLORS.slate400,
+    fontSize: 11,
+    fontWeight: "600",
+  },
+});
