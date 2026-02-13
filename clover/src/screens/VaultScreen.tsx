@@ -37,10 +37,29 @@ export default function VaultScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   const loadEarnings = useCallback(async () => {
-    const data = await getEarnings();
-    setEarnings(data);
-    const user = await getUser();
-    setHasPayoutMethod(user?.payoutMethod !== "none" && !!user?.payoutMethod);
+    try {
+      const data = await getEarnings();
+      setEarnings(data);
+    } catch {
+      // If API is unavailable, show empty state instead of white screen
+      setEarnings({
+        totalEstimated: 0,
+        totalActualEarned: 0,
+        totalUserPayouts: 0,
+        totalPlatformRevenue: 0,
+        pendingPayout: 0,
+        paidOut: 0,
+        totalDataGB: 0,
+        totalHours: 0,
+        sessions: [],
+      });
+    }
+    try {
+      const user = await getUser();
+      setHasPayoutMethod(user?.payoutMethod !== "none" && !!user?.payoutMethod);
+    } catch {
+      // Ignore — default to no payout method
+    }
   }, []);
 
   useEffect(() => {
@@ -124,7 +143,19 @@ export default function VaultScreen() {
     }
   };
 
-  if (!earnings) return null;
+  if (!earnings) {
+    return (
+      <LinearGradient
+        colors={[COLORS.darkBg, "#0D1117", COLORS.darkBg]}
+        style={styles.gradient}
+      >
+        <SafeAreaView style={[styles.container, { alignItems: "center", justifyContent: "center" }]}>
+          <Vault size={32} color={COLORS.emerald} />
+          <Text style={{ color: COLORS.slate400, marginTop: 12, fontSize: 14 }}>Loading...</Text>
+        </SafeAreaView>
+      </LinearGradient>
+    );
+  }
 
   return (
     <LinearGradient
