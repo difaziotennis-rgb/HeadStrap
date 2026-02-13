@@ -42,6 +42,7 @@ const nextConfig = {
       '*': [
         './ClubManagement/**/*',
         './art-portfolio/**/*',
+        './clover/**/*',
       ],
     },
   },
@@ -69,6 +70,7 @@ const nextConfig = {
             ...(Array.isArray(rule.exclude) ? rule.exclude : rule.exclude ? [rule.exclude] : []),
             /ClubManagement/,
             /art-portfolio/,
+            /clover/,
           ],
         }
       }
