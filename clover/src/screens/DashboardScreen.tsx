@@ -64,7 +64,7 @@ export default function DashboardScreen({ navigation }: Props) {
         setIsRecording(true);
         setSessionEarnings(session.estimatedEarnings);
       }
-    });
+    }).catch(() => {});
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -86,16 +86,20 @@ export default function DashboardScreen({ navigation }: Props) {
           setElapsedSeconds(0);
           setSessionEarnings(0);
         }
-      });
+      }).catch(() => {});
     }, [])
   );
 
   const startRecording = useCallback(async () => {
-    const session = await startSession(
-      "Field Recording",
-      narrationEnabled
-    );
-    setCurrentSession(session);
+    try {
+      const session = await startSession(
+        "Field Recording",
+        narrationEnabled
+      );
+      setCurrentSession(session);
+    } catch {
+      // API unavailable — continue with local-only recording
+    }
     setIsRecording(true);
     setElapsedSeconds(0);
     setSessionEarnings(0);
@@ -108,7 +112,7 @@ export default function DashboardScreen({ navigation }: Props) {
           if (updated) {
             setSessionEarnings(updated.estimatedEarnings);
           }
-        });
+        }).catch(() => {});
         return newElapsed;
       });
     }, 1000);
@@ -122,7 +126,11 @@ export default function DashboardScreen({ navigation }: Props) {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
-    await endSession();
+    try {
+      await endSession();
+    } catch {
+      // API unavailable — still reset local state
+    }
     setIsRecording(false);
     setCurrentSession(null);
   }, []);

@@ -152,7 +152,7 @@ export default function RecorderScreen({ navigation }: Props) {
             setEarnings(session.estimatedEarnings);
             setDataMB(session.dataSizeMB);
           }
-        });
+        }).catch(() => {});
         return newElapsed;
       });
     }, 1000);
@@ -178,7 +178,11 @@ export default function RecorderScreen({ navigation }: Props) {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
-    await endSession();
+    try {
+      await endSession();
+    } catch {
+      // API unavailable — still navigate back
+    }
     navigation.goBack();
   }, [navigation]);
 
