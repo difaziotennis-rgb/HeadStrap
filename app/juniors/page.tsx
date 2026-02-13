@@ -3,22 +3,22 @@
 import { useState, useMemo } from "react";
 import { Sun, Calendar, Clock, MapPin, Users, ChevronDown, CheckCircle, DollarSign, User } from "lucide-react";
 
-// Generate all clinic weeks (Sun-Fri) from June 28 to Sept 2, 2026
+// Generate all clinic weeks (Sat-Fri) from June 27 to Sept 2, 2026
 function getClinicWeeks() {
   const weeks: { label: string; startDate: string; days: string[] }[] = [];
-  const start = new Date(2026, 5, 28); // June 28, 2026 (Sunday)
+  const start = new Date(2026, 5, 27); // June 27, 2026 (Saturday)
   const end = new Date(2026, 8, 2); // Sept 2, 2026
 
   let current = new Date(start);
   while (current <= end) {
-    // Find the Sunday of this week
-    const sun = new Date(current);
-    while (sun.getDay() !== 0) sun.setDate(sun.getDate() - 1);
+    // Find the Saturday of this week
+    const sat = new Date(current);
+    while (sat.getDay() !== 6) sat.setDate(sat.getDate() - 1);
 
-    const wed = new Date(sun);
-    wed.setDate(wed.getDate() + 3);
-    const fri = new Date(sun);
-    fri.setDate(fri.getDate() + 5);
+    const wed = new Date(sat);
+    wed.setDate(wed.getDate() + 4);
+    const fri = new Date(sat);
+    fri.setDate(fri.getDate() + 6);
 
     const fmt = (d: Date) =>
       d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -26,20 +26,20 @@ function getClinicWeeks() {
 
     // Only include if at least one day is in range
     const days: string[] = [];
-    if (sun >= start && sun <= end) days.push(isoFmt(sun));
+    if (sat >= start && sat <= end) days.push(isoFmt(sat));
     if (wed >= start && wed <= end) days.push(isoFmt(wed));
     if (fri >= start && fri <= end) days.push(isoFmt(fri));
 
     if (days.length > 0) {
       weeks.push({
-        label: `${fmt(sun)} – ${fmt(fri)}`,
-        startDate: isoFmt(sun),
+        label: `${fmt(sat)} – ${fmt(fri)}`,
+        startDate: isoFmt(sat),
         days,
       });
     }
 
-    // Move to next Sunday
-    current = new Date(sun);
+    // Move to next Saturday
+    current = new Date(sat);
     current.setDate(current.getDate() + 7);
   }
   return weeks;
@@ -139,7 +139,7 @@ export default function JuniorsPage() {
         body: JSON.stringify({
           ...formData,
           ageGroup: formData.ageGroup,
-          ageGroupLabel: formData.ageGroup === "6-11" ? "Ages 6–11 (11:00 AM – 12:00 PM)" : "Ages 12–16 (12:00 – 1:00 PM)",
+          ageGroupLabel: formData.ageGroup === "6-11" ? "Ages 6–11 (2:00 – 3:00 PM)" : "Ages 12–16 (3:00 – 4:00 PM)",
           selectedDays: allSelected,
           weeklyCount,
           dropinCount,
@@ -180,24 +180,24 @@ export default function JuniorsPage() {
           <div className="mt-10 flex flex-wrap items-center justify-center gap-6 text-[13px] text-white/50">
             <span className="flex items-center gap-1.5">
               <Sun className="h-4 w-4 text-[#8a8477]" />
-              June 28 – Sept 2
+              June 27 – Sept 2
             </span>
             <span className="flex items-center gap-1.5">
               <Calendar className="h-4 w-4 text-[#8a8477]" />
-              Sun / Wed / Fri
+              Sat / Wed / Fri
             </span>
             <span className="flex items-center gap-1.5">
               <Clock className="h-4 w-4 text-[#8a8477]" />
-              11 AM – 1 PM
+              2 PM – 4 PM
             </span>
           </div>
 
           <div className="mt-6 flex flex-wrap items-center justify-center gap-4 text-[12px]">
             <span className="bg-white/10 text-white/70 px-4 py-1.5 rounded-full">
-              Ages 6–11 · 11:00 AM – 12:00 PM
+              Ages 6–11 · 2:00 – 3:00 PM
             </span>
             <span className="bg-white/10 text-white/70 px-4 py-1.5 rounded-full">
-              Ages 12–16 · 12:00 – 1:00 PM
+              Ages 12–16 · 3:00 – 4:00 PM
             </span>
           </div>
 
@@ -254,16 +254,16 @@ export default function JuniorsPage() {
               </h3>
             </div>
             <p className="text-[15px] text-[#1a1a1a] font-medium mb-1">
-              Sunday, Wednesday, Friday
+              Saturday, Wednesday, Friday
             </p>
             <p className="text-[14px] text-[#7a756d]">
-              Ages 6–11: 11:00 AM – 12:00 PM
+              Ages 6–11: 2:00 – 3:00 PM
             </p>
             <p className="text-[14px] text-[#7a756d]">
-              Ages 12–16: 12:00 – 1:00 PM
+              Ages 12–16: 3:00 – 4:00 PM
             </p>
             <p className="text-[13px] text-[#a39e95] mt-3">
-              10 weeks from June 28 through September 2. Register by the week or drop in for a single session.
+              10 weeks from June 27 through September 2. Register by the week or drop in for a single session.
             </p>
           </div>
 
@@ -297,7 +297,7 @@ export default function JuniorsPage() {
             </p>
             <p className="text-[14px] text-[#7a756d]">Ages 6–11 and Ages 12–16</p>
             <p className="text-[13px] text-[#a39e95] mt-3">
-              All skill levels welcome. The younger group runs 11 AM – 12 PM, the middle/high school group runs 12 – 1 PM.
+              All skill levels welcome. The younger group runs 2:00 – 3:00 PM, the middle/high school group runs 3:00 – 4:00 PM.
             </p>
           </div>
 
@@ -552,7 +552,7 @@ export default function JuniorsPage() {
                       }`}
                     >
                       <span className="block">Ages 6–11</span>
-                      <span className={`text-[10px] ${formData.ageGroup === "6-11" ? "text-white/60" : "text-[#a39e95]"}`}>11:00 AM – 12:00 PM</span>
+                      <span className={`text-[10px] ${formData.ageGroup === "6-11" ? "text-white/60" : "text-[#a39e95]"}`}>2:00 – 3:00 PM</span>
                     </button>
                     <button
                       type="button"
@@ -564,7 +564,7 @@ export default function JuniorsPage() {
                       }`}
                     >
                       <span className="block">Ages 12–16</span>
-                      <span className={`text-[10px] ${formData.ageGroup === "12-16" ? "text-white/60" : "text-[#a39e95]"}`}>12:00 – 1:00 PM</span>
+                      <span className={`text-[10px] ${formData.ageGroup === "12-16" ? "text-white/60" : "text-[#a39e95]"}`}>3:00 – 4:00 PM</span>
                     </button>
                   </div>
                 </div>
@@ -703,7 +703,7 @@ export default function JuniorsPage() {
               },
               {
                 q: "How does pricing work?",
-                a: `Select all 3 days in a week (Sun, Wed, Fri) and you get the weekly rate of $${WEEKLY_PRICE}. If you only want certain days, each individual session is $${DROPIN_PRICE}. You can mix and match — some full weeks and some individual days.`,
+                a: `Select all 3 days in a week (Sat, Wed, Fri) and you get the weekly rate of $${WEEKLY_PRICE}. If you only want certain days, each individual session is $${DROPIN_PRICE}. You can mix and match — some full weeks and some individual days.`,
               },
               {
                 q: "What happens if it rains?",
@@ -711,7 +711,7 @@ export default function JuniorsPage() {
               },
               {
                 q: "What ages are accepted?",
-                a: "The clinic is for ages 6–16. The younger group (ages 6–11) runs from 11:00 AM – 12:00 PM, and the middle/high school group (ages 12–16) runs from 12:00 – 1:00 PM.",
+                a: "The clinic is for ages 6–16. The younger group (ages 6–11) runs from 2:00 – 3:00 PM, and the middle/high school group (ages 12–16) runs from 3:00 – 4:00 PM.",
               },
             ].map((item, i) => (
               <FAQItem key={i} question={item.q} answer={item.a} />
