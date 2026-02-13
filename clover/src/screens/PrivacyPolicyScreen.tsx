@@ -75,8 +75,8 @@ export default function PrivacyPolicyScreen({ navigation }: Props) {
           <Text style={s.h2}>4. Revenue Sharing</Text>
           <Text style={s.p}>
             When your data is sold to a buyer, revenue is split between you and the Platform:{"\n"}
-            • <Text style={s.bold}>Narrated recordings:</Text> 60% to you, 40% to the Platform{"\n"}
-            • <Text style={s.bold}>Silent recordings:</Text> 40% to you, 60% to the Platform{"\n\n"}
+            • <Text style={s.bold}>Narrated high-quality recordings:</Text> 50% to you, 50% to the Platform (maximum){"\n"}
+            • <Text style={s.bold}>Silent recordings:</Text> 30% to you, 70% to the Platform{"\n\n"}
             Earnings displayed during recording are <Text style={s.bold}>estimates only</Text>. Actual earnings are
             determined at the time of sale and may differ from estimates. Revenue splits apply only after a confirmed
             sale — unsold data generates no earnings.

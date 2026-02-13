@@ -246,9 +246,9 @@ export default function DashboardScreen({ navigation }: Props) {
                   )}
                 </View>
                 <Text style={[styles.rateBoxAmount, narrationEnabled && styles.rateBoxAmountActive]}>
-                  ~$0.28/min
+                  ~$0.24/min
                 </Text>
-                <Text style={styles.rateBoxSplit}>60% your split</Text>
+                <Text style={styles.rateBoxSplit}>50% your split (max)</Text>
               </View>
               <View style={[styles.rateBox, !narrationEnabled && styles.rateBoxDimmed]}>
                 <View style={styles.rateBoxHeader}>
@@ -259,9 +259,9 @@ export default function DashboardScreen({ navigation }: Props) {
                   )}
                 </View>
                 <Text style={[styles.rateBoxAmount, !narrationEnabled && { color: COLORS.slate400 }]}>
-                  ~$0.12/min
+                  ~$0.08/min
                 </Text>
-                <Text style={styles.rateBoxSplit}>40% your split</Text>
+                <Text style={styles.rateBoxSplit}>30% your split</Text>
               </View>
             </View>
 
@@ -366,7 +366,7 @@ export default function DashboardScreen({ navigation }: Props) {
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
               <Text style={styles.statValue}>
-                {narrationEnabled ? "60%" : "40%"}
+                {narrationEnabled ? "50%" : "30%"}
               </Text>
               <Text style={styles.statLabel}>your split</Text>
             </View>

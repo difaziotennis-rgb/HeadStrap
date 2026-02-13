@@ -194,7 +194,7 @@ export default function SessionsPage() {
               />
             </div>
             <p style={{ fontSize: 12, color: "var(--text3)", marginBottom: 4 }}>
-              Revenue will be split per-session based on duration and narration status (60/40 narrated, 40/60 silent).
+              Revenue will be split per-session based on duration and narration status (50/50 narrated, 30/70 silent).
             </p>
             <div className="modal-actions">
               <button className="btn" onClick={() => setShowSellModal(false)}>Cancel</button>

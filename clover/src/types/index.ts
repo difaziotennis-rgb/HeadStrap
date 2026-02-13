@@ -22,8 +22,8 @@ export interface Session {
   // Actual earnings (set after data is sold; 0 until then)
   actualEarnings: number;
   // Revenue split only happens after data sale
-  userPayout: number; // 60% of actual (0 until sold)
-  platformRevenue: number; // 40% of actual (0 until sold)
+  userPayout: number; // up to 50% of actual (0 until sold)
+  platformRevenue: number; // 50%+ of actual (0 until sold)
   // Data sale lifecycle
   dataSaleStatus: "pending_upload" | "uploaded" | "listed" | "sold" | "paid_out";
   uploadedToCloud: boolean;

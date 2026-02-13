@@ -7,10 +7,10 @@ export default function ConfigPage() {
   const [form, setForm] = useState({
     narRatePerMinute: 0.28,
     silentRatePerMinute: 0.12,
-    narUserSplit: 0.6,
-    narPlatformSplit: 0.4,
-    silentUserSplit: 0.4,
-    silentPlatformSplit: 0.6,
+  narUserSplit: 0.5,
+  narPlatformSplit: 0.5,
+  silentUserSplit: 0.3,
+  silentPlatformSplit: 0.7,
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);

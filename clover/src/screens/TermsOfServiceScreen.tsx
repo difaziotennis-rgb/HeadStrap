@@ -87,8 +87,8 @@ export default function TermsOfServiceScreen({ navigation }: Props) {
           <Text style={s.h3}>6.1 Revenue Split</Text>
           <Text style={s.p}>
             When your data is sold, revenue is split as follows:{"\n"}
-            • <Text style={s.bold}>Narrated recordings:</Text> 60% to you, 40% to the Platform{"\n"}
-            • <Text style={s.bold}>Silent recordings:</Text> 40% to you, 60% to the Platform{"\n\n"}
+            • <Text style={s.bold}>Narrated high-quality recordings:</Text> 50% to you, 50% to the Platform (maximum){"\n"}
+            • <Text style={s.bold}>Silent recordings:</Text> 30% to you, 70% to the Platform{"\n\n"}
             These splits may be adjusted with 30 days' notice to you.
           </Text>
           <Text style={s.h3}>6.2 Estimated vs. Actual Earnings</Text>

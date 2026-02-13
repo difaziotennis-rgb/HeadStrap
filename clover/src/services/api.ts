@@ -45,10 +45,10 @@ async function apiFetch(path: string, options: RequestInit = {}): Promise<any> {
 
 // ─── Rate helpers (kept client-side for instant UI updates) ─────
 
-const EST_RATE_NARRATED = 0.28;
-const EST_RATE_SILENT = 0.12;
-const NARRATED_USER_SPLIT = 0.6;
-const SILENT_USER_SPLIT = 0.4;
+const EST_RATE_NARRATED = 0.24;
+const EST_RATE_SILENT = 0.08;
+const NARRATED_USER_SPLIT = 0.5;
+const SILENT_USER_SPLIT = 0.3;
 const MB_PER_MINUTE = 45;
 
 export function getSessionRates(narrated: boolean) {

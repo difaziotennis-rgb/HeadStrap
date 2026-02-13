@@ -10,14 +10,14 @@ const KEYS = {
 };
 
 // Estimated rates — narrated data is worth significantly more
-const EST_RATE_NARRATED = 0.28; // ~$16.80/hour — premium (narrated)
-const EST_RATE_SILENT = 0.12; // ~$7.20/hour — standard (unnarrated)
+const EST_RATE_NARRATED = 0.24; // ~$14.40/hour — premium (narrated + high quality)
+const EST_RATE_SILENT = 0.08; // ~$4.80/hour — standard (unnarrated)
 
-// Revenue splits — narrated gets a better deal
-const NARRATED_USER_SPLIT = 0.6; // 60% to user
-const NARRATED_PLATFORM_SPLIT = 0.4;
-const SILENT_USER_SPLIT = 0.4; // 40% to user
-const SILENT_PLATFORM_SPLIT = 0.6;
+// Revenue splits — 50% max for narrated high-quality data
+const NARRATED_USER_SPLIT = 0.5; // 50% to user (max)
+const NARRATED_PLATFORM_SPLIT = 0.5;
+const SILENT_USER_SPLIT = 0.3; // 30% to user
+const SILENT_PLATFORM_SPLIT = 0.7;
 
 const MB_PER_MINUTE = 45; // simulated data rate
 

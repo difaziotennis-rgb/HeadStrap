@@ -95,9 +95,9 @@ model PlatformConfig {
   id                    String  @id @default("global")
   narRatePerMinute      Float   @default(0.28)
   silentRatePerMinute   Float   @default(0.12)
-  narUserSplit          Float   @default(0.6)
-  narPlatformSplit      Float   @default(0.4)
-  silentUserSplit       Float   @default(0.4)
-  silentPlatformSplit   Float   @default(0.6)
+  narUserSplit          Float   @default(0.5)
+  narPlatformSplit      Float   @default(0.5)
+  silentUserSplit       Float   @default(0.3)
+  silentPlatformSplit   Float   @default(0.7)
   updatedAt             DateTime @updatedAt
 }

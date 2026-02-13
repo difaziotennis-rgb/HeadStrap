@@ -223,7 +223,7 @@ export default function VaultScreen() {
                   </Text>
                 </View>
                 <Text style={styles.actualSub}>
-                  From sold data • 60% (narrated) / 40% (silent) of sale price
+                  From sold data • 50% (narrated) / 30% (silent) of sale price
                 </Text>
 
                 {/* Payout breakdown */}
@@ -299,14 +299,14 @@ export default function VaultScreen() {
               <View style={styles.splitSection}>
                 <View style={styles.splitSectionHeader}>
                   <Mic size={12} color={COLORS.emerald} />
-                  <Text style={styles.splitSectionLabel}>NARRATED RECORDINGS</Text>
+                  <Text style={styles.splitSectionLabel}>NARRATED + HIGH QUALITY</Text>
                 </View>
                 <View style={styles.splitBarContainer}>
-                  <View style={[styles.splitBarUser, { flex: 6 }]}>
-                    <Text style={styles.splitBarText}>60% you</Text>
+                  <View style={[styles.splitBarUser, { flex: 5 }]}>
+                    <Text style={styles.splitBarText}>50% you</Text>
                   </View>
-                  <View style={[styles.splitBarPlatform, { flex: 4 }]}>
-                    <Text style={styles.splitBarTextPlatform}>40%</Text>
+                  <View style={[styles.splitBarPlatform, { flex: 5 }]}>
+                    <Text style={styles.splitBarTextPlatform}>50%</Text>
                   </View>
                 </View>
               </View>
@@ -319,11 +319,11 @@ export default function VaultScreen() {
                   </Text>
                 </View>
                 <View style={styles.splitBarContainer}>
-                  <View style={[styles.splitBarUser, { flex: 4, backgroundColor: COLORS.slate500 }]}>
-                    <Text style={styles.splitBarText}>40% you</Text>
+                  <View style={[styles.splitBarUser, { flex: 3, backgroundColor: COLORS.slate500 }]}>
+                    <Text style={styles.splitBarText}>30% you</Text>
                   </View>
-                  <View style={[styles.splitBarPlatform, { flex: 6 }]}>
-                    <Text style={styles.splitBarTextPlatform}>60%</Text>
+                  <View style={[styles.splitBarPlatform, { flex: 7 }]}>
+                    <Text style={styles.splitBarTextPlatform}>70%</Text>
                   </View>
                 </View>
               </View>
@@ -331,8 +331,8 @@ export default function VaultScreen() {
               <View style={[styles.splitNote, { marginTop: 12 }]}>
                 <AlertCircle size={12} color={COLORS.slate500} />
                 <Text style={styles.splitNoteText}>
-                  Narrated recordings earn a higher split because they're more
-                  valuable for AI training. Enable narration to maximize your payout.
+                  Narrated high-quality recordings earn a 50/50 split — the maximum.
+                  Silent recordings earn 30%. Enable narration to maximize your payout.
                 </Text>
               </View>
             </View>
@@ -374,8 +374,8 @@ export default function VaultScreen() {
                             { color: session.narrationEnabled ? COLORS.emerald : COLORS.slate500 },
                           ]}>
                             {session.narrationEnabled
-                              ? `60/40`
-                              : `40/60`}
+                              ? `50/50`
+                              : `30/70`}
                           </Text>
                         </View>
                       </View>

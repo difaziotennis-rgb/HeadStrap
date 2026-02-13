@@ -67,8 +67,8 @@ export default function EarningsMeter({
         <View style={[styles.rateDot, !narrated && { backgroundColor: COLORS.slate500 }]} />
         <Text style={styles.rateText}>
           {narrated
-            ? "~$0.28/min est. • 60/40 split after sale"
-            : "~$0.12/min est. • 40/60 split (no narration)"}
+            ? "~$0.24/min est. • 50/50 split after sale"
+            : "~$0.08/min est. • 30/70 split (no narration)"}
         </Text>
       </View>
     </Animated.View>

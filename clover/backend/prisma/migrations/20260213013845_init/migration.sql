@@ -70,10 +70,10 @@ CREATE TABLE "PlatformConfig" (
     "id" TEXT NOT NULL PRIMARY KEY DEFAULT 'global',
     "narRatePerMinute" REAL NOT NULL DEFAULT 0.28,
     "silentRatePerMinute" REAL NOT NULL DEFAULT 0.12,
-    "narUserSplit" REAL NOT NULL DEFAULT 0.6,
-    "narPlatformSplit" REAL NOT NULL DEFAULT 0.4,
-    "silentUserSplit" REAL NOT NULL DEFAULT 0.4,
-    "silentPlatformSplit" REAL NOT NULL DEFAULT 0.6,
+    "narUserSplit" REAL NOT NULL DEFAULT 0.5,
+    "narPlatformSplit" REAL NOT NULL DEFAULT 0.5,
+    "silentUserSplit" REAL NOT NULL DEFAULT 0.3,
+    "silentPlatformSplit" REAL NOT NULL DEFAULT 0.7,
     "updatedAt" DATETIME NOT NULL
 );
 

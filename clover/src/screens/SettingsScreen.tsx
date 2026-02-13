@@ -239,7 +239,7 @@ export default function SettingsScreen({ navigation: navProp }: Props) {
                 {
                   step: "3",
                   title: "Revenue split after sale",
-                  desc: "60% goes to you, 40% to the platform. Only after a sale.",
+                  desc: "Up to 50% goes to you with narrated high-quality data. Only after a sale.",
                 },
                 {
                   step: "4",
@@ -312,8 +312,8 @@ export default function SettingsScreen({ navigation: navProp }: Props) {
               <Text style={styles.noteText}>
                 All earnings displayed during recording are estimates based on
                 average market rates for professional data. Actual earnings are
-                determined when your data is purchased by a buyer. The 60/40
-                revenue split only applies after a confirmed sale.
+                determined when your data is purchased by a buyer. The 50/50
+                max revenue split only applies to narrated high-quality data after a confirmed sale.
               </Text>
             </View>
 
