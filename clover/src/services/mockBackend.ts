@@ -162,7 +162,18 @@ async function seedDemoSessions(): Promise<void> {
 
 export async function getSessions(): Promise<Session[]> {
   const stored = await AsyncStorage.getItem(KEYS.SESSIONS);
-  return stored ? JSON.parse(stored) : [];
+  if (!stored) return [];
+  const raw: any[] = JSON.parse(stored);
+  // Migrate old session format to new format
+  return raw.map((s) => ({
+    ...s,
+    estimatedEarnings: s.estimatedEarnings ?? s.totalEarned ?? 0,
+    actualEarnings: s.actualEarnings ?? 0,
+    userPayout: s.userPayout ?? s.userShare ?? 0,
+    platformRevenue: s.platformRevenue ?? s.platformShare ?? 0,
+    dataSaleStatus: s.dataSaleStatus ?? "uploaded",
+    uploadedToCloud: s.uploadedToCloud ?? true,
+  }));
 }
 
 export async function startSession(
