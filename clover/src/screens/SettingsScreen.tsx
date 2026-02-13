@@ -29,7 +29,7 @@ import {
   logout,
   paymentService,
   dataCollectionService,
-} from "../services/mockBackend";
+} from "../services/api";
 import { COLORS } from "../constants/theme";
 import { RootStackParamList, User } from "../types";
 

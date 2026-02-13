@@ -1,0 +1,103 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String    @id @default(uuid())
+  email           String    @unique
+  name            String
+  passwordHash    String
+  verified        Boolean   @default(false)
+  calibrated      Boolean   @default(false)
+  stripeConnectId String?
+  payoutMethod    String    @default("none") // "stripe" | "bank" | "none"
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  sessions Session[]
+  payouts  Payout[]
+}
+
+model Session {
+  id                String   @id @default(uuid())
+  userId            String
+  type              String   // job type: "Plumbing Repair", etc.
+  startTime         DateTime @default(now())
+  endTime           DateTime?
+  durationMinutes   Float    @default(0)
+  dataSizeMB        Float    @default(0)
+  narrationEnabled  Boolean  @default(true)
+
+  // Earnings
+  estimatedEarnings Float    @default(0)
+  actualEarnings    Float    @default(0)
+  userPayout        Float    @default(0)
+  platformRevenue   Float    @default(0)
+
+  // Data lifecycle
+  dataSaleStatus    String   @default("pending_upload") // pending_upload | uploaded | listed | sold | paid_out
+  uploadedToCloud   Boolean  @default(false)
+  cloudStorageKey   String?
+
+  // Recording status
+  status            String   @default("recording") // recording | paused | completed | error
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dataPackage       DataPackage? @relation(fields: [dataPackageId], references: [id])
+  dataPackageId     String?
+
+  @@index([userId])
+  @@index([dataSaleStatus])
+  @@index([status])
+}
+
+model Payout {
+  id               String    @id @default(uuid())
+  userId           String
+  amount           Float
+  status           String    @default("pending") // pending | processing | completed | failed | rejected
+  method           String    @default("stripe")  // stripe | bank
+  createdAt        DateTime  @default(now())
+  completedAt      DateTime?
+  stripeTransferId String?
+
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+}
+
+model DataPackage {
+  id                    String    @id @default(uuid())
+  name                  String?
+  totalSizeMB           Float     @default(0)
+  totalDurationMinutes  Float     @default(0)
+  category              String?
+  status                String    @default("draft") // draft | uploaded | listed | sold
+  salePrice             Float?
+  soldAt                DateTime?
+  buyerId               String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  sessions              Session[]
+}
+
+model PlatformConfig {
+  id                    String  @id @default("global")
+  narRatePerMinute      Float   @default(0.28)
+  silentRatePerMinute   Float   @default(0.12)
+  narUserSplit          Float   @default(0.6)
+  narPlatformSplit      Float   @default(0.4)
+  silentUserSplit       Float   @default(0.4)
+  silentPlatformSplit   Float   @default(0.6)
+  updatedAt             DateTime @updatedAt
+}

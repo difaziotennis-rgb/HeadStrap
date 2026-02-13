@@ -32,7 +32,7 @@ import {
   endSession,
   updateCurrentSession,
   getCurrentSession,
-} from "../services/mockBackend";
+} from "../services/api";
 import { COLORS } from "../constants/theme";
 import { RootStackParamList, Session } from "../types";
 

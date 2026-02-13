@@ -26,7 +26,7 @@ import {
   Package,
   AlertCircle,
 } from "lucide-react-native";
-import { getEarnings, requestPayout, getUser } from "../services/mockBackend";
+import { getEarnings, requestPayout, getUser } from "../services/api";
 import { COLORS } from "../constants/theme";
 import { Earnings, Session } from "../types";
 

@@ -14,7 +14,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { LogIn, UserPlus, Mail, Lock, User } from "lucide-react-native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import CloverLogo from "../components/CloverLogo";
-import { login, signup } from "../services/mockBackend";
+import { login, signup } from "../services/api";
 import { COLORS } from "../constants/theme";
 import { RootStackParamList } from "../types";
 

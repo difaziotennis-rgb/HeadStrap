@@ -16,7 +16,7 @@ import {
   ChevronRight,
 } from "lucide-react-native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { updateUser } from "../services/mockBackend";
+import { updateUser } from "../services/api";
 import { COLORS } from "../constants/theme";
 import { RootStackParamList } from "../types";
 

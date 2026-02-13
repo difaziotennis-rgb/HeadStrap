@@ -1,0 +1,37 @@
+{
+  "name": "clover-backend",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "db:migrate": "prisma migrate dev",
+    "db:push": "prisma db push",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:studio": "prisma studio"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "bcryptjs": "latest",
+    "cors": "latest",
+    "dotenv": "latest",
+    "express": "latest",
+    "jsonwebtoken": "latest",
+    "swagger-jsdoc": "latest",
+    "swagger-ui-express": "latest",
+    "uuid": "latest"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "latest",
+    "@types/cors": "latest",
+    "@types/express": "latest",
+    "@types/jsonwebtoken": "latest",
+    "@types/swagger-jsdoc": "latest",
+    "@types/swagger-ui-express": "latest",
+    "@types/uuid": "latest",
+    "prisma": "^5.22.0",
+    "tsx": "latest",
+    "typescript": "latest"
+  }
+}

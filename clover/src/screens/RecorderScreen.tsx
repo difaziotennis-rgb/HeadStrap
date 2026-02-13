@@ -23,7 +23,7 @@ import AudioWaveform from "../components/AudioWaveform";
 import {
   updateCurrentSession,
   endSession,
-} from "../services/mockBackend";
+} from "../services/api";
 import { COLORS } from "../constants/theme";
 import { RootStackParamList, StoplightStatus } from "../types";
 
