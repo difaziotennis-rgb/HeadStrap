@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   format,
   startOfMonth,
@@ -16,7 +16,7 @@ import { ChevronLeft, ChevronRight, Check, X, Save } from "lucide-react";
 import { TimeSlot } from "@/lib/types";
 import { formatTime, isPastDate, getHoursForDay } from "@/lib/utils";
 import { cn } from "@/lib/utils";
-import { readAllSlots, writeSlots, writeSlot, buildDateStr } from "@/lib/booking-data";
+import { readAllSlots, writeSlots, writeSlot, buildDateStr, readClientNames } from "@/lib/booking-data";
 
 // ─── Build default slots for a date ─────────────────────────
 function defaultSlotsForDate(date: Date): TimeSlot[] {
@@ -47,12 +47,41 @@ export function AdminCalendar() {
   const [bookingSlotId, setBookingSlotId] = useState<string | null>(null);
   const [bookName, setBookName] = useState("");
 
+  // Client name autocomplete
+  const [clientNames, setClientNames] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
   // ── Load from Supabase on mount ────────────────────────────
   useEffect(() => {
     readAllSlots().then((saved) => {
       setSlots(saved);
       setLoaded(true);
     });
+    readClientNames().then(setClientNames);
+  }, []);
+
+  // ── Filtered suggestions for autocomplete ─────────────────
+  const filteredNames = bookName.trim()
+    ? clientNames.filter((n) => n.toLowerCase().includes(bookName.toLowerCase().trim()))
+    : [];
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (
+        suggestionsRef.current &&
+        !suggestionsRef.current.contains(e.target as Node) &&
+        inputRef.current &&
+        !inputRef.current.contains(e.target as Node)
+      ) {
+        setShowSuggestions(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   // ── Get merged slots for a date (saved + defaults) ─────────
@@ -357,15 +386,78 @@ export function AdminCalendar() {
                   getSlotsForDate(selectedDate).find((s) => s.id === bookingSlotId)?.hour ?? 0
                 )} — enter client name
               </p>
-              <input
-                type="text"
-                value={bookName}
-                onChange={(e) => setBookName(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") handleQuickBook(); }}
-                className="w-full px-3 py-2.5 bg-white border border-[#e8e5df] rounded-lg text-[16px] sm:text-[13px] text-[#1a1a1a] placeholder:text-[#c4bfb8] focus:ring-1 focus:ring-[#1a1a1a] focus:border-[#1a1a1a] outline-none"
-                placeholder="Client name"
-                autoFocus
-              />
+              <div className="relative">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={bookName}
+                  onChange={(e) => {
+                    setBookName(e.target.value);
+                    setShowSuggestions(true);
+                    setHighlightedIndex(-1);
+                  }}
+                  onFocus={() => setShowSuggestions(true)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") {
+                      setShowSuggestions(false);
+                      return;
+                    }
+                    if (!showSuggestions || filteredNames.length === 0) {
+                      if (e.key === "Enter") handleQuickBook();
+                      return;
+                    }
+                    if (e.key === "ArrowDown") {
+                      e.preventDefault();
+                      setHighlightedIndex((i) => (i < filteredNames.length - 1 ? i + 1 : 0));
+                    } else if (e.key === "ArrowUp") {
+                      e.preventDefault();
+                      setHighlightedIndex((i) => (i > 0 ? i - 1 : filteredNames.length - 1));
+                    } else if (e.key === "Enter") {
+                      e.preventDefault();
+                      if (highlightedIndex >= 0 && highlightedIndex < filteredNames.length) {
+                        setBookName(filteredNames[highlightedIndex]);
+                        setShowSuggestions(false);
+                        setHighlightedIndex(-1);
+                      } else {
+                        handleQuickBook();
+                      }
+                    }
+                  }}
+                  className="w-full px-3 py-2.5 bg-white border border-[#e8e5df] rounded-lg text-[16px] sm:text-[13px] text-[#1a1a1a] placeholder:text-[#c4bfb8] focus:ring-1 focus:ring-[#1a1a1a] focus:border-[#1a1a1a] outline-none"
+                  placeholder="Client name"
+                  autoFocus
+                  autoComplete="off"
+                />
+                {showSuggestions && filteredNames.length > 0 && (
+                  <div
+                    ref={suggestionsRef}
+                    className="absolute z-10 top-full left-0 right-0 mt-1 bg-white border border-[#e8e5df] rounded-lg shadow-lg max-h-40 overflow-y-auto"
+                  >
+                    {filteredNames.map((name, idx) => (
+                      <button
+                        key={name}
+                        type="button"
+                        className={cn(
+                          "w-full text-left px-3 py-2 text-[13px] text-[#1a1a1a] hover:bg-[#f0ede8] transition-colors",
+                          idx === highlightedIndex && "bg-[#f0ede8]",
+                          idx === 0 && "rounded-t-lg",
+                          idx === filteredNames.length - 1 && "rounded-b-lg"
+                        )}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          setBookName(name);
+                          setShowSuggestions(false);
+                          setHighlightedIndex(-1);
+                          inputRef.current?.focus();
+                        }}
+                        onMouseEnter={() => setHighlightedIndex(idx)}
+                      >
+                        {name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               <div className="flex gap-2 mt-3">
                 <button
                   onClick={() => { setBookingSlotId(null); setBookName(""); }}

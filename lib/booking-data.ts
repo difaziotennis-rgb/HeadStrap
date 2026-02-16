@@ -474,6 +474,39 @@ export async function deleteRecurring(id: string): Promise<boolean> {
 }
 
 // ────────────────────────────────────────────────────────────
+// CLIENT NAMES — Unique names for autocomplete
+// ────────────────────────────────────────────────────────────
+
+/** Fetch unique client names across time_slots, bookings, and recurring_lessons. */
+export async function readClientNames(): Promise<string[]> {
+  try {
+    const supabase = getBookingClient();
+    const names = new Set<string>();
+
+    const [slotsRes, bookingsRes, recurringRes] = await Promise.all([
+      supabase.from("time_slots").select("booked_by").not("booked_by", "is", null),
+      supabase.from("bookings").select("client_name").not("client_name", "is", null),
+      supabase.from("recurring_lessons").select("client_name").not("client_name", "is", null),
+    ]);
+
+    for (const row of slotsRes.data ?? []) {
+      if (row.booked_by?.trim()) names.add(row.booked_by.trim());
+    }
+    for (const row of bookingsRes.data ?? []) {
+      if (row.client_name?.trim()) names.add(row.client_name.trim());
+    }
+    for (const row of recurringRes.data ?? []) {
+      if (row.client_name?.trim()) names.add(row.client_name.trim());
+    }
+
+    return Array.from(names).sort((a, b) => a.localeCompare(b));
+  } catch (e) {
+    console.error("[booking-data] readClientNames error:", e);
+    return [];
+  }
+}
+
+// ────────────────────────────────────────────────────────────
 // MIGRATION: localStorage → Supabase (one-time)
 // ────────────────────────────────────────────────────────────
 
