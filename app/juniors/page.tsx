@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { Sun, Calendar, Clock, MapPin, Users, ChevronDown, CheckCircle, DollarSign, User } from "lucide-react";
 
-// Generate all clinic weeks (Sat-Fri) from June 27 to Sept 2, 2026
+// Generate all clinic weeks (Sat & Wed) from June 27 to Sept 2, 2026
 function getClinicWeeks() {
   const weeks: { label: string; startDate: string; days: string[] }[] = [];
   const start = new Date(2026, 5, 27); // June 27, 2026 (Saturday)
@@ -17,8 +17,6 @@ function getClinicWeeks() {
 
     const wed = new Date(sat);
     wed.setDate(wed.getDate() + 4);
-    const fri = new Date(sat);
-    fri.setDate(fri.getDate() + 6);
 
     const fmt = (d: Date) =>
       d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -28,11 +26,10 @@ function getClinicWeeks() {
     const days: string[] = [];
     if (sat >= start && sat <= end) days.push(isoFmt(sat));
     if (wed >= start && wed <= end) days.push(isoFmt(wed));
-    if (fri >= start && fri <= end) days.push(isoFmt(fri));
 
     if (days.length > 0) {
       weeks.push({
-        label: `${fmt(sat)} – ${fmt(fri)}`,
+        label: `${fmt(sat)} & ${fmt(wed)}`,
         startDate: isoFmt(sat),
         days,
       });
@@ -101,7 +98,7 @@ export default function JuniorsPage() {
     });
   };
 
-  // Calculate pricing: for each week, if all 3 days are selected → weekly rate; otherwise each day is drop-in
+  // Calculate pricing: for each week, if both days are selected → weekly rate; otherwise each day is drop-in
   const { totalPrice, weeklyCount, dropinCount, totalDays } = useMemo(() => {
     let weekly = 0;
     let dropin = 0;
@@ -109,7 +106,7 @@ export default function JuniorsPage() {
 
     for (const week of weeks) {
       const selectedInWeek = week.days.filter((d) => selectedDays[d]);
-      if (selectedInWeek.length === week.days.length && week.days.length === 3) {
+      if (selectedInWeek.length === week.days.length && week.days.length === 2) {
         weekly++;
       } else {
         dropin += selectedInWeek.length;
@@ -139,14 +136,14 @@ export default function JuniorsPage() {
         body: JSON.stringify({
           ...formData,
           ageGroup: formData.ageGroup,
-          ageGroupLabel: formData.ageGroup === "6-11" ? "Ages 6–11 (Sat 10:30–11:30 AM, Wed/Fri 11 AM–12 PM)" : "Ages 12–16 (Sat 11:30 AM–12:30 PM, Wed/Fri 12–1 PM)",
+          ageGroupLabel: formData.ageGroup === "6-11" ? "Ages 6–11 (Sat 10:30–11:30 AM, Wed 11 AM–12 PM)" : "Ages 12–16 (Sat 11:30 AM–12:30 PM, Wed 12–1 PM)",
           selectedDays: allSelected,
           weeklyCount,
           dropinCount,
           totalPrice,
           registrationType: dropinCount > 0 ? "mixed" : "weekly",
           selectedWeeks: weeks
-            .filter((w) => w.days.every((d) => selectedDays[d]) && w.days.length === 3)
+            .filter((w) => w.days.every((d) => selectedDays[d]) && w.days.length === 2)
             .map((w) => w.startDate),
         }),
       });
@@ -184,7 +181,7 @@ export default function JuniorsPage() {
             </span>
             <span className="flex items-center gap-1.5">
               <Calendar className="h-4 w-4 text-[#8a8477]" />
-              Sat / Wed / Fri
+              Sat / Wed
             </span>
           </div>
 
@@ -195,7 +192,7 @@ export default function JuniorsPage() {
             </span>
             <span className="bg-white/10 text-white/70 px-4 py-1.5 rounded-full flex items-center gap-1.5">
               <Clock className="h-3.5 w-3.5 text-[#8a8477]" />
-              Wed & Fri · 11:00 AM – 1:00 PM
+              Wed · 11:00 AM – 1:00 PM
             </span>
           </div>
 
@@ -222,7 +219,7 @@ export default function JuniorsPage() {
                 ${WEEKLY_PRICE}
               </p>
               <p className="text-[13px] text-[#a39e95] mt-1">
-                per week · 3 sessions
+                per week · 2 sessions
               </p>
             </div>
             <div className="bg-white rounded-2xl border border-[#e8e5df] p-6 text-center">
@@ -252,7 +249,7 @@ export default function JuniorsPage() {
               </h3>
             </div>
             <p className="text-[15px] text-[#1a1a1a] font-medium mb-1">
-              Saturday, Wednesday, Friday
+              Saturday & Wednesday
             </p>
             <p className="text-[13px] text-[#7a756d] font-medium mt-2">Saturday</p>
             <p className="text-[14px] text-[#7a756d]">
@@ -261,7 +258,7 @@ export default function JuniorsPage() {
             <p className="text-[14px] text-[#7a756d]">
               Ages 12–16: 11:30 AM – 12:30 PM
             </p>
-            <p className="text-[13px] text-[#7a756d] font-medium mt-2">Wednesday & Friday</p>
+            <p className="text-[13px] text-[#7a756d] font-medium mt-2">Wednesday</p>
             <p className="text-[14px] text-[#7a756d]">
               Ages 6–11: 11:00 AM – 12:00 PM
             </p>
@@ -303,7 +300,7 @@ export default function JuniorsPage() {
             </p>
             <p className="text-[14px] text-[#7a756d]">Ages 6–11 and Ages 12–16</p>
             <p className="text-[13px] text-[#a39e95] mt-3">
-              All skill levels welcome. Saturdays run 10:30 AM – 12:30 PM, Wednesday & Friday run 11 AM – 1 PM. Each session is split by age group.
+              All skill levels welcome. Saturdays run 10:30 AM – 12:30 PM, Wednesdays run 11 AM – 1 PM. Each session is split by age group.
             </p>
           </div>
 
@@ -411,13 +408,13 @@ export default function JuniorsPage() {
                   Select Weeks & Days
                 </p>
                 <p className="text-[11px] text-[#a39e95] mb-3">
-                  Tap a week to add it. All 3 days = ${WEEKLY_PRICE}/week. Individual days = ${DROPIN_PRICE} each.
+                  Tap a week to add it. Both days = ${WEEKLY_PRICE}/week. Individual days = ${DROPIN_PRICE} each.
                 </p>
                 <div className="space-y-1.5 max-h-[380px] overflow-y-auto">
                   {weeks.map((week) => {
                     const isExpanded = expandedWeeks[week.startDate];
                     const selectedInWeek = week.days.filter((d) => selectedDays[d]);
-                    const isFullWeek = selectedInWeek.length === week.days.length && week.days.length === 3;
+                    const isFullWeek = selectedInWeek.length === week.days.length && week.days.length === 2;
 
                     return (
                       <div key={week.startDate}>
@@ -479,9 +476,9 @@ export default function JuniorsPage() {
                                 </button>
                               );
                             })}
-                            {selectedInWeek.length > 0 && selectedInWeek.length < 3 && (
+                            {selectedInWeek.length > 0 && selectedInWeek.length < 2 && (
                               <p className="text-[10px] text-[#a39e95] px-3 pt-1">
-                                Select all 3 days to get the weekly rate (${WEEKLY_PRICE} vs ${selectedInWeek.length * DROPIN_PRICE})
+                                Select both days to get the weekly rate (${WEEKLY_PRICE} vs ${selectedInWeek.length * DROPIN_PRICE})
                               </p>
                             )}
                           </div>
@@ -558,7 +555,7 @@ export default function JuniorsPage() {
                       }`}
                     >
                       <span className="block">Ages 6–11</span>
-                      <span className={`text-[10px] ${formData.ageGroup === "6-11" ? "text-white/60" : "text-[#a39e95]"}`}>Sat 10:30–11:30 AM · Wed/Fri 11 AM–12 PM</span>
+                      <span className={`text-[10px] ${formData.ageGroup === "6-11" ? "text-white/60" : "text-[#a39e95]"}`}>Sat 10:30–11:30 AM · Wed 11 AM–12 PM</span>
                     </button>
                     <button
                       type="button"
@@ -570,7 +567,7 @@ export default function JuniorsPage() {
                       }`}
                     >
                       <span className="block">Ages 12–16</span>
-                      <span className={`text-[10px] ${formData.ageGroup === "12-16" ? "text-white/60" : "text-[#a39e95]"}`}>Sat 11:30 AM–12:30 PM · Wed/Fri 12–1 PM</span>
+                      <span className={`text-[10px] ${formData.ageGroup === "12-16" ? "text-white/60" : "text-[#a39e95]"}`}>Sat 11:30 AM–12:30 PM · Wed 12–1 PM</span>
                     </button>
                   </div>
                 </div>
@@ -709,7 +706,7 @@ export default function JuniorsPage() {
               },
               {
                 q: "How does pricing work?",
-                a: `Select all 3 days in a week (Sat, Wed, Fri) and you get the weekly rate of $${WEEKLY_PRICE}. If you only want certain days, each individual session is $${DROPIN_PRICE}. You can mix and match — some full weeks and some individual days.`,
+                a: `Select both days in a week (Sat & Wed) and you get the weekly rate of $${WEEKLY_PRICE}. If you only want one day, each individual session is $${DROPIN_PRICE}. You can mix and match — some full weeks and some individual days.`,
               },
               {
                 q: "What happens if it rains?",
@@ -717,7 +714,7 @@ export default function JuniorsPage() {
               },
               {
                 q: "What ages are accepted?",
-                a: "The clinic is for ages 6–16. On Saturdays, ages 6–11 run 10:30–11:30 AM and ages 12–16 run 11:30 AM–12:30 PM. On Wednesday & Friday, ages 6–11 run 11 AM–12 PM and ages 12–16 run 12–1 PM.",
+                a: "The clinic is for ages 6–16. On Saturdays, ages 6–11 run 10:30–11:30 AM and ages 12–16 run 11:30 AM–12:30 PM. On Wednesdays, ages 6–11 run 11 AM–12 PM and ages 12–16 run 12–1 PM.",
               },
             ].map((item, i) => (
               <FAQItem key={i} question={item.q} answer={item.a} />
