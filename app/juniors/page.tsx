@@ -42,7 +42,7 @@ function getClinicWeeks() {
   return weeks;
 }
 
-const WEEKLY_PRICE = 175;
+const WEEKLY_PRICE = 145;
 const DROPIN_PRICE = 75;
 
 export default function JuniorsPage() {
