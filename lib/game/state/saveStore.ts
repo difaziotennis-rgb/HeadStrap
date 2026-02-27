@@ -36,6 +36,7 @@ export function createInitialState(): GameState {
     badges: [],
     gymProgress: {
       lakeside: 0,
+      eclipse: 0,
     },
   };
 }

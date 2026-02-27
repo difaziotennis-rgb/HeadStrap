@@ -18,6 +18,12 @@ function hasLivingMonster(state: GameState) {
 function canChallengeTrainer(state: GameState, trainerId: string) {
   const npc = NPCS.find((n) => n.id === trainerId);
   if (!npc || !npc.gymKey || !npc.gymOrder) return { allowed: true, reason: null as string | null };
+  if (npc.gymKey === "eclipse" && !state.badges.includes("Tidal Badge")) {
+    return {
+      allowed: false,
+      reason: "The Eclipse Gym rejects challengers without the Tidal Badge.",
+    };
+  }
   const requiredOrder = npc.gymOrder - 1;
   if (requiredOrder <= 0) return { allowed: true, reason: null as string | null };
   const needed = NPCS.filter((n) => n.gymKey === npc.gymKey && n.gymOrder === requiredOrder && (n.role === "trainer" || n.role === "rival")).map((n) => n.id);
@@ -31,7 +37,9 @@ function canChallengeTrainer(state: GameState, trainerId: string) {
   return { allowed: true, reason: null as string | null };
 }
 
-function areaStoryBeat(mapId: string, gymStage: number) {
+function areaStoryBeat(mapId: string, gymProgress: Record<string, number>, badges: string[]) {
+  const lakesideStage = gymProgress.lakeside ?? 0;
+  const eclipseStage = gymProgress.eclipse ?? 0;
   if (mapId.includes("forest")) {
     return "The forest whispers with old magic. Stay brave and keep your light.";
   }
@@ -39,9 +47,43 @@ function areaStoryBeat(mapId: string, gymStage: number) {
     return "Shadows gather in the canyon, but heroes carve hope through stone.";
   }
   if (mapId.includes("lakeside_gym_arena")) {
-    return gymStage >= 2
+    return lakesideStage >= 2
       ? "The gym core trembles with dark tide energy. Friendship is your anchor."
       : "A cold aura circles the arena. Train with purpose before the final challenge.";
+  }
+  if (mapId.includes("emberstep")) {
+    return "Emberstep marks the second chapter: cross fear, gather allies, and keep your flame.";
+  }
+  if (mapId.includes("dreadmarsh")) {
+    return "The marsh feeds on doubt. Stay close to your team and move with courage.";
+  }
+  if (mapId.includes("sunspire")) {
+    return "At Sunspire, every step is a vow. Heroes rise by lifting others with them.";
+  }
+  if (mapId.includes("umbral_woods")) {
+    return "Umbral Woods mirrors your heart: shadows deepen, but so does hope.";
+  }
+  if (mapId.includes("obsidian_gate")) {
+    return "Obsidian Gate tests resolve. The dark tide cannot claim a united team.";
+  }
+  if (mapId.includes("eclipse_gym_lobby")) {
+    return "Eclipse Gym challenge: twilight, midnight, then dawn. Trust is your lantern.";
+  }
+  if (mapId.includes("eclipse_gym_arena")) {
+    return eclipseStage >= 2
+      ? "The final eclipse trial begins. Friendship and courage must outshine fear."
+      : "Only focused hearts pass the eclipse trials. Keep your team close.";
+  }
+  if (mapId.includes("eclipse_city")) {
+    return badges.includes("Tidal Badge")
+      ? "Eclipse City welcomes a proven hero. One more badge may steady the whole region."
+      : "Eclipse City is tense. Earn the Tidal Badge before challenging its shadows.";
+  }
+  if (mapId.includes("void_catacombs")) {
+    return "The catacombs whisper ancient grief. Carry hope, or be consumed by the hush.";
+  }
+  if (mapId.includes("dawn_sanctuary")) {
+    return "Dawn Sanctuary reminds every hero: light returns, even after the longest night.";
   }
   if (mapId.includes("lakeside_gym_lobby")) {
     return "The gym halls test resolve: courage, trust, and control over fear.";
@@ -118,7 +160,7 @@ export function useGameStore() {
           stepCounter: prev.player.stepCounter + (result.moved ? 1 : 0),
         },
         visitedMaps: prev.visitedMaps.includes(result.mapId) ? prev.visitedMaps : [...prev.visitedMaps, result.mapId],
-        activeDialog: result.transitionedMap ? areaStoryBeat(result.mapId, prev.gymProgress.lakeside ?? 0) : null,
+        activeDialog: result.transitionedMap ? areaStoryBeat(result.mapId, prev.gymProgress, prev.badges) : null,
       };
       if (result.transitionedMap) {
         setMapTransitioning(true);

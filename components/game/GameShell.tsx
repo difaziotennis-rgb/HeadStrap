@@ -19,7 +19,7 @@ export function GameShell() {
   const moveLoopRef = useRef<number | null>(null);
   const lastMoveTimeRef = useRef(0);
   const [cinematicHud, setCinematicHud] = useState(true);
-  const objectiveText = nextObjectiveText(state.gymProgress.lakeside ?? 0);
+  const objectiveText = nextObjectiveText(state.gymProgress.lakeside ?? 0, state.gymProgress.eclipse ?? 0);
 
   useEffect(() => {
     const MOVE_INTERVAL_MS = 84;
@@ -122,7 +122,9 @@ export function GameShell() {
             Trainers unbeaten: {mapNpcs.filter((n) => (n.role === "trainer" || n.role === "rival") && !state.defeatedTrainerIds.includes(n.id)).length}
           </span>
           <span className="retro-chip text-amber-200">Badges: {state.badges.length ? state.badges.join(", ") : "None"}</span>
-          <span className="retro-chip text-emerald-200">Gym Stage: {state.gymProgress.lakeside ?? 0}/3</span>
+          <span className="retro-chip text-emerald-200">Lakeside Gym: {state.gymProgress.lakeside ?? 0}/3</span>
+          <span className="retro-chip text-violet-200">Eclipse Gym: {state.gymProgress.eclipse ?? 0}/3</span>
+          <span className="retro-chip text-cyan-200">Chapter: {storyChapterLabel(state.gymProgress.lakeside ?? 0, state.gymProgress.eclipse ?? 0)}</span>
           <span className="retro-chip text-indigo-200">Objective: {objectiveText}</span>
         </div>
         <div className="mt-2 flex gap-2">
@@ -224,9 +226,18 @@ export function GameShell() {
   );
 }
 
-function nextObjectiveText(gymStage: number) {
-  if (gymStage <= 0) return "Cross the lakeside threshold and answer the gym's first trial";
-  if (gymStage === 1) return "Defeat the second guardian and keep the dark tide at bay";
-  if (gymStage === 2) return "Face Leader Kaia and earn the Tidal Badge of hope";
-  return "Journey onward: train your bond and uncover the hidden magic";
+function nextObjectiveText(lakesideStage: number, eclipseStage: number) {
+  if (lakesideStage <= 0) return "Reach Lakeside Gym and clear the first tide guardians";
+  if (lakesideStage < 3) return "Complete Lakeside Gym and claim the Tidal Badge";
+  if (eclipseStage <= 0) return "Travel east to Eclipse City through Emberstep and Obsidian Gate";
+  if (eclipseStage < 3) return "Conquer Eclipse Gym's twilight and midnight trials";
+  return "Enter Void Catacombs and push the dark tide back with your allies";
+}
+
+function storyChapterLabel(lakesideStage: number, eclipseStage: number) {
+  if (lakesideStage <= 0) return "I - First Steps";
+  if (lakesideStage < 3) return "II - Tidal Trial";
+  if (eclipseStage <= 0) return "III - Long Road East";
+  if (eclipseStage < 3) return "IV - Eclipse Oath";
+  return "V - Dawn Against Shadow";
 }
