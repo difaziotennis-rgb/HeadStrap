@@ -1,15 +1,9 @@
 .game-retro-wrap {
   background:
-    radial-gradient(circle at 10% 8%, rgba(56, 189, 248, 0.1), transparent 40%),
-    radial-gradient(circle at 90% 0%, rgba(168, 85, 247, 0.12), transparent 42%),
-    repeating-linear-gradient(
-      45deg,
-      rgba(15, 23, 42, 0.65) 0px,
-      rgba(15, 23, 42, 0.65) 4px,
-      rgba(2, 6, 23, 0.65) 4px,
-      rgba(2, 6, 23, 0.65) 8px
-    ),
-    #020617;
+    radial-gradient(circle at 8% 10%, rgba(56, 189, 248, 0.12), transparent 38%),
+    radial-gradient(circle at 92% 2%, rgba(168, 85, 247, 0.1), transparent 40%),
+    radial-gradient(circle at 50% 100%, rgba(15, 23, 42, 0.55), transparent 58%),
+    linear-gradient(180deg, #030712 0%, #020617 52%, #010409 100%);
 }
 
 .pixel-frame {
@@ -343,15 +337,62 @@
 
 .battle-scene-bg {
   background:
-    radial-gradient(ellipse at 30% 30%, rgba(52, 211, 153, 0.18), transparent 40%),
-    radial-gradient(ellipse at 70% 70%, rgba(99, 102, 241, 0.2), transparent 42%),
-    linear-gradient(180deg, #172554 0%, #1e293b 55%, #0f172a 100%);
+    radial-gradient(ellipse at 24% 22%, rgba(103, 232, 249, 0.18), transparent 46%),
+    radial-gradient(ellipse at 76% 74%, rgba(165, 180, 252, 0.16), transparent 48%),
+    linear-gradient(180deg, #1a2746 0%, #16253a 52%, #0f172a 100%);
 }
 
 .battle-ground {
   border-radius: 999px;
   background: radial-gradient(circle, rgba(15, 23, 42, 0.3), rgba(2, 6, 23, 0.85));
   border: 2px solid rgba(148, 163, 184, 0.25);
+  position: relative;
+  overflow: hidden;
+}
+
+.battle-stage {
+  backdrop-filter: blur(2px);
+}
+
+.battle-narration {
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.18);
+}
+
+.battle-slash {
+  position: absolute;
+  width: 46px;
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgba(251, 191, 36, 0.9), transparent);
+  transform: rotate(-24deg);
+  animation: slash-sweep 260ms ease-out;
+}
+
+.battle-burst {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 2px solid rgba(248, 113, 113, 0.8);
+  animation: burst-hit 320ms ease-out;
+}
+
+.battle-heal-ring {
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 2px solid rgba(74, 222, 128, 0.75);
+  animation: heal-rise 480ms ease-out;
+}
+
+.battle-orb {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.95), rgba(99, 102, 241, 0.9));
+  animation: orb-arc 520ms ease-in-out;
 }
 
 .pixel-btn {
@@ -397,4 +438,86 @@
 
 .animate-map-transition {
   animation: map-transition-fade 260ms ease-in-out;
+}
+
+@keyframes slash-sweep {
+  0% {
+    opacity: 0;
+    transform: translateX(-16px) rotate(-24deg);
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(16px) rotate(-24deg);
+  }
+}
+
+@keyframes burst-hit {
+  0% {
+    opacity: 0.9;
+    transform: scale(0.4);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.3);
+  }
+}
+
+@keyframes heal-rise {
+  0% {
+    opacity: 0.85;
+    transform: scale(0.6) translateY(4px);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.4) translateY(-10px);
+  }
+}
+
+@keyframes orb-arc {
+  0% {
+    opacity: 0;
+    transform: translate(-24px, 8px) scale(0.6);
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(22px, -16px) scale(1.05);
+  }
+}
+
+@keyframes target-shake {
+  0% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-2px);
+  }
+  50% {
+    transform: translateX(2px);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.animate-target-shake {
+  animation: target-shake 220ms ease-in-out;
+}
+
+@keyframes faint-drop {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    transform: translateY(14px) scale(0.9);
+  }
+}
+
+.animate-faint-drop {
+  animation: faint-drop 420ms ease-in forwards;
 }

@@ -35,35 +35,63 @@ export function BattleScene({ battle, playerMonster, onMove, onEnemyTurn, onUseI
   const [tab, setTab] = useState<ActionTab>("moves");
   const [isLocked, setIsLocked] = useState(false);
   const [phase, setPhase] = useState<"idle" | "player" | "enemy">("idle");
-  const [visibleLogCount, setVisibleLogCount] = useState(2);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [fx, setFx] = useState<"none" | "enemy_hit" | "player_hit" | "heal" | "orb" | "enemy_faint" | "player_faint">(
+    "none",
+  );
+  const [typedNarration, setTypedNarration] = useState("");
   const lastTurnRef = useRef<number>(battle.turn);
 
   const enemy = battle.enemy;
   const playerSpecies = SPECIES_INDEX[playerMonster.speciesId];
   const enemySpecies = SPECIES_INDEX[enemy.speciesId];
+  const latestLog = battle.log[battle.log.length - 1] ?? "Battle begins.";
 
   useEffect(() => {
     if (battle.turn !== lastTurnRef.current) {
       lastTurnRef.current = battle.turn;
     }
-    setVisibleLogCount(2);
   }, [battle.turn]);
 
   useEffect(() => {
+    setTypedNarration("");
+    let i = 0;
     const interval = setInterval(() => {
-      setVisibleLogCount((prev) => Math.min(prev + 1, battle.log.length));
-    }, 600);
+      i += 1;
+      setTypedNarration(latestLog.slice(0, i));
+      if (i >= latestLog.length) clearInterval(interval);
+    }, 16);
     return () => clearInterval(interval);
-  }, [battle.log.length]);
+  }, [latestLog]);
 
   useEffect(() => {
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, []);
+    if (latestLog.includes("broke free") || latestLog.includes("captured")) {
+      setFx("orb");
+      return;
+    }
+    if (latestLog.includes("recovered HP")) {
+      setFx("heal");
+      return;
+    }
+    if (latestLog.includes(`${enemySpecies.name} fainted`)) {
+      setFx("enemy_faint");
+      return;
+    }
+    if (latestLog.includes(`${playerSpecies.name} fainted`)) {
+      setFx("player_faint");
+      return;
+    }
+    if (latestLog.startsWith(playerSpecies.name) && latestLog.includes("used")) {
+      setFx("enemy_hit");
+      return;
+    }
+    if (latestLog.startsWith(enemySpecies.name) && latestLog.includes("used")) {
+      setFx("player_hit");
+      return;
+    }
+    setFx("none");
+  }, [latestLog, enemySpecies.name, playerSpecies.name]);
 
-  const shownLogs = useMemo(() => battle.log.slice(-visibleLogCount).reverse(), [battle.log, visibleLogCount]);
+  const recentLogs = useMemo(() => battle.log.slice(-3).reverse(), [battle.log]);
 
   useEffect(() => {
     if (!battle.pendingEnemyTurn) return;
@@ -126,7 +154,7 @@ export function BattleScene({ battle, playerMonster, onMove, onEnemyTurn, onUseI
         </div>
       </div>
 
-      <div className="battle-scene-bg mt-3 rounded-xl border-2 border-slate-700 p-4">
+      <div className="battle-scene-bg battle-stage mt-3 rounded-xl border-2 border-slate-700 p-4">
         <div className="grid gap-4 md:grid-cols-2">
           <div className="rounded-lg border border-slate-700/70 bg-slate-900/55 p-3">
             <div className="mb-3 flex items-end justify-between">
@@ -139,11 +167,14 @@ export function BattleScene({ battle, playerMonster, onMove, onEnemyTurn, onUseI
             </div>
             <div className="battle-ground mx-auto grid h-24 w-28 place-items-center">
               <PixelSprite
-                className={phase === "player" ? "animate-battle-hit shadow-[0_0_20px_rgba(147,197,253,0.35)]" : "animate-float"}
+                className={`${
+                  phase === "player" || fx === "enemy_hit" ? "animate-target-shake" : "animate-float"
+                } ${fx === "enemy_faint" ? "animate-faint-drop opacity-50" : ""} shadow-[0_0_20px_rgba(147,197,253,0.35)]`}
                 seed={`enemy_${enemySpecies.id}`}
                 size={68}
                 tone="enemy"
               />
+              {phase === "player" || fx === "enemy_hit" ? <span className="battle-slash" /> : null}
             </div>
             <HpBar current={enemy.currentHp} max={enemy.maxHp} />
           </div>
@@ -158,13 +189,28 @@ export function BattleScene({ battle, playerMonster, onMove, onEnemyTurn, onUseI
             </div>
             <div className="battle-ground mx-auto grid h-24 w-28 place-items-center">
               <PixelSprite
-                className={phase === "enemy" ? "animate-battle-hit shadow-[0_0_20px_rgba(134,239,172,0.35)]" : "animate-float-slow"}
+                className={`${
+                  phase === "enemy" || fx === "player_hit" ? "animate-target-shake" : "animate-float-slow"
+                } ${fx === "player_faint" ? "animate-faint-drop opacity-50" : ""} shadow-[0_0_20px_rgba(134,239,172,0.35)]`}
                 seed={`ally_${playerSpecies.id}`}
                 size={68}
                 tone="ally"
               />
+              {phase === "enemy" || fx === "player_hit" ? <span className="battle-burst" /> : null}
+              {fx === "heal" ? <span className="battle-heal-ring" /> : null}
+              {fx === "orb" ? <span className="battle-orb" /> : null}
             </div>
             <HpBar current={playerMonster.currentHp} max={playerMonster.maxHp} />
+          </div>
+        </div>
+
+        <div className="battle-narration mt-4 rounded-lg border border-slate-600/70 bg-slate-950/60 p-3">
+          <p className="text-[11px] uppercase tracking-[0.18em] text-cyan-200">Battle narration</p>
+          <p className="mt-1 min-h-6 text-sm text-slate-100">{typedNarration}</p>
+          <div className="mt-2 space-y-1 text-xs text-slate-300">
+            {recentLogs.map((line, idx) => (
+              <p key={`${line}_${idx}`}>{line}</p>
+            ))}
           </div>
         </div>
       </div>
@@ -234,14 +280,6 @@ export function BattleScene({ battle, playerMonster, onMove, onEnemyTurn, onUseI
         )}
       </div>
 
-      <div className="pixel-card mt-4 rounded p-3">
-        <p className="text-xs uppercase tracking-widest text-slate-400">Battle log</p>
-        <ul className="mt-2 space-y-1 text-sm text-slate-200">
-          {shownLogs.map((line, idx) => (
-            <li key={`${line}_${idx}`}>{line}</li>
-          ))}
-        </ul>
-      </div>
     </div>
   );
 }
