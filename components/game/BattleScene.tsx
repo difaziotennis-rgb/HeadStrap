@@ -134,8 +134,9 @@ export function BattleScene({ battle, playerMonster, onMove, onUseItem, onRun, i
           <div className="rounded-lg border border-slate-700/70 bg-slate-900/55 p-3">
             <div className="mb-3 flex items-end justify-between">
               <div>
-                <p className="text-xs uppercase tracking-wider text-slate-300">Wild</p>
+                <p className="text-xs uppercase tracking-wider text-slate-300">{battle.isWild ? "Wild" : "Trainer"}</p>
                 <p className="font-semibold text-slate-100">{enemySpecies.name}</p>
+                {!battle.isWild ? <p className="text-[11px] text-slate-300">{battle.enemyName}</p> : null}
               </div>
               <p className="text-xs text-slate-300">Lv {enemy.level}</p>
             </div>

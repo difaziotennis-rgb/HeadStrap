@@ -17,6 +17,7 @@ export type WorldMoveResult = {
   mapId: string;
   steppedOnGrass: boolean;
   triggerEncounter: MonsterInstance | null;
+  transitionedMap: boolean;
 };
 
 export function movePlayer(
@@ -29,19 +30,19 @@ export function movePlayer(
 ): WorldMoveResult {
   const map = MAP_INDEX[mapId];
   if (!map) {
-    return { moved: false, x, y, mapId, steppedOnGrass: false, triggerEncounter: null };
+    return { moved: false, x, y, mapId, steppedOnGrass: false, triggerEncounter: null, transitionedMap: false };
   }
 
   const dir = DIRECTIONS[facing];
   const nx = x + dir.dx;
   const ny = y + dir.dy;
   if (nx < 0 || ny < 0 || nx >= map.width || ny >= map.height) {
-    return { moved: false, x, y, mapId, steppedOnGrass: false, triggerEncounter: null };
+    return { moved: false, x, y, mapId, steppedOnGrass: false, triggerEncounter: null, transitionedMap: false };
   }
 
   const tile = map.tiles[ny * map.width + nx];
-  if (tile.kind === "wall" || tile.kind === "water") {
-    return { moved: false, x, y, mapId, steppedOnGrass: false, triggerEncounter: null };
+  if (tile.kind === "wall" || tile.kind === "water" || tile.kind === "tree") {
+    return { moved: false, x, y, mapId, steppedOnGrass: false, triggerEncounter: null, transitionedMap: false };
   }
 
   let nextMapId = mapId;
@@ -53,9 +54,9 @@ export function movePlayer(
     ty = tile.toY ?? MAP_INDEX[nextMapId]?.spawnY ?? ny;
   }
 
-  const steppedOnGrass = tile.kind === "grass";
+  const steppedOnGrass = tile.kind === "grass" || tile.kind === "tall_grass" || tile.kind === "short_grass";
   const triggerEncounter = rolledEncounter(nextMapId, steppedOnGrass, stepCounter, forcedEncounterId);
-  return { moved: true, x: tx, y: ty, mapId: nextMapId, steppedOnGrass, triggerEncounter };
+  return { moved: true, x: tx, y: ty, mapId: nextMapId, steppedOnGrass, triggerEncounter, transitionedMap: mapId !== nextMapId };
 }
 
 function rolledEncounter(

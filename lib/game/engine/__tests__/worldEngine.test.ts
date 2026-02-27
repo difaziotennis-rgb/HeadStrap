@@ -19,7 +19,7 @@ test("player movement respects walls", () => {
 });
 
 test("forced encounter always returns enemy", () => {
-  const result = movePlayer("starter_town", 2, 1, "right", 10, "m_4");
+  const result = movePlayer("starter_town", 6, 21, "right", 10, "m_4");
   assert.equal(result.moved, true);
   assert.ok(result.triggerEncounter);
   assert.equal(result.triggerEncounter?.speciesId, "m_4");
@@ -27,7 +27,7 @@ test("forced encounter always returns enemy", () => {
 
 test("grass tile can trigger random encounter", () => {
   withRandom([0.0, 0.0, 0.0], () => {
-    const result = movePlayer("starter_town", 14, 1, "right", 120, null);
+    const result = movePlayer("starter_town", 4, 4, "right", 120, null);
     assert.equal(result.moved, true);
     assert.equal(result.steppedOnGrass, true);
     assert.ok(result.triggerEncounter);

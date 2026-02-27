@@ -9,10 +9,11 @@ export function createInitialState(): GameState {
     mode: "world",
     player: {
       mapId: "starter_town",
-      x: 2,
-      y: 2,
+      x: 5,
+      y: 21,
       facing: "down",
       stepCounter: 0,
+      avatarId: "ace",
     },
     party: [createMonsterInstance("m_1", 5)],
     storage: [],
@@ -30,6 +31,8 @@ export function createInitialState(): GameState {
     },
     starterChosen: false,
     lastSavedAt: null,
+    defeatedTrainerIds: [],
+    activeDialog: null,
   };
 }
 

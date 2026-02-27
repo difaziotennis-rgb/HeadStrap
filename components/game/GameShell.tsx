@@ -11,7 +11,7 @@ import { useGameStore } from "@/lib/game/state/gameStore";
 
 export function GameShell() {
   const store = useGameStore();
-  const { state, map, isHydrated } = store;
+  const { state, map, isHydrated, mapTransitioning, mapNpcs } = store;
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -21,6 +21,7 @@ export function GameShell() {
       if (event.key === "ArrowLeft" || event.key.toLowerCase() === "a") store.move("left");
       if (event.key === "ArrowRight" || event.key.toLowerCase() === "d") store.move("right");
       if (event.key.toLowerCase() === "t") store.swapPartyIndex(1);
+      if (event.key.toLowerCase() === "e") store.interact();
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -55,9 +56,27 @@ export function GameShell() {
         <p className="mt-2 text-sm text-slate-300">
           Retro-inspired sandbox RPG under active development. Isolated to <code>/game</code>.
         </p>
-        <p className="mt-1 text-xs text-slate-400">
-          Desktop: arrows/WASD • Mobile: touch D-pad • Battles: action timer + narrated turn flow.
-        </p>
+        <p className="mt-1 text-xs text-slate-400">Desktop: arrows/WASD • Interact: E • Mobile: touch D-pad.</p>
+        <div className="mt-2 flex flex-wrap gap-2 text-xs">
+          <span className="retro-chip text-slate-200">Map cast: {mapNpcs.length} characters</span>
+          <span className="retro-chip text-slate-200">
+            Trainers unbeaten: {mapNpcs.filter((n) => (n.role === "trainer" || n.role === "rival") && !state.defeatedTrainerIds.includes(n.id)).length}
+          </span>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button className="pixel-btn rounded px-2 py-1 text-xs text-slate-200" onClick={() => store.chooseAvatar("ace")} type="button">
+            Avatar: Ace
+          </button>
+          <button className="pixel-btn rounded px-2 py-1 text-xs text-slate-200" onClick={() => store.chooseAvatar("blaze")} type="button">
+            Avatar: Blaze
+          </button>
+          <button className="pixel-btn rounded px-2 py-1 text-xs text-slate-200" onClick={() => store.chooseAvatar("wave")} type="button">
+            Avatar: Wave
+          </button>
+          <button className="pixel-btn rounded px-2 py-1 text-xs text-slate-200" onClick={() => store.chooseAvatar("shadow")} type="button">
+            Avatar: Shadow
+          </button>
+        </div>
       </div>
 
       {!state.starterChosen ? <StarterPicker onChoose={store.chooseStarter} /> : null}
@@ -75,8 +94,14 @@ export function GameShell() {
             />
           ) : (
             <>
-              <WorldCanvas map={map} player={state.player} />
+              <div className="relative">
+                <WorldCanvas map={map} npcs={mapNpcs} player={state.player} />
+                {mapTransitioning ? <div className="animate-map-transition absolute inset-0 rounded-xl bg-slate-950/70" /> : null}
+              </div>
               <MobileControls onMove={store.move} onOpenTeam={() => store.swapPartyIndex(1)} />
+              <button className="pixel-btn rounded bg-indigo-700 px-3 py-2 text-sm text-white" onClick={store.interact} type="button">
+                Interact (E)
+              </button>
             </>
           )}
         </div>
@@ -102,6 +127,14 @@ export function GameShell() {
           </button>
         </div>
       </div>
+      {state.activeDialog ? (
+        <div className="retro-console p-3">
+          <p className="text-sm text-slate-100">{state.activeDialog}</p>
+          <button className="pixel-btn mt-2 rounded bg-slate-700 px-3 py-1 text-xs text-white" onClick={store.dismissDialog} type="button">
+            Close
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }

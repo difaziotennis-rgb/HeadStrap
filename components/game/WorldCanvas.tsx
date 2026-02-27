@@ -1,10 +1,12 @@
 "use client";
 
 import { MapData, PlayerState } from "@/lib/game/state/gameTypes";
+import { NpcCharacter } from "@/lib/game/state/gameTypes";
 
 type Props = {
   map: MapData;
   player: PlayerState;
+  npcs: NpcCharacter[];
 };
 
 const TILE_CLASSES: Record<string, string> = {
@@ -13,9 +15,15 @@ const TILE_CLASSES: Record<string, string> = {
   grass: "bg-[linear-gradient(135deg,#65a30d_0%,#65a30d_50%,#4d7c0f_50%,#4d7c0f_100%)]",
   water: "bg-[linear-gradient(135deg,#2563eb_0%,#2563eb_50%,#1d4ed8_50%,#1d4ed8_100%)]",
   portal: "bg-[linear-gradient(135deg,#8b5cf6_0%,#8b5cf6_50%,#6d28d9_50%,#6d28d9_100%)]",
+  tree: "bg-[linear-gradient(135deg,#166534_0%,#166534_50%,#14532d_50%,#14532d_100%)]",
+  bush: "bg-[linear-gradient(135deg,#4d7c0f_0%,#4d7c0f_50%,#365314_50%,#365314_100%)]",
+  path: "bg-[linear-gradient(135deg,#a16207_0%,#a16207_50%,#854d0e_50%,#854d0e_100%)]",
+  short_grass: "bg-[linear-gradient(135deg,#84cc16_0%,#84cc16_50%,#65a30d_50%,#65a30d_100%)]",
+  tall_grass: "bg-[linear-gradient(135deg,#65a30d_0%,#65a30d_50%,#4d7c0f_50%,#4d7c0f_100%)]",
+  bridge: "bg-[linear-gradient(135deg,#92400e_0%,#92400e_50%,#78350f_50%,#78350f_100%)]",
 };
 
-export function WorldCanvas({ map, player }: Props) {
+export function WorldCanvas({ map, player, npcs }: Props) {
   const viewportW = 12;
   const viewportH = 9;
   const startX = Math.max(0, Math.min(player.x - Math.floor(viewportW / 2), map.width - viewportW));
@@ -33,6 +41,7 @@ export function WorldCanvas({ map, player }: Props) {
 
   const tiles = visibleTiles.map(({ tile, x, y }) => {
     const isPlayer = x === player.x && y === player.y;
+    const npc = npcs.find((n) => n.x === x && n.y === y);
     const detailVariant = (x * 13 + y * 7) % 3;
     return (
       <div
@@ -51,9 +60,17 @@ export function WorldCanvas({ map, player }: Props) {
         {isPlayer ? (
           <span className="absolute inset-1">
             <span className="absolute left-1 top-0 h-1 w-1 bg-amber-100" />
-            <span className="absolute left-0 top-1 h-2 w-3 rounded-sm bg-amber-300 shadow-[0_0_10px_rgba(251,191,36,0.95)]" />
+            <span className={`absolute left-0 top-1 h-2 w-3 rounded-sm shadow-[0_0_10px_rgba(251,191,36,0.95)] ${avatarColor(player.avatarId)}`} />
             <span className="absolute left-0 top-3 h-2 w-1 bg-amber-900" />
             <span className="absolute left-2 top-3 h-2 w-1 bg-amber-900" />
+          </span>
+        ) : null}
+        {npc ? (
+          <span className="absolute inset-1">
+            <span className="absolute left-1 top-0 h-1 w-1 bg-slate-50" />
+            <span className={`absolute left-0 top-1 h-2 w-3 rounded-sm ${npc.role === "trainer" || npc.role === "rival" ? "bg-rose-400" : "bg-cyan-300"}`} />
+            <span className="absolute left-0 top-3 h-2 w-1 bg-slate-900" />
+            <span className="absolute left-2 top-3 h-2 w-1 bg-slate-900" />
           </span>
         ) : null}
       </div>
@@ -80,8 +97,16 @@ export function WorldCanvas({ map, player }: Props) {
       <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-400">
         <span className="retro-chip">Grass = encounters</span>
         <span className="retro-chip">Purple = portals</span>
+        <span className="retro-chip">Red NPC = trainer battle</span>
         <span className="retro-chip">Arrows / WASD</span>
       </div>
     </div>
   );
+}
+
+function avatarColor(avatarId: string) {
+  if (avatarId === "blaze") return "bg-orange-300";
+  if (avatarId === "shadow") return "bg-violet-300";
+  if (avatarId === "wave") return "bg-sky-300";
+  return "bg-amber-300";
 }

@@ -127,3 +127,19 @@
 .animate-water-shimmer {
   animation: water-shimmer 1.2s ease-in-out infinite;
 }
+
+@keyframes map-transition-fade {
+  0% {
+    opacity: 0;
+  }
+  40% {
+    opacity: 0.75;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.animate-map-transition {
+  animation: map-transition-fade 260ms ease-in-out;
+}

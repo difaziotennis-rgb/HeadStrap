@@ -64,7 +64,18 @@ export interface EncounterEntry {
 }
 
 export interface MapTile {
-  kind: "ground" | "wall" | "grass" | "water" | "portal";
+  kind:
+    | "ground"
+    | "wall"
+    | "grass"
+    | "water"
+    | "portal"
+    | "tree"
+    | "bush"
+    | "path"
+    | "tall_grass"
+    | "short_grass"
+    | "bridge";
   toMapId?: string;
   toX?: number;
   toY?: number;
@@ -84,6 +95,7 @@ export interface BattleState {
   enemy: MonsterInstance;
   isWild: boolean;
   enemyName: string;
+  trainerId?: string;
   activePartyIndex: number;
   log: string[];
   turn: number;
@@ -97,6 +109,7 @@ export interface PlayerState {
   y: number;
   facing: Facing;
   stepCounter: number;
+  avatarId: string;
 }
 
 export interface SandboxState {
@@ -115,6 +128,23 @@ export interface GameState {
   sandbox: SandboxState;
   starterChosen: boolean;
   lastSavedAt: number | null;
+  defeatedTrainerIds: string[];
+  activeDialog: string | null;
+}
+
+export interface NpcCharacter {
+  id: string;
+  name: string;
+  mapId: string;
+  x: number;
+  y: number;
+  facing: Facing;
+  role: "trainer" | "villager" | "merchant" | "rival";
+  personality: string;
+  introLine: string;
+  followupLine: string;
+  trainerSpeciesIds?: string[];
+  trainerLevels?: number[];
 }
 
 export interface BattleMoveResult {

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ITEM_INDEX } from "@/lib/game/data/items";
 import { MAP_INDEX } from "@/lib/game/data/maps";
 import { SPECIES_INDEX } from "@/lib/game/data/monsters";
+import { NPCS } from "@/lib/game/data/npcs";
 import { applyEnemyMove, applyPlayerMove, attemptCapture, awardExperience, useHealingItem } from "@/lib/game/engine/battleEngine";
 import { createMonsterInstance } from "@/lib/game/engine/worldFactory";
 import { movePlayer } from "@/lib/game/engine/worldEngine";
@@ -17,6 +18,7 @@ function hasLivingMonster(state: GameState) {
 export function useGameStore() {
   const [state, setState] = useState<GameState>(createInitialState);
   const [isHydrated, setIsHydrated] = useState(false);
+  const [mapTransitioning, setMapTransitioning] = useState(false);
 
   useEffect(() => {
     setState(loadGameState());
@@ -31,6 +33,16 @@ export function useGameStore() {
   const map = MAP_INDEX[state.player.mapId];
   const activeMonster = state.party[0];
   const enemyMonster = state.battle?.enemy ?? null;
+  const mapNpcs = NPCS.filter((n) => n.mapId === state.player.mapId);
+
+  const getAdjacentNpc = useCallback((prev: GameState) => {
+    return NPCS.find((npc) => {
+      if (npc.mapId !== prev.player.mapId) return false;
+      const dx = Math.abs(npc.x - prev.player.x);
+      const dy = Math.abs(npc.y - prev.player.y);
+      return dx + dy === 1;
+    });
+  }, []);
 
   const move = useCallback((facing: Facing) => {
     setState((prev) => {
@@ -54,7 +66,12 @@ export function useGameStore() {
           stepCounter: prev.player.stepCounter + (result.moved ? 1 : 0),
         },
         visitedMaps: prev.visitedMaps.includes(result.mapId) ? prev.visitedMaps : [...prev.visitedMaps, result.mapId],
+        activeDialog: null,
       };
+      if (result.transitionedMap) {
+        setMapTransitioning(true);
+        setTimeout(() => setMapTransitioning(false), 240);
+      }
       if (result.triggerEncounter && hasLivingMonster(next)) {
         return {
           ...next,
@@ -63,6 +80,7 @@ export function useGameStore() {
             enemy: result.triggerEncounter,
             isWild: true,
             enemyName: SPECIES_INDEX[result.triggerEncounter.speciesId].name,
+            trainerId: undefined,
             activePartyIndex: 0,
             log: [`A wild ${SPECIES_INDEX[result.triggerEncounter.speciesId].name} appeared!`],
             turn: 0,
@@ -90,6 +108,16 @@ export function useGameStore() {
     });
   }, []);
 
+  const chooseAvatar = useCallback((avatarId: string) => {
+    setState((prev) => ({
+      ...prev,
+      player: {
+        ...prev.player,
+        avatarId,
+      },
+    }));
+  }, []);
+
   const runFromBattle = useCallback(() => {
     setState((prev) => {
       if (prev.mode !== "battle" || !prev.battle) return prev;
@@ -107,6 +135,7 @@ export function useGameStore() {
         ...prev,
         mode: "world",
         battle: null,
+        activeDialog: "You escaped from the battle.",
       };
     });
   }, []);
@@ -129,6 +158,7 @@ export function useGameStore() {
               inventory: nextInv,
               party: hasRoom ? [...prev.party, nextMonster] : prev.party,
               storage: hasRoom ? prev.storage : [...prev.storage, nextMonster],
+              activeDialog: `You captured ${SPECIES_INDEX[nextMonster.speciesId].name}!`,
             };
           }
           return {
@@ -202,11 +232,16 @@ export function useGameStore() {
       if (faintedEnemy) {
         const gained = awardExperience(party[0], SPECIES_INDEX[enemyMonster.speciesId].xpYield);
         party[0] = gained.monster;
+        const trainerWin = battle.trainerId ? !prev.defeatedTrainerIds.includes(battle.trainerId) : false;
         return {
           ...prev,
           party,
           mode: "world",
           battle: null,
+          defeatedTrainerIds: trainerWin ? [...prev.defeatedTrainerIds, battle.trainerId as string] : prev.defeatedTrainerIds,
+          activeDialog: trainerWin
+            ? "Trainer defeated. Their route checkpoint is now clear."
+            : "Wild battle complete.",
         };
       }
 
@@ -224,6 +259,7 @@ export function useGameStore() {
               y: 2,
             },
             party: prev.party.map((m) => ({ ...m, currentHp: m.maxHp })),
+            activeDialog: "Your team blacked out and was restored in Willow Town.",
           };
         }
         const nextParty = [...party];
@@ -249,6 +285,56 @@ export function useGameStore() {
         },
       };
     });
+  }, []);
+
+  const interact = useCallback(() => {
+    setState((prev) => {
+      if (prev.mode !== "world") return prev;
+      const npc = getAdjacentNpc(prev);
+      if (!npc) {
+        return {
+          ...prev,
+          activeDialog: "No one is close enough to talk. Move next to a character and press Interact.",
+        };
+      }
+
+      if (npc.role === "trainer" || npc.role === "rival") {
+        const alreadyDefeated = prev.defeatedTrainerIds.includes(npc.id);
+        if (alreadyDefeated) {
+          return {
+            ...prev,
+            activeDialog: `${npc.name}: ${npc.followupLine}`,
+          };
+        }
+        const speciesId = npc.trainerSpeciesIds?.[0] ?? "m_7";
+        const level = npc.trainerLevels?.[0] ?? 8;
+        return {
+          ...prev,
+          mode: "battle",
+          battle: {
+            enemy: createMonsterInstance(speciesId, level),
+            isWild: false,
+            enemyName: npc.name,
+            trainerId: npc.id,
+            activePartyIndex: 0,
+            log: [`${npc.name}: "${npc.introLine}"`, `${npc.name} sent out ${SPECIES_INDEX[speciesId].name}!`],
+            turn: 0,
+            awaitingSwitch: false,
+            encounterArea: npc.mapId,
+          },
+          activeDialog: null,
+        };
+      }
+
+      return {
+        ...prev,
+        activeDialog: `${npc.name}: ${npc.introLine}`,
+      };
+    });
+  }, [getAdjacentNpc]);
+
+  const dismissDialog = useCallback(() => {
+    setState((prev) => ({ ...prev, activeDialog: null }));
   }, []);
 
   const swapPartyIndex = useCallback((index: number) => {
@@ -354,6 +440,11 @@ export function useGameStore() {
       addSandboxMonster,
       resetSave,
       isHydrated,
+      mapTransitioning,
+      mapNpcs,
+      chooseAvatar,
+      interact,
+      dismissDialog,
     }),
     [
       state,
@@ -374,6 +465,11 @@ export function useGameStore() {
       addSandboxMonster,
       resetSave,
       isHydrated,
+      mapTransitioning,
+      mapNpcs,
+      chooseAvatar,
+      interact,
+      dismissDialog,
     ],
   );
 }
