@@ -2,6 +2,7 @@ import { createMonsterInstance } from "@/lib/game/engine/worldFactory";
 import { GameState } from "@/lib/game/state/gameTypes";
 
 const SAVE_KEY = "difazio_game_save_v1";
+const RESET_ON_EACH_REFRESH = true;
 
 export function createInitialState(): GameState {
   return {
@@ -33,6 +34,9 @@ export function createInitialState(): GameState {
 }
 
 export function loadGameState(): GameState {
+  if (RESET_ON_EACH_REFRESH) {
+    return createInitialState();
+  }
   if (typeof window === "undefined") return createInitialState();
   try {
     const raw = window.localStorage.getItem(SAVE_KEY);
@@ -48,6 +52,7 @@ export function loadGameState(): GameState {
 }
 
 export function saveGameState(state: GameState) {
+  if (RESET_ON_EACH_REFRESH) return;
   if (typeof window === "undefined") return;
   const persisted = {
     ...state,

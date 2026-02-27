@@ -108,3 +108,22 @@
 .pixel-btn:active {
   transform: translateY(1px) scale(0.99);
 }
+
+@keyframes water-shimmer {
+  0% {
+    opacity: 0.35;
+    transform: translateX(-1px);
+  }
+  50% {
+    opacity: 0.85;
+    transform: translateX(1px);
+  }
+  100% {
+    opacity: 0.35;
+    transform: translateX(-1px);
+  }
+}
+
+.animate-water-shimmer {
+  animation: water-shimmer 1.2s ease-in-out infinite;
+}

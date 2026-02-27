@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { PixelSprite } from "@/components/game/PixelSprite";
 import { ITEM_INDEX } from "@/lib/game/data/items";
 import { MOVE_INDEX } from "@/lib/game/data/moves";
 import { SPECIES_INDEX } from "@/lib/game/data/monsters";
@@ -139,10 +140,11 @@ export function BattleScene({ battle, playerMonster, onMove, onUseItem, onRun, i
               <p className="text-xs text-slate-300">Lv {enemy.level}</p>
             </div>
             <div className="battle-ground mx-auto grid h-24 w-28 place-items-center">
-              <div
-                className={`h-16 w-16 rounded-full border border-slate-600 bg-gradient-to-br from-indigo-300/35 to-slate-950 ${
-                  phase === "player" ? "animate-battle-hit" : "animate-float"
-                }`}
+              <PixelSprite
+                className={phase === "player" ? "animate-battle-hit shadow-[0_0_20px_rgba(147,197,253,0.35)]" : "animate-float"}
+                seed={`enemy_${enemySpecies.id}`}
+                size={68}
+                tone="enemy"
               />
             </div>
             <HpBar current={enemy.currentHp} max={enemy.maxHp} />
@@ -157,10 +159,11 @@ export function BattleScene({ battle, playerMonster, onMove, onUseItem, onRun, i
               <p className="text-xs text-slate-300">Lv {playerMonster.level}</p>
             </div>
             <div className="battle-ground mx-auto grid h-24 w-28 place-items-center">
-              <div
-                className={`h-16 w-16 rounded-md border border-emerald-500/40 bg-gradient-to-br from-emerald-300/35 to-slate-950 ${
-                  phase === "enemy" ? "animate-battle-hit" : "animate-float-slow"
-                }`}
+              <PixelSprite
+                className={phase === "enemy" ? "animate-battle-hit shadow-[0_0_20px_rgba(134,239,172,0.35)]" : "animate-float-slow"}
+                seed={`ally_${playerSpecies.id}`}
+                size={68}
+                tone="ally"
               />
             </div>
             <HpBar current={playerMonster.currentHp} max={playerMonster.maxHp} />
