@@ -68,6 +68,114 @@
     inset 0 -40px 70px rgba(5, 10, 20, 0.28);
 }
 
+.tile-art {
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.08);
+}
+
+.tile-art--ground {
+  background: linear-gradient(180deg, #80c764 0%, #4d983c 100%);
+}
+
+.tile-art--grass,
+.tile-art--short_grass {
+  background:
+    radial-gradient(circle at 15% 18%, rgba(224, 255, 161, 0.2), transparent 36%),
+    linear-gradient(180deg, #93d765 0%, #5aa33f 100%);
+}
+
+.tile-art--tall_grass {
+  background:
+    radial-gradient(circle at 80% 20%, rgba(208, 255, 160, 0.16), transparent 38%),
+    linear-gradient(180deg, #7fc458 0%, #4c8f35 100%);
+}
+
+.tile-art--path {
+  background:
+    radial-gradient(circle at 20% 20%, rgba(255, 229, 170, 0.24), transparent 35%),
+    linear-gradient(180deg, #d9bc8a 0%, #ae824c 100%);
+}
+
+.tile-art--water {
+  background:
+    linear-gradient(180deg, rgba(181, 236, 255, 0.32), rgba(181, 236, 255, 0)),
+    linear-gradient(180deg, #72c9f7 0%, #2e7fd8 100%);
+}
+
+.tile-art--bridge {
+  background:
+    repeating-linear-gradient(
+      180deg,
+      rgba(255, 214, 148, 0.3) 0px,
+      rgba(255, 214, 148, 0.3) 2px,
+      transparent 2px,
+      transparent 4px
+    ),
+    linear-gradient(180deg, #c79352 0%, #996432 100%);
+}
+
+.tile-art--wall {
+  background:
+    radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.1), transparent 35%),
+    linear-gradient(180deg, #9ca3af 0%, #4b5563 100%);
+}
+
+.tile-art--tree {
+  background: linear-gradient(180deg, #7cbc56 0%, #3f7f32 100%);
+}
+
+.tile-art--bush {
+  background: linear-gradient(180deg, #89c45a 0%, #4d7f2e 100%);
+}
+
+.tile-art--portal {
+  background: linear-gradient(180deg, #7f8798 0%, #4b5563 100%);
+}
+
+.parallax-layer {
+  pointer-events: none;
+  position: absolute;
+  left: -25%;
+  width: 150%;
+  background-repeat: repeat-x;
+  will-change: transform;
+}
+
+.parallax-far {
+  top: 14%;
+  height: 24%;
+  opacity: 0.45;
+  background-image:
+    radial-gradient(circle at 10% 90%, rgba(16, 74, 39, 0.7) 0 28px, transparent 30px),
+    radial-gradient(circle at 35% 90%, rgba(16, 74, 39, 0.65) 0 30px, transparent 32px),
+    radial-gradient(circle at 62% 90%, rgba(16, 74, 39, 0.75) 0 34px, transparent 36px),
+    radial-gradient(circle at 88% 90%, rgba(16, 74, 39, 0.6) 0 30px, transparent 32px);
+}
+
+.parallax-mid {
+  top: 18%;
+  height: 28%;
+  opacity: 0.38;
+  background-image:
+    radial-gradient(circle at 14% 100%, rgba(33, 99, 58, 0.72) 0 30px, transparent 32px),
+    radial-gradient(circle at 42% 100%, rgba(33, 99, 58, 0.74) 0 26px, transparent 28px),
+    radial-gradient(circle at 70% 100%, rgba(33, 99, 58, 0.68) 0 34px, transparent 36px),
+    radial-gradient(circle at 94% 100%, rgba(33, 99, 58, 0.7) 0 24px, transparent 26px);
+}
+
+.parallax-near {
+  bottom: 7%;
+  height: 18%;
+  opacity: 0.24;
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      rgba(26, 84, 43, 0.35) 0px,
+      rgba(26, 84, 43, 0.35) 12px,
+      rgba(19, 65, 34, 0.3) 12px,
+      rgba(19, 65, 34, 0.3) 28px
+    );
+}
+
 @keyframes cloud-drift {
   0% {
     transform: translateX(0);
@@ -100,6 +208,73 @@
 
 .animate-grass-sway {
   animation: grass-sway 1100ms ease-in-out infinite;
+}
+
+@keyframes walk-a {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-0.5px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.animate-walk-a {
+  animation: walk-a 180ms linear infinite;
+}
+
+@keyframes walk-b {
+  0% {
+    transform: translateY(-0.5px);
+  }
+  50% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-0.5px);
+  }
+}
+
+.animate-walk-b {
+  animation: walk-b 180ms linear infinite;
+}
+
+@keyframes npc-idle {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-0.7px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.animate-npc-idle {
+  animation: npc-idle 1.3s ease-in-out infinite;
+}
+
+@keyframes firefly {
+  0% {
+    opacity: 0.2;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 0.95;
+    transform: translateY(-1px);
+  }
+  100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+}
+
+.animate-firefly {
+  animation: firefly 1.6s ease-in-out infinite;
 }
 
 .retro-chip {

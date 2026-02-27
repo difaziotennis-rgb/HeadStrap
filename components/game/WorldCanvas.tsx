@@ -9,23 +9,9 @@ type Props = {
   npcs: NpcCharacter[];
 };
 
-const BASE_TILE_CLASSES: Record<string, string> = {
-  ground: "bg-[linear-gradient(180deg,#71b95a_0%,#4a8f3a_100%)]",
-  wall: "bg-[linear-gradient(180deg,#9ca3af_0%,#4b5563_100%)]",
-  grass: "bg-[linear-gradient(180deg,#88c85b_0%,#4e9438_100%)]",
-  water: "bg-[linear-gradient(180deg,#6ec2f4_0%,#2f7fd8_100%)]",
-  portal: "bg-[linear-gradient(180deg,#7c8596_0%,#4b5563_100%)]",
-  tree: "bg-[linear-gradient(180deg,#6db34f_0%,#3e7e31_100%)]",
-  bush: "bg-[linear-gradient(180deg,#7ab44d_0%,#4a812e_100%)]",
-  path: "bg-[linear-gradient(180deg,#d0b07b_0%,#a87f4d_100%)]",
-  short_grass: "bg-[linear-gradient(180deg,#98d763_0%,#5ea23e_100%)]",
-  tall_grass: "bg-[linear-gradient(180deg,#7fbe55_0%,#4f8a34_100%)]",
-  bridge: "bg-[linear-gradient(180deg,#c59352_0%,#996432_100%)]",
-};
-
 export function WorldCanvas({ map, player, npcs }: Props) {
-  const viewportW = 18;
-  const viewportH = 13;
+  const viewportW = 20;
+  const viewportH = 14;
   const startX = Math.max(0, Math.min(player.x - Math.floor(viewportW / 2), map.width - viewportW));
   const startY = Math.max(0, Math.min(player.y - Math.floor(viewportH / 2), map.height - viewportH));
   const npcIndex = Object.fromEntries(npcs.map((npc) => [`${npc.x}_${npc.y}`, npc]));
@@ -44,22 +30,21 @@ export function WorldCanvas({ map, player, npcs }: Props) {
     const isPlayer = x === player.x && y === player.y;
     const npc = npcIndex[`${x}_${y}`];
     const seed = Math.abs((x * 92821 + y * 68917 + 17) % 1000);
-    const northKind = map.tiles[Math.max(0, y - 1) * map.width + x]?.kind;
-    const westKind = map.tiles[y * map.width + Math.max(0, x - 1)]?.kind;
-    const eastKind = map.tiles[y * map.width + Math.min(map.width - 1, x + 1)]?.kind;
+    const walkFrame = player.stepCounter % 2;
+    const playerFacing = player.facing;
     return (
       <div
         key={`${x}_${y}`}
-        className={`relative h-5 w-5 overflow-visible sm:h-6 sm:w-6 ${BASE_TILE_CLASSES[tile.kind]}`}
+        className={`tile-art tile-art--${tile.kind} relative h-5 w-5 overflow-visible sm:h-6 sm:w-6`}
       >
         {tile.kind === "ground" || tile.kind === "grass" || tile.kind === "short_grass" || tile.kind === "tall_grass" ? (
           <>
-            <span className="absolute inset-x-0 bottom-0 h-1 bg-emerald-950/20" />
             {seed % 6 === 0 ? <span className="absolute left-1 top-1 h-1 w-1 rounded-full bg-yellow-200/85" /> : null}
             {seed % 10 === 0 ? <span className="absolute right-1 top-2 h-1 w-1 rounded-full bg-pink-200/80" /> : null}
             {tile.kind === "tall_grass" ? <span className="animate-grass-sway absolute bottom-0 left-0 h-3 w-1 bg-lime-900/40" /> : null}
             {tile.kind === "tall_grass" ? <span className="animate-grass-sway absolute bottom-0 left-2 h-2 w-1 bg-lime-900/40 [animation-delay:180ms]" /> : null}
             {tile.kind === "tall_grass" ? <span className="animate-grass-sway absolute bottom-0 right-0 h-3 w-1 bg-lime-900/40 [animation-delay:360ms]" /> : null}
+            {seed % 23 === 0 ? <span className="animate-firefly absolute right-1 top-1 h-1 w-1 rounded-full bg-yellow-100" /> : null}
           </>
         ) : null}
         {tile.kind === "water" ? (
@@ -67,11 +52,11 @@ export function WorldCanvas({ map, player, npcs }: Props) {
             <span className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.22),transparent_40%)]" />
             <span className="absolute inset-x-1 top-1 h-0.5 rounded-full bg-cyan-100/70 animate-water-shimmer" />
             <span className="absolute inset-x-2 top-3 h-0.5 rounded-full bg-blue-100/50 animate-water-shimmer [animation-delay:300ms]" />
+            {seed % 9 === 0 ? <span className="animate-water-shimmer absolute left-2 top-2 h-1 w-1 rounded-full bg-cyan-50/70" /> : null}
           </>
         ) : null}
         {tile.kind === "path" ? (
           <>
-            <span className="absolute inset-x-0 bottom-0 h-1 bg-amber-900/20" />
             {seed % 4 === 0 ? <span className="absolute left-1 top-2 h-0.5 w-0.5 rounded-full bg-amber-950/40" /> : null}
           </>
         ) : null}
@@ -81,14 +66,7 @@ export function WorldCanvas({ map, player, npcs }: Props) {
             <span className="absolute inset-x-0 top-3 h-0.5 bg-amber-950/40" />
           </>
         ) : null}
-        {tile.kind === "wall" ? (
-          <>
-            {northKind !== "wall" ? <span className="absolute inset-x-0 top-0 h-1 bg-slate-300/35" /> : null}
-            <span className="absolute inset-x-0 bottom-0 h-1 bg-slate-950/35" />
-            {westKind !== "wall" ? <span className="absolute bottom-0 left-0 top-0 w-0.5 bg-slate-300/20" /> : null}
-            {eastKind !== "wall" ? <span className="absolute bottom-0 right-0 top-0 w-0.5 bg-slate-950/30" /> : null}
-          </>
-        ) : null}
+        {tile.kind === "wall" ? <span className="absolute inset-x-0 top-0 h-1 bg-slate-200/25" /> : null}
         {tile.kind === "bush" ? (
           <>
             <span className="absolute inset-x-0 bottom-0 top-1 rounded-t-full bg-lime-700/90" />
@@ -110,16 +88,16 @@ export function WorldCanvas({ map, player, npcs }: Props) {
           </>
         ) : null}
         {isPlayer ? (
-          <span className="absolute inset-0 z-20">
-            <span className="absolute left-2 top-0 h-1 w-1 rounded-full bg-amber-100" />
+          <span className={`absolute inset-0 z-20 ${walkFrame === 0 ? "animate-walk-a" : "animate-walk-b"}`}>
+            <span className={`absolute left-2 top-0 h-1 w-1 rounded-full bg-amber-100 ${playerFacing === "up" ? "opacity-90" : ""}`} />
             <span className={`absolute left-1 top-1 h-3 w-3 rounded-sm shadow-[0_0_8px_rgba(251,191,36,0.9)] ${avatarColor(player.avatarId)}`} />
-            <span className="absolute left-1 top-4 h-1 w-1 bg-amber-900" />
-            <span className="absolute left-3 top-4 h-1 w-1 bg-amber-900" />
-            <span className="absolute -bottom-0 left-1 h-1 w-3 rounded-full bg-slate-950/45" />
+            <span className={`absolute left-1 top-4 h-1 w-1 bg-amber-900 ${playerFacing === "left" ? "translate-x-[-1px]" : ""}`} />
+            <span className={`absolute left-3 top-4 h-1 w-1 bg-amber-900 ${playerFacing === "right" ? "translate-x-[1px]" : ""}`} />
+            <span className="absolute left-1 top-[15px] h-1 w-3 rounded-full bg-slate-950/45" />
           </span>
         ) : null}
         {npc ? (
-          <span className="absolute inset-0 z-20">
+          <span className="animate-npc-idle absolute inset-0 z-20">
             <span className="absolute left-2 top-0 h-1 w-1 rounded-full bg-slate-50" />
             <span
               className={`absolute left-1 top-1 h-3 w-3 rounded-sm ${
@@ -128,7 +106,7 @@ export function WorldCanvas({ map, player, npcs }: Props) {
             />
             <span className="absolute left-1 top-4 h-1 w-1 bg-slate-900" />
             <span className="absolute left-3 top-4 h-1 w-1 bg-slate-900" />
-            <span className="absolute -bottom-0 left-1 h-1 w-3 rounded-full bg-slate-950/40" />
+            <span className="absolute left-1 top-[15px] h-1 w-3 rounded-full bg-slate-950/40" />
           </span>
         ) : null}
       </div>
@@ -148,10 +126,15 @@ export function WorldCanvas({ map, player, npcs }: Props) {
           className="retro-screen relative grid w-fit overflow-hidden rounded"
           style={{ gridTemplateColumns: `repeat(${viewportW}, minmax(0, 1fr))` }}
         >
+          <div className="parallax-layer parallax-far" style={{ transform: `translateX(-${startX * 1.2}px)` }} />
+          <div className="parallax-layer parallax-mid" style={{ transform: `translateX(-${startX * 2.4}px)` }} />
+          <div className="parallax-layer parallax-near" style={{ transform: `translateX(-${startX * 4}px)` }} />
           <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(120,201,255,0.28)_0%,rgba(189,245,255,0.08)_34%,transparent_40%)]" />
           <div className="pointer-events-none animate-cloud-drift absolute -left-8 top-1 h-8 w-20 rounded-full bg-white/20 blur-sm" />
           <div className="pointer-events-none animate-cloud-drift absolute -left-16 top-4 h-7 w-16 rounded-full bg-white/15 blur-sm [animation-delay:2000ms]" />
           {tiles}
+          <div className="pointer-events-none absolute bottom-2 left-3 h-6 w-8 rounded-full bg-emerald-900/20 blur-md" />
+          <div className="pointer-events-none absolute bottom-1 right-6 h-8 w-12 rounded-full bg-cyan-800/15 blur-md" />
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,transparent_64%,rgba(5,8,20,0.18)_100%)]" />
         </div>
       </div>
