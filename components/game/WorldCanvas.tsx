@@ -24,13 +24,6 @@ const TILE_FRAME_INDEX: Record<MapTile["kind"], number> = {
   portal: 10,
 };
 
-const FACING_FRAME_BASE: Record<Facing, number> = {
-  up: 0,
-  right: 2,
-  down: 4,
-  left: 6,
-};
-
 export function WorldCanvas({ map, player, npcs }: Props) {
   const viewportW = 20;
   const viewportH = 14;
@@ -53,6 +46,11 @@ export function WorldCanvas({ map, player, npcs }: Props) {
     const npc = npcIndex[`${x}_${y}`];
     const seed = Math.abs((x * 92821 + y * 68917 + 17) % 1000);
     const walkFrame = player.stepCounter % 2;
+    const nearWater =
+      getTileKind(map, x + 1, y) === "water" ||
+      getTileKind(map, x - 1, y) === "water" ||
+      getTileKind(map, x, y + 1) === "water" ||
+      getTileKind(map, x, y - 1) === "water";
     return (
       <div
         key={`${x}_${y}`}
@@ -67,6 +65,9 @@ export function WorldCanvas({ map, player, npcs }: Props) {
             {tile.kind === "tall_grass" ? <span className="animate-grass-sway absolute bottom-0 left-2 h-2 w-1 bg-lime-900/40 [animation-delay:180ms]" /> : null}
             {tile.kind === "tall_grass" ? <span className="animate-grass-sway absolute bottom-0 right-0 h-3 w-1 bg-lime-900/40 [animation-delay:360ms]" /> : null}
             {seed % 23 === 0 ? <span className="animate-firefly absolute right-1 top-1 h-1 w-1 rounded-full bg-yellow-100" /> : null}
+            {nearWater ? <span className="absolute inset-x-0 bottom-0 h-0.5 bg-cyan-100/35" /> : null}
+            {nearWater && seed % 5 === 0 ? <span className="absolute bottom-0 left-0 h-2 w-1 bg-emerald-900/40" /> : null}
+            {nearWater && seed % 8 === 0 ? <span className="absolute bottom-0 right-1 h-2 w-1 bg-emerald-900/35" /> : null}
           </>
         ) : null}
         {tile.kind === "water" ? (
@@ -75,6 +76,7 @@ export function WorldCanvas({ map, player, npcs }: Props) {
             <span className="absolute inset-x-1 top-1 h-0.5 rounded-full bg-cyan-100/70 animate-water-shimmer" />
             <span className="absolute inset-x-2 top-3 h-0.5 rounded-full bg-blue-100/50 animate-water-shimmer [animation-delay:300ms]" />
             {seed % 9 === 0 ? <span className="animate-water-shimmer absolute left-2 top-2 h-1 w-1 rounded-full bg-cyan-50/70" /> : null}
+            {seed % 7 === 0 ? <span className="absolute left-1 top-1 h-1 w-2 rounded-full bg-white/25" /> : null}
           </>
         ) : null}
         {tile.kind === "path" ? (
@@ -113,8 +115,8 @@ export function WorldCanvas({ map, player, npcs }: Props) {
           <span className={`absolute inset-0 z-20 ${walkFrame === 0 ? "animate-walk-a" : "animate-walk-b"}`}>
             <span className="absolute left-1 top-[15px] h-1 w-3 rounded-full bg-slate-950/45" />
             <span
-              className={`sprite-character absolute left-[2px] top-[2px] ${avatarFilterClass(player.avatarId)}`}
-              style={characterSpriteStyle(player.facing, walkFrame)}
+              className="sprite-character absolute left-[1px] top-[1px]"
+              style={characterSpriteStyle(player.avatarId, player.facing, walkFrame)}
             />
           </span>
         ) : null}
@@ -122,10 +124,8 @@ export function WorldCanvas({ map, player, npcs }: Props) {
           <span className="animate-npc-idle absolute inset-0 z-20">
             <span className="absolute left-1 top-[15px] h-1 w-3 rounded-full bg-slate-950/40" />
             <span
-              className={`sprite-character absolute left-[2px] top-[2px] ${
-                npc.role === "trainer" || npc.role === "rival" ? "sprite-filter-trainer" : "sprite-filter-villager"
-              }`}
-              style={characterSpriteStyle(npc.facing, seed % 2)}
+              className="sprite-character absolute left-[1px] top-[1px]"
+              style={characterSpriteStyle(npc.role === "trainer" || npc.role === "rival" ? "blaze" : "wave", npc.facing, seed % 2)}
             />
           </span>
         ) : null}
@@ -143,7 +143,7 @@ export function WorldCanvas({ map, player, npcs }: Props) {
       </div>
       <div className="retro-bezel">
         <div
-          className="retro-screen relative grid w-fit overflow-hidden rounded"
+          className={`retro-screen biome-tone-${biomeToneKey(map.id)} relative grid w-fit overflow-hidden rounded`}
           style={{ gridTemplateColumns: `repeat(${viewportW}, minmax(0, 1fr))` }}
         >
           <div className="parallax-layer parallax-far" style={{ transform: `translateX(-${startX * 1.2}px)` }} />
@@ -155,6 +155,7 @@ export function WorldCanvas({ map, player, npcs }: Props) {
           {tiles}
           <div className="pointer-events-none absolute bottom-2 left-3 h-6 w-8 rounded-full bg-emerald-900/20 blur-md" />
           <div className="pointer-events-none absolute bottom-1 right-6 h-8 w-12 rounded-full bg-cyan-800/15 blur-md" />
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_72%_18%,rgba(255,255,255,0.12),transparent_33%)]" />
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,transparent_64%,rgba(5,8,20,0.18)_100%)]" />
         </div>
       </div>
@@ -173,22 +174,46 @@ function terrainSpriteStyle(kind: MapTile["kind"]): CSSProperties {
   const col = frame % 4;
   const row = Math.floor(frame / 4);
   return {
-    backgroundImage: "url('/game/sprites/terrain-atlas.svg')",
-    backgroundPosition: `-${col * 32}px -${row * 32}px`,
-    backgroundSize: "128px 96px",
+    backgroundImage: "url('/game/sprites/terrain-atlas.png')",
+    backgroundPosition: `${framePositionPercent(col, 4)} ${framePositionPercent(row, 3)}`,
   };
 }
 
-function characterSpriteStyle(facing: Facing, frame: number): CSSProperties {
-  const frameIndex = FACING_FRAME_BASE[facing] + (frame % 2);
+function characterSpriteStyle(avatarId: string, facing: Facing, frame: number): CSSProperties {
+  const facingColumns: Record<Facing, [number, number]> = {
+    down: [0, 1],
+    up: [2, 7],
+    right: [3, 4],
+    left: [8, 9],
+  };
+  const column = facingColumns[facing][frame % 2];
+  const row = avatarRow(avatarId);
   return {
-    backgroundPosition: `-${frameIndex * 24}px 0px`,
+    backgroundPosition: `${framePositionPercent(column, 10)} ${framePositionPercent(row, 4)}`,
   };
 }
 
-function avatarFilterClass(avatarId: string) {
-  if (avatarId === "blaze") return "sprite-filter-blaze";
-  if (avatarId === "shadow") return "sprite-filter-shadow";
-  if (avatarId === "wave") return "sprite-filter-wave";
-  return "sprite-filter-ace";
+function avatarRow(avatarId: string) {
+  if (avatarId === "blaze") return 1;
+  if (avatarId === "wave") return 2;
+  if (avatarId === "shadow") return 3;
+  return 0;
+}
+
+function framePositionPercent(index: number, count: number) {
+  if (count <= 1) return "0%";
+  return `${(index / (count - 1)) * 100}%`;
+}
+
+function getTileKind(map: MapData, x: number, y: number) {
+  if (x < 0 || y < 0 || x >= map.width || y >= map.height) return "wall";
+  return map.tiles[y * map.width + x].kind;
+}
+
+function biomeToneKey(mapId: string) {
+  if (mapId.includes("forest")) return "forest";
+  if (mapId.includes("canyon")) return "canyon";
+  if (mapId.includes("lake")) return "lakeside";
+  if (mapId.includes("gym") || mapId.includes("lab")) return "interior";
+  return "town";
 }
