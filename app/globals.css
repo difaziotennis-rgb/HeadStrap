@@ -47,3 +47,50 @@ html {
   scroll-behavior: smooth;
 }
 
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes float-slow {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes battle-hit {
+  0% {
+    transform: translateX(0) scale(1);
+  }
+  30% {
+    transform: translateX(-6px) scale(1.04);
+  }
+  60% {
+    transform: translateX(6px) scale(0.98);
+  }
+  100% {
+    transform: translateX(0) scale(1);
+  }
+}
+
+.animate-float {
+  animation: float 1.6s ease-in-out infinite;
+}
+
+.animate-float-slow {
+  animation: float-slow 2.2s ease-in-out infinite;
+}
+
+.animate-battle-hit {
+  animation: battle-hit 420ms ease-out 1;
+}
+

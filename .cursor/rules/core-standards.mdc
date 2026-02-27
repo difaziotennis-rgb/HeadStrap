@@ -1,0 +1,17 @@
+---
+description: Core engineering standards for this monorepo
+alwaysApply: true
+---
+
+# Core Standards
+
+- Make the smallest correct change that solves the task.
+- Keep edits scoped to the relevant project area.
+- Do not include secrets, tokens, or credentials in code or logs.
+- Preserve backward compatibility unless the task explicitly allows breaking changes.
+- If behavior changes, update nearby docs/tests in the same change when practical.
+
+## Definition of done
+
+- Code is readable, consistent with local conventions, and free of obvious dead paths.
+- Risks and follow-up work are called out clearly when full validation is not possible.

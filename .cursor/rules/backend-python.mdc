@@ -1,0 +1,18 @@
+---
+description: Python backend guidance for legal-clean-room backend
+globs: "legal-clean-room/backend/**/*.py"
+alwaysApply: false
+---
+
+# Python Backend Rule
+
+- Follow existing route/service/model boundaries already present in the backend.
+- Keep request handlers thin; push reusable logic into services/helpers.
+- Validate inputs and return explicit, stable response shapes.
+- Handle external API and database failures with clear errors and logging.
+- Update related auth/permission checks when adding sensitive endpoints.
+
+## Safety checks before finishing
+
+- Run or describe API-level verification for touched endpoints.
+- Avoid silent exception handling; surface actionable failure details.

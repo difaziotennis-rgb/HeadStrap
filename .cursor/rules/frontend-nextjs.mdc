@@ -1,0 +1,18 @@
+---
+description: Next.js frontend guidance for app, components, and lib
+globs: "{app,components,lib}/**/*.{ts,tsx,js,jsx}"
+alwaysApply: false
+---
+
+# Next.js Frontend Rule
+
+- Prefer server components by default; add client components only when needed for interactivity/browser APIs.
+- Keep UI components presentational and move business logic into hooks or `lib` utilities.
+- Reuse existing design patterns and utility styles before adding new variants.
+- Validate loading/error/empty states for new async UI flows.
+- Preserve route and metadata conventions used in `app/`.
+
+## Safety checks before finishing
+
+- Verify changed routes render without runtime errors.
+- Confirm imports are path-correct and dead code is not introduced.

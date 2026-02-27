@@ -1,0 +1,18 @@
+---
+description: Clover React Native and TypeScript guidance
+globs: "clover/src/**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# Clover Mobile Rule
+
+- Prefer strongly typed interfaces and avoid `any` unless unavoidable.
+- Keep screen components focused on UI orchestration; move data logic into services/hooks.
+- Reuse existing API wrappers and shared components before creating new patterns.
+- Guard async calls with loading/error states and user-friendly fallback messaging.
+- Preserve navigation and platform behavior conventions already used in Clover.
+
+## Safety checks before finishing
+
+- Verify affected screens compile and navigation flows still work.
+- Confirm API/service changes remain backward compatible with current callers.

@@ -1,0 +1,110 @@
+.game-retro-wrap {
+  background:
+    radial-gradient(circle at 10% 8%, rgba(56, 189, 248, 0.1), transparent 40%),
+    radial-gradient(circle at 90% 0%, rgba(168, 85, 247, 0.12), transparent 42%),
+    repeating-linear-gradient(
+      45deg,
+      rgba(15, 23, 42, 0.65) 0px,
+      rgba(15, 23, 42, 0.65) 4px,
+      rgba(2, 6, 23, 0.65) 4px,
+      rgba(2, 6, 23, 0.65) 8px
+    ),
+    #020617;
+}
+
+.pixel-frame {
+  border: 4px solid #0f172a;
+  box-shadow:
+    0 0 0 2px #334155,
+    0 18px 50px rgba(2, 6, 23, 0.6);
+}
+
+.pixel-card {
+  border: 3px solid #1e293b;
+  box-shadow: inset 0 0 0 2px #0f172a;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.88), rgba(2, 6, 23, 0.95));
+}
+
+.pixel-screen {
+  border: 4px solid #0f172a;
+  box-shadow: inset 0 0 0 2px #1e293b;
+  image-rendering: pixelated;
+}
+
+.tile-grid {
+  background-image:
+    linear-gradient(rgba(15, 23, 42, 0.3) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.3) 1px, transparent 1px);
+  background-size: 8px 8px;
+}
+
+.pixel-text {
+  font-family: "Space Grotesk", "Inter", system-ui, sans-serif;
+  letter-spacing: 0.03em;
+}
+
+.retro-console {
+  border: 6px solid #0b1220;
+  border-radius: 22px;
+  background: linear-gradient(180deg, #1f2937, #111827);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.06),
+    0 24px 70px rgba(2, 6, 23, 0.7);
+}
+
+.retro-bezel {
+  border: 5px solid #0f172a;
+  border-radius: 16px;
+  padding: 8px;
+  background: linear-gradient(180deg, #0b1220, #020617);
+}
+
+.retro-screen {
+  border: 4px solid #111827;
+  border-radius: 10px;
+  background:
+    linear-gradient(rgba(17, 24, 39, 0.12), rgba(17, 24, 39, 0.12)),
+    repeating-linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0.25) 0px,
+      rgba(0, 0, 0, 0.25) 1px,
+      transparent 1px,
+      transparent 3px
+    ),
+    #0b1324;
+  box-shadow:
+    inset 0 0 0 2px rgba(148, 163, 184, 0.12),
+    inset 0 -30px 60px rgba(15, 23, 42, 0.45);
+}
+
+.retro-chip {
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  line-height: 1.4;
+  background: rgba(15, 23, 42, 0.6);
+}
+
+.battle-scene-bg {
+  background:
+    radial-gradient(ellipse at 30% 30%, rgba(52, 211, 153, 0.18), transparent 40%),
+    radial-gradient(ellipse at 70% 70%, rgba(99, 102, 241, 0.2), transparent 42%),
+    linear-gradient(180deg, #172554 0%, #1e293b 55%, #0f172a 100%);
+}
+
+.battle-ground {
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(15, 23, 42, 0.3), rgba(2, 6, 23, 0.85));
+  border: 2px solid rgba(148, 163, 184, 0.25);
+}
+
+.pixel-btn {
+  border: 2px solid #1e293b;
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.2);
+  transition: transform 120ms ease, border-color 120ms ease;
+}
+
+.pixel-btn:active {
+  transform: translateY(1px) scale(0.99);
+}
