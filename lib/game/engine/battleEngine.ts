@@ -47,7 +47,8 @@ export function applyPlayerMove(
     return { nextState, playerMonster: nextPlayer, enemyMonster, faintedEnemy: false, faintedPlayer: false };
   }
 
-  const damage = computeDamage(nextPlayer, enemyMonster, move.id);
+  const outcome = computeDamageOutcome(nextPlayer, enemyMonster, move.id);
+  const damage = outcome.damage;
   const nextEnemy = structuredClone(enemyMonster);
   nextEnemy.currentHp = clamp(nextEnemy.currentHp - damage, 0, nextEnemy.maxHp);
 
@@ -55,6 +56,14 @@ export function applyPlayerMove(
     battle,
     `${SPECIES_INDEX[playerMonster.speciesId].name} used ${move.name} for ${damage} damage.`,
   );
+  if (outcome.critical) {
+    nextState = withLog(nextState, "Critical hit!");
+  }
+  if (outcome.typeMod >= 1.35) {
+    nextState = withLog(nextState, "It's super effective!");
+  } else if (outcome.typeMod <= 0.8) {
+    nextState = withLog(nextState, "It's not very effective...");
+  }
   const faintedEnemy = nextEnemy.currentHp <= 0;
   if (faintedEnemy) {
     nextState = withLog(nextState, `${SPECIES_INDEX[enemyMonster.speciesId].name} fainted.`);
@@ -95,7 +104,8 @@ export function applyEnemyMove(
     return { nextState, playerMonster, enemyMonster: nextEnemy, faintedEnemy: false, faintedPlayer: false };
   }
 
-  const damage = computeDamage(nextEnemy, playerMonster, move.id);
+  const outcome = computeDamageOutcome(nextEnemy, playerMonster, move.id);
+  const damage = outcome.damage;
   const nextPlayer = structuredClone(playerMonster);
   nextPlayer.currentHp = clamp(nextPlayer.currentHp - damage, 0, nextPlayer.maxHp);
 
@@ -103,6 +113,14 @@ export function applyEnemyMove(
     battle,
     `${SPECIES_INDEX[enemyMonster.speciesId].name} used ${move.name} for ${damage} damage.`,
   );
+  if (outcome.critical) {
+    nextState = withLog(nextState, "Critical hit!");
+  }
+  if (outcome.typeMod >= 1.35) {
+    nextState = withLog(nextState, "It's super effective!");
+  } else if (outcome.typeMod <= 0.8) {
+    nextState = withLog(nextState, "It's not very effective...");
+  }
   const faintedPlayer = nextPlayer.currentHp <= 0;
   if (faintedPlayer) {
     nextState = withLog(nextState, `${SPECIES_INDEX[playerMonster.speciesId].name} fainted.`);
@@ -112,15 +130,31 @@ export function applyEnemyMove(
 }
 
 export function computeDamage(attacker: MonsterInstance, defender: MonsterInstance, moveId: string) {
+  return computeDamageOutcome(attacker, defender, moveId).damage;
+}
+
+function computeDamageOutcome(attacker: MonsterInstance, defender: MonsterInstance, moveId: string) {
   const move = MOVE_INDEX[moveId];
-  if (!move || move.category === "status" || move.power <= 0) return 0;
+  if (!move || move.category === "status" || move.power <= 0) {
+    return {
+      damage: 0,
+      typeMod: 1,
+      critical: false,
+    };
+  }
   const atk = move.category === "physical" ? attacker.attack : Math.floor(attacker.attack * 0.95);
   const def = move.category === "physical" ? defender.defense : Math.floor(defender.defense * 0.95);
   const base = Math.floor(((2 * attacker.level) / 5 + 2) * move.power * (atk / Math.max(def, 1)) / 50) + 2;
   const stab = SPECIES_INDEX[attacker.speciesId].type === move.type ? 1.15 : 1;
   const typeMod = typeMultiplier(move.type, SPECIES_INDEX[defender.speciesId].type);
+  const critical = Math.random() < 0.09;
+  const critMod = critical ? 1.55 : 1;
   const variance = 0.88 + Math.random() * 0.12;
-  return Math.max(1, Math.floor(base * stab * typeMod * variance));
+  return {
+    damage: Math.max(1, Math.floor(base * stab * typeMod * critMod * variance)),
+    typeMod,
+    critical,
+  };
 }
 
 export function attemptCapture(enemy: MonsterInstance, catchBonus = 1) {

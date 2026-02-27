@@ -39,6 +39,8 @@ export function BattleScene({ battle, playerMonster, onMove, onEnemyTurn, onUseI
     "none",
   );
   const [typedNarration, setTypedNarration] = useState("");
+  const [damagePop, setDamagePop] = useState<{ side: "ally" | "enemy"; value: number; id: number } | null>(null);
+  const [fxTone, setFxTone] = useState("fx-tone-neutral");
   const lastTurnRef = useRef<number>(battle.turn);
 
   const enemy = battle.enemy;
@@ -62,6 +64,18 @@ export function BattleScene({ battle, playerMonster, onMove, onEnemyTurn, onUseI
     }, 16);
     return () => clearInterval(interval);
   }, [latestLog]);
+
+  useEffect(() => {
+    const damageMatch = latestLog.match(/used (.+?) for (\d+) damage\./);
+    if (!damageMatch) return;
+    const [, moveName, amountRaw] = damageMatch;
+    const moveType = moveTypeFromName(moveName);
+    setFxTone(moveToneClass(moveType));
+    const amount = Number(amountRaw);
+    if (!Number.isFinite(amount)) return;
+    const side = latestLog.startsWith(playerSpecies.name) ? "enemy" : "ally";
+    setDamagePop({ side, value: amount, id: Date.now() });
+  }, [latestLog, playerSpecies.name]);
 
   useEffect(() => {
     if (latestLog.includes("broke free") || latestLog.includes("captured")) {
@@ -138,6 +152,15 @@ export function BattleScene({ battle, playerMonster, onMove, onEnemyTurn, onUseI
     setIsLocked(false);
   }
 
+  const camClass =
+    phase === "player"
+      ? "battle-cam-player"
+      : phase === "enemy"
+        ? "battle-cam-enemy"
+        : battle.pendingEnemyTurn
+          ? "battle-cam-tension"
+          : "battle-cam-idle";
+
   return (
     <div className="retro-console p-3">
       <div className="pixel-card rounded-xl p-3">
@@ -156,12 +179,15 @@ export function BattleScene({ battle, playerMonster, onMove, onEnemyTurn, onUseI
       </div>
 
       <div className="battle-scene-bg battle-stage mt-3 rounded-xl border-2 border-slate-700 p-4">
-        <div className="battle-stadium">
+        <div className={`battle-stadium ${camClass}`}>
           <span className="battle-stadium-lights" />
           <span className="battle-stadium-cityline" />
           <span className="battle-stadium-crowd" />
           <span className="battle-stadium-platform" />
           <span className="battle-stadium-platform-core" />
+          <span className="battle-stadium-jumbotron">
+            {battle.isWild ? `Wild encounter - ${enemySpecies.name}` : `${battle.enemyName} Challenge Arena`}
+          </span>
 
           <div className="battle-slot battle-slot-enemy">
             <BattleCreatureSprite
@@ -172,7 +198,8 @@ export function BattleScene({ battle, playerMonster, onMove, onEnemyTurn, onUseI
               state={fx === "enemy_faint" ? "faint" : phase === "player" ? "hit" : phase === "enemy" ? "attacking" : "idle"}
             />
             <span className="battle-slot-ring" />
-            {phase === "player" || fx === "enemy_hit" ? <span className="battle-slash" /> : null}
+            {phase === "player" || fx === "enemy_hit" ? <span className={`battle-slash ${fxTone}`} /> : null}
+            {damagePop?.side === "enemy" ? <span className="battle-damage-pop">{damagePop.value}</span> : null}
           </div>
 
           <div className="battle-slot battle-slot-ally">
@@ -184,9 +211,10 @@ export function BattleScene({ battle, playerMonster, onMove, onEnemyTurn, onUseI
               state={fx === "player_faint" ? "faint" : phase === "enemy" ? "hit" : phase === "player" ? "attacking" : "idle"}
             />
             <span className="battle-slot-ring" />
-            {phase === "enemy" || fx === "player_hit" ? <span className="battle-burst" /> : null}
+            {phase === "enemy" || fx === "player_hit" ? <span className={`battle-burst ${fxTone}`} /> : null}
             {fx === "heal" ? <span className="battle-heal-ring" /> : null}
             {fx === "orb" ? <span className="battle-orb" /> : null}
+            {damagePop?.side === "ally" ? <span className="battle-damage-pop">{damagePop.value}</span> : null}
           </div>
         </div>
 
@@ -299,4 +327,19 @@ function wait(ms: number) {
   return new Promise<void>((resolve) => {
     setTimeout(() => resolve(), ms);
   });
+}
+
+function moveTypeFromName(moveName: string) {
+  const move = Object.values(MOVE_INDEX).find((candidate) => candidate.name === moveName);
+  return move?.type ?? "void";
+}
+
+function moveToneClass(type: string) {
+  if (type === "ember") return "fx-tone-ember";
+  if (type === "aqua") return "fx-tone-aqua";
+  if (type === "flora") return "fx-tone-flora";
+  if (type === "volt") return "fx-tone-volt";
+  if (type === "stone") return "fx-tone-stone";
+  if (type === "gust") return "fx-tone-gust";
+  return "fx-tone-void";
 }

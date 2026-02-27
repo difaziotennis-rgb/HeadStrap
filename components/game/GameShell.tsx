@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BattleScene } from "@/components/game/BattleScene";
 import { MobileControls } from "@/components/game/MobileControls";
 import { SandboxPanel } from "@/components/game/SandboxPanel";
@@ -18,6 +18,8 @@ export function GameShell() {
   const heldDirectionRef = useRef<"up" | "down" | "left" | "right" | null>(null);
   const moveLoopRef = useRef<number | null>(null);
   const lastMoveTimeRef = useRef(0);
+  const [cinematicHud, setCinematicHud] = useState(true);
+  const objectiveText = nextObjectiveText(state.gymProgress.lakeside ?? 0);
 
   useEffect(() => {
     const MOVE_INTERVAL_MS = 84;
@@ -110,9 +112,7 @@ export function GameShell() {
             </span>
           </div>
         </div>
-        <p className="mt-2 text-sm text-slate-300">
-          Retro-inspired sandbox RPG under active development. Isolated to <code>/game</code>.
-        </p>
+        <p className="mt-2 text-sm text-slate-300">Modern monster RPG sandbox under active development. Isolated to <code>/game</code>.</p>
         <p className="mt-1 text-xs text-slate-400">Desktop: arrows/WASD • Interact: E • Mobile: touch D-pad.</p>
         <div className="mt-2 flex flex-wrap gap-2 text-xs">
           <span className="retro-chip text-slate-200">Map cast: {mapNpcs.length} characters</span>
@@ -121,6 +121,16 @@ export function GameShell() {
           </span>
           <span className="retro-chip text-amber-200">Badges: {state.badges.length ? state.badges.join(", ") : "None"}</span>
           <span className="retro-chip text-emerald-200">Gym Stage: {state.gymProgress.lakeside ?? 0}/3</span>
+          <span className="retro-chip text-indigo-200">Objective: {objectiveText}</span>
+        </div>
+        <div className="mt-2 flex gap-2">
+          <button
+            className="pixel-btn rounded bg-slate-700 px-2 py-1 text-xs text-slate-200"
+            onClick={() => setCinematicHud((prev) => !prev)}
+            type="button"
+          >
+            HUD: {cinematicHud ? "Cinematic" : "Compact"}
+          </button>
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
           <button className="pixel-btn rounded px-2 py-1 text-xs text-slate-200" onClick={() => store.chooseAvatar("ace")} type="button">
@@ -141,7 +151,7 @@ export function GameShell() {
       {!state.starterChosen ? <StarterPicker onChoose={store.chooseStarter} /> : null}
 
       <div className="grid gap-4 lg:grid-cols-[1fr_370px]">
-        <div className="space-y-4">
+        <div className={`space-y-4 ${cinematicHud ? "" : "lg:max-w-[310px]"}`}>
           {state.mode === "battle" && state.battle ? (
             <BattleScene
               battle={state.battle}
@@ -158,7 +168,7 @@ export function GameShell() {
                 <WorldCanvas map={map} npcs={mapNpcs} player={state.player} />
                 {mapTransitioning ? <div className="animate-map-transition absolute inset-0 rounded-xl bg-slate-950/70" /> : null}
               </div>
-              <MobileControls onMove={store.move} onOpenTeam={() => store.swapPartyIndex(1)} />
+              <MobileControls onInteract={store.interact} onMove={store.move} onOpenTeam={() => store.swapPartyIndex(1)} />
               <div className="grid gap-2 sm:grid-cols-2">
                 <button
                   className="pixel-btn min-h-11 rounded bg-indigo-700 px-3 py-2 text-sm font-semibold text-white"
@@ -210,4 +220,11 @@ export function GameShell() {
       ) : null}
     </div>
   );
+}
+
+function nextObjectiveText(gymStage: number) {
+  if (gymStage <= 0) return "Enter Lakeside Gym lobby";
+  if (gymStage === 1) return "Defeat the stage 2 gym trainer";
+  if (gymStage === 2) return "Challenge Leader Kaia";
+  return "Explore routes for higher-level encounters";
 }

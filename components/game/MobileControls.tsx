@@ -6,9 +6,10 @@ import { Facing } from "@/lib/game/state/gameTypes";
 type Props = {
   onMove: (facing: Facing) => void;
   onOpenTeam: () => void;
+  onInteract: () => void;
 };
 
-export function MobileControls({ onMove, onOpenTeam }: Props) {
+export function MobileControls({ onMove, onOpenTeam, onInteract }: Props) {
   const holdRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const startHold = (facing: Facing) => {
@@ -78,6 +79,22 @@ export function MobileControls({ onMove, onOpenTeam }: Props) {
           ▼
         </button>
         <div />
+      </div>
+      <div className="mt-2 grid grid-cols-2 gap-2">
+        <button
+          className="pixel-btn min-h-12 rounded-md border border-indigo-500/60 bg-indigo-700 p-3 text-sm font-semibold active:scale-95"
+          onClick={onInteract}
+          type="button"
+        >
+          Interact
+        </button>
+        <button
+          className="pixel-btn min-h-12 rounded-md border border-violet-500/60 bg-violet-700 p-3 text-sm font-semibold active:scale-95"
+          onClick={onOpenTeam}
+          type="button"
+        >
+          Lead Swap
+        </button>
       </div>
       <p className="mt-3 text-[11px] text-slate-400">Tip: Team Swap promotes your next healthy monster.</p>
     </div>

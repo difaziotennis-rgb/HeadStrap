@@ -31,6 +31,7 @@ export function WorldCanvas({ map, player, npcs }: Props) {
   const viewportW = 20;
   const viewportH = 14;
   const [tileSize, setTileSize] = useState(TILE_SIZE);
+  const [timePhase, setTimePhase] = useState<"day" | "sunset" | "night">("day");
   const [renderPlayer, setRenderPlayer] = useState({ x: player.x, y: player.y });
   const targetPlayerRef = useRef({ x: player.x, y: player.y });
   const rafRef = useRef<number | null>(null);
@@ -57,6 +58,18 @@ export function WorldCanvas({ map, player, npcs }: Props) {
     syncTileSize();
     window.addEventListener("resize", syncTileSize);
     return () => window.removeEventListener("resize", syncTileSize);
+  }, []);
+
+  useEffect(() => {
+    const syncTimePhase = () => {
+      const hour = new Date().getHours();
+      if (hour >= 19 || hour < 6) setTimePhase("night");
+      else if (hour >= 17) setTimePhase("sunset");
+      else setTimePhase("day");
+    };
+    syncTimePhase();
+    const interval = setInterval(syncTimePhase, 60_000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -198,7 +211,7 @@ export function WorldCanvas({ map, player, npcs }: Props) {
       </div>
       <div className="retro-bezel">
         <div
-          className={`retro-screen biome-tone-${biomeToneKey(map.id)} relative grid w-fit overflow-hidden rounded`}
+          className={`retro-screen biome-tone-${biomeToneKey(map.id)} world-time-${timePhase} relative grid w-fit overflow-hidden rounded`}
           style={{ width: viewportW * tileSize, height: viewportH * tileSize }}
         >
           <div className="parallax-layer parallax-far" style={{ transform: `translateX(-${cameraX * 1.15}px)` }} />
@@ -242,6 +255,26 @@ export function WorldCanvas({ map, player, npcs }: Props) {
         <span className="retro-chip">Tunnel tiles = portals</span>
         <span className="retro-chip">Red NPC = trainer battle</span>
         <span className="retro-chip">Arrows / WASD</span>
+        <span className="retro-chip">Time phase: {timePhase}</span>
+      </div>
+      <div className="pixel-card mt-2 rounded-md p-2">
+        <p className="mb-1 text-[10px] uppercase tracking-[0.18em] text-slate-300">Mini Map</p>
+        <div
+          className="grid gap-px rounded border border-slate-700 bg-slate-950/80 p-1"
+          style={{ gridTemplateColumns: `repeat(${map.width}, minmax(0, 1fr))` }}
+        >
+          {map.tiles.map((tile, index) => {
+            const x = index % map.width;
+            const y = Math.floor(index / map.width);
+            const isPlayer = x === player.x && y === player.y;
+            return (
+              <span
+                key={`mini_${x}_${y}`}
+                className={`h-1 w-1 rounded-[1px] ${isPlayer ? "bg-fuchsia-300" : miniTileClass(tile.kind)}`}
+              />
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -291,4 +324,14 @@ function biomeToneKey(mapId: string) {
   if (mapId.includes("lake")) return "lakeside";
   if (mapId.includes("gym") || mapId.includes("lab")) return "interior";
   return "town";
+}
+
+function miniTileClass(kind: MapTile["kind"]) {
+  if (kind === "water") return "bg-blue-500/80";
+  if (kind === "tall_grass" || kind === "grass" || kind === "short_grass") return "bg-emerald-500/75";
+  if (kind === "path" || kind === "bridge") return "bg-amber-500/75";
+  if (kind === "tree" || kind === "bush") return "bg-lime-700/80";
+  if (kind === "wall") return "bg-slate-500/75";
+  if (kind === "portal") return "bg-violet-400/80";
+  return "bg-emerald-900/45";
 }
