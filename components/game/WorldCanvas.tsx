@@ -47,8 +47,8 @@ export function WorldCanvas({ map, player, npcs }: Props) {
     const animate = () => {
       setRenderPlayer((prev) => {
         const target = targetPlayerRef.current;
-        const nx = prev.x + (target.x - prev.x) * 0.22;
-        const ny = prev.y + (target.y - prev.y) * 0.22;
+        const nx = prev.x + (target.x - prev.x) * 0.14;
+        const ny = prev.y + (target.y - prev.y) * 0.14;
         if (Math.abs(nx - target.x) < 0.002 && Math.abs(ny - target.y) < 0.002) {
           return target;
         }

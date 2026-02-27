@@ -101,7 +101,7 @@ export function BattleScene({ battle, playerMonster, onMove, onEnemyTurn, onUseI
       onEnemyTurn();
       setIsLocked(false);
       setPhase("idle");
-    }, 850);
+    }, 1500);
     return () => clearTimeout(timeout);
   }, [battle.pendingEnemyTurn, onEnemyTurn]);
 
@@ -109,8 +109,9 @@ export function BattleScene({ battle, playerMonster, onMove, onEnemyTurn, onUseI
     if (isLocked) return;
     setIsLocked(true);
     setPhase("player");
-    await wait(420);
+    await wait(780);
     onMove(idx);
+    await wait(420);
     setPhase("idle");
     setIsLocked(false);
   }
@@ -119,9 +120,9 @@ export function BattleScene({ battle, playerMonster, onMove, onEnemyTurn, onUseI
     if (isLocked) return;
     setIsLocked(true);
     setPhase("player");
-    await wait(450);
+    await wait(860);
     onUseItem(itemId);
-    await wait(500);
+    await wait(720);
     setPhase("idle");
     setIsLocked(false);
   }
@@ -130,9 +131,9 @@ export function BattleScene({ battle, playerMonster, onMove, onEnemyTurn, onUseI
     if (isLocked) return;
     setIsLocked(true);
     setPhase("player");
-    await wait(400);
+    await wait(760);
     onRun();
-    await wait(300);
+    await wait(520);
     setPhase("idle");
     setIsLocked(false);
   }
@@ -172,11 +173,11 @@ export function BattleScene({ battle, playerMonster, onMove, onEnemyTurn, onUseI
               </div>
               <p className="text-xs text-slate-300">Lv {enemy.level}</p>
             </div>
-            <div className="battle-ground mx-auto grid h-24 w-28 place-items-center">
+            <div className="battle-ground mx-auto grid h-32 w-44 place-items-center">
               <BattleCreatureSprite
                 className="shadow-[0_0_20px_rgba(147,197,253,0.35)]"
                 speciesId={enemySpecies.id}
-                size={76}
+                size={116}
                 side="enemy"
                 state={fx === "enemy_faint" ? "faint" : phase === "player" ? "hit" : phase === "enemy" ? "attacking" : "idle"}
               />
@@ -193,11 +194,11 @@ export function BattleScene({ battle, playerMonster, onMove, onEnemyTurn, onUseI
               </div>
               <p className="text-xs text-slate-300">Lv {playerMonster.level}</p>
             </div>
-            <div className="battle-ground mx-auto grid h-24 w-28 place-items-center">
+            <div className="battle-ground mx-auto grid h-32 w-44 place-items-center">
               <BattleCreatureSprite
                 className="shadow-[0_0_20px_rgba(134,239,172,0.35)]"
                 speciesId={playerSpecies.id}
-                size={76}
+                size={116}
                 side="ally"
                 state={fx === "player_faint" ? "faint" : phase === "enemy" ? "hit" : phase === "player" ? "attacking" : "idle"}
               />

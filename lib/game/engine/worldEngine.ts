@@ -71,7 +71,7 @@ function rolledEncounter(
   if (!steppedOnGrass) return null;
   const table = ENCOUNTER_TABLES[mapId] ?? [];
   if (!table.length) return null;
-  const encounterRate = 0.16 + Math.min(0.1, stepCounter / 180);
+  const encounterRate = 0.08 + Math.min(0.05, stepCounter / 240);
   if (Math.random() > encounterRate) return null;
 
   const totalWeight = table.reduce((sum, e) => sum + e.weight, 0);

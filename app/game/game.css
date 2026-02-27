@@ -72,11 +72,12 @@
 .sprite-character {
   width: 17px;
   height: 19px;
-  background-image: url("/game/sprites/character-atlas.png");
+  background-image: url("/game/sprites/character-atlas-transparent.png");
   background-size: 1000% 400%;
   background-repeat: no-repeat;
   image-rendering: pixelated;
   transform-origin: center bottom;
+  filter: drop-shadow(0 1px 0 rgba(2, 6, 23, 0.45));
 }
 
 .tile-art {
@@ -349,7 +350,7 @@
   background:
     radial-gradient(circle at 50% 30%, rgba(190, 242, 100, 0.28), transparent 55%),
     radial-gradient(circle at 50% 75%, rgba(21, 128, 61, 0.45), rgba(20, 83, 45, 0.2));
-  border: 2px solid rgba(186, 230, 253, 0.35);
+  border: 3px solid rgba(186, 230, 253, 0.35);
   position: relative;
   overflow: hidden;
 }
@@ -387,19 +388,19 @@
 }
 
 .creature-state-attack-right {
-  animation: creature-attack-right 220ms ease-out;
+  animation: creature-attack-right 460ms ease-out;
 }
 
 .creature-state-attack-left {
-  animation: creature-attack-left 220ms ease-out;
+  animation: creature-attack-left 460ms ease-out;
 }
 
 .creature-state-hit {
-  animation: creature-hit 220ms ease-in-out;
+  animation: creature-hit 460ms ease-in-out;
 }
 
 .creature-state-faint {
-  animation: creature-faint 500ms ease-in forwards;
+  animation: creature-faint 860ms ease-in forwards;
 }
 
 .battle-stage {
@@ -409,38 +410,38 @@
 
 .battle-nature-ring {
   position: relative;
-  height: 26px;
-  margin: 0 auto 8px;
-  max-width: 520px;
+  height: 38px;
+  margin: 0 auto 10px;
+  max-width: 620px;
 }
 
 .battle-rope {
   position: absolute;
   left: 10%;
   right: 10%;
-  height: 3px;
+  height: 4px;
   border-radius: 999px;
   background: linear-gradient(90deg, rgba(120, 53, 15, 0.9), rgba(146, 64, 14, 0.92), rgba(120, 53, 15, 0.9));
   box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.2);
 }
 
 .battle-rope-top {
-  top: 4px;
+  top: 6px;
 }
 
 .battle-rope-mid {
-  top: 11px;
+  top: 17px;
 }
 
 .battle-rope-bottom {
-  top: 18px;
+  top: 28px;
 }
 
 .battle-post {
   position: absolute;
-  top: 1px;
-  width: 8px;
-  height: 22px;
+  top: 3px;
+  width: 10px;
+  height: 32px;
   border-radius: 2px;
   background: linear-gradient(180deg, #9a3412, #7c2d12);
 }
@@ -459,39 +460,39 @@
 
 .battle-slash {
   position: absolute;
-  width: 46px;
-  height: 6px;
+  width: 72px;
+  height: 10px;
   border-radius: 999px;
   background: linear-gradient(90deg, transparent, rgba(251, 191, 36, 0.9), transparent);
   transform: rotate(-24deg);
-  animation: slash-sweep 260ms ease-out;
+  animation: slash-sweep 560ms ease-out;
 }
 
 .battle-burst {
   position: absolute;
-  width: 28px;
-  height: 28px;
+  width: 52px;
+  height: 52px;
   border-radius: 999px;
   border: 2px solid rgba(248, 113, 113, 0.8);
-  animation: burst-hit 320ms ease-out;
+  animation: burst-hit 680ms ease-out;
 }
 
 .battle-heal-ring {
   position: absolute;
-  width: 34px;
-  height: 34px;
+  width: 62px;
+  height: 62px;
   border-radius: 999px;
   border: 2px solid rgba(74, 222, 128, 0.75);
-  animation: heal-rise 480ms ease-out;
+  animation: heal-rise 820ms ease-out;
 }
 
 .battle-orb {
   position: absolute;
-  width: 12px;
-  height: 12px;
+  width: 22px;
+  height: 22px;
   border-radius: 999px;
   background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.95), rgba(99, 102, 241, 0.9));
-  animation: orb-arc 520ms ease-in-out;
+  animation: orb-arc 980ms ease-in-out;
 }
 
 .pixel-btn {

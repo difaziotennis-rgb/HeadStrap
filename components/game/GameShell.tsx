@@ -20,7 +20,7 @@ export function GameShell() {
   const lastMoveTimeRef = useRef(0);
 
   useEffect(() => {
-    const MOVE_INTERVAL_MS = 42;
+    const MOVE_INTERVAL_MS = 84;
     const tickMove = (now: number) => {
       if (!heldDirectionRef.current) {
         moveLoopRef.current = null;

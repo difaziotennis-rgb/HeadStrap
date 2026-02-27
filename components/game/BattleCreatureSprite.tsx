@@ -26,7 +26,7 @@ function motionClass(speciesId: string) {
 
 export function BattleCreatureSprite({
   speciesId,
-  size = 88,
+  size = 108,
   className = "",
   state = "idle",
   side = "enemy",
