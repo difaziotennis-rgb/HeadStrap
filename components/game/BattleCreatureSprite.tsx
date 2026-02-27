@@ -21,15 +21,18 @@ export function BattleCreatureSprite({ speciesId, size = 88, className = "" }: P
 
   return (
     <div
-      className={`overflow-hidden rounded-md border-2 border-slate-700 bg-slate-950/50 ${className}`}
+      className={`battle-creature relative ${className}`}
       style={{
         width: size,
         height: size,
-        backgroundImage: "url('/game/sprites/creature-atlas.png')",
+        backgroundImage: "url('/game/sprites/creature-atlas-transparent.png')",
         backgroundSize: "400% 400%",
         backgroundPosition: `${(col / 3) * 100}% ${(row / 3) * 100}%`,
+        backgroundRepeat: "no-repeat",
         imageRendering: "pixelated",
       }}
-    />
+    >
+      <span className="battle-creature-shadow" />
+    </div>
   );
 }

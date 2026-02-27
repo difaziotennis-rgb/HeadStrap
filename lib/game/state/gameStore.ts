@@ -71,6 +71,18 @@ export function useGameStore() {
         prev.player.stepCounter,
         prev.sandbox.enabled ? prev.sandbox.guaranteedEncounter : null,
       );
+      const npcBlocking = NPCS.find(
+        (npc) => npc.mapId === result.mapId && npc.x === result.x && npc.y === result.y,
+      );
+      if (npcBlocking) {
+        return {
+          ...prev,
+          player: {
+            ...prev.player,
+            facing,
+          },
+        };
+      }
       const next = {
         ...prev,
         player: {

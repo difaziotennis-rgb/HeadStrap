@@ -27,7 +27,7 @@ export function GameShell() {
         if (heldDirectionRef.current) {
           move(heldDirectionRef.current);
         }
-      }, 85);
+      }, 60);
     };
 
     const stopMoveLoop = (dir?: string) => {
@@ -140,9 +140,22 @@ export function GameShell() {
                 {mapTransitioning ? <div className="animate-map-transition absolute inset-0 rounded-xl bg-slate-950/70" /> : null}
               </div>
               <MobileControls onMove={store.move} onOpenTeam={() => store.swapPartyIndex(1)} />
-              <button className="pixel-btn rounded bg-indigo-700 px-3 py-2 text-sm text-white" onClick={store.interact} type="button">
-                Interact (E)
-              </button>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <button
+                  className="pixel-btn min-h-11 rounded bg-indigo-700 px-3 py-2 text-sm font-semibold text-white"
+                  onClick={store.interact}
+                  type="button"
+                >
+                  Interact (E)
+                </button>
+                <button
+                  className="pixel-btn min-h-11 rounded bg-cyan-700 px-3 py-2 text-sm font-semibold text-white"
+                  onClick={() => store.swapPartyIndex(1)}
+                  type="button"
+                >
+                  Team Swap (T)
+                </button>
+              </div>
             </>
           )}
         </div>

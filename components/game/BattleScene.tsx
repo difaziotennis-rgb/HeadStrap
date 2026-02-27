@@ -214,24 +214,24 @@ export function BattleScene({ battle, playerMonster, onMove, onEnemyTurn, onUseI
       </div>
 
       <div className="pixel-card mt-4 rounded-lg p-3">
-        <p className="mb-2 text-sm font-semibold text-slate-100">What will {playerSpecies.name} do?</p>
-        <div className="mb-3 flex gap-2">
+        <p className="mb-2 text-sm font-semibold text-slate-100">Choose an action for {playerSpecies.name}</p>
+        <div className="mb-3 grid grid-cols-3 gap-2">
           <button
-            className={`pixel-btn rounded px-3 py-2 text-xs font-medium ${tab === "moves" ? "bg-cyan-600 text-white" : "bg-slate-800 text-slate-300"}`}
+            className={`pixel-btn min-h-11 rounded px-3 py-2 text-xs font-semibold ${tab === "moves" ? "bg-cyan-600 text-white" : "bg-slate-800 text-slate-300"}`}
             onClick={() => setTab("moves")}
             type="button"
           >
-            Moves
+            Fight
           </button>
           <button
-            className={`pixel-btn rounded px-3 py-2 text-xs font-medium ${tab === "items" ? "bg-violet-600 text-white" : "bg-slate-800 text-slate-300"}`}
+            className={`pixel-btn min-h-11 rounded px-3 py-2 text-xs font-semibold ${tab === "items" ? "bg-violet-600 text-white" : "bg-slate-800 text-slate-300"}`}
             onClick={() => setTab("items")}
             type="button"
           >
-            Items
+            Bag
           </button>
           <button
-            className="pixel-btn ml-auto rounded bg-rose-700 px-3 py-2 text-xs font-medium text-white hover:bg-rose-600 disabled:opacity-50"
+            className="pixel-btn min-h-11 rounded bg-rose-700 px-3 py-2 text-xs font-semibold text-white hover:bg-rose-600 disabled:opacity-50"
             onClick={handleRun}
             type="button"
             disabled={isLocked || battle.pendingEnemyTurn}
@@ -245,7 +245,7 @@ export function BattleScene({ battle, playerMonster, onMove, onEnemyTurn, onUseI
             {playerMonster.moves.map((slot, idx) => (
               <button
                 key={`${slot.moveId}_${idx}`}
-                className="pixel-btn rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-left text-sm transition hover:border-cyan-400 disabled:cursor-not-allowed disabled:opacity-40"
+                className="pixel-btn min-h-14 rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-left text-sm transition hover:border-cyan-400 disabled:cursor-not-allowed disabled:opacity-40"
                 onClick={() => void handleMove(idx)}
                 type="button"
                 disabled={isLocked || battle.pendingEnemyTurn || slot.currentPp <= 0}
@@ -263,7 +263,7 @@ export function BattleScene({ battle, playerMonster, onMove, onEnemyTurn, onUseI
             {(["capture_orb", "super_orb", "potion", "mega_potion"] as const).map((itemId) => (
               <button
                 key={itemId}
-                className="pixel-btn rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-left text-sm transition hover:border-violet-400 disabled:cursor-not-allowed disabled:opacity-40"
+                className="pixel-btn min-h-14 rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-left text-sm transition hover:border-violet-400 disabled:cursor-not-allowed disabled:opacity-40"
                 onClick={() => void handleItem(itemId)}
                 type="button"
                 disabled={isLocked || battle.pendingEnemyTurn || (inventory[itemId] ?? 0) <= 0}
