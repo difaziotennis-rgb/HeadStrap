@@ -15,6 +15,22 @@ function hasLivingMonster(state: GameState) {
   return state.party.some((m) => m.currentHp > 0);
 }
 
+function canChallengeTrainer(state: GameState, trainerId: string) {
+  const npc = NPCS.find((n) => n.id === trainerId);
+  if (!npc || !npc.gymKey || !npc.gymOrder) return { allowed: true, reason: null as string | null };
+  const requiredOrder = npc.gymOrder - 1;
+  if (requiredOrder <= 0) return { allowed: true, reason: null as string | null };
+  const needed = NPCS.filter((n) => n.gymKey === npc.gymKey && n.gymOrder === requiredOrder && (n.role === "trainer" || n.role === "rival")).map((n) => n.id);
+  const allCleared = needed.every((id) => state.defeatedTrainerIds.includes(id));
+  if (!allCleared) {
+    return {
+      allowed: false,
+      reason: `You must clear gym stage ${requiredOrder} before challenging ${npc.name}.`,
+    };
+  }
+  return { allowed: true, reason: null as string | null };
+}
+
 export function useGameStore() {
   const [state, setState] = useState<GameState>(createInitialState);
   const [isHydrated, setIsHydrated] = useState(false);
@@ -225,14 +241,27 @@ export function useGameStore() {
         const gained = awardExperience(party[0], SPECIES_INDEX[enemyMonster.speciesId].xpYield);
         party[0] = gained.monster;
         const trainerWin = battle.trainerId ? !prev.defeatedTrainerIds.includes(battle.trainerId) : false;
+        const trainerNpc = battle.trainerId ? NPCS.find((n) => n.id === battle.trainerId) : null;
+        const nextBadges = [...prev.badges];
+        if (trainerWin && trainerNpc?.badgeReward && !nextBadges.includes(trainerNpc.badgeReward)) {
+          nextBadges.push(trainerNpc.badgeReward);
+        }
+        const nextGymProgress = { ...prev.gymProgress };
+        if (trainerWin && trainerNpc?.gymKey && trainerNpc?.gymOrder) {
+          nextGymProgress[trainerNpc.gymKey] = Math.max(nextGymProgress[trainerNpc.gymKey] ?? 0, trainerNpc.gymOrder);
+        }
         return {
           ...prev,
           party,
           mode: "world",
           battle: null,
           defeatedTrainerIds: trainerWin ? [...prev.defeatedTrainerIds, battle.trainerId as string] : prev.defeatedTrainerIds,
+          badges: nextBadges,
+          gymProgress: nextGymProgress,
           activeDialog: trainerWin
-            ? "Trainer defeated. Their route checkpoint is now clear."
+            ? trainerNpc?.badgeReward
+              ? `${trainerNpc.followupLine} You received ${trainerNpc.badgeReward}.`
+              : `${trainerNpc?.name ?? "Trainer"} defeated.`
             : "Wild battle complete.",
         };
       }
@@ -317,6 +346,13 @@ export function useGameStore() {
       }
 
       if (npc.role === "trainer" || npc.role === "rival") {
+        const gate = canChallengeTrainer(prev, npc.id);
+        if (!gate.allowed) {
+          return {
+            ...prev,
+            activeDialog: gate.reason,
+          };
+        }
         const alreadyDefeated = prev.defeatedTrainerIds.includes(npc.id);
         if (alreadyDefeated) {
           return {
@@ -337,7 +373,7 @@ export function useGameStore() {
             trainerId: npc.id,
             trainerRoster: roster,
             activePartyIndex: 0,
-            log: [`${npc.name}: "${npc.introLine}"`, `${npc.name} sent out ${SPECIES_INDEX[speciesId].name}!`],
+            log: [`${npc.trainerClass ? `${npc.trainerClass} ${npc.name}` : npc.name}: "${npc.introLine}"`, `${npc.name} sent out ${SPECIES_INDEX[speciesId].name}!`],
             turn: 0,
             awaitingSwitch: false,
             encounterArea: npc.mapId,

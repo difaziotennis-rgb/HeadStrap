@@ -100,6 +100,8 @@ export function GameShell() {
           <span className="retro-chip text-slate-200">
             Trainers unbeaten: {mapNpcs.filter((n) => (n.role === "trainer" || n.role === "rival") && !state.defeatedTrainerIds.includes(n.id)).length}
           </span>
+          <span className="retro-chip text-amber-200">Badges: {state.badges.length ? state.badges.join(", ") : "None"}</span>
+          <span className="retro-chip text-emerald-200">Gym Stage: {state.gymProgress.lakeside ?? 0}/3</span>
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
           <button className="pixel-btn rounded px-2 py-1 text-xs text-slate-200" onClick={() => store.chooseAvatar("ace")} type="button">

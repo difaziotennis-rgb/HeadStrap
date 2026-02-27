@@ -132,6 +132,8 @@ export interface GameState {
   lastSavedAt: number | null;
   defeatedTrainerIds: string[];
   activeDialog: string | null;
+  badges: string[];
+  gymProgress: Record<string, number>;
 }
 
 export interface NpcCharacter {
@@ -143,10 +145,14 @@ export interface NpcCharacter {
   facing: Facing;
   role: "trainer" | "villager" | "merchant" | "rival";
   personality: string;
+  trainerClass?: string;
   introLine: string;
   followupLine: string;
   trainerSpeciesIds?: string[];
   trainerLevels?: number[];
+  gymKey?: string;
+  gymOrder?: number;
+  badgeReward?: string;
 }
 
 export interface BattleMoveResult {

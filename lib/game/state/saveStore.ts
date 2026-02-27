@@ -33,6 +33,10 @@ export function createInitialState(): GameState {
     lastSavedAt: null,
     defeatedTrainerIds: [],
     activeDialog: null,
+    badges: [],
+    gymProgress: {
+      lakeside: 0,
+    },
   };
 }
 

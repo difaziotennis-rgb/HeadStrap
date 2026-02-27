@@ -92,6 +92,30 @@ fillRect(lakeside, 30, 22, 38, 28, "wall");
 for (let x = 4; x < 47; x += 3) setTile(lakeside, x, 21, { kind: "tree" });
 setTile(lakeside, 1, 14, { kind: "portal", toMapId: "canyon_pass", toX: 43, toY: 14 });
 setTile(lakeside, 50, 18, { kind: "portal", toMapId: "forest_arc", toX: 55, toY: 20 });
+setTile(lakeside, 16, 22, { kind: "portal", toMapId: "lakeside_gym_lobby", toX: 8, toY: 13 });
+setTile(lakeside, 34, 22, { kind: "portal", toMapId: "lakeside_lab", toX: 8, toY: 11 });
 
-export const GAME_MAPS: MapData[] = [town, routeNorth, forest, canyon, lakeside];
+const gymLobby = makeMap("lakeside_gym_lobby", "Lakeside Gym Lobby", 18, 16, 8, 13);
+borderWalls(gymLobby);
+fillRect(gymLobby, 2, 2, 15, 13, "path");
+fillRect(gymLobby, 4, 4, 6, 6, "short_grass");
+fillRect(gymLobby, 11, 4, 13, 6, "short_grass");
+setTile(gymLobby, 8, 15, { kind: "portal", toMapId: "lakeside", toX: 16, toY: 23 });
+setTile(gymLobby, 8, 1, { kind: "portal", toMapId: "lakeside_gym_arena", toX: 10, toY: 17 });
+
+const gymArena = makeMap("lakeside_gym_arena", "Lakeside Gym Arena", 22, 20, 10, 17);
+borderWalls(gymArena);
+fillRect(gymArena, 3, 3, 18, 16, "bridge");
+fillRect(gymArena, 5, 5, 16, 14, "path");
+fillRect(gymArena, 8, 7, 13, 12, "short_grass");
+setTile(gymArena, 10, 19, { kind: "portal", toMapId: "lakeside_gym_lobby", toX: 8, toY: 2 });
+
+const lakesideLab = makeMap("lakeside_lab", "Aether Lab", 18, 14, 8, 11);
+borderWalls(lakesideLab);
+fillRect(lakesideLab, 2, 2, 15, 11, "path");
+fillRect(lakesideLab, 3, 3, 5, 4, "water");
+fillRect(lakesideLab, 12, 3, 14, 4, "water");
+setTile(lakesideLab, 8, 13, { kind: "portal", toMapId: "lakeside", toX: 34, toY: 23 });
+
+export const GAME_MAPS: MapData[] = [town, routeNorth, forest, canyon, lakeside, gymLobby, gymArena, lakesideLab];
 export const MAP_INDEX = Object.fromEntries(GAME_MAPS.map((m) => [m.id, m]));
