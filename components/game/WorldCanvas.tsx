@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
-import { Facing, MapData, MapTile, PlayerState } from "@/lib/game/state/gameTypes";
+import { MapData, MapTile, PlayerState } from "@/lib/game/state/gameTypes";
 import { NpcCharacter } from "@/lib/game/state/gameTypes";
 
 type Props = {
@@ -154,10 +154,16 @@ export function WorldCanvas({ map, player, npcs }: Props) {
         {npc ? (
           <span className="animate-npc-idle absolute inset-0 z-20">
             <span className="absolute left-1 top-[15px] h-1 w-3 rounded-full bg-slate-950/40" />
-            <span
-              className="sprite-character absolute left-[1px] top-[1px]"
-              style={characterSpriteStyle(npc.role === "trainer" || npc.role === "rival" ? "blaze" : "wave", npc.facing, seed % 2)}
-            />
+            <span className="world-character absolute left-[1px] top-[1px]">
+              <span className="world-character-head bg-amber-100" />
+              <span
+                className={`world-character-body ${
+                  npc.role === "trainer" || npc.role === "rival" ? "bg-rose-500" : "bg-cyan-400"
+                }`}
+              />
+              <span className="world-character-leg left-[2px]" />
+              <span className="world-character-leg left-[7px]" />
+            </span>
           </span>
         ) : null}
       </div>
@@ -200,10 +206,12 @@ export function WorldCanvas({ map, player, npcs }: Props) {
             }}
           >
             <span className="absolute left-1 top-[15px] h-1 w-3 rounded-full bg-slate-950/45" />
-            <span
-              className="sprite-character absolute left-[1px] top-[1px]"
-              style={characterSpriteStyle(player.avatarId, player.facing, walkFrame)}
-            />
+            <span className="world-character absolute left-[1px] top-[1px]">
+              <span className={`world-character-head ${avatarHeadTone(player.avatarId)}`} />
+              <span className={`world-character-body ${avatarBodyTone(player.avatarId)}`} />
+              <span className={`world-character-leg left-[2px] ${walkFrame === 0 ? "translate-y-0" : "translate-y-[1px]"}`} />
+              <span className={`world-character-leg left-[7px] ${walkFrame === 1 ? "translate-y-0" : "translate-y-[1px]"}`} />
+            </span>
           </span>
           <div className="pointer-events-none absolute bottom-2 left-3 h-6 w-8 rounded-full bg-emerald-900/20 blur-md" />
           <div className="pointer-events-none absolute bottom-1 right-6 h-8 w-12 rounded-full bg-cyan-800/15 blur-md" />
@@ -235,30 +243,23 @@ function terrainSpriteStyle(kind: MapTile["kind"]): CSSProperties {
   };
 }
 
-function characterSpriteStyle(avatarId: string, facing: Facing, frame: number): CSSProperties {
-  const facingColumns: Record<Facing, [number, number]> = {
-    down: [0, 1],
-    up: [2, 7],
-    right: [3, 4],
-    left: [8, 9],
-  };
-  const column = facingColumns[facing][frame % 2];
-  const row = avatarRow(avatarId);
-  return {
-    backgroundPosition: `${framePositionPercent(column, 10)} ${framePositionPercent(row, 4)}`,
-  };
-}
-
-function avatarRow(avatarId: string) {
-  if (avatarId === "blaze") return 1;
-  if (avatarId === "wave") return 2;
-  if (avatarId === "shadow") return 3;
-  return 0;
-}
-
 function framePositionPercent(index: number, count: number) {
   if (count <= 1) return "0%";
   return `${(index / (count - 1)) * 100}%`;
+}
+
+function avatarBodyTone(avatarId: string) {
+  if (avatarId === "blaze") return "bg-orange-500";
+  if (avatarId === "wave") return "bg-sky-500";
+  if (avatarId === "shadow") return "bg-violet-600";
+  return "bg-amber-500";
+}
+
+function avatarHeadTone(avatarId: string) {
+  if (avatarId === "blaze") return "bg-orange-200";
+  if (avatarId === "wave") return "bg-sky-200";
+  if (avatarId === "shadow") return "bg-violet-300";
+  return "bg-amber-200";
 }
 
 function getTileKind(map: MapData, x: number, y: number) {

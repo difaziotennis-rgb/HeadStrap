@@ -156,12 +156,11 @@ export function BattleScene({ battle, playerMonster, onMove, onEnemyTurn, onUseI
       </div>
 
       <div className="battle-scene-bg battle-stage mt-3 rounded-xl border-2 border-slate-700 p-4">
-        <div className="battle-nature-ring mb-4">
-          <span className="battle-rope battle-rope-top" />
-          <span className="battle-rope battle-rope-mid" />
-          <span className="battle-rope battle-rope-bottom" />
-          <span className="battle-post battle-post-left" />
-          <span className="battle-post battle-post-right" />
+        <div className="battle-nature-coliseum mb-4">
+          <span className="battle-coliseum-rim" />
+          <span className="battle-coliseum-lane" />
+          <span className="battle-coliseum-grass" />
+          <span className="battle-coliseum-crowd" />
         </div>
         <div className="relative z-10 grid gap-4 md:grid-cols-2">
           <div className="rounded-lg border border-slate-700/70 bg-slate-900/35 p-3 backdrop-blur-[1px]">

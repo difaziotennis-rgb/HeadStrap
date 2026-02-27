@@ -80,6 +80,40 @@
   filter: drop-shadow(0 1px 0 rgba(2, 6, 23, 0.45));
 }
 
+.world-character {
+  position: relative;
+  width: 14px;
+  height: 17px;
+  filter: drop-shadow(0 1px 0 rgba(2, 6, 23, 0.55));
+}
+
+.world-character-head {
+  position: absolute;
+  left: 4px;
+  top: 0;
+  width: 6px;
+  height: 4px;
+  border-radius: 2px;
+}
+
+.world-character-body {
+  position: absolute;
+  left: 3px;
+  top: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.world-character-leg {
+  position: absolute;
+  top: 12px;
+  width: 3px;
+  height: 5px;
+  border-radius: 1px;
+  background: #1e293b;
+}
+
 .tile-art {
   box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.08);
 }
@@ -408,50 +442,66 @@
   position: relative;
 }
 
-.battle-nature-ring {
+.battle-nature-coliseum {
   position: relative;
-  height: 38px;
+  height: 66px;
   margin: 0 auto 10px;
-  max-width: 620px;
+  max-width: 680px;
 }
 
-.battle-rope {
+.battle-coliseum-rim {
   position: absolute;
-  left: 10%;
-  right: 10%;
-  height: 4px;
+  left: 6%;
+  right: 6%;
+  top: 12px;
+  bottom: 8px;
+  border-radius: 999px / 60%;
+  border: 5px solid rgba(100, 116, 139, 0.8);
+  background: radial-gradient(circle at 50% 45%, rgba(30, 41, 59, 0.2), rgba(15, 23, 42, 0.6));
+  box-shadow:
+    inset 0 0 0 2px rgba(203, 213, 225, 0.24),
+    0 0 35px rgba(14, 116, 144, 0.22);
+}
+
+.battle-coliseum-lane {
+  position: absolute;
+  left: 13%;
+  right: 13%;
+  top: 21px;
+  bottom: 18px;
+  border-radius: 999px / 60%;
+  background:
+    radial-gradient(circle at 50% 30%, rgba(190, 242, 100, 0.35), transparent 55%),
+    radial-gradient(circle at 50% 70%, rgba(21, 128, 61, 0.45), rgba(20, 83, 45, 0.2));
+  border: 2px solid rgba(163, 230, 53, 0.25);
+}
+
+.battle-coliseum-grass {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: 7px;
+  height: 18px;
   border-radius: 999px;
-  background: linear-gradient(90deg, rgba(120, 53, 15, 0.9), rgba(146, 64, 14, 0.92), rgba(120, 53, 15, 0.9));
-  box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.2);
+  background: linear-gradient(180deg, rgba(101, 163, 13, 0.3), rgba(21, 128, 61, 0.45));
+  filter: blur(0.5px);
 }
 
-.battle-rope-top {
-  top: 6px;
-}
-
-.battle-rope-mid {
-  top: 17px;
-}
-
-.battle-rope-bottom {
-  top: 28px;
-}
-
-.battle-post {
+.battle-coliseum-crowd {
   position: absolute;
-  top: 3px;
-  width: 10px;
-  height: 32px;
-  border-radius: 2px;
-  background: linear-gradient(180deg, #9a3412, #7c2d12);
-}
-
-.battle-post-left {
-  left: 8.5%;
-}
-
-.battle-post-right {
-  right: 8.5%;
+  left: 16%;
+  right: 16%;
+  top: 0;
+  height: 13px;
+  border-radius: 999px;
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(51, 65, 85, 0.28) 0px,
+    rgba(51, 65, 85, 0.28) 8px,
+    rgba(71, 85, 105, 0.22) 8px,
+    rgba(71, 85, 105, 0.22) 14px
+  );
+  filter: blur(0.3px);
 }
 
 .battle-narration {
