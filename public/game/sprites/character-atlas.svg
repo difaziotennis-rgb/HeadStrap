@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="24" viewBox="0 0 192 24" shape-rendering="crispEdges">
+  <defs>
+    <g id="frame-up-a">
+      <rect x="9" y="4" width="6" height="4" fill="#f3d7b8"/>
+      <rect x="8" y="8" width="8" height="7" fill="#6f8fb0"/>
+      <rect x="8" y="15" width="3" height="5" fill="#2d3748"/>
+      <rect x="13" y="15" width="3" height="5" fill="#2d3748"/>
+      <rect x="9" y="5" width="1" height="1" fill="#1f2937"/>
+      <rect x="13" y="5" width="1" height="1" fill="#1f2937"/>
+    </g>
+    <g id="frame-up-b">
+      <rect x="9" y="4" width="6" height="4" fill="#f3d7b8"/>
+      <rect x="8" y="8" width="8" height="7" fill="#6f8fb0"/>
+      <rect x="7" y="15" width="3" height="5" fill="#2d3748"/>
+      <rect x="14" y="15" width="3" height="5" fill="#2d3748"/>
+      <rect x="9" y="5" width="1" height="1" fill="#1f2937"/>
+      <rect x="13" y="5" width="1" height="1" fill="#1f2937"/>
+    </g>
+    <g id="frame-right-a">
+      <rect x="9" y="4" width="6" height="4" fill="#f3d7b8"/>
+      <rect x="8" y="8" width="8" height="7" fill="#6f8fb0"/>
+      <rect x="8" y="15" width="3" height="5" fill="#2d3748"/>
+      <rect x="13" y="15" width="3" height="5" fill="#2d3748"/>
+      <rect x="13" y="5" width="1" height="1" fill="#1f2937"/>
+    </g>
+    <g id="frame-right-b">
+      <rect x="9" y="4" width="6" height="4" fill="#f3d7b8"/>
+      <rect x="8" y="8" width="8" height="7" fill="#6f8fb0"/>
+      <rect x="7" y="15" width="3" height="5" fill="#2d3748"/>
+      <rect x="14" y="15" width="3" height="5" fill="#2d3748"/>
+      <rect x="13" y="5" width="1" height="1" fill="#1f2937"/>
+    </g>
+    <g id="frame-down-a">
+      <rect x="9" y="4" width="6" height="4" fill="#f3d7b8"/>
+      <rect x="8" y="8" width="8" height="7" fill="#6f8fb0"/>
+      <rect x="8" y="15" width="3" height="5" fill="#2d3748"/>
+      <rect x="13" y="15" width="3" height="5" fill="#2d3748"/>
+      <rect x="10" y="6" width="4" height="1" fill="#1f2937"/>
+    </g>
+    <g id="frame-down-b">
+      <rect x="9" y="4" width="6" height="4" fill="#f3d7b8"/>
+      <rect x="8" y="8" width="8" height="7" fill="#6f8fb0"/>
+      <rect x="7" y="15" width="3" height="5" fill="#2d3748"/>
+      <rect x="14" y="15" width="3" height="5" fill="#2d3748"/>
+      <rect x="10" y="6" width="4" height="1" fill="#1f2937"/>
+    </g>
+    <g id="frame-left-a">
+      <rect x="9" y="4" width="6" height="4" fill="#f3d7b8"/>
+      <rect x="8" y="8" width="8" height="7" fill="#6f8fb0"/>
+      <rect x="8" y="15" width="3" height="5" fill="#2d3748"/>
+      <rect x="13" y="15" width="3" height="5" fill="#2d3748"/>
+      <rect x="10" y="5" width="1" height="1" fill="#1f2937"/>
+    </g>
+    <g id="frame-left-b">
+      <rect x="9" y="4" width="6" height="4" fill="#f3d7b8"/>
+      <rect x="8" y="8" width="8" height="7" fill="#6f8fb0"/>
+      <rect x="7" y="15" width="3" height="5" fill="#2d3748"/>
+      <rect x="14" y="15" width="3" height="5" fill="#2d3748"/>
+      <rect x="10" y="5" width="1" height="1" fill="#1f2937"/>
+    </g>
+  </defs>
+
+  <use href="#frame-up-a" x="0" y="0"/>
+  <use href="#frame-up-b" x="24" y="0"/>
+  <use href="#frame-right-a" x="48" y="0"/>
+  <use href="#frame-right-b" x="72" y="0"/>
+  <use href="#frame-down-a" x="96" y="0"/>
+  <use href="#frame-down-b" x="120" y="0"/>
+  <use href="#frame-left-a" x="144" y="0"/>
+  <use href="#frame-left-b" x="168" y="0"/>
+</svg>

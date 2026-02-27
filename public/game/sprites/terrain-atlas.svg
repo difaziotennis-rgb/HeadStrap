@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="96" viewBox="0 0 128 96" shape-rendering="crispEdges">
+  <defs>
+    <g id="ground">
+      <rect width="32" height="32" fill="#5aa33f"/>
+      <rect y="22" width="32" height="10" fill="#4c8f35"/>
+      <rect x="3" y="6" width="2" height="2" fill="#a5db74"/>
+      <rect x="19" y="10" width="2" height="2" fill="#8ccc5f"/>
+    </g>
+    <g id="grass">
+      <rect width="32" height="32" fill="#67b345"/>
+      <rect y="22" width="32" height="10" fill="#4d9438"/>
+      <rect x="4" y="14" width="2" height="8" fill="#3d7a2c"/>
+      <rect x="13" y="12" width="2" height="10" fill="#3d7a2c"/>
+      <rect x="23" y="13" width="2" height="9" fill="#3d7a2c"/>
+    </g>
+    <g id="short-grass">
+      <rect width="32" height="32" fill="#71bf4f"/>
+      <rect y="22" width="32" height="10" fill="#5aa33f"/>
+      <rect x="6" y="15" width="2" height="7" fill="#437f30"/>
+      <rect x="16" y="14" width="2" height="8" fill="#437f30"/>
+      <rect x="25" y="16" width="2" height="6" fill="#437f30"/>
+    </g>
+    <g id="tall-grass">
+      <rect width="32" height="32" fill="#5ea93f"/>
+      <rect y="22" width="32" height="10" fill="#4a8a34"/>
+      <rect x="3" y="10" width="2" height="12" fill="#376e29"/>
+      <rect x="10" y="8" width="2" height="14" fill="#376e29"/>
+      <rect x="18" y="7" width="2" height="15" fill="#376e29"/>
+      <rect x="25" y="11" width="2" height="11" fill="#376e29"/>
+    </g>
+    <g id="path">
+      <rect width="32" height="32" fill="#be9a63"/>
+      <rect y="22" width="32" height="10" fill="#a87f4d"/>
+      <rect x="4" y="8" width="2" height="2" fill="#d9bc8a"/>
+      <rect x="20" y="14" width="2" height="2" fill="#8f673e"/>
+      <rect x="11" y="19" width="2" height="2" fill="#8f673e"/>
+    </g>
+    <g id="water">
+      <rect width="32" height="32" fill="#3d93e6"/>
+      <rect y="20" width="32" height="12" fill="#2f7fd8"/>
+      <rect x="2" y="8" width="12" height="1" fill="#b6ecff"/>
+      <rect x="17" y="12" width="10" height="1" fill="#b6ecff"/>
+      <rect x="7" y="16" width="14" height="1" fill="#8ed9ff"/>
+    </g>
+    <g id="bridge">
+      <rect width="32" height="32" fill="#a96f3b"/>
+      <rect y="22" width="32" height="10" fill="#8f5d31"/>
+      <rect y="6" width="32" height="2" fill="#d6a067"/>
+      <rect y="12" width="32" height="2" fill="#d6a067"/>
+      <rect y="18" width="32" height="2" fill="#d6a067"/>
+    </g>
+    <g id="wall">
+      <rect width="32" height="32" fill="#6b7280"/>
+      <rect y="22" width="32" height="10" fill="#4b5563"/>
+      <rect y="0" width="32" height="3" fill="#bdc4cf"/>
+      <rect x="5" y="9" width="3" height="2" fill="#8e96a5"/>
+      <rect x="19" y="14" width="4" height="2" fill="#8e96a5"/>
+    </g>
+    <g id="tree">
+      <rect width="32" height="32" fill="#5ea93f"/>
+      <rect y="22" width="32" height="10" fill="#4a8a34"/>
+      <ellipse cx="16" cy="12" rx="12" ry="9" fill="#2f7c31"/>
+      <ellipse cx="16" cy="10" rx="9" ry="6" fill="#4ca54a"/>
+      <rect x="15" y="16" width="3" height="9" fill="#6e4a2f"/>
+    </g>
+    <g id="bush">
+      <rect width="32" height="32" fill="#67b345"/>
+      <rect y="22" width="32" height="10" fill="#4d9438"/>
+      <ellipse cx="9" cy="18" rx="7" ry="5" fill="#397c2d"/>
+      <ellipse cx="16" cy="17" rx="8" ry="6" fill="#3c822f"/>
+      <ellipse cx="23" cy="18" rx="7" ry="5" fill="#397c2d"/>
+      <rect x="10" y="14" width="1" height="1" fill="#9ee070"/>
+      <rect x="21" y="15" width="1" height="1" fill="#9ee070"/>
+    </g>
+    <g id="portal">
+      <rect width="32" height="32" fill="#5a6a79"/>
+      <rect y="22" width="32" height="10" fill="#44515d"/>
+      <path d="M8 24 L24 24 L24 12 Q16 4 8 12 Z" fill="#10141d"/>
+      <rect x="11" y="9" width="10" height="2" fill="#9d87ff"/>
+      <rect x="12" y="10" width="8" height="1" fill="#c8b8ff"/>
+    </g>
+  </defs>
+
+  <use href="#ground" x="0" y="0"/>
+  <use href="#grass" x="32" y="0"/>
+  <use href="#short-grass" x="64" y="0"/>
+  <use href="#tall-grass" x="96" y="0"/>
+
+  <use href="#path" x="0" y="32"/>
+  <use href="#water" x="32" y="32"/>
+  <use href="#bridge" x="64" y="32"/>
+  <use href="#wall" x="96" y="32"/>
+
+  <use href="#tree" x="0" y="64"/>
+  <use href="#bush" x="32" y="64"/>
+  <use href="#portal" x="64" y="64"/>
+  <use href="#ground" x="96" y="64"/>
+</svg>

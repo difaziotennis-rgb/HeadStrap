@@ -1,12 +1,34 @@
 "use client";
 
-import { MapData, PlayerState } from "@/lib/game/state/gameTypes";
+import type { CSSProperties } from "react";
+import { Facing, MapData, MapTile, PlayerState } from "@/lib/game/state/gameTypes";
 import { NpcCharacter } from "@/lib/game/state/gameTypes";
 
 type Props = {
   map: MapData;
   player: PlayerState;
   npcs: NpcCharacter[];
+};
+
+const TILE_FRAME_INDEX: Record<MapTile["kind"], number> = {
+  ground: 0,
+  grass: 1,
+  short_grass: 2,
+  tall_grass: 3,
+  path: 4,
+  water: 5,
+  bridge: 6,
+  wall: 7,
+  tree: 8,
+  bush: 9,
+  portal: 10,
+};
+
+const FACING_FRAME_BASE: Record<Facing, number> = {
+  up: 0,
+  right: 2,
+  down: 4,
+  left: 6,
 };
 
 export function WorldCanvas({ map, player, npcs }: Props) {
@@ -31,12 +53,12 @@ export function WorldCanvas({ map, player, npcs }: Props) {
     const npc = npcIndex[`${x}_${y}`];
     const seed = Math.abs((x * 92821 + y * 68917 + 17) % 1000);
     const walkFrame = player.stepCounter % 2;
-    const playerFacing = player.facing;
     return (
       <div
         key={`${x}_${y}`}
-        className={`tile-art tile-art--${tile.kind} relative h-5 w-5 overflow-visible sm:h-6 sm:w-6`}
+        className="relative h-5 w-5 overflow-visible sm:h-6 sm:w-6"
       >
+        <span className="sprite-tile absolute inset-0" style={terrainSpriteStyle(tile.kind)} />
         {tile.kind === "ground" || tile.kind === "grass" || tile.kind === "short_grass" || tile.kind === "tall_grass" ? (
           <>
             {seed % 6 === 0 ? <span className="absolute left-1 top-1 h-1 w-1 rounded-full bg-yellow-200/85" /> : null}
@@ -49,7 +71,7 @@ export function WorldCanvas({ map, player, npcs }: Props) {
         ) : null}
         {tile.kind === "water" ? (
           <>
-            <span className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.22),transparent_40%)]" />
+            <span className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.2),transparent_40%)]" />
             <span className="absolute inset-x-1 top-1 h-0.5 rounded-full bg-cyan-100/70 animate-water-shimmer" />
             <span className="absolute inset-x-2 top-3 h-0.5 rounded-full bg-blue-100/50 animate-water-shimmer [animation-delay:300ms]" />
             {seed % 9 === 0 ? <span className="animate-water-shimmer absolute left-2 top-2 h-1 w-1 rounded-full bg-cyan-50/70" /> : null}
@@ -89,24 +111,22 @@ export function WorldCanvas({ map, player, npcs }: Props) {
         ) : null}
         {isPlayer ? (
           <span className={`absolute inset-0 z-20 ${walkFrame === 0 ? "animate-walk-a" : "animate-walk-b"}`}>
-            <span className={`absolute left-2 top-0 h-1 w-1 rounded-full bg-amber-100 ${playerFacing === "up" ? "opacity-90" : ""}`} />
-            <span className={`absolute left-1 top-1 h-3 w-3 rounded-sm shadow-[0_0_8px_rgba(251,191,36,0.9)] ${avatarColor(player.avatarId)}`} />
-            <span className={`absolute left-1 top-4 h-1 w-1 bg-amber-900 ${playerFacing === "left" ? "translate-x-[-1px]" : ""}`} />
-            <span className={`absolute left-3 top-4 h-1 w-1 bg-amber-900 ${playerFacing === "right" ? "translate-x-[1px]" : ""}`} />
             <span className="absolute left-1 top-[15px] h-1 w-3 rounded-full bg-slate-950/45" />
+            <span
+              className={`sprite-character absolute left-[2px] top-[2px] ${avatarFilterClass(player.avatarId)}`}
+              style={characterSpriteStyle(player.facing, walkFrame)}
+            />
           </span>
         ) : null}
         {npc ? (
           <span className="animate-npc-idle absolute inset-0 z-20">
-            <span className="absolute left-2 top-0 h-1 w-1 rounded-full bg-slate-50" />
-            <span
-              className={`absolute left-1 top-1 h-3 w-3 rounded-sm ${
-                npc.role === "trainer" || npc.role === "rival" ? "bg-rose-400" : "bg-cyan-300"
-              }`}
-            />
-            <span className="absolute left-1 top-4 h-1 w-1 bg-slate-900" />
-            <span className="absolute left-3 top-4 h-1 w-1 bg-slate-900" />
             <span className="absolute left-1 top-[15px] h-1 w-3 rounded-full bg-slate-950/40" />
+            <span
+              className={`sprite-character absolute left-[2px] top-[2px] ${
+                npc.role === "trainer" || npc.role === "rival" ? "sprite-filter-trainer" : "sprite-filter-villager"
+              }`}
+              style={characterSpriteStyle(npc.facing, seed % 2)}
+            />
           </span>
         ) : null}
       </div>
@@ -148,9 +168,27 @@ export function WorldCanvas({ map, player, npcs }: Props) {
   );
 }
 
-function avatarColor(avatarId: string) {
-  if (avatarId === "blaze") return "bg-orange-300";
-  if (avatarId === "shadow") return "bg-violet-300";
-  if (avatarId === "wave") return "bg-sky-300";
-  return "bg-amber-300";
+function terrainSpriteStyle(kind: MapTile["kind"]): CSSProperties {
+  const frame = TILE_FRAME_INDEX[kind] ?? 0;
+  const col = frame % 4;
+  const row = Math.floor(frame / 4);
+  return {
+    backgroundImage: "url('/game/sprites/terrain-atlas.svg')",
+    backgroundPosition: `-${col * 32}px -${row * 32}px`,
+    backgroundSize: "128px 96px",
+  };
+}
+
+function characterSpriteStyle(facing: Facing, frame: number): CSSProperties {
+  const frameIndex = FACING_FRAME_BASE[facing] + (frame % 2);
+  return {
+    backgroundPosition: `-${frameIndex * 24}px 0px`,
+  };
+}
+
+function avatarFilterClass(avatarId: string) {
+  if (avatarId === "blaze") return "sprite-filter-blaze";
+  if (avatarId === "shadow") return "sprite-filter-shadow";
+  if (avatarId === "wave") return "sprite-filter-wave";
+  return "sprite-filter-ace";
 }
