@@ -374,9 +374,10 @@
 
 .battle-scene-bg {
   background:
+    radial-gradient(ellipse at 50% 0%, rgba(186, 230, 253, 0.2), transparent 55%),
     radial-gradient(ellipse at 24% 22%, rgba(103, 232, 249, 0.18), transparent 46%),
     radial-gradient(ellipse at 76% 74%, rgba(165, 180, 252, 0.16), transparent 48%),
-    linear-gradient(180deg, #1a2746 0%, #16253a 52%, #0f172a 100%);
+    linear-gradient(180deg, #101a33 0%, #111f3d 40%, #0f172a 100%);
 }
 
 .battle-ground {
@@ -391,17 +392,17 @@
 
 .battle-creature {
   background-color: transparent;
-  filter: drop-shadow(0 8px 10px rgba(15, 23, 42, 0.45));
+  filter: drop-shadow(0 10px 14px rgba(15, 23, 42, 0.52));
 }
 
 .battle-creature-shadow {
   position: absolute;
   left: 20%;
   right: 20%;
-  bottom: 2px;
-  height: 10px;
+  bottom: 0;
+  height: 12px;
   border-radius: 999px;
-  background: radial-gradient(circle, rgba(2, 6, 23, 0.45), rgba(2, 6, 23, 0));
+  background: radial-gradient(circle, rgba(2, 6, 23, 0.58), rgba(2, 6, 23, 0));
   pointer-events: none;
 }
 
@@ -442,66 +443,147 @@
   position: relative;
 }
 
-.battle-nature-coliseum {
+.battle-stadium {
   position: relative;
-  height: 66px;
-  margin: 0 auto 10px;
-  max-width: 680px;
-}
-
-.battle-coliseum-rim {
-  position: absolute;
-  left: 6%;
-  right: 6%;
-  top: 12px;
-  bottom: 8px;
-  border-radius: 999px / 60%;
-  border: 5px solid rgba(100, 116, 139, 0.8);
-  background: radial-gradient(circle at 50% 45%, rgba(30, 41, 59, 0.2), rgba(15, 23, 42, 0.6));
-  box-shadow:
-    inset 0 0 0 2px rgba(203, 213, 225, 0.24),
-    0 0 35px rgba(14, 116, 144, 0.22);
-}
-
-.battle-coliseum-lane {
-  position: absolute;
-  left: 13%;
-  right: 13%;
-  top: 21px;
-  bottom: 18px;
-  border-radius: 999px / 60%;
+  height: 360px;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 2px solid rgba(148, 163, 184, 0.35);
   background:
-    radial-gradient(circle at 50% 30%, rgba(190, 242, 100, 0.35), transparent 55%),
-    radial-gradient(circle at 50% 70%, rgba(21, 128, 61, 0.45), rgba(20, 83, 45, 0.2));
-  border: 2px solid rgba(163, 230, 53, 0.25);
+    radial-gradient(ellipse at 50% 15%, rgba(125, 211, 252, 0.18), transparent 44%),
+    linear-gradient(180deg, #0f172a 0%, #142345 52%, #111827 100%);
 }
 
-.battle-coliseum-grass {
+.battle-stadium-lights {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 10% 18%, rgba(253, 224, 71, 0.9), transparent 8%),
+    radial-gradient(circle at 90% 20%, rgba(253, 224, 71, 0.88), transparent 8%),
+    radial-gradient(circle at 16% 40%, rgba(125, 211, 252, 0.5), transparent 14%),
+    radial-gradient(circle at 84% 42%, rgba(125, 211, 252, 0.5), transparent 14%),
+    linear-gradient(120deg, transparent 40%, rgba(226, 232, 240, 0.18) 50%, transparent 60%),
+    linear-gradient(60deg, transparent 44%, rgba(148, 163, 184, 0.14) 52%, transparent 62%);
+  opacity: 0.75;
+  pointer-events: none;
+}
+
+.battle-stadium-cityline {
+  position: absolute;
+  left: 28%;
+  right: 28%;
+  top: 34px;
+  height: 64px;
+  border: 1px solid rgba(125, 211, 252, 0.45);
+  border-radius: 4px;
+  background:
+    linear-gradient(180deg, rgba(15, 23, 42, 0.28), rgba(15, 23, 42, 0.62)),
+    repeating-linear-gradient(
+      90deg,
+      rgba(148, 163, 184, 0.04) 0px,
+      rgba(148, 163, 184, 0.04) 9px,
+      rgba(2, 6, 23, 0.08) 9px,
+      rgba(2, 6, 23, 0.08) 15px
+    );
+  box-shadow: 0 0 24px rgba(125, 211, 252, 0.22);
+}
+
+.battle-stadium-crowd {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 118px;
+  height: 92px;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(148, 163, 184, 0.08) 0px,
+      rgba(148, 163, 184, 0.08) 3px,
+      rgba(99, 102, 241, 0.07) 3px,
+      rgba(99, 102, 241, 0.07) 6px
+    );
+  opacity: 0.85;
+}
+
+.battle-stadium-platform {
   position: absolute;
   left: 8%;
   right: 8%;
-  bottom: 7px;
-  height: 18px;
-  border-radius: 999px;
-  background: linear-gradient(180deg, rgba(101, 163, 13, 0.3), rgba(21, 128, 61, 0.45));
-  filter: blur(0.5px);
+  bottom: 26px;
+  height: 160px;
+  border-radius: 999px / 44%;
+  border: 4px solid rgba(226, 232, 240, 0.5);
+  background:
+    radial-gradient(ellipse at 50% 46%, rgba(187, 247, 208, 0.24), rgba(74, 222, 128, 0.05) 58%, transparent 76%),
+    radial-gradient(ellipse at 50% 84%, rgba(148, 163, 184, 0.5), rgba(71, 85, 105, 0.42));
+  box-shadow:
+    inset 0 0 0 2px rgba(125, 211, 252, 0.38),
+    0 16px 30px rgba(2, 6, 23, 0.45);
 }
 
-.battle-coliseum-crowd {
+.battle-stadium-platform-core {
   position: absolute;
-  left: 16%;
-  right: 16%;
-  top: 0;
-  height: 13px;
+  left: 24%;
+  right: 24%;
+  bottom: 68px;
+  height: 84px;
+  border-radius: 999px / 52%;
+  border: 2px solid rgba(226, 232, 240, 0.55);
+  background:
+    radial-gradient(circle at 50% 50%, rgba(248, 250, 252, 0.65), rgba(239, 68, 68, 0.65) 48%, rgba(15, 23, 42, 0.86) 49%),
+    linear-gradient(180deg, rgba(226, 232, 240, 0.3), rgba(148, 163, 184, 0.2));
+}
+
+.battle-slot {
+  position: absolute;
+  z-index: 2;
+  width: 200px;
+  height: 170px;
+  display: grid;
+  place-items: center;
+}
+
+.battle-slot-enemy {
+  top: 114px;
+  right: 20%;
+}
+
+.battle-slot-ally {
+  top: 148px;
+  left: 20%;
+}
+
+.battle-slot-ring {
+  position: absolute;
+  left: 50%;
+  bottom: 10px;
+  width: 126px;
+  height: 30px;
   border-radius: 999px;
-  background: repeating-linear-gradient(
-    90deg,
-    rgba(51, 65, 85, 0.28) 0px,
-    rgba(51, 65, 85, 0.28) 8px,
-    rgba(71, 85, 105, 0.22) 8px,
-    rgba(71, 85, 105, 0.22) 14px
-  );
-  filter: blur(0.3px);
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse at center, rgba(2, 132, 199, 0.5), rgba(2, 132, 199, 0));
+  pointer-events: none;
+}
+
+@media (max-width: 768px) {
+  .battle-stadium {
+    height: 300px;
+  }
+
+  .battle-slot {
+    width: 160px;
+    height: 138px;
+  }
+
+  .battle-slot-enemy {
+    top: 106px;
+    right: 6%;
+  }
+
+  .battle-slot-ally {
+    top: 144px;
+    left: 6%;
+  }
 }
 
 .battle-narration {
