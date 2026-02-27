@@ -33,6 +33,24 @@ export function movePlayer(
     return { moved: false, x, y, mapId, steppedOnGrass: false, triggerEncounter: null, transitionedMap: false };
   }
 
+  const standingTile = map.tiles[y * map.width + x];
+  // Portal transitions are resolved one input after stepping onto the portal tile
+  // so visual movement and tunnel entry feel grounded instead of pre-teleporting.
+  if (standingTile.kind === "portal" && standingTile.toMapId) {
+    const nextMapId = standingTile.toMapId;
+    const tx = standingTile.toX ?? MAP_INDEX[nextMapId]?.spawnX ?? x;
+    const ty = standingTile.toY ?? MAP_INDEX[nextMapId]?.spawnY ?? y;
+    return {
+      moved: true,
+      x: tx,
+      y: ty,
+      mapId: nextMapId,
+      steppedOnGrass: false,
+      triggerEncounter: null,
+      transitionedMap: true,
+    };
+  }
+
   const dir = DIRECTIONS[facing];
   const nx = x + dir.dx;
   const ny = y + dir.dy;
@@ -45,18 +63,13 @@ export function movePlayer(
     return { moved: false, x, y, mapId, steppedOnGrass: false, triggerEncounter: null, transitionedMap: false };
   }
 
-  let nextMapId = mapId;
-  let tx = nx;
-  let ty = ny;
-  if (tile.kind === "portal" && tile.toMapId) {
-    nextMapId = tile.toMapId;
-    tx = tile.toX ?? MAP_INDEX[nextMapId]?.spawnX ?? nx;
-    ty = tile.toY ?? MAP_INDEX[nextMapId]?.spawnY ?? ny;
-  }
+  const nextMapId = mapId;
+  const tx = nx;
+  const ty = ny;
 
   const steppedOnGrass = tile.kind === "grass" || tile.kind === "tall_grass" || tile.kind === "short_grass";
   const triggerEncounter = rolledEncounter(nextMapId, steppedOnGrass, stepCounter, forcedEncounterId);
-  return { moved: true, x: tx, y: ty, mapId: nextMapId, steppedOnGrass, triggerEncounter, transitionedMap: mapId !== nextMapId };
+  return { moved: true, x: tx, y: ty, mapId: nextMapId, steppedOnGrass, triggerEncounter, transitionedMap: false };
 }
 
 function rolledEncounter(

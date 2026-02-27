@@ -99,7 +99,7 @@ export function GameShell() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-[1200px] space-y-4 px-1.5 pb-4 sm:px-2">
+    <div className="mx-auto w-full max-w-[1020px] space-y-3 px-1 pb-3 sm:px-2">
       <div className="retro-console p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h1 className="text-2xl font-bold tracking-tight text-slate-100 sm:text-3xl">DiFazio Monster Lab</h1>
@@ -112,7 +112,9 @@ export function GameShell() {
             </span>
           </div>
         </div>
-        <p className="mt-2 text-sm text-slate-300">Modern monster RPG sandbox under active development. Isolated to <code>/game</code>.</p>
+        <p className="mt-2 text-sm text-slate-300">
+          A hero's journey through mystery, darkness, magic, and friendship. Isolated to <code>/game</code>.
+        </p>
         <p className="mt-1 text-xs text-slate-400">Desktop: arrows/WASD • Interact: E • Mobile: touch D-pad.</p>
         <div className="mt-2 flex flex-wrap gap-2 text-xs">
           <span className="retro-chip text-slate-200">Map cast: {mapNpcs.length} characters</span>
@@ -223,8 +225,8 @@ export function GameShell() {
 }
 
 function nextObjectiveText(gymStage: number) {
-  if (gymStage <= 0) return "Enter Lakeside Gym lobby";
-  if (gymStage === 1) return "Defeat the stage 2 gym trainer";
-  if (gymStage === 2) return "Challenge Leader Kaia";
-  return "Explore routes for higher-level encounters";
+  if (gymStage <= 0) return "Cross the lakeside threshold and answer the gym's first trial";
+  if (gymStage === 1) return "Defeat the second guardian and keep the dark tide at bay";
+  if (gymStage === 2) return "Face Leader Kaia and earn the Tidal Badge of hope";
+  return "Journey onward: train your bond and uncover the hidden magic";
 }

@@ -31,6 +31,30 @@ function canChallengeTrainer(state: GameState, trainerId: string) {
   return { allowed: true, reason: null as string | null };
 }
 
+function areaStoryBeat(mapId: string, gymStage: number) {
+  if (mapId.includes("forest")) {
+    return "The forest whispers with old magic. Stay brave and keep your light.";
+  }
+  if (mapId.includes("canyon")) {
+    return "Shadows gather in the canyon, but heroes carve hope through stone.";
+  }
+  if (mapId.includes("lakeside_gym_arena")) {
+    return gymStage >= 2
+      ? "The gym core trembles with dark tide energy. Friendship is your anchor."
+      : "A cold aura circles the arena. Train with purpose before the final challenge.";
+  }
+  if (mapId.includes("lakeside_gym_lobby")) {
+    return "The gym halls test resolve: courage, trust, and control over fear.";
+  }
+  if (mapId.includes("lab")) {
+    return "Ancient runes in the lab hint at a sleeping force beneath the region.";
+  }
+  if (mapId.includes("route")) {
+    return "Every route is part of your hero's journey. Keep moving forward.";
+  }
+  return "Hope travels with you. A brighter future is built one battle at a time.";
+}
+
 export function useGameStore() {
   const [state, setState] = useState<GameState>(createInitialState);
   const [isHydrated, setIsHydrated] = useState(false);
@@ -94,7 +118,7 @@ export function useGameStore() {
           stepCounter: prev.player.stepCounter + (result.moved ? 1 : 0),
         },
         visitedMaps: prev.visitedMaps.includes(result.mapId) ? prev.visitedMaps : [...prev.visitedMaps, result.mapId],
-        activeDialog: null,
+        activeDialog: result.transitionedMap ? areaStoryBeat(result.mapId, prev.gymProgress.lakeside ?? 0) : null,
       };
       if (result.transitionedMap) {
         setMapTransitioning(true);
@@ -111,7 +135,10 @@ export function useGameStore() {
             trainerId: undefined,
             trainerRoster: undefined,
             activePartyIndex: 0,
-            log: [`A wild ${SPECIES_INDEX[result.triggerEncounter.speciesId].name} appeared!`],
+            log: [
+              `A wild ${SPECIES_INDEX[result.triggerEncounter.speciesId].name} emerged from the veil.`,
+              "A hush falls over the field. Stand with courage.",
+            ],
             turn: 0,
             awaitingSwitch: false,
             encounterArea: result.mapId,
@@ -272,9 +299,9 @@ export function useGameStore() {
           gymProgress: nextGymProgress,
           activeDialog: trainerWin
             ? trainerNpc?.badgeReward
-              ? `${trainerNpc.followupLine} You received ${trainerNpc.badgeReward}.`
+              ? `${trainerNpc.followupLine} You received ${trainerNpc.badgeReward}. A new light pushes back the dark tide.`
               : `${trainerNpc?.name ?? "Trainer"} defeated.`
-            : "Wild battle complete.",
+            : "Wild battle complete. Your bond grows stronger.",
         };
       }
 
@@ -385,7 +412,11 @@ export function useGameStore() {
             trainerId: npc.id,
             trainerRoster: roster,
             activePartyIndex: 0,
-            log: [`${npc.trainerClass ? `${npc.trainerClass} ${npc.name}` : npc.name}: "${npc.introLine}"`, `${npc.name} sent out ${SPECIES_INDEX[speciesId].name}!`],
+            log: [
+              `${npc.trainerClass ? `${npc.trainerClass} ${npc.name}` : npc.name}: "${npc.introLine}"`,
+              "This clash will test fear, faith, and friendship.",
+              `${npc.name} sent out ${SPECIES_INDEX[speciesId].name}!`,
+            ],
             turn: 0,
             awaitingSwitch: false,
             encounterArea: npc.mapId,
