@@ -148,6 +148,7 @@
   width: 150%;
   background-repeat: repeat-x;
   will-change: transform;
+  transition: transform 90ms linear;
 }
 
 .parallax-far {

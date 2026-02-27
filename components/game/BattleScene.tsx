@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { PixelSprite } from "@/components/game/PixelSprite";
+import { BattleCreatureSprite } from "@/components/game/BattleCreatureSprite";
 import { ITEM_INDEX } from "@/lib/game/data/items";
 import { MOVE_INDEX } from "@/lib/game/data/moves";
 import { SPECIES_INDEX } from "@/lib/game/data/monsters";
@@ -166,13 +166,12 @@ export function BattleScene({ battle, playerMonster, onMove, onEnemyTurn, onUseI
               <p className="text-xs text-slate-300">Lv {enemy.level}</p>
             </div>
             <div className="battle-ground mx-auto grid h-24 w-28 place-items-center">
-              <PixelSprite
+              <BattleCreatureSprite
                 className={`${
                   phase === "player" || fx === "enemy_hit" ? "animate-target-shake" : "animate-float"
                 } ${fx === "enemy_faint" ? "animate-faint-drop opacity-50" : ""} shadow-[0_0_20px_rgba(147,197,253,0.35)]`}
-                seed={`enemy_${enemySpecies.id}`}
-                size={68}
-                tone="enemy"
+                speciesId={enemySpecies.id}
+                size={76}
               />
               {phase === "player" || fx === "enemy_hit" ? <span className="battle-slash" /> : null}
             </div>
@@ -188,13 +187,12 @@ export function BattleScene({ battle, playerMonster, onMove, onEnemyTurn, onUseI
               <p className="text-xs text-slate-300">Lv {playerMonster.level}</p>
             </div>
             <div className="battle-ground mx-auto grid h-24 w-28 place-items-center">
-              <PixelSprite
+              <BattleCreatureSprite
                 className={`${
                   phase === "enemy" || fx === "player_hit" ? "animate-target-shake" : "animate-float-slow"
                 } ${fx === "player_faint" ? "animate-faint-drop opacity-50" : ""} shadow-[0_0_20px_rgba(134,239,172,0.35)]`}
-                seed={`ally_${playerSpecies.id}`}
-                size={68}
-                tone="ally"
+                speciesId={playerSpecies.id}
+                size={76}
               />
               {phase === "enemy" || fx === "player_hit" ? <span className="battle-burst" /> : null}
               {fx === "heal" ? <span className="battle-heal-ring" /> : null}

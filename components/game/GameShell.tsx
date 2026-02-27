@@ -27,7 +27,7 @@ export function GameShell() {
         if (heldDirectionRef.current) {
           move(heldDirectionRef.current);
         }
-      }, 120);
+      }, 85);
     };
 
     const stopMoveLoop = (dir?: string) => {

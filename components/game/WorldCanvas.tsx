@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import type { CSSProperties } from "react";
 import { Facing, MapData, MapTile, PlayerState } from "@/lib/game/state/gameTypes";
 import { NpcCharacter } from "@/lib/game/state/gameTypes";
@@ -24,28 +25,59 @@ const TILE_FRAME_INDEX: Record<MapTile["kind"], number> = {
   portal: 10,
 };
 
+const TILE_SIZE = 24;
+
 export function WorldCanvas({ map, player, npcs }: Props) {
   const viewportW = 20;
   const viewportH = 14;
-  const startX = Math.max(0, Math.min(player.x - Math.floor(viewportW / 2), map.width - viewportW));
-  const startY = Math.max(0, Math.min(player.y - Math.floor(viewportH / 2), map.height - viewportH));
+  const [renderPlayer, setRenderPlayer] = useState({ x: player.x, y: player.y });
+
+  useEffect(() => {
+    setRenderPlayer({ x: player.x, y: player.y });
+  }, [map.id]);
+
+  useEffect(() => {
+    let raf = 0;
+    const animate = () => {
+      setRenderPlayer((prev) => {
+        const nx = prev.x + (player.x - prev.x) * 0.36;
+        const ny = prev.y + (player.y - prev.y) * 0.36;
+        const done = Math.abs(nx - player.x) < 0.02 && Math.abs(ny - player.y) < 0.02;
+        if (!done) {
+          raf = requestAnimationFrame(animate);
+          return { x: nx, y: ny };
+        }
+        return { x: player.x, y: player.y };
+      });
+    };
+    raf = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(raf);
+  }, [player.x, player.y]);
+
+  const cameraX = clamp(renderPlayer.x - viewportW / 2, 0, map.width - viewportW);
+  const cameraY = clamp(renderPlayer.y - viewportH / 2, 0, map.height - viewportH);
+  const baseX = Math.floor(cameraX);
+  const baseY = Math.floor(cameraY);
+  const fracX = cameraX - baseX;
+  const fracY = cameraY - baseY;
+
   const npcIndex = Object.fromEntries(npcs.map((npc) => [`${npc.x}_${npc.y}`, npc]));
 
   const visibleTiles = [];
-  for (let vy = 0; vy < viewportH; vy += 1) {
-    for (let vx = 0; vx < viewportW; vx += 1) {
-      const x = startX + vx;
-      const y = startY + vy;
+  for (let vy = 0; vy < viewportH + 1; vy += 1) {
+    for (let vx = 0; vx < viewportW + 1; vx += 1) {
+      const x = baseX + vx;
+      const y = baseY + vy;
+      if (x < 0 || y < 0 || x >= map.width || y >= map.height) continue;
       const tile = map.tiles[y * map.width + x];
       visibleTiles.push({ tile, x, y });
     }
   }
 
+  const walkFrame = player.stepCounter % 2;
   const tiles = visibleTiles.map(({ tile, x, y }) => {
-    const isPlayer = x === player.x && y === player.y;
     const npc = npcIndex[`${x}_${y}`];
     const seed = Math.abs((x * 92821 + y * 68917 + 17) % 1000);
-    const walkFrame = player.stepCounter % 2;
     const nearWater =
       getTileKind(map, x + 1, y) === "water" ||
       getTileKind(map, x - 1, y) === "water" ||
@@ -54,7 +86,7 @@ export function WorldCanvas({ map, player, npcs }: Props) {
     return (
       <div
         key={`${x}_${y}`}
-        className="relative h-5 w-5 overflow-visible sm:h-6 sm:w-6"
+        className="relative h-6 w-6 overflow-visible"
       >
         <span className="sprite-tile absolute inset-0" style={terrainSpriteStyle(tile.kind)} />
         {tile.kind === "ground" || tile.kind === "grass" || tile.kind === "short_grass" || tile.kind === "tall_grass" ? (
@@ -111,15 +143,6 @@ export function WorldCanvas({ map, player, npcs }: Props) {
             <span className="absolute inset-x-2 top-1 h-1 rounded-full bg-violet-300/60" />
           </>
         ) : null}
-        {isPlayer ? (
-          <span className={`absolute inset-0 z-20 ${walkFrame === 0 ? "animate-walk-a" : "animate-walk-b"}`}>
-            <span className="absolute left-1 top-[15px] h-1 w-3 rounded-full bg-slate-950/45" />
-            <span
-              className="sprite-character absolute left-[1px] top-[1px]"
-              style={characterSpriteStyle(player.avatarId, player.facing, walkFrame)}
-            />
-          </span>
-        ) : null}
         {npc ? (
           <span className="animate-npc-idle absolute inset-0 z-20">
             <span className="absolute left-1 top-[15px] h-1 w-3 rounded-full bg-slate-950/40" />
@@ -144,15 +167,36 @@ export function WorldCanvas({ map, player, npcs }: Props) {
       <div className="retro-bezel">
         <div
           className={`retro-screen biome-tone-${biomeToneKey(map.id)} relative grid w-fit overflow-hidden rounded`}
-          style={{ gridTemplateColumns: `repeat(${viewportW}, minmax(0, 1fr))` }}
+          style={{ width: viewportW * TILE_SIZE, height: viewportH * TILE_SIZE }}
         >
-          <div className="parallax-layer parallax-far" style={{ transform: `translateX(-${startX * 1.2}px)` }} />
-          <div className="parallax-layer parallax-mid" style={{ transform: `translateX(-${startX * 2.4}px)` }} />
-          <div className="parallax-layer parallax-near" style={{ transform: `translateX(-${startX * 4}px)` }} />
+          <div className="parallax-layer parallax-far" style={{ transform: `translateX(-${cameraX * 1.15}px)` }} />
+          <div className="parallax-layer parallax-mid" style={{ transform: `translateX(-${cameraX * 2.2}px)` }} />
+          <div className="parallax-layer parallax-near" style={{ transform: `translateX(-${cameraX * 3.8}px)` }} />
           <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(120,201,255,0.28)_0%,rgba(189,245,255,0.08)_34%,transparent_40%)]" />
           <div className="pointer-events-none animate-cloud-drift absolute -left-8 top-1 h-8 w-20 rounded-full bg-white/20 blur-sm" />
           <div className="pointer-events-none animate-cloud-drift absolute -left-16 top-4 h-7 w-16 rounded-full bg-white/15 blur-sm [animation-delay:2000ms]" />
-          {tiles}
+          <div
+            className="absolute left-0 top-0 grid"
+            style={{
+              gridTemplateColumns: `repeat(${viewportW + 1}, ${TILE_SIZE}px)`,
+              transform: `translate(${-fracX * TILE_SIZE}px, ${-fracY * TILE_SIZE}px)`,
+            }}
+          >
+            {tiles}
+          </div>
+          <span
+            className={`pointer-events-none absolute z-30 ${walkFrame === 0 ? "animate-walk-a" : "animate-walk-b"}`}
+            style={{
+              left: (renderPlayer.x - cameraX) * TILE_SIZE + 1,
+              top: (renderPlayer.y - cameraY) * TILE_SIZE + 1,
+            }}
+          >
+            <span className="absolute left-1 top-[15px] h-1 w-3 rounded-full bg-slate-950/45" />
+            <span
+              className="sprite-character absolute left-[1px] top-[1px]"
+              style={characterSpriteStyle(player.avatarId, player.facing, walkFrame)}
+            />
+          </span>
           <div className="pointer-events-none absolute bottom-2 left-3 h-6 w-8 rounded-full bg-emerald-900/20 blur-md" />
           <div className="pointer-events-none absolute bottom-1 right-6 h-8 w-12 rounded-full bg-cyan-800/15 blur-md" />
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_72%_18%,rgba(255,255,255,0.12),transparent_33%)]" />
@@ -167,6 +211,10 @@ export function WorldCanvas({ map, player, npcs }: Props) {
       </div>
     </div>
   );
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
 }
 
 function terrainSpriteStyle(kind: MapTile["kind"]): CSSProperties {
