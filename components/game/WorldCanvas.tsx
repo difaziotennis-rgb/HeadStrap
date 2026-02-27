@@ -87,11 +87,11 @@ export function WorldCanvas({ map, player, npcs }: Props) {
       </div>
       <div className="retro-bezel">
         <div
-          className="retro-screen tile-grid relative grid w-fit overflow-hidden rounded"
+          className="retro-screen relative grid w-fit overflow-hidden rounded"
           style={{ gridTemplateColumns: `repeat(${viewportW}, minmax(0, 1fr))` }}
         >
           {tiles}
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,transparent_55%,rgba(2,6,23,0.45)_100%)]" />
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,transparent_62%,rgba(2,6,23,0.25)_100%)]" />
         </div>
       </div>
       <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-400">

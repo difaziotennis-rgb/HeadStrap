@@ -11,6 +11,7 @@ type Props = {
   battle: BattleState;
   playerMonster: MonsterInstance;
   onMove: (idx: number) => void;
+  onEnemyTurn: () => void;
   onUseItem: (itemId: "capture_orb" | "super_orb" | "potion" | "mega_potion") => void;
   onRun: () => void;
   inventory: Record<"capture_orb" | "super_orb" | "potion" | "mega_potion", number>;
@@ -30,14 +31,12 @@ function HpBar({ current, max }: { current: number; max: number }) {
   );
 }
 
-export function BattleScene({ battle, playerMonster, onMove, onUseItem, onRun, inventory }: Props) {
+export function BattleScene({ battle, playerMonster, onMove, onEnemyTurn, onUseItem, onRun, inventory }: Props) {
   const [tab, setTab] = useState<ActionTab>("moves");
   const [isLocked, setIsLocked] = useState(false);
   const [phase, setPhase] = useState<"idle" | "player" | "enemy">("idle");
-  const [timeLeftMs, setTimeLeftMs] = useState(12000);
   const [visibleLogCount, setVisibleLogCount] = useState(2);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastTurnRef = useRef<number>(battle.turn);
 
   const enemy = battle.enemy;
@@ -46,22 +45,10 @@ export function BattleScene({ battle, playerMonster, onMove, onUseItem, onRun, i
 
   useEffect(() => {
     if (battle.turn !== lastTurnRef.current) {
-      setTimeLeftMs(12000);
       lastTurnRef.current = battle.turn;
     }
     setVisibleLogCount(2);
   }, [battle.turn]);
-
-  useEffect(() => {
-    if (isLocked) return;
-    if (countdownRef.current) clearInterval(countdownRef.current);
-    countdownRef.current = setInterval(() => {
-      setTimeLeftMs((prev) => Math.max(0, prev - 100));
-    }, 100);
-    return () => {
-      if (countdownRef.current) clearInterval(countdownRef.current);
-    };
-  }, [isLocked, battle.turn]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -73,21 +60,29 @@ export function BattleScene({ battle, playerMonster, onMove, onUseItem, onRun, i
   useEffect(() => {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
-      if (countdownRef.current) clearInterval(countdownRef.current);
     };
   }, []);
 
-  const timerPct = Math.round((timeLeftMs / 12000) * 100);
   const shownLogs = useMemo(() => battle.log.slice(-visibleLogCount).reverse(), [battle.log, visibleLogCount]);
+
+  useEffect(() => {
+    if (!battle.pendingEnemyTurn) return;
+    setIsLocked(true);
+    setPhase("enemy");
+    const timeout = setTimeout(() => {
+      onEnemyTurn();
+      setIsLocked(false);
+      setPhase("idle");
+    }, 850);
+    return () => clearTimeout(timeout);
+  }, [battle.pendingEnemyTurn, onEnemyTurn]);
 
   async function handleMove(idx: number) {
     if (isLocked) return;
     setIsLocked(true);
     setPhase("player");
-    await wait(500);
+    await wait(420);
     onMove(idx);
-    setPhase("enemy");
-    await wait(700);
     setPhase("idle");
     setIsLocked(false);
   }
@@ -118,13 +113,15 @@ export function BattleScene({ battle, playerMonster, onMove, onUseItem, onRun, i
     <div className="retro-console p-3">
       <div className="pixel-card rounded-xl p-3">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <p className="text-[11px] uppercase tracking-[0.2em] text-slate-300">Battle Timeline</p>
-          <p className="text-xs font-medium text-slate-200">{Math.ceil(timeLeftMs / 1000)}s to act</p>
+          <p className="text-[11px] uppercase tracking-[0.2em] text-slate-300">Battle Flow</p>
+          <p className="text-xs font-medium text-slate-200">
+            {battle.pendingEnemyTurn ? "Opponent is responding..." : "Choose your next action"}
+          </p>
         </div>
         <div className="h-2 overflow-hidden rounded bg-slate-800">
           <div
-            className={`h-full transition-all duration-200 ${timerPct > 45 ? "bg-cyan-400" : timerPct > 20 ? "bg-amber-400" : "bg-rose-500"}`}
-            style={{ width: `${timerPct}%` }}
+            className={`h-full transition-all duration-300 ${battle.pendingEnemyTurn ? "bg-rose-500" : "bg-cyan-400"}`}
+            style={{ width: battle.pendingEnemyTurn ? "100%" : "55%" }}
           />
         </div>
       </div>
@@ -193,7 +190,7 @@ export function BattleScene({ battle, playerMonster, onMove, onUseItem, onRun, i
             className="pixel-btn ml-auto rounded bg-rose-700 px-3 py-2 text-xs font-medium text-white hover:bg-rose-600 disabled:opacity-50"
             onClick={handleRun}
             type="button"
-            disabled={isLocked}
+            disabled={isLocked || battle.pendingEnemyTurn}
           >
             Run
           </button>
@@ -207,7 +204,7 @@ export function BattleScene({ battle, playerMonster, onMove, onUseItem, onRun, i
                 className="pixel-btn rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-left text-sm transition hover:border-cyan-400 disabled:cursor-not-allowed disabled:opacity-40"
                 onClick={() => void handleMove(idx)}
                 type="button"
-                disabled={isLocked || slot.currentPp <= 0}
+                disabled={isLocked || battle.pendingEnemyTurn || slot.currentPp <= 0}
               >
                 <div className="flex items-center justify-between">
                   <span className="font-medium text-slate-100">{MOVE_INDEX[slot.moveId].name}</span>
@@ -225,7 +222,7 @@ export function BattleScene({ battle, playerMonster, onMove, onUseItem, onRun, i
                 className="pixel-btn rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-left text-sm transition hover:border-violet-400 disabled:cursor-not-allowed disabled:opacity-40"
                 onClick={() => void handleItem(itemId)}
                 type="button"
-                disabled={isLocked || (inventory[itemId] ?? 0) <= 0}
+                disabled={isLocked || battle.pendingEnemyTurn || (inventory[itemId] ?? 0) <= 0}
               >
                 <div className="flex items-center justify-between">
                   <span className="font-medium text-slate-100">{ITEM_INDEX[itemId].name}</span>
@@ -244,9 +241,6 @@ export function BattleScene({ battle, playerMonster, onMove, onUseItem, onRun, i
             <li key={`${line}_${idx}`}>{line}</li>
           ))}
         </ul>
-        {timeLeftMs <= 0 && !isLocked ? (
-          <p className="mt-2 text-xs text-amber-300">Timer reached zero. Choose your next action when ready.</p>
-        ) : null}
       </div>
     </div>
   );

@@ -96,11 +96,13 @@ export interface BattleState {
   isWild: boolean;
   enemyName: string;
   trainerId?: string;
+  trainerRoster?: MonsterInstance[];
   activePartyIndex: number;
   log: string[];
   turn: number;
   awaitingSwitch: boolean;
   encounterArea: string;
+  pendingEnemyTurn: boolean;
 }
 
 export interface PlayerState {

@@ -81,11 +81,13 @@ export function useGameStore() {
             isWild: true,
             enemyName: SPECIES_INDEX[result.triggerEncounter.speciesId].name,
             trainerId: undefined,
+            trainerRoster: undefined,
             activePartyIndex: 0,
             log: [`A wild ${SPECIES_INDEX[result.triggerEncounter.speciesId].name} appeared!`],
             turn: 0,
             awaitingSwitch: false,
             encounterArea: result.mapId,
+            pendingEnemyTurn: false,
           },
           sandbox: {
             ...next.sandbox,
@@ -193,43 +195,33 @@ export function useGameStore() {
   const battleMove = useCallback((moveIndex: number) => {
     setState((prev) => {
       if (prev.mode !== "battle" || !prev.battle) return prev;
+      if (prev.battle.pendingEnemyTurn) return prev;
       const playerMonster = prev.party[0];
       let enemyMonster = prev.battle.enemy;
       let battle = prev.battle;
 
-      const playerFirst = playerMonster.speed >= enemyMonster.speed;
       let party = [...prev.party];
-
-      const doPlayer = () => {
-        const res = applyPlayerMove(battle, party[0], enemyMonster, moveIndex);
-        battle = res.nextState;
-        party[0] = res.playerMonster;
-        enemyMonster = res.enemyMonster;
-        return res.faintedEnemy;
-      };
-      const doEnemy = () => {
-        const res = applyEnemyMove(battle, party[0], enemyMonster);
-        battle = res.nextState;
-        party[0] = res.playerMonster;
-        enemyMonster = res.enemyMonster;
-        return res.faintedPlayer;
-      };
-
-      let faintedEnemy = false;
-      let faintedPlayer = false;
-      if (playerFirst) {
-        faintedEnemy = doPlayer();
-        if (!faintedEnemy) {
-          faintedPlayer = doEnemy();
-        }
-      } else {
-        faintedPlayer = doEnemy();
-        if (!faintedPlayer) {
-          faintedEnemy = doPlayer();
-        }
-      }
+      const res = applyPlayerMove(battle, party[0], enemyMonster, moveIndex);
+      battle = res.nextState;
+      party[0] = res.playerMonster;
+      enemyMonster = res.enemyMonster;
+      const faintedEnemy = res.faintedEnemy;
 
       if (faintedEnemy) {
+        if (battle.trainerId && battle.trainerRoster && battle.trainerRoster.length > 0) {
+          const [nextEnemy, ...rest] = battle.trainerRoster;
+          return {
+            ...prev,
+            party,
+            battle: {
+              ...battle,
+              enemy: nextEnemy,
+              trainerRoster: rest,
+              pendingEnemyTurn: false,
+              log: [...battle.log.slice(-7), `${battle.enemyName} sent out ${SPECIES_INDEX[nextEnemy.speciesId].name}!`],
+            },
+          };
+        }
         const gained = awardExperience(party[0], SPECIES_INDEX[enemyMonster.speciesId].xpYield);
         party[0] = gained.monster;
         const trainerWin = battle.trainerId ? !prev.defeatedTrainerIds.includes(battle.trainerId) : false;
@@ -245,7 +237,31 @@ export function useGameStore() {
         };
       }
 
-      if (faintedPlayer) {
+      return {
+        ...prev,
+        party,
+        battle: {
+          ...battle,
+          enemy: enemyMonster,
+          pendingEnemyTurn: true,
+        },
+      };
+    });
+  }, []);
+
+  const enemyTurn = useCallback(() => {
+    setState((prev) => {
+      if (prev.mode !== "battle" || !prev.battle) return prev;
+      if (!prev.battle.pendingEnemyTurn) return prev;
+      const party = [...prev.party];
+      const playerMonster = party[0];
+      const enemyMonster = prev.battle.enemy;
+      const battle = prev.battle;
+      const res = applyEnemyMove(battle, playerMonster, enemyMonster);
+      party[0] = res.playerMonster;
+      const nextEnemy = res.enemyMonster;
+
+      if (res.faintedPlayer) {
         const nextActiveIdx = party.findIndex((m) => m.currentHp > 0);
         if (nextActiveIdx === -1) {
           return {
@@ -255,8 +271,8 @@ export function useGameStore() {
             player: {
               ...prev.player,
               mapId: "starter_town",
-              x: 2,
-              y: 2,
+              x: 5,
+              y: 21,
             },
             party: prev.party.map((m) => ({ ...m, currentHp: m.maxHp })),
             activeDialog: "Your team blacked out and was restored in Willow Town.",
@@ -269,9 +285,10 @@ export function useGameStore() {
           ...prev,
           party: nextParty,
           battle: {
-            ...battle,
-            enemy: enemyMonster,
-            log: [...battle.log.slice(-7), `${SPECIES_INDEX[nextActive.speciesId].name}, go!`],
+            ...res.nextState,
+            enemy: nextEnemy,
+            pendingEnemyTurn: false,
+            log: [...res.nextState.log.slice(-7), `${SPECIES_INDEX[nextActive.speciesId].name}, go!`],
           },
         };
       }
@@ -280,8 +297,9 @@ export function useGameStore() {
         ...prev,
         party,
         battle: {
-          ...battle,
-          enemy: enemyMonster,
+          ...res.nextState,
+          enemy: nextEnemy,
+          pendingEnemyTurn: false,
         },
       };
     });
@@ -308,6 +326,7 @@ export function useGameStore() {
         }
         const speciesId = npc.trainerSpeciesIds?.[0] ?? "m_7";
         const level = npc.trainerLevels?.[0] ?? 8;
+        const roster = (npc.trainerSpeciesIds ?? []).slice(1).map((sId, i) => createMonsterInstance(sId, npc.trainerLevels?.[i + 1] ?? level + i + 1));
         return {
           ...prev,
           mode: "battle",
@@ -316,11 +335,13 @@ export function useGameStore() {
             isWild: false,
             enemyName: npc.name,
             trainerId: npc.id,
+            trainerRoster: roster,
             activePartyIndex: 0,
             log: [`${npc.name}: "${npc.introLine}"`, `${npc.name} sent out ${SPECIES_INDEX[speciesId].name}!`],
             turn: 0,
             awaitingSwitch: false,
             encounterArea: npc.mapId,
+            pendingEnemyTurn: false,
           },
           activeDialog: null,
         };
@@ -429,6 +450,7 @@ export function useGameStore() {
       move,
       chooseStarter,
       battleMove,
+      enemyTurn,
       runFromBattle,
       useItem,
       swapPartyIndex,
@@ -454,6 +476,7 @@ export function useGameStore() {
       move,
       chooseStarter,
       battleMove,
+      enemyTurn,
       runFromBattle,
       useItem,
       swapPartyIndex,

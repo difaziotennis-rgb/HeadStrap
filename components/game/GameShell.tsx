@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { BattleScene } from "@/components/game/BattleScene";
 import { MobileControls } from "@/components/game/MobileControls";
 import { SandboxPanel } from "@/components/game/SandboxPanel";
@@ -12,20 +12,58 @@ import { useGameStore } from "@/lib/game/state/gameStore";
 export function GameShell() {
   const store = useGameStore();
   const { state, map, isHydrated, mapTransitioning, mapNpcs } = store;
+  const move = store.move;
+  const interact = store.interact;
+  const swapPartyIndex = store.swapPartyIndex;
+  const heldDirectionRef = useRef<"up" | "down" | "left" | "right" | null>(null);
+  const moveLoopRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
+    const startMoveLoop = (dir: "up" | "down" | "left" | "right") => {
+      heldDirectionRef.current = dir;
+      move(dir);
+      if (moveLoopRef.current) clearInterval(moveLoopRef.current);
+      moveLoopRef.current = setInterval(() => {
+        if (heldDirectionRef.current) {
+          move(heldDirectionRef.current);
+        }
+      }, 120);
+    };
+
+    const stopMoveLoop = (dir?: string) => {
+      if (!dir || heldDirectionRef.current === dir) {
+        heldDirectionRef.current = null;
+        if (moveLoopRef.current) {
+          clearInterval(moveLoopRef.current);
+          moveLoopRef.current = null;
+        }
+      }
+    };
+
     const onKeyDown = (event: KeyboardEvent) => {
       if (state.mode !== "world") return;
-      if (event.key === "ArrowUp" || event.key.toLowerCase() === "w") store.move("up");
-      if (event.key === "ArrowDown" || event.key.toLowerCase() === "s") store.move("down");
-      if (event.key === "ArrowLeft" || event.key.toLowerCase() === "a") store.move("left");
-      if (event.key === "ArrowRight" || event.key.toLowerCase() === "d") store.move("right");
-      if (event.key.toLowerCase() === "t") store.swapPartyIndex(1);
-      if (event.key.toLowerCase() === "e") store.interact();
+      if (event.repeat) return;
+      if (event.key === "ArrowUp" || event.key.toLowerCase() === "w") startMoveLoop("up");
+      if (event.key === "ArrowDown" || event.key.toLowerCase() === "s") startMoveLoop("down");
+      if (event.key === "ArrowLeft" || event.key.toLowerCase() === "a") startMoveLoop("left");
+      if (event.key === "ArrowRight" || event.key.toLowerCase() === "d") startMoveLoop("right");
+      if (event.key.toLowerCase() === "t") swapPartyIndex(1);
+      if (event.key.toLowerCase() === "e") interact();
+    };
+    const onKeyUp = (event: KeyboardEvent) => {
+      if (event.key === "ArrowUp" || event.key.toLowerCase() === "w") stopMoveLoop("up");
+      if (event.key === "ArrowDown" || event.key.toLowerCase() === "s") stopMoveLoop("down");
+      if (event.key === "ArrowLeft" || event.key.toLowerCase() === "a") stopMoveLoop("left");
+      if (event.key === "ArrowRight" || event.key.toLowerCase() === "d") stopMoveLoop("right");
     };
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [state.mode, store]);
+    window.addEventListener("keyup", onKeyUp);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+      stopMoveLoop();
+    };
+  }, [state.mode, move, swapPartyIndex, interact]);
 
   if (!isHydrated) {
     return (
@@ -88,6 +126,7 @@ export function GameShell() {
               battle={state.battle}
               inventory={state.inventory}
               onMove={store.battleMove}
+              onEnemyTurn={store.enemyTurn}
               onRun={store.runFromBattle}
               onUseItem={store.useItem}
               playerMonster={state.party[0]}
