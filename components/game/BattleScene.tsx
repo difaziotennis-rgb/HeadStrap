@@ -155,8 +155,15 @@ export function BattleScene({ battle, playerMonster, onMove, onEnemyTurn, onUseI
       </div>
 
       <div className="battle-scene-bg battle-stage mt-3 rounded-xl border-2 border-slate-700 p-4">
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="rounded-lg border border-slate-700/70 bg-slate-900/55 p-3">
+        <div className="battle-nature-ring mb-4">
+          <span className="battle-rope battle-rope-top" />
+          <span className="battle-rope battle-rope-mid" />
+          <span className="battle-rope battle-rope-bottom" />
+          <span className="battle-post battle-post-left" />
+          <span className="battle-post battle-post-right" />
+        </div>
+        <div className="relative z-10 grid gap-4 md:grid-cols-2">
+          <div className="rounded-lg border border-slate-700/70 bg-slate-900/35 p-3 backdrop-blur-[1px]">
             <div className="mb-3 flex items-end justify-between">
               <div>
                 <p className="text-xs uppercase tracking-wider text-slate-300">{battle.isWild ? "Wild" : "Trainer"}</p>
@@ -167,18 +174,18 @@ export function BattleScene({ battle, playerMonster, onMove, onEnemyTurn, onUseI
             </div>
             <div className="battle-ground mx-auto grid h-24 w-28 place-items-center">
               <BattleCreatureSprite
-                className={`${
-                  phase === "player" || fx === "enemy_hit" ? "animate-target-shake" : "animate-float"
-                } ${fx === "enemy_faint" ? "animate-faint-drop opacity-50" : ""} shadow-[0_0_20px_rgba(147,197,253,0.35)]`}
+                className="shadow-[0_0_20px_rgba(147,197,253,0.35)]"
                 speciesId={enemySpecies.id}
                 size={76}
+                side="enemy"
+                state={fx === "enemy_faint" ? "faint" : phase === "player" ? "hit" : phase === "enemy" ? "attacking" : "idle"}
               />
               {phase === "player" || fx === "enemy_hit" ? <span className="battle-slash" /> : null}
             </div>
             <HpBar current={enemy.currentHp} max={enemy.maxHp} />
           </div>
 
-          <div className="rounded-lg border border-slate-700/70 bg-slate-900/55 p-3">
+          <div className="rounded-lg border border-slate-700/70 bg-slate-900/35 p-3 backdrop-blur-[1px]">
             <div className="mb-3 flex items-end justify-between">
               <div>
                 <p className="text-xs uppercase tracking-wider text-slate-300">Your Lead</p>
@@ -188,11 +195,11 @@ export function BattleScene({ battle, playerMonster, onMove, onEnemyTurn, onUseI
             </div>
             <div className="battle-ground mx-auto grid h-24 w-28 place-items-center">
               <BattleCreatureSprite
-                className={`${
-                  phase === "enemy" || fx === "player_hit" ? "animate-target-shake" : "animate-float-slow"
-                } ${fx === "player_faint" ? "animate-faint-drop opacity-50" : ""} shadow-[0_0_20px_rgba(134,239,172,0.35)]`}
+                className="shadow-[0_0_20px_rgba(134,239,172,0.35)]"
                 speciesId={playerSpecies.id}
                 size={76}
+                side="ally"
+                state={fx === "player_faint" ? "faint" : phase === "enemy" ? "hit" : phase === "player" ? "attacking" : "idle"}
               />
               {phase === "enemy" || fx === "player_hit" ? <span className="battle-burst" /> : null}
               {fx === "heal" ? <span className="battle-heal-ring" /> : null}

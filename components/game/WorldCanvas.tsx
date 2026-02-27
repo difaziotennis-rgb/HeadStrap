@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { Facing, MapData, MapTile, PlayerState } from "@/lib/game/state/gameTypes";
 import { NpcCharacter } from "@/lib/game/state/gameTypes";
@@ -31,28 +31,36 @@ export function WorldCanvas({ map, player, npcs }: Props) {
   const viewportW = 20;
   const viewportH = 14;
   const [renderPlayer, setRenderPlayer] = useState({ x: player.x, y: player.y });
+  const targetPlayerRef = useRef({ x: player.x, y: player.y });
+  const rafRef = useRef<number | null>(null);
 
   useEffect(() => {
+    targetPlayerRef.current = { x: player.x, y: player.y };
     setRenderPlayer({ x: player.x, y: player.y });
   }, [map.id]);
 
   useEffect(() => {
-    let raf = 0;
+    targetPlayerRef.current = { x: player.x, y: player.y };
+  }, [player.x, player.y]);
+
+  useEffect(() => {
     const animate = () => {
       setRenderPlayer((prev) => {
-        const nx = prev.x + (player.x - prev.x) * 0.36;
-        const ny = prev.y + (player.y - prev.y) * 0.36;
-        const done = Math.abs(nx - player.x) < 0.02 && Math.abs(ny - player.y) < 0.02;
-        if (!done) {
-          raf = requestAnimationFrame(animate);
-          return { x: nx, y: ny };
+        const target = targetPlayerRef.current;
+        const nx = prev.x + (target.x - prev.x) * 0.22;
+        const ny = prev.y + (target.y - prev.y) * 0.22;
+        if (Math.abs(nx - target.x) < 0.002 && Math.abs(ny - target.y) < 0.002) {
+          return target;
         }
-        return { x: player.x, y: player.y };
+        return { x: nx, y: ny };
       });
+      rafRef.current = requestAnimationFrame(animate);
     };
-    raf = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(raf);
-  }, [player.x, player.y]);
+    rafRef.current = requestAnimationFrame(animate);
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
 
   const cameraX = clamp(renderPlayer.x - viewportW / 2, 0, map.width - viewportW);
   const cameraY = clamp(renderPlayer.y - viewportH / 2, 0, map.height - viewportH);

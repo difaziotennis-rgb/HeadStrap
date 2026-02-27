@@ -14,7 +14,7 @@ export function MobileControls({ onMove, onOpenTeam }: Props) {
   const startHold = (facing: Facing) => {
     onMove(facing);
     if (holdRef.current) clearInterval(holdRef.current);
-    holdRef.current = setInterval(() => onMove(facing), 80);
+    holdRef.current = setInterval(() => onMove(facing), 45);
   };
 
   const stopHold = () => {

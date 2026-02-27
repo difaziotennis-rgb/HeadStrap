@@ -16,25 +16,36 @@ export function GameShell() {
   const interact = store.interact;
   const swapPartyIndex = store.swapPartyIndex;
   const heldDirectionRef = useRef<"up" | "down" | "left" | "right" | null>(null);
-  const moveLoopRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const moveLoopRef = useRef<number | null>(null);
+  const lastMoveTimeRef = useRef(0);
 
   useEffect(() => {
+    const MOVE_INTERVAL_MS = 42;
+    const tickMove = (now: number) => {
+      if (!heldDirectionRef.current) {
+        moveLoopRef.current = null;
+        return;
+      }
+      if (now - lastMoveTimeRef.current >= MOVE_INTERVAL_MS) {
+        move(heldDirectionRef.current);
+        lastMoveTimeRef.current = now;
+      }
+      moveLoopRef.current = requestAnimationFrame(tickMove);
+    };
+
     const startMoveLoop = (dir: "up" | "down" | "left" | "right") => {
       heldDirectionRef.current = dir;
       move(dir);
-      if (moveLoopRef.current) clearInterval(moveLoopRef.current);
-      moveLoopRef.current = setInterval(() => {
-        if (heldDirectionRef.current) {
-          move(heldDirectionRef.current);
-        }
-      }, 60);
+      if (moveLoopRef.current) cancelAnimationFrame(moveLoopRef.current);
+      lastMoveTimeRef.current = performance.now();
+      moveLoopRef.current = requestAnimationFrame(tickMove);
     };
 
     const stopMoveLoop = (dir?: string) => {
       if (!dir || heldDirectionRef.current === dir) {
         heldDirectionRef.current = null;
         if (moveLoopRef.current) {
-          clearInterval(moveLoopRef.current);
+          cancelAnimationFrame(moveLoopRef.current);
           moveLoopRef.current = null;
         }
       }

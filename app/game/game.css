@@ -346,8 +346,10 @@
 
 .battle-ground {
   border-radius: 999px;
-  background: radial-gradient(circle, rgba(15, 23, 42, 0.3), rgba(2, 6, 23, 0.85));
-  border: 2px solid rgba(148, 163, 184, 0.25);
+  background:
+    radial-gradient(circle at 50% 30%, rgba(190, 242, 100, 0.28), transparent 55%),
+    radial-gradient(circle at 50% 75%, rgba(21, 128, 61, 0.45), rgba(20, 83, 45, 0.2));
+  border: 2px solid rgba(186, 230, 253, 0.35);
   position: relative;
   overflow: hidden;
 }
@@ -368,8 +370,87 @@
   pointer-events: none;
 }
 
+.creature-motion-bob {
+  animation: creature-bob 1300ms ease-in-out infinite;
+}
+
+.creature-motion-sway {
+  animation: creature-sway 1500ms ease-in-out infinite;
+}
+
+.creature-motion-prowl {
+  animation: creature-prowl 1450ms ease-in-out infinite;
+}
+
+.creature-motion-hover {
+  animation: creature-hover 1200ms ease-in-out infinite;
+}
+
+.creature-state-attack-right {
+  animation: creature-attack-right 220ms ease-out;
+}
+
+.creature-state-attack-left {
+  animation: creature-attack-left 220ms ease-out;
+}
+
+.creature-state-hit {
+  animation: creature-hit 220ms ease-in-out;
+}
+
+.creature-state-faint {
+  animation: creature-faint 500ms ease-in forwards;
+}
+
 .battle-stage {
   backdrop-filter: blur(2px);
+  position: relative;
+}
+
+.battle-nature-ring {
+  position: relative;
+  height: 26px;
+  margin: 0 auto 8px;
+  max-width: 520px;
+}
+
+.battle-rope {
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(120, 53, 15, 0.9), rgba(146, 64, 14, 0.92), rgba(120, 53, 15, 0.9));
+  box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.2);
+}
+
+.battle-rope-top {
+  top: 4px;
+}
+
+.battle-rope-mid {
+  top: 11px;
+}
+
+.battle-rope-bottom {
+  top: 18px;
+}
+
+.battle-post {
+  position: absolute;
+  top: 1px;
+  width: 8px;
+  height: 22px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #9a3412, #7c2d12);
+}
+
+.battle-post-left {
+  left: 8.5%;
+}
+
+.battle-post-right {
+  right: 8.5%;
 }
 
 .battle-narration {
@@ -538,4 +619,92 @@
 
 .animate-faint-drop {
   animation: faint-drop 420ms ease-in forwards;
+}
+
+@keyframes creature-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes creature-sway {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(1.8px);
+  }
+}
+
+@keyframes creature-prowl {
+  0%,
+  100% {
+    transform: translateX(0) translateY(0);
+  }
+  50% {
+    transform: translateX(-1px) translateY(-1.2px);
+  }
+}
+
+@keyframes creature-hover {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-3px) scale(1.015);
+  }
+}
+
+@keyframes creature-attack-right {
+  0% {
+    transform: translateX(0) scale(1);
+  }
+  55% {
+    transform: translateX(8px) scale(1.04);
+  }
+  100% {
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes creature-attack-left {
+  0% {
+    transform: translateX(0) scale(1);
+  }
+  55% {
+    transform: translateX(-8px) scale(1.04);
+  }
+  100% {
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes creature-hit {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-2px);
+  }
+  75% {
+    transform: translateX(2px);
+  }
+}
+
+@keyframes creature-faint {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(16px) scale(0.92);
+    opacity: 0.45;
+  }
 }
