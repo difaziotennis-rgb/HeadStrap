@@ -167,7 +167,7 @@ export function BattleScene({ battle, playerMonster, onMove, onEnemyTurn, onUseI
             <BattleCreatureSprite
               className="shadow-[0_0_26px_rgba(125,211,252,0.4)]"
               speciesId={enemySpecies.id}
-              size={140}
+              size={96}
               side="enemy"
               state={fx === "enemy_faint" ? "faint" : phase === "player" ? "hit" : phase === "enemy" ? "attacking" : "idle"}
             />
@@ -179,7 +179,7 @@ export function BattleScene({ battle, playerMonster, onMove, onEnemyTurn, onUseI
             <BattleCreatureSprite
               className="shadow-[0_0_26px_rgba(134,239,172,0.4)]"
               speciesId={playerSpecies.id}
-              size={140}
+              size={96}
               side="ally"
               state={fx === "player_faint" ? "faint" : phase === "enemy" ? "hit" : phase === "player" ? "attacking" : "idle"}
             />

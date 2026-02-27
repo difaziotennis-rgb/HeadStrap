@@ -30,6 +30,7 @@ const TILE_SIZE = 24;
 export function WorldCanvas({ map, player, npcs }: Props) {
   const viewportW = 20;
   const viewportH = 14;
+  const [tileSize, setTileSize] = useState(TILE_SIZE);
   const [renderPlayer, setRenderPlayer] = useState({ x: player.x, y: player.y });
   const targetPlayerRef = useRef({ x: player.x, y: player.y });
   const rafRef = useRef<number | null>(null);
@@ -42,6 +43,21 @@ export function WorldCanvas({ map, player, npcs }: Props) {
   useEffect(() => {
     targetPlayerRef.current = { x: player.x, y: player.y };
   }, [player.x, player.y]);
+
+  useEffect(() => {
+    const syncTileSize = () => {
+      if (window.innerWidth <= 430) {
+        setTileSize(18);
+      } else if (window.innerWidth <= 768) {
+        setTileSize(20);
+      } else {
+        setTileSize(TILE_SIZE);
+      }
+    };
+    syncTileSize();
+    window.addEventListener("resize", syncTileSize);
+    return () => window.removeEventListener("resize", syncTileSize);
+  }, []);
 
   useEffect(() => {
     const animate = () => {
@@ -86,6 +102,7 @@ export function WorldCanvas({ map, player, npcs }: Props) {
   const tiles = visibleTiles.map(({ tile, x, y }) => {
     const npc = npcIndex[`${x}_${y}`];
     const seed = Math.abs((x * 92821 + y * 68917 + 17) % 1000);
+    const characterScale = tileSize / TILE_SIZE;
     const nearWater =
       getTileKind(map, x + 1, y) === "water" ||
       getTileKind(map, x - 1, y) === "water" ||
@@ -94,7 +111,8 @@ export function WorldCanvas({ map, player, npcs }: Props) {
     return (
       <div
         key={`${x}_${y}`}
-        className="relative h-6 w-6 overflow-visible"
+        className="relative overflow-visible"
+        style={{ width: tileSize, height: tileSize }}
       >
         <span className="sprite-tile absolute inset-0" style={terrainSpriteStyle(tile.kind)} />
         {tile.kind === "ground" || tile.kind === "grass" || tile.kind === "short_grass" || tile.kind === "tall_grass" ? (
@@ -153,8 +171,8 @@ export function WorldCanvas({ map, player, npcs }: Props) {
         ) : null}
         {npc ? (
           <span className="animate-npc-idle absolute inset-0 z-20">
-            <span className="absolute left-1 top-[15px] h-1 w-3 rounded-full bg-slate-950/40" />
-            <span className="world-character absolute left-[1px] top-[1px]">
+            <span className="absolute left-1 top-[15px] h-1 w-3 rounded-full bg-slate-950/40" style={{ transform: `scale(${characterScale})`, transformOrigin: "left top" }} />
+            <span className="world-character absolute left-[1px] top-[1px]" style={{ transform: `scale(${characterScale})`, transformOrigin: "left top" }}>
               <span className="world-character-head bg-amber-100" />
               <span
                 className={`world-character-body ${
@@ -181,7 +199,7 @@ export function WorldCanvas({ map, player, npcs }: Props) {
       <div className="retro-bezel">
         <div
           className={`retro-screen biome-tone-${biomeToneKey(map.id)} relative grid w-fit overflow-hidden rounded`}
-          style={{ width: viewportW * TILE_SIZE, height: viewportH * TILE_SIZE }}
+          style={{ width: viewportW * tileSize, height: viewportH * tileSize }}
         >
           <div className="parallax-layer parallax-far" style={{ transform: `translateX(-${cameraX * 1.15}px)` }} />
           <div className="parallax-layer parallax-mid" style={{ transform: `translateX(-${cameraX * 2.2}px)` }} />
@@ -192,8 +210,8 @@ export function WorldCanvas({ map, player, npcs }: Props) {
           <div
             className="absolute left-0 top-0 grid"
             style={{
-              gridTemplateColumns: `repeat(${viewportW + 1}, ${TILE_SIZE}px)`,
-              transform: `translate(${-fracX * TILE_SIZE}px, ${-fracY * TILE_SIZE}px)`,
+              gridTemplateColumns: `repeat(${viewportW + 1}, ${tileSize}px)`,
+              transform: `translate(${-fracX * tileSize}px, ${-fracY * tileSize}px)`,
             }}
           >
             {tiles}
@@ -201,12 +219,12 @@ export function WorldCanvas({ map, player, npcs }: Props) {
           <span
             className={`pointer-events-none absolute z-30 ${walkFrame === 0 ? "animate-walk-a" : "animate-walk-b"}`}
             style={{
-              left: (renderPlayer.x - cameraX) * TILE_SIZE + 1,
-              top: (renderPlayer.y - cameraY) * TILE_SIZE + 1,
+              left: (renderPlayer.x - cameraX) * tileSize + 1,
+              top: (renderPlayer.y - cameraY) * tileSize + 1,
             }}
           >
-            <span className="absolute left-1 top-[15px] h-1 w-3 rounded-full bg-slate-950/45" />
-            <span className="world-character absolute left-[1px] top-[1px]">
+            <span className="absolute left-1 top-[15px] h-1 w-3 rounded-full bg-slate-950/45" style={{ transform: `scale(${tileSize / TILE_SIZE})`, transformOrigin: "left top" }} />
+            <span className="world-character absolute left-[1px] top-[1px]" style={{ transform: `scale(${tileSize / TILE_SIZE})`, transformOrigin: "left top" }}>
               <span className={`world-character-head ${avatarHeadTone(player.avatarId)}`} />
               <span className={`world-character-body ${avatarBodyTone(player.avatarId)}`} />
               <span className={`world-character-leg left-[2px] ${walkFrame === 0 ? "translate-y-0" : "translate-y-[1px]"}`} />

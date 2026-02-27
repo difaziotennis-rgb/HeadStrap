@@ -52,20 +52,28 @@ export function GameShell() {
     };
 
     const onKeyDown = (event: KeyboardEvent) => {
+      const key = event.key.toLowerCase();
+      const isArrow = event.key.startsWith("Arrow");
+      const isMoveKey = isArrow || key === "w" || key === "a" || key === "s" || key === "d";
+      if (isMoveKey) event.preventDefault();
       if (state.mode !== "world") return;
       if (event.repeat) return;
-      if (event.key === "ArrowUp" || event.key.toLowerCase() === "w") startMoveLoop("up");
-      if (event.key === "ArrowDown" || event.key.toLowerCase() === "s") startMoveLoop("down");
-      if (event.key === "ArrowLeft" || event.key.toLowerCase() === "a") startMoveLoop("left");
-      if (event.key === "ArrowRight" || event.key.toLowerCase() === "d") startMoveLoop("right");
+      if (event.key === "ArrowUp" || key === "w") startMoveLoop("up");
+      if (event.key === "ArrowDown" || key === "s") startMoveLoop("down");
+      if (event.key === "ArrowLeft" || key === "a") startMoveLoop("left");
+      if (event.key === "ArrowRight" || key === "d") startMoveLoop("right");
       if (event.key.toLowerCase() === "t") swapPartyIndex(1);
       if (event.key.toLowerCase() === "e") interact();
     };
     const onKeyUp = (event: KeyboardEvent) => {
-      if (event.key === "ArrowUp" || event.key.toLowerCase() === "w") stopMoveLoop("up");
-      if (event.key === "ArrowDown" || event.key.toLowerCase() === "s") stopMoveLoop("down");
-      if (event.key === "ArrowLeft" || event.key.toLowerCase() === "a") stopMoveLoop("left");
-      if (event.key === "ArrowRight" || event.key.toLowerCase() === "d") stopMoveLoop("right");
+      const key = event.key.toLowerCase();
+      const isArrow = event.key.startsWith("Arrow");
+      const isMoveKey = isArrow || key === "w" || key === "a" || key === "s" || key === "d";
+      if (isMoveKey) event.preventDefault();
+      if (event.key === "ArrowUp" || key === "w") stopMoveLoop("up");
+      if (event.key === "ArrowDown" || key === "s") stopMoveLoop("down");
+      if (event.key === "ArrowLeft" || key === "a") stopMoveLoop("left");
+      if (event.key === "ArrowRight" || key === "d") stopMoveLoop("right");
     };
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
@@ -89,7 +97,7 @@ export function GameShell() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="mx-auto w-full max-w-[1200px] space-y-4 px-1.5 pb-4 sm:px-2">
       <div className="retro-console p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h1 className="text-2xl font-bold tracking-tight text-slate-100 sm:text-3xl">DiFazio Monster Lab</h1>

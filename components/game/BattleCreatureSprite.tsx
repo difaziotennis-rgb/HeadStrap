@@ -51,11 +51,11 @@ export function BattleCreatureSprite({
       style={{
         width: size,
         height: size,
-        backgroundImage: "url('/game/sprites/creature-atlas-transparent.png')",
+        backgroundImage: "url('/game/sprites/creature-atlas-ultra-transparent.png')",
         backgroundSize: "400% 400%",
         backgroundPosition: `${(col / 3) * 100}% ${(row / 3) * 100}%`,
         backgroundRepeat: "no-repeat",
-        imageRendering: "pixelated",
+        imageRendering: "auto",
       }}
     >
       <span className="battle-creature-shadow" />
