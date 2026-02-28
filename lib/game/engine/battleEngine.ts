@@ -76,8 +76,15 @@ export function applyEnemyMove(
   battle: BattleState,
   playerMonster: MonsterInstance,
   enemyMonster: MonsterInstance,
-  aiPersonality: "aggressive" | "defensive" | "trickster" | "balanced" = "balanced",
+  options: {
+    aiPersonality?: "aggressive" | "defensive" | "trickster" | "balanced";
+    isBoss?: boolean;
+    bossPhase?: number;
+  } = {},
 ): BattleMoveResult {
+  const aiPersonality = options.aiPersonality ?? "balanced";
+  const isBoss = Boolean(options.isBoss);
+  const bossPhase = options.bossPhase ?? 1;
   const usable = enemyMonster.moves
     .map((moveRef, idx) => ({ moveRef, idx }))
     .filter((entry) => entry.moveRef.currentPp > 0);
@@ -108,8 +115,14 @@ export function applyEnemyMove(
   }
 
   const outcome = computeDamageOutcome(nextEnemy, playerMonster, move.id);
-  const damage = outcome.damage;
+  let damage = outcome.damage;
   const nextPlayer = structuredClone(playerMonster);
+  let signatureLine: string | null = null;
+  if (isBoss && bossPhase >= 2 && move.category !== "status" && Math.random() < (bossPhase >= 3 ? 0.4 : 0.25)) {
+    const bonus = Math.max(2, Math.floor(damage * (bossPhase >= 3 ? 0.38 : 0.24)));
+    damage += bonus;
+    signatureLine = bossPhase >= 3 ? "Signature Art: Umbral Cataclysm!" : "Signature Art: Eclipse Rend!";
+  }
   nextPlayer.currentHp = clamp(nextPlayer.currentHp - damage, 0, nextPlayer.maxHp);
 
   let nextState = withLog(
@@ -118,6 +131,9 @@ export function applyEnemyMove(
   );
   if (outcome.critical) {
     nextState = withLog(nextState, "Critical hit!");
+  }
+  if (signatureLine) {
+    nextState = withLog(nextState, signatureLine);
   }
   if (outcome.typeMod >= 1.35) {
     nextState = withLog(nextState, "It's super effective!");

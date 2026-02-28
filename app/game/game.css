@@ -647,6 +647,14 @@
   animation: cam-tension 900ms ease-in-out infinite;
 }
 
+.battle-cam-boss-rise {
+  animation: cam-boss-rise 1300ms ease-in-out infinite;
+}
+
+.battle-cam-boss-final {
+  animation: cam-boss-final 900ms ease-in-out infinite;
+}
+
 .fx-tone-neutral {
   filter: hue-rotate(0deg) saturate(1);
 }
@@ -1044,5 +1052,28 @@
   }
   50% {
     transform: scale(1.01);
+  }
+}
+
+@keyframes cam-boss-rise {
+  0%,
+  100% {
+    transform: scale(1.015) translateY(0);
+  }
+  50% {
+    transform: scale(1.03) translateY(-2px);
+  }
+}
+
+@keyframes cam-boss-final {
+  0%,
+  100% {
+    transform: scale(1.02) translateX(0);
+  }
+  25% {
+    transform: scale(1.03) translateX(-4px);
+  }
+  75% {
+    transform: scale(1.03) translateX(4px);
   }
 }

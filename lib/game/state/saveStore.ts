@@ -40,6 +40,12 @@ export function createInitialState(): GameState {
     },
     loreItems: [],
     questStage: 0,
+    questChoices: {},
+    factionReputation: {
+      dawn_guard: 0,
+      eclipse_order: 0,
+    },
+    companionBond: 0,
     mapEventState: {},
     lastWorldEvent: null,
   };

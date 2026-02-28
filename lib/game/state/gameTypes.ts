@@ -139,6 +139,9 @@ export interface GameState {
   gymProgress: Record<string, number>;
   loreItems: string[];
   questStage: number;
+  questChoices: Record<string, string>;
+  factionReputation: Record<string, number>;
+  companionBond: number;
   mapEventState: Record<string, number>;
   lastWorldEvent: string | null;
 }

@@ -246,6 +246,7 @@ export function useGameStore() {
         questStage: questBeat ? questBeat.stage : prev.questStage,
         activeDialog: questBeat ? questBeat.text : next.activeDialog,
         lastWorldEvent: worldEvent?.line ?? null,
+        companionBond: Math.min(100, prev.companionBond + (questBeat ? 2 : 0) + (worldEvent ? 1 : 0)),
         mapEventState: worldEvent ? { ...prev.mapEventState, [result.mapId]: worldEvent.nextCooldown } : prev.mapEventState,
       };
       if (result.transitionedMap) {
@@ -447,6 +448,13 @@ export function useGameStore() {
           }
         }
         const nextGymProgress = { ...prev.gymProgress };
+        const nextFaction = { ...prev.factionReputation };
+        const mapKey = battle.encounterArea.includes("eclipse") || battle.encounterArea.includes("void") ? "eclipse_order" : "dawn_guard";
+        if (trainerWin) {
+          nextFaction[mapKey] = (nextFaction[mapKey] ?? 0) + 2;
+        } else if (battle.isWild) {
+          nextFaction[mapKey] = (nextFaction[mapKey] ?? 0) + 1;
+        }
         if (trainerWin && trainerNpc?.gymKey && trainerNpc?.gymOrder) {
           nextGymProgress[trainerNpc.gymKey] = Math.max(nextGymProgress[trainerNpc.gymKey] ?? 0, trainerNpc.gymOrder);
         }
@@ -459,6 +467,8 @@ export function useGameStore() {
           badges: nextBadges,
           loreItems: nextLore,
           gymProgress: nextGymProgress,
+          factionReputation: nextFaction,
+          companionBond: Math.min(100, prev.companionBond + (trainerWin ? 3 : 1)),
           activeDialog: trainerWin
             ? trainerNpc?.badgeReward
               ? `${trainerNpc.followupLine} You received ${trainerNpc.badgeReward}. A new light pushes back the dark tide.`
@@ -487,7 +497,11 @@ export function useGameStore() {
       const playerMonster = party[0];
       const enemyMonster = prev.battle.enemy;
       const battle = prev.battle;
-      const res = applyEnemyMove(battle, playerMonster, enemyMonster, battle.aiPersonality);
+      const res = applyEnemyMove(battle, playerMonster, enemyMonster, {
+        aiPersonality: battle.aiPersonality,
+        isBoss: battle.isBoss,
+        bossPhase: battle.bossPhase,
+      });
       party[0] = res.playerMonster;
       const nextEnemy = res.enemyMonster;
 
@@ -598,10 +612,17 @@ export function useGameStore() {
       };
       const loreDrop = loreByNpc[npc.id];
       const gainsLore = loreDrop && !prev.loreItems.includes(loreDrop.id);
+      const factionKey = npc.mapId.includes("eclipse") || npc.mapId.includes("void") ? "eclipse_order" : "dawn_guard";
+      const nextFaction = {
+        ...prev.factionReputation,
+        [factionKey]: (prev.factionReputation[factionKey] ?? 0) + 1,
+      };
 
       return {
         ...prev,
         loreItems: gainsLore ? [...prev.loreItems, loreDrop.id] : prev.loreItems,
+        factionReputation: nextFaction,
+        companionBond: Math.min(100, prev.companionBond + (gainsLore ? 2 : 1)),
         activeDialog: gainsLore ? `${npc.name}: ${npc.introLine} ${loreDrop.line}` : `${npc.name}: ${npc.introLine}`,
       };
     });
@@ -689,6 +710,31 @@ export function useGameStore() {
     });
   }, []);
 
+  const setQuestChoice = useCallback((key: string, value: string) => {
+    setState((prev) => {
+      if (prev.questChoices[key]) return prev;
+      const faction = { ...prev.factionReputation };
+      if (key === "oath_path") {
+        if (value === "dawn") faction.dawn_guard = (faction.dawn_guard ?? 0) + 4;
+        if (value === "dusk") faction.eclipse_order = (faction.eclipse_order ?? 0) + 4;
+      }
+      return {
+        ...prev,
+        questChoices: {
+          ...prev.questChoices,
+          [key]: value,
+        },
+        factionReputation: faction,
+        activeDialog:
+          key === "oath_path"
+            ? value === "dawn"
+              ? "Quest Choice: Oath of Dawn chosen. You vow to shield others first."
+              : "Quest Choice: Oath of Dusk chosen. You vow to confront darkness directly."
+            : prev.activeDialog,
+      };
+    });
+  }, []);
+
   const resetSave = useCallback(() => {
     clearGameState();
     setState(createInitialState());
@@ -713,6 +759,7 @@ export function useGameStore() {
       sandboxGrantItems,
       sandboxTeleport,
       addSandboxMonster,
+      setQuestChoice,
       resetSave,
       isHydrated,
       mapTransitioning,
@@ -739,6 +786,7 @@ export function useGameStore() {
       sandboxGrantItems,
       sandboxTeleport,
       addSandboxMonster,
+      setQuestChoice,
       resetSave,
       isHydrated,
       mapTransitioning,

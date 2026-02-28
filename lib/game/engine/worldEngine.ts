@@ -34,32 +34,44 @@ export function movePlayer(
   }
 
   const standingTile = map.tiles[y * map.width + x];
-  // Portal transitions are resolved one input after stepping onto the portal tile
-  // so visual movement and tunnel entry feel grounded instead of pre-teleporting.
-  if (standingTile.kind === "portal" && standingTile.toMapId) {
-    const nextMapId = standingTile.toMapId;
-    const tx = standingTile.toX ?? MAP_INDEX[nextMapId]?.spawnX ?? x;
-    const ty = standingTile.toY ?? MAP_INDEX[nextMapId]?.spawnY ?? y;
-    return {
-      moved: true,
-      x: tx,
-      y: ty,
-      mapId: nextMapId,
-      steppedOnGrass: false,
-      triggerEncounter: null,
-      transitionedMap: true,
-    };
-  }
 
   const dir = DIRECTIONS[facing];
   const nx = x + dir.dx;
   const ny = y + dir.dy;
   if (nx < 0 || ny < 0 || nx >= map.width || ny >= map.height) {
+    if (standingTile.kind === "portal" && standingTile.toMapId) {
+      const nextMapId = standingTile.toMapId;
+      const tx = standingTile.toX ?? MAP_INDEX[nextMapId]?.spawnX ?? x;
+      const ty = standingTile.toY ?? MAP_INDEX[nextMapId]?.spawnY ?? y;
+      return {
+        moved: true,
+        x: tx,
+        y: ty,
+        mapId: nextMapId,
+        steppedOnGrass: false,
+        triggerEncounter: null,
+        transitionedMap: true,
+      };
+    }
     return { moved: false, x, y, mapId, steppedOnGrass: false, triggerEncounter: null, transitionedMap: false };
   }
 
   const tile = map.tiles[ny * map.width + nx];
   if (tile.kind === "wall" || tile.kind === "water" || tile.kind === "tree") {
+    if (standingTile.kind === "portal" && standingTile.toMapId) {
+      const nextMapId = standingTile.toMapId;
+      const tx = standingTile.toX ?? MAP_INDEX[nextMapId]?.spawnX ?? x;
+      const ty = standingTile.toY ?? MAP_INDEX[nextMapId]?.spawnY ?? y;
+      return {
+        moved: true,
+        x: tx,
+        y: ty,
+        mapId: nextMapId,
+        steppedOnGrass: false,
+        triggerEncounter: null,
+        transitionedMap: true,
+      };
+    }
     return { moved: false, x, y, mapId, steppedOnGrass: false, triggerEncounter: null, transitionedMap: false };
   }
 

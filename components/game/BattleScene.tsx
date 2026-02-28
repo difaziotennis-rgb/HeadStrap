@@ -153,7 +153,11 @@ export function BattleScene({ battle, playerMonster, onMove, onEnemyTurn, onUseI
   }
 
   const camClass =
-    phase === "player"
+    battle.isBoss && battle.bossPhase >= 3
+      ? "battle-cam-boss-final"
+      : battle.isBoss && battle.bossPhase === 2
+        ? "battle-cam-boss-rise"
+        : phase === "player"
       ? "battle-cam-player"
       : phase === "enemy"
         ? "battle-cam-enemy"

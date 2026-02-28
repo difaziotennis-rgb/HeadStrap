@@ -176,7 +176,35 @@ export function GameShell() {
             <span className="retro-chip text-emerald-200">Lakeside Gym: {state.gymProgress.lakeside ?? 0}/3</span>
             <span className="retro-chip text-violet-200">Eclipse Gym: {state.gymProgress.eclipse ?? 0}/3</span>
             <span className="retro-chip text-cyan-200">Lore Relics: {state.loreItems.length}</span>
+            <span className="retro-chip text-emerald-200">Companion Bond: {state.companionBond}</span>
+            <span className="retro-chip text-amber-200">
+              Dawn Guard Rep: {state.factionReputation.dawn_guard ?? 0}
+            </span>
+            <span className="retro-chip text-violet-200">
+              Eclipse Order Rep: {state.factionReputation.eclipse_order ?? 0}
+            </span>
             <span className="retro-chip text-slate-300">Controls: Arrows/WASD, E interact, T next lead</span>
+          </div>
+        ) : null}
+        {state.questStage >= 2 && !state.questChoices.oath_path ? (
+          <div className="mt-3 rounded-md border border-slate-700 bg-slate-900/70 p-2">
+            <p className="text-xs text-slate-200">Branching Choice: Choose your Oath Path</p>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              <button
+                className="pixel-btn rounded bg-emerald-700 px-2 py-2 text-xs font-semibold text-white"
+                onClick={() => store.setQuestChoice("oath_path", "dawn")}
+                type="button"
+              >
+                Oath of Dawn (Protect)
+              </button>
+              <button
+                className="pixel-btn rounded bg-violet-700 px-2 py-2 text-xs font-semibold text-white"
+                onClick={() => store.setQuestChoice("oath_path", "dusk")}
+                type="button"
+              >
+                Oath of Dusk (Confront)
+              </button>
+            </div>
           </div>
         ) : null}
         {showAvatars ? (
