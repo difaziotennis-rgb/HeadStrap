@@ -38,7 +38,7 @@ export function MobileControls({ onMove, onOpenTeam, onInteract }: Props) {
   return (
     <div className="retro-console p-3 md:hidden">
       <p className="mb-2 text-xs uppercase tracking-[0.2em] text-slate-300">Touch controls</p>
-      <p className="mb-3 text-[11px] text-slate-400">Hold arrows to move smoothly.</p>
+      <p className="mb-3 text-[11px] text-slate-400">Hold to move.</p>
       <div className="grid grid-cols-3 gap-2">
         <div />
         <button
@@ -56,13 +56,7 @@ export function MobileControls({ onMove, onOpenTeam, onInteract }: Props) {
         >
           ◀
         </button>
-        <button
-          className="pixel-btn min-h-12 rounded-md border border-cyan-500/60 bg-cyan-700 p-3 text-xs font-semibold active:scale-95"
-          onClick={() => onOpenTeam()}
-          type="button"
-        >
-          Team Swap
-        </button>
+        <div />
         <button
           className="pixel-btn min-h-12 rounded-md border border-slate-600 bg-slate-700 p-3 text-base font-bold active:scale-95"
           {...holdHandlers("right")}
@@ -93,10 +87,9 @@ export function MobileControls({ onMove, onOpenTeam, onInteract }: Props) {
           onClick={onOpenTeam}
           type="button"
         >
-          Lead Swap
+          Next Lead
         </button>
       </div>
-      <p className="mt-3 text-[11px] text-slate-400">Tip: Team Swap promotes your next healthy monster.</p>
     </div>
   );
 }

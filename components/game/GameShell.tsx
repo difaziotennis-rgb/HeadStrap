@@ -19,7 +19,13 @@ export function GameShell() {
   const moveLoopRef = useRef<number | null>(null);
   const lastMoveTimeRef = useRef(0);
   const [cinematicHud, setCinematicHud] = useState(true);
+  const [showInfo, setShowInfo] = useState(false);
+  const [showAvatars, setShowAvatars] = useState(false);
+  const [showPanels, setShowPanels] = useState(false);
+  const [showDevTools, setShowDevTools] = useState(false);
   const objectiveText = nextObjectiveText(state.gymProgress.lakeside ?? 0, state.gymProgress.eclipse ?? 0);
+  const chapterText = storyChapterLabel(state.gymProgress.lakeside ?? 0, state.gymProgress.eclipse ?? 0);
+  const showRightRail = showPanels || showDevTools;
 
   useEffect(() => {
     const MOVE_INTERVAL_MS = 84;
@@ -112,22 +118,41 @@ export function GameShell() {
             </span>
           </div>
         </div>
-        <p className="mt-2 text-sm text-slate-300">
-          A hero's journey through mystery, darkness, magic, and friendship. Isolated to <code>/game</code>.
+        <p className="mt-2 text-sm text-slate-200">
+          <span className="font-semibold text-cyan-200">Objective:</span> {objectiveText}
         </p>
-        <p className="mt-1 text-xs text-slate-400">Desktop: arrows/WASD • Interact: E • Mobile: touch D-pad.</p>
-        <div className="mt-2 flex flex-wrap gap-2 text-xs">
-          <span className="retro-chip text-slate-200">Map cast: {mapNpcs.length} characters</span>
-          <span className="retro-chip text-slate-200">
-            Trainers unbeaten: {mapNpcs.filter((n) => (n.role === "trainer" || n.role === "rival") && !state.defeatedTrainerIds.includes(n.id)).length}
-          </span>
-          <span className="retro-chip text-amber-200">Badges: {state.badges.length ? state.badges.join(", ") : "None"}</span>
-          <span className="retro-chip text-emerald-200">Lakeside Gym: {state.gymProgress.lakeside ?? 0}/3</span>
-          <span className="retro-chip text-violet-200">Eclipse Gym: {state.gymProgress.eclipse ?? 0}/3</span>
-          <span className="retro-chip text-cyan-200">Chapter: {storyChapterLabel(state.gymProgress.lakeside ?? 0, state.gymProgress.eclipse ?? 0)}</span>
-          <span className="retro-chip text-indigo-200">Objective: {objectiveText}</span>
-        </div>
-        <div className="mt-2 flex gap-2">
+        <p className="mt-1 text-xs text-slate-400">
+          <span className="font-semibold text-violet-200">Chapter:</span> {chapterText}
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button
+            className="pixel-btn rounded bg-slate-700 px-2 py-1 text-xs text-slate-200"
+            onClick={() => setShowPanels((prev) => !prev)}
+            type="button"
+          >
+            {showPanels ? "Hide Team" : "Show Team"}
+          </button>
+          <button
+            className="pixel-btn rounded bg-slate-700 px-2 py-1 text-xs text-slate-200"
+            onClick={() => setShowInfo((prev) => !prev)}
+            type="button"
+          >
+            {showInfo ? "Hide Details" : "Show Details"}
+          </button>
+          <button
+            className="pixel-btn rounded bg-slate-700 px-2 py-1 text-xs text-slate-200"
+            onClick={() => setShowAvatars((prev) => !prev)}
+            type="button"
+          >
+            {showAvatars ? "Hide Avatars" : "Choose Avatar"}
+          </button>
+          <button
+            className="pixel-btn rounded bg-slate-700 px-2 py-1 text-xs text-slate-200"
+            onClick={() => setShowDevTools((prev) => !prev)}
+            type="button"
+          >
+            {showDevTools ? "Hide Dev Tools" : "Show Dev Tools"}
+          </button>
           <button
             className="pixel-btn rounded bg-slate-700 px-2 py-1 text-xs text-slate-200"
             onClick={() => setCinematicHud((prev) => !prev)}
@@ -136,26 +161,40 @@ export function GameShell() {
             HUD: {cinematicHud ? "Cinematic" : "Compact"}
           </button>
         </div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <button className="pixel-btn rounded px-2 py-1 text-xs text-slate-200" onClick={() => store.chooseAvatar("ace")} type="button">
-            Avatar: Ace
-          </button>
-          <button className="pixel-btn rounded px-2 py-1 text-xs text-slate-200" onClick={() => store.chooseAvatar("blaze")} type="button">
-            Avatar: Blaze
-          </button>
-          <button className="pixel-btn rounded px-2 py-1 text-xs text-slate-200" onClick={() => store.chooseAvatar("wave")} type="button">
-            Avatar: Wave
-          </button>
-          <button className="pixel-btn rounded px-2 py-1 text-xs text-slate-200" onClick={() => store.chooseAvatar("shadow")} type="button">
-            Avatar: Shadow
-          </button>
-        </div>
+        {showInfo ? (
+          <div className="mt-2 flex flex-wrap gap-2 text-xs">
+            <span className="retro-chip text-slate-200">Map cast: {mapNpcs.length} characters</span>
+            <span className="retro-chip text-slate-200">
+              Trainers unbeaten: {mapNpcs.filter((n) => (n.role === "trainer" || n.role === "rival") && !state.defeatedTrainerIds.includes(n.id)).length}
+            </span>
+            <span className="retro-chip text-amber-200">Badges: {state.badges.length ? state.badges.join(", ") : "None"}</span>
+            <span className="retro-chip text-emerald-200">Lakeside Gym: {state.gymProgress.lakeside ?? 0}/3</span>
+            <span className="retro-chip text-violet-200">Eclipse Gym: {state.gymProgress.eclipse ?? 0}/3</span>
+            <span className="retro-chip text-slate-300">Controls: Arrows/WASD, E interact, T next lead</span>
+          </div>
+        ) : null}
+        {showAvatars ? (
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button className="pixel-btn rounded px-2 py-1 text-xs text-slate-200" onClick={() => store.chooseAvatar("ace")} type="button">
+              Avatar: Ace
+            </button>
+            <button className="pixel-btn rounded px-2 py-1 text-xs text-slate-200" onClick={() => store.chooseAvatar("blaze")} type="button">
+              Avatar: Blaze
+            </button>
+            <button className="pixel-btn rounded px-2 py-1 text-xs text-slate-200" onClick={() => store.chooseAvatar("wave")} type="button">
+              Avatar: Wave
+            </button>
+            <button className="pixel-btn rounded px-2 py-1 text-xs text-slate-200" onClick={() => store.chooseAvatar("shadow")} type="button">
+              Avatar: Shadow
+            </button>
+          </div>
+        ) : null}
       </div>
 
       {!state.starterChosen ? <StarterPicker onChoose={store.chooseStarter} /> : null}
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_370px]">
-        <div className={`space-y-4 ${cinematicHud ? "" : "lg:max-w-[310px]"}`}>
+      <div className={`grid gap-3 ${showRightRail ? "lg:grid-cols-[1fr_350px]" : "grid-cols-1"}`}>
+        <div className={`space-y-3 ${cinematicHud ? "" : "lg:max-w-[310px]"}`}>
           {state.mode === "battle" && state.battle ? (
             <BattleScene
               battle={state.battle}
@@ -173,46 +212,59 @@ export function GameShell() {
                 {mapTransitioning ? <div className="animate-map-transition absolute inset-0 rounded-xl bg-slate-950/70" /> : null}
               </div>
               <MobileControls onInteract={store.interact} onMove={store.move} onOpenTeam={() => store.swapPartyIndex(1)} />
-              <div className="grid gap-2 sm:grid-cols-2">
+              <div className="grid gap-2 sm:grid-cols-3">
                 <button
                   className="pixel-btn min-h-11 rounded bg-indigo-700 px-3 py-2 text-sm font-semibold text-white"
                   onClick={store.interact}
                   type="button"
                 >
-                  Interact (E)
+                  Interact
                 </button>
                 <button
                   className="pixel-btn min-h-11 rounded bg-cyan-700 px-3 py-2 text-sm font-semibold text-white"
                   onClick={() => store.swapPartyIndex(1)}
                   type="button"
                 >
-                  Team Swap (T)
+                  Next Lead
+                </button>
+                <button
+                  className="pixel-btn min-h-11 rounded bg-slate-700 px-3 py-2 text-sm font-semibold text-white"
+                  onClick={() => setShowPanels((prev) => !prev)}
+                  type="button"
+                >
+                  {showPanels ? "Hide Team" : "Show Team"}
                 </button>
               </div>
             </>
           )}
         </div>
 
-        <div className="space-y-4">
-          <TeamPanel onMakeLead={store.swapPartyIndex} party={state.party} storageCount={state.storage.length} />
-          <SandboxPanel
-            enabled={state.sandbox.enabled}
-            encounterId={state.sandbox.guaranteedEncounter}
-            onAddMonster={store.addSandboxMonster}
-            onGrantItems={store.sandboxGrantItems}
-            onHeal={store.sandboxHealAll}
-            onSetEncounter={store.setSandboxEncounter}
-            onTeleport={store.sandboxTeleport}
-            onToggle={store.toggleSandbox}
-          />
-          <button
-            className="pixel-btn w-full rounded-lg border border-rose-400/40 bg-rose-700 px-3 py-2 text-sm font-medium text-white hover:bg-rose-600"
-            onClick={store.resetSave}
-            type="button"
-          >
-            Reset Local Save
-          </button>
-        </div>
+        {showRightRail ? (
+          <div className="space-y-3">
+            {showPanels ? <TeamPanel onMakeLead={store.swapPartyIndex} party={state.party} storageCount={state.storage.length} /> : null}
+            {showDevTools ? (
+              <>
+                <SandboxPanel
+                  enabled={state.sandbox.enabled}
+                  encounterId={state.sandbox.guaranteedEncounter}
+                  onAddMonster={store.addSandboxMonster}
+                  onGrantItems={store.sandboxGrantItems}
+                  onHeal={store.sandboxHealAll}
+                  onSetEncounter={store.setSandboxEncounter}
+                  onTeleport={store.sandboxTeleport}
+                  onToggle={store.toggleSandbox}
+                />
+                <button
+                  className="pixel-btn w-full rounded-lg border border-rose-400/40 bg-rose-700 px-3 py-2 text-sm font-medium text-white hover:bg-rose-600"
+                  onClick={store.resetSave}
+                  type="button"
+                >
+                  Reset Local Save
+                </button>
+              </>
+            ) : null}
+          </div>
+        ) : null}
       </div>
       {state.activeDialog ? (
         <div className="retro-console p-3">

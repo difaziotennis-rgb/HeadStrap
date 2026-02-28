@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { PixelSprite } from "@/components/game/PixelSprite";
 import { SPECIES_INDEX } from "@/lib/game/data/monsters";
 import { MonsterInstance } from "@/lib/game/state/gameTypes";
@@ -11,10 +12,31 @@ type Props = {
 };
 
 export function TeamPanel({ party, storageCount, onMakeLead }: Props) {
+  const [expanded, setExpanded] = useState(false);
+  const lead = party[0];
+  const leadSpecies = lead ? SPECIES_INDEX[lead.speciesId] : null;
+
   return (
     <div className="retro-console p-3">
-      <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-100">Team</h3>
-      <div className="mt-2 space-y-2">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-100">Team</h3>
+        <button
+          className="pixel-btn rounded bg-slate-700 px-2 py-1 text-xs font-medium text-slate-100"
+          onClick={() => setExpanded((prev) => !prev)}
+          type="button"
+        >
+          {expanded ? "Collapse" : "Expand"}
+        </button>
+      </div>
+      {leadSpecies ? (
+        <div className="mt-2 rounded-md border border-slate-700 bg-slate-900/70 p-2">
+          <p className="text-xs text-slate-300">
+            Lead: <span className="font-semibold text-slate-100">{leadSpecies.name}</span> Lv {lead.level}
+          </p>
+          <p className="text-[11px] text-slate-400">Party {party.length}/6 • Storage {storageCount}</p>
+        </div>
+      ) : null}
+      {expanded ? <div className="mt-2 space-y-2">
         {party.map((member, index) => {
           const species = SPECIES_INDEX[member.speciesId];
           const hpPct = Math.round((member.currentHp / Math.max(member.maxHp, 1)) * 100);
@@ -56,8 +78,7 @@ export function TeamPanel({ party, storageCount, onMakeLead }: Props) {
             </div>
           );
         })}
-      </div>
-      <p className="mt-2 text-xs text-slate-400">Storage monsters: {storageCount}</p>
+      </div> : null}
     </div>
   );
 }
