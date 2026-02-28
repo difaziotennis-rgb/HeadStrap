@@ -124,6 +124,11 @@ export function GameShell() {
         <p className="mt-1 text-xs text-slate-400">
           <span className="font-semibold text-violet-200">Chapter:</span> {chapterText}
         </p>
+        {state.lastWorldEvent ? (
+          <p className="mt-1 text-xs text-amber-200">
+            <span className="font-semibold">World Event:</span> {state.lastWorldEvent}
+          </p>
+        ) : null}
         <div className="mt-3 flex flex-wrap gap-2">
           <button
             className="pixel-btn rounded bg-slate-700 px-2 py-1 text-xs text-slate-200"
@@ -170,6 +175,7 @@ export function GameShell() {
             <span className="retro-chip text-amber-200">Badges: {state.badges.length ? state.badges.join(", ") : "None"}</span>
             <span className="retro-chip text-emerald-200">Lakeside Gym: {state.gymProgress.lakeside ?? 0}/3</span>
             <span className="retro-chip text-violet-200">Eclipse Gym: {state.gymProgress.eclipse ?? 0}/3</span>
+            <span className="retro-chip text-cyan-200">Lore Relics: {state.loreItems.length}</span>
             <span className="retro-chip text-slate-300">Controls: Arrows/WASD, E interact, T next lead</span>
           </div>
         ) : null}

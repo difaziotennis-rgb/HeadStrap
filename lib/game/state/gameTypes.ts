@@ -95,6 +95,9 @@ export interface BattleState {
   enemy: MonsterInstance;
   isWild: boolean;
   enemyName: string;
+  isBoss: boolean;
+  bossPhase: number;
+  aiPersonality: "aggressive" | "defensive" | "trickster" | "balanced";
   trainerId?: string;
   trainerRoster?: MonsterInstance[];
   activePartyIndex: number;
@@ -134,6 +137,10 @@ export interface GameState {
   activeDialog: string | null;
   badges: string[];
   gymProgress: Record<string, number>;
+  loreItems: string[];
+  questStage: number;
+  mapEventState: Record<string, number>;
+  lastWorldEvent: string | null;
 }
 
 export interface NpcCharacter {

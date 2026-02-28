@@ -186,7 +186,11 @@ export function BattleScene({ battle, playerMonster, onMove, onEnemyTurn, onUseI
           <span className="battle-stadium-platform" />
           <span className="battle-stadium-platform-core" />
           <span className="battle-stadium-jumbotron">
-            {battle.isWild ? `Wild encounter - ${enemySpecies.name}` : `${battle.enemyName} Challenge Arena`}
+            {battle.isBoss
+              ? `Boss Phase ${battle.bossPhase}/3 - ${battle.enemyName}`
+              : battle.isWild
+                ? `Wild encounter - ${enemySpecies.name}`
+                : `${battle.enemyName} Challenge Arena`}
           </span>
 
           <div className="battle-slot battle-slot-enemy">
@@ -224,7 +228,11 @@ export function BattleScene({ battle, playerMonster, onMove, onEnemyTurn, onUseI
               <div>
                 <p className="text-xs uppercase tracking-wider text-slate-300">{battle.isWild ? "Wild" : "Trainer"}</p>
                 <p className="font-semibold text-slate-100">{enemySpecies.name}</p>
-                {!battle.isWild ? <p className="text-[11px] text-slate-300">{battle.enemyName}</p> : null}
+                {!battle.isWild ? (
+                  <p className="text-[11px] text-slate-300">
+                    {battle.enemyName} {battle.isBoss ? `• Phase ${battle.bossPhase}` : ""}
+                  </p>
+                ) : null}
               </div>
               <p className="text-xs text-slate-300">Lv {enemy.level}</p>
             </div>

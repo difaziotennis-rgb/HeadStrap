@@ -38,6 +38,10 @@ export function createInitialState(): GameState {
       lakeside: 0,
       eclipse: 0,
     },
+    loreItems: [],
+    questStage: 0,
+    mapEventState: {},
+    lastWorldEvent: null,
   };
 }
 

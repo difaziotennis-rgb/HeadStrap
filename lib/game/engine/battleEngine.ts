@@ -76,8 +76,11 @@ export function applyEnemyMove(
   battle: BattleState,
   playerMonster: MonsterInstance,
   enemyMonster: MonsterInstance,
+  aiPersonality: "aggressive" | "defensive" | "trickster" | "balanced" = "balanced",
 ): BattleMoveResult {
-  const usable = enemyMonster.moves.filter((m) => m.currentPp > 0);
+  const usable = enemyMonster.moves
+    .map((moveRef, idx) => ({ moveRef, idx }))
+    .filter((entry) => entry.moveRef.currentPp > 0);
   if (!usable.length) {
     return {
       nextState: withLog(battle, `${SPECIES_INDEX[enemyMonster.speciesId].name} stalled.`),
@@ -88,10 +91,10 @@ export function applyEnemyMove(
     };
   }
 
-  const selected = usable[Math.floor(Math.random() * usable.length)];
-  const move = MOVE_INDEX[selected.moveId];
+  const selected = chooseEnemyMove(usable, aiPersonality, enemyMonster, playerMonster);
+  const move = MOVE_INDEX[selected.moveRef.moveId];
   const nextEnemy = structuredClone(enemyMonster);
-  const moveIdx = nextEnemy.moves.findIndex((m) => m.moveId === selected.moveId && m.currentPp > 0);
+  const moveIdx = selected.idx;
   if (moveIdx >= 0) {
     nextEnemy.moves[moveIdx].currentPp -= 1;
   }
@@ -127,6 +130,31 @@ export function applyEnemyMove(
   }
 
   return { nextState, playerMonster: nextPlayer, enemyMonster: nextEnemy, faintedEnemy: false, faintedPlayer };
+}
+
+function chooseEnemyMove(
+  usable: { moveRef: MonsterInstance["moves"][number]; idx: number }[],
+  aiPersonality: "aggressive" | "defensive" | "trickster" | "balanced",
+  enemyMonster: MonsterInstance,
+  playerMonster: MonsterInstance,
+) {
+  const weighted = usable.map((entry) => {
+    const move = MOVE_INDEX[entry.moveRef.moveId];
+    let score = 1 + move.power / 30;
+    if (move.category === "status") score *= aiPersonality === "trickster" ? 2.2 : 0.6;
+    if (aiPersonality === "aggressive" && move.category !== "status") score *= 1.55;
+    if (aiPersonality === "defensive" && playerMonster.currentHp < playerMonster.maxHp * 0.35) score *= 1.3;
+    if (aiPersonality === "defensive" && enemyMonster.currentHp < enemyMonster.maxHp * 0.45 && move.category === "status") score *= 1.9;
+    if (aiPersonality === "trickster" && move.accuracy < 90) score *= 1.4;
+    return { ...entry, score };
+  });
+  const total = weighted.reduce((sum, entry) => sum + Math.max(0.05, entry.score), 0);
+  let roll = Math.random() * total;
+  for (const entry of weighted) {
+    roll -= Math.max(0.05, entry.score);
+    if (roll <= 0) return entry;
+  }
+  return weighted[weighted.length - 1];
 }
 
 export function computeDamage(attacker: MonsterInstance, defender: MonsterInstance, moveId: string) {

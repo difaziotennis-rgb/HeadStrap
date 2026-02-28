@@ -97,6 +97,82 @@ function areaStoryBeat(mapId: string, gymProgress: Record<string, number>, badge
   return "Hope travels with you. A brighter future is built one battle at a time.";
 }
 
+function cinematicQuestBeat(mapId: string, questStage: number) {
+  if (mapId === "emberstep_plains" && questStage < 1) {
+    return {
+      stage: 1,
+      text: "Cinematic Event: The Emberstep sky darkens. A distant bell rings, and your team feels the coming eclipse.",
+    };
+  }
+  if (mapId === "eclipse_city" && questStage < 2) {
+    return {
+      stage: 2,
+      text: "Cinematic Event: Eclipse City's wards flicker. Citizens whisper your name as the last line of hope.",
+    };
+  }
+  if (mapId === "void_catacombs" && questStage < 3) {
+    return {
+      stage: 3,
+      text: "Cinematic Event: The catacombs breathe with ancient shadow. Your party's bond becomes your only lantern.",
+    };
+  }
+  if (mapId === "dawn_sanctuary" && questStage < 4) {
+    return {
+      stage: 4,
+      text: "Cinematic Event: At dawn, the sanctuary answers. Light and darkness meet, and your oath hardens.",
+    };
+  }
+  return null;
+}
+
+function dynamicMapEvent(mapId: string, stepCounter: number, mapEventState: Record<string, number>) {
+  const cooldown = mapEventState[mapId] ?? 0;
+  if (stepCounter < cooldown) return null;
+  const eventsByMap: Record<string, string[]> = {
+    dreadmarsh: [
+      "Dynamic Event: A mist surge cuts visibility. Nearby creatures grow bolder.",
+      "Dynamic Event: A lantern spirit appears, then vanishes toward safer ground.",
+    ],
+    umbral_woods: [
+      "Dynamic Event: Whispering branches reveal a hidden safe path for a moment.",
+      "Dynamic Event: A shadow pulse ripples through the woods; your team steadies each other.",
+    ],
+    eclipse_city: [
+      "Dynamic Event: City ward crystals flare bright, pushing darkness back for now.",
+      "Dynamic Event: A crowd gathers to cheer your progress through the eclipse trials.",
+    ],
+  };
+  const options = eventsByMap[mapId];
+  if (!options || Math.random() > 0.07) return null;
+  const line = options[Math.floor(Math.random() * options.length)];
+  return {
+    line,
+    nextCooldown: stepCounter + 45,
+  };
+}
+
+function inferAiPersonality(npcName: string, personality: string) {
+  const text = `${npcName} ${personality}`.toLowerCase();
+  if (text.includes("aggressive") || text.includes("brawler") || text.includes("marshal") || text.includes("hunter")) {
+    return "aggressive" as const;
+  }
+  if (text.includes("calm") || text.includes("guardian") || text.includes("defensive") || text.includes("captain")) {
+    return "defensive" as const;
+  }
+  if (text.includes("trickster") || text.includes("shadow") || text.includes("mystic") || text.includes("oracle")) {
+    return "trickster" as const;
+  }
+  return "balanced" as const;
+}
+
+function inferWildAi(speciesId: string) {
+  const type = SPECIES_INDEX[speciesId]?.type;
+  if (type === "ember" || type === "stone") return "aggressive" as const;
+  if (type === "aqua" || type === "flora") return "defensive" as const;
+  if (type === "void" || type === "gust") return "trickster" as const;
+  return "balanced" as const;
+}
+
 export function useGameStore() {
   const [state, setState] = useState<GameState>(createInitialState);
   const [isHydrated, setIsHydrated] = useState(false);
@@ -161,19 +237,32 @@ export function useGameStore() {
         },
         visitedMaps: prev.visitedMaps.includes(result.mapId) ? prev.visitedMaps : [...prev.visitedMaps, result.mapId],
         activeDialog: result.transitionedMap ? areaStoryBeat(result.mapId, prev.gymProgress, prev.badges) : null,
+        lastWorldEvent: null,
+      };
+      const questBeat = result.transitionedMap ? cinematicQuestBeat(result.mapId, prev.questStage) : null;
+      const worldEvent = dynamicMapEvent(result.mapId, next.player.stepCounter, prev.mapEventState);
+      const withEvents = {
+        ...next,
+        questStage: questBeat ? questBeat.stage : prev.questStage,
+        activeDialog: questBeat ? questBeat.text : next.activeDialog,
+        lastWorldEvent: worldEvent?.line ?? null,
+        mapEventState: worldEvent ? { ...prev.mapEventState, [result.mapId]: worldEvent.nextCooldown } : prev.mapEventState,
       };
       if (result.transitionedMap) {
         setMapTransitioning(true);
         setTimeout(() => setMapTransitioning(false), 240);
       }
-      if (result.triggerEncounter && hasLivingMonster(next)) {
+      if (result.triggerEncounter && hasLivingMonster(withEvents)) {
         return {
-          ...next,
+          ...withEvents,
           mode: "battle",
           battle: {
             enemy: result.triggerEncounter,
             isWild: true,
             enemyName: SPECIES_INDEX[result.triggerEncounter.speciesId].name,
+            isBoss: false,
+            bossPhase: 1,
+            aiPersonality: inferWildAi(result.triggerEncounter.speciesId),
             trainerId: undefined,
             trainerRoster: undefined,
             activePartyIndex: 0,
@@ -187,12 +276,12 @@ export function useGameStore() {
             pendingEnemyTurn: false,
           },
           sandbox: {
-            ...next.sandbox,
+            ...withEvents.sandbox,
             guaranteedEncounter: null,
           },
         };
       }
-      return next;
+      return withEvents;
     });
   }, []);
 
@@ -304,6 +393,30 @@ export function useGameStore() {
       enemyMonster = res.enemyMonster;
       const faintedEnemy = res.faintedEnemy;
 
+      if (!faintedEnemy && battle.isBoss) {
+        const hpRatio = enemyMonster.currentHp / Math.max(enemyMonster.maxHp, 1);
+        const nextPhase = hpRatio <= 0.33 ? 3 : hpRatio <= 0.66 ? 2 : 1;
+        if (nextPhase > battle.bossPhase) {
+          const buffedEnemy = {
+            ...enemyMonster,
+            attack: enemyMonster.attack + (nextPhase === 2 ? 3 : 6),
+            defense: enemyMonster.defense + (nextPhase === 2 ? 2 : 5),
+            speed: enemyMonster.speed + (nextPhase === 2 ? 2 : 4),
+          };
+          enemyMonster = buffedEnemy;
+          battle = {
+            ...battle,
+            bossPhase: nextPhase,
+            log: [
+              ...battle.log.slice(-7),
+              nextPhase === 2
+                ? `${battle.enemyName} enters Phase II - the arena darkens and power surges.`
+                : `${battle.enemyName} enters Final Phase - void pressure rises!`,
+            ],
+          };
+        }
+      }
+
       if (faintedEnemy) {
         if (battle.trainerId && battle.trainerRoster && battle.trainerRoster.length > 0) {
           const [nextEnemy, ...rest] = battle.trainerRoster;
@@ -314,6 +427,7 @@ export function useGameStore() {
               ...battle,
               enemy: nextEnemy,
               trainerRoster: rest,
+              bossPhase: battle.isBoss ? Math.max(1, battle.bossPhase) : 1,
               pendingEnemyTurn: false,
               log: [...battle.log.slice(-7), `${battle.enemyName} sent out ${SPECIES_INDEX[nextEnemy.speciesId].name}!`],
             },
@@ -324,8 +438,13 @@ export function useGameStore() {
         const trainerWin = battle.trainerId ? !prev.defeatedTrainerIds.includes(battle.trainerId) : false;
         const trainerNpc = battle.trainerId ? NPCS.find((n) => n.id === battle.trainerId) : null;
         const nextBadges = [...prev.badges];
+        const nextLore = [...prev.loreItems];
         if (trainerWin && trainerNpc?.badgeReward && !nextBadges.includes(trainerNpc.badgeReward)) {
           nextBadges.push(trainerNpc.badgeReward);
+          const badgeLore = `lore_badge_${trainerNpc.badgeReward.toLowerCase().replace(/\s+/g, "_")}`;
+          if (!nextLore.includes(badgeLore)) {
+            nextLore.push(badgeLore);
+          }
         }
         const nextGymProgress = { ...prev.gymProgress };
         if (trainerWin && trainerNpc?.gymKey && trainerNpc?.gymOrder) {
@@ -338,6 +457,7 @@ export function useGameStore() {
           battle: null,
           defeatedTrainerIds: trainerWin ? [...prev.defeatedTrainerIds, battle.trainerId as string] : prev.defeatedTrainerIds,
           badges: nextBadges,
+          loreItems: nextLore,
           gymProgress: nextGymProgress,
           activeDialog: trainerWin
             ? trainerNpc?.badgeReward
@@ -367,7 +487,7 @@ export function useGameStore() {
       const playerMonster = party[0];
       const enemyMonster = prev.battle.enemy;
       const battle = prev.battle;
-      const res = applyEnemyMove(battle, playerMonster, enemyMonster);
+      const res = applyEnemyMove(battle, playerMonster, enemyMonster, battle.aiPersonality);
       party[0] = res.playerMonster;
       const nextEnemy = res.enemyMonster;
 
@@ -451,6 +571,9 @@ export function useGameStore() {
             enemy: createMonsterInstance(speciesId, level),
             isWild: false,
             enemyName: npc.name,
+            isBoss: Boolean(npc.badgeReward),
+            bossPhase: 1,
+            aiPersonality: inferAiPersonality(npc.name, npc.personality),
             trainerId: npc.id,
             trainerRoster: roster,
             activePartyIndex: 0,
@@ -468,9 +591,18 @@ export function useGameStore() {
         };
       }
 
+      const loreByNpc: Record<string, { id: string; line: string }> = {
+        npc_29: { id: "lore_aether_tablet", line: "Lore found: Aether Tablet - 'Dark tides answer unresolved grief.'" },
+        npc_41: { id: "lore_oath_bark", line: "Lore found: Oath Bark - 'Heroes swore to carry each other through the eclipse.'" },
+        npc_55: { id: "lore_dawn_chime", line: "Lore found: Dawn Chime - 'Hope is strongest when shared aloud.'" },
+      };
+      const loreDrop = loreByNpc[npc.id];
+      const gainsLore = loreDrop && !prev.loreItems.includes(loreDrop.id);
+
       return {
         ...prev,
-        activeDialog: `${npc.name}: ${npc.introLine}`,
+        loreItems: gainsLore ? [...prev.loreItems, loreDrop.id] : prev.loreItems,
+        activeDialog: gainsLore ? `${npc.name}: ${npc.introLine} ${loreDrop.line}` : `${npc.name}: ${npc.introLine}`,
       };
     });
   }, [getAdjacentNpc]);
