@@ -503,7 +503,12 @@ export default function RTCBookPage() {
           </p>
         </div>
 
-        <div className="mt-5 overflow-x-auto rounded-2xl border border-[#ece8e2] bg-white shadow-[0_10px_24px_rgba(26,26,26,0.04)]">
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#ece8e2] bg-[#f9f8f6] px-3 py-2 text-[11px] text-[#7a756d]">
+          <p className="uppercase tracking-[0.1em]">Court Grid</p>
+          <p>Tap any open slot to book instantly.</p>
+        </div>
+
+        <div className="mt-3 overflow-x-auto rounded-3xl border border-[#ece8e2] bg-white shadow-[0_12px_28px_rgba(26,26,26,0.05)]">
           <table className="min-w-[980px] w-full border-collapse">
             <thead>
               <tr className="bg-[#faf9f7]">
@@ -525,19 +530,21 @@ export default function RTCBookPage() {
             </thead>
             <tbody>
               {hours.map((hour) => (
-                <tr key={hour}>
+                <tr key={hour} className="transition-colors hover:bg-[#fcfbf9]">
                   <td className="sticky left-0 z-10 border-r border-t border-[#f0ede8] bg-white px-3 py-2 text-[12px] font-medium text-[#6b665e]">
                     {formatHour(hour)}
                   </td>
                   {courts.map((court) => {
                     const key = bookingKey(selectedDate, court.id, hour);
                     const existing = bookings[key];
-                  const isBlockStart =
-                    !!existing && existing.blockStartHour === existing.hour;
+                    const isBlockStart =
+                      !!existing && existing.blockStartHour === existing.hour;
+                    const isSelectedCell =
+                      activeCourt?.id === court.id && activeHour === hour;
                     return (
                       <td key={key} className="border-t border-[#f0ede8] p-1.5 align-top">
                         {existing ? (
-                          <div className="rounded-lg border border-[#ead2d2] bg-[#fff7f7] px-2 py-2 text-[11px] shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]">
+                          <div className="rounded-xl border border-[#ead2d2] bg-gradient-to-b from-[#fffafa] to-[#fff5f5] px-2.5 py-2 text-[11px] shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]">
                             <p className="font-medium text-[#7f1d1d]">
                               {isBlockStart ? "Booked" : "Booked (cont.)"}
                             </p>
@@ -564,9 +571,14 @@ export default function RTCBookPage() {
                           <button
                             type="button"
                             onClick={() => openBooking(court, hour)}
-                            className="w-full rounded-lg border border-[#d9d5cf] bg-white px-2 py-2 text-[11px] font-medium text-[#1a1a1a] transition-all hover:border-[#c7c1b8] hover:bg-[#faf9f7] hover:shadow-[0_4px_10px_rgba(26,26,26,0.05)]"
+                            className={`w-full rounded-xl border px-2.5 py-2 text-[11px] font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#d7d2c9] ${
+                              isSelectedCell
+                                ? "border-[#1a1a1a] bg-[#1a1a1a] text-white shadow-[0_6px_14px_rgba(26,26,26,0.2)]"
+                                : "border-[#d9d5cf] bg-white text-[#1a1a1a] hover:-translate-y-[1px] hover:border-[#c7c1b8] hover:bg-[#faf9f7] hover:shadow-[0_6px_14px_rgba(26,26,26,0.08)] active:translate-y-0"
+                            }`}
+                            aria-label={`Book ${court.name} at ${formatHour(hour)}`}
                           >
-                            Book
+                            {isSelectedCell ? "Selected" : "Book"}
                           </button>
                         )}
                       </td>
