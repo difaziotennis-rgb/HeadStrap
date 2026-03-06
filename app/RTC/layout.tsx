@@ -39,10 +39,10 @@ export default function RTCLayout({ children }: { children: React.ReactNode }) {
             <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Rhinebeck Tennis Club</p>
             <p className="mt-2 text-[13px] text-[#4a4a4a]">2 Salisbury Ct, Rhinebeck, NY 12572</p>
             <a
-              href="tel:+18458768008"
+              href="tel:+16319015220"
               className="mt-1 block text-[12px] text-[#6b665e] underline-offset-4 hover:text-[#1a1a1a] hover:underline"
             >
-              (845) 876-8008
+              (631) 901-5220
             </a>
             <a
               href="mailto:difaziotennis@gmail.com"
