@@ -62,6 +62,27 @@ function formatTime(hour: number): string {
   return `${h}:${minutes.toString().padStart(2, "0")} ${hour >= 12 ? "PM" : "AM"}`;
 }
 
+function buildCancellationMailto(booking: Booking, formattedDate: string, formattedTime: string): string {
+  const subject = `Lesson Cancellation Request - ${formattedDate} at ${formattedTime}`;
+  const bodyLines = [
+    "Hi Coach Derek,",
+    "",
+    "I'd like to cancel my lesson.",
+    "",
+    `Name: ${booking.clientName || "Not provided"}`,
+    `Email: ${booking.clientEmail || "Not provided"}`,
+    `Date: ${formattedDate}`,
+    `Time: ${formattedTime}`,
+    `Booking ID: ${booking.id}`,
+    "",
+    "Thanks,",
+    booking.clientName || "Client",
+  ];
+  return `mailto:difaziotennis@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(
+    bodyLines.join("\n")
+  )}`;
+}
+
 // Build payment links
 function getPaymentLinks(booking: Booking, formattedDate: string, formattedTime: string) {
   const note = `Tennis lesson - ${formattedDate} at ${formattedTime}`;
@@ -86,6 +107,7 @@ export function clientConfirmationEmail(booking: Booking, stripeCheckoutUrl?: st
   const date = formatBookingDate(booking.date);
   const time = formatTime(booking.hour);
   const isMember = !!booking.memberCode;
+  const cancellationLink = buildCancellationMailto(booking, date, time);
 
   // Member confirmation — no payment links, just auto-charge note
   if (isMember) {
@@ -127,6 +149,11 @@ export function clientConfirmationEmail(booking: Booking, stripeCheckoutUrl?: st
           <p style="font-size:13px; color:#2d5016; font-weight:600; margin:0 0 4px;">Member — Auto-Pay Enabled</p>
           <p style="font-size:12px; color:#8a8477; margin:0;">Your card on file will be charged $${booking.amount} the morning after your lesson.</p>
         </div>
+
+        <div style="margin-top:16px; text-align:center;">
+          <a href="${cancellationLink}" class="btn btn-outline" style="font-size:12px; padding:10px 18px;">Cancel Lesson</a>
+          <p class="muted" style="margin-top:8px;">72-hour cancellation policy applies.</p>
+        </div>
       </div>
 
       <div class="footer">
@@ -149,6 +176,9 @@ Location: Rhinebeck Tennis Club
 Fee: $${booking.amount}
 
 PAYMENT: Your card on file will be charged $${booking.amount} the morning after your lesson.
+
+Cancellation link: ${cancellationLink}
+72-hour cancellation policy applies.
 
 DiFazio Tennis - Rhinebeck, NY
 difaziotennis@gmail.com | 631-901-5220
@@ -203,6 +233,11 @@ difaziotennis@gmail.com | 631-901-5220
         ${stripeCheckoutUrl ? `<a href="${stripeCheckoutUrl}" target="_blank" rel="noopener" class="payment-btn btn-outline">Pay $${booking.amount} with Card</a>` : ""}
       </div>
 
+      <div style="margin-top:16px; text-align:center;">
+        <a href="${cancellationLink}" class="btn btn-outline" style="font-size:12px; padding:10px 18px;">Cancel Lesson</a>
+        <p class="muted" style="margin-top:8px;">72-hour cancellation policy applies.</p>
+      </div>
+
     </div>
 
     <div class="footer">
@@ -228,6 +263,8 @@ PAYMENT OPTIONS:
 ${venmo ? `Venmo: ${venmo}` : ""}
 ${paypal ? `PayPal: ${paypal}` : ""}
 ${stripeCheckoutUrl ? `Card: ${stripeCheckoutUrl}` : ""}
+Cancellation link: ${cancellationLink}
+72-hour cancellation policy applies.
 
 DiFazio Tennis - Rhinebeck, NY
 difaziotennis@gmail.com | 631-901-5220
