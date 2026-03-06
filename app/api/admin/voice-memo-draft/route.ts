@@ -14,6 +14,7 @@ type ParsedLessonData = {
   physical_limitations: string[];
   future_goals: string[];
   next_lesson_date: string;
+  personal_note?: string;
 };
 
 function buildMessage(studentName: string, parsed: ParsedLessonData): string {
@@ -51,6 +52,12 @@ function buildMessage(studentName: string, parsed: ParsedLessonData): string {
     message += `📅 Next Lesson: ${parsed.next_lesson_date}\n\n`;
   }
 
+  if (parsed.personal_note && parsed.personal_note !== "not specified") {
+    const formatted = parsed.personal_note.charAt(0).toUpperCase() + parsed.personal_note.slice(1);
+    message += `💬 Personal Note:\n`;
+    message += `• ${formatted}\n\n`;
+  }
+
   message += `Keep up the great work! 💪\n\n`;
   message += `- Coach Derek`;
   return message;
@@ -68,7 +75,8 @@ Return ONLY valid JSON (no markdown, no code blocks, no explanations). The JSON 
   "key_areas_focused": ["array", "of", "strings"],
   "physical_limitations": ["array", "of", "strings"],
   "future_goals": ["array", "of", "strings"],
-  "next_lesson_date": "text description of next lesson time/date or 'not specified'"
+  "next_lesson_date": "text description of next lesson time/date or 'not specified'",
+  "personal_note": "optional encouraging message / inside joke / custom note or 'not specified'"
 }
 
 Rules:
@@ -76,7 +84,10 @@ Rules:
 - Rewrite rough spoken phrasing into clear, client-friendly wording.
 - Do not include generic filler text.
 - Keep each array item concise and specific.
+- Do not use one-word labels when details were provided.
+- Example: prefer "Proper grip on serve" over just "Serve".
 - For next_lesson_date, extract exact timing text if mentioned; otherwise "not specified".
+- For personal_note, include only if coach said something personal/encouraging/fun; otherwise "not specified".
 
 TRANSCRIPT:
 ${transcript}
@@ -119,6 +130,7 @@ ${transcript}
     if (!Array.isArray(parsed.physical_limitations)) parsed.physical_limitations = [];
     if (!Array.isArray(parsed.future_goals)) parsed.future_goals = [];
     if (!parsed.next_lesson_date) parsed.next_lesson_date = "not specified";
+    if (!parsed.personal_note) parsed.personal_note = "not specified";
     return parsed;
   } catch {
     return null;
@@ -154,6 +166,7 @@ export async function POST(req: Request) {
         physical_limitations: [],
         future_goals: [],
         next_lesson_date: "not specified",
+        personal_note: "not specified",
       };
     }
 
