@@ -423,6 +423,7 @@ export default function RTCAdminPage() {
   const [performanceView, setPerformanceView] = useState<"monthly" | "seasonal" | "yearly">("monthly");
   const [selectedClinic, setSelectedClinic] = useState("All Clinics");
   const [selectedEvent, setSelectedEvent] = useState("All Events");
+  const [selectedLessonCoach, setSelectedLessonCoach] = useState("All Pros");
   const [selectedMemberNumber, setSelectedMemberNumber] = useState<string | null>(null);
   const [selectedMemberDetailTab, setSelectedMemberDetailTab] = useState<
     "courts" | "clinics" | "events" | "lessons"
@@ -775,6 +776,74 @@ export default function RTCAdminPage() {
     });
     return Array.from(map.values()).sort((a, b) => b.signups - a.signups);
   }, [mergedData.clinics]);
+  const lessonMonitor = useMemo(() => {
+    const now = new Date();
+    const yearAgo = new Date(now);
+    yearAgo.setFullYear(yearAgo.getFullYear() - 1);
+    const rows = new Map<
+      string,
+      {
+        coachName: string;
+        lessons: number;
+        members: Set<string>;
+        memberCounts: Map<string, number>;
+      }
+    >();
+    rtcCoaches.forEach((coach) => {
+      rows.set(coach.name, {
+        coachName: coach.name,
+        lessons: 0,
+        members: new Set<string>(),
+        memberCounts: new Map<string, number>(),
+      });
+    });
+    mergedData.lessons.forEach((lesson) => {
+      const at = new Date(lesson.createdAt);
+      if (at < yearAgo) return;
+      const key = lesson.coachName || "Unassigned";
+      const row =
+        rows.get(key) || { coachName: key, lessons: 0, members: new Set<string>(), memberCounts: new Map<string, number>() };
+      const member = lesson.memberNumber ? `${lesson.clientName} (#${lesson.memberNumber})` : lesson.clientName;
+      row.lessons += 1;
+      row.members.add(member);
+      row.memberCounts.set(member, (row.memberCounts.get(member) || 0) + 1);
+      rows.set(key, row);
+    });
+    return Array.from(rows.values())
+      .map((row) => {
+        const topMembers = Array.from(row.memberCounts.entries())
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 3)
+          .map(([name, count]) => `${name} (${count})`);
+        return {
+          coachName: row.coachName,
+          lessons: row.lessons,
+          uniqueMembers: row.members.size,
+          avgPerWeek: row.lessons / 52,
+          topMembers,
+        };
+      })
+      .sort((a, b) => b.lessons - a.lessons);
+  }, [mergedData.lessons]);
+  const lessonMemberLeaderboard = useMemo(() => {
+    const now = new Date();
+    const yearAgo = new Date(now);
+    yearAgo.setFullYear(yearAgo.getFullYear() - 1);
+    const rows = new Map<string, { member: string; lessons: number; pros: Set<string> }>();
+    mergedData.lessons.forEach((lesson) => {
+      const at = new Date(lesson.createdAt);
+      if (at < yearAgo) return;
+      const member = lesson.memberNumber ? `${lesson.clientName} (#${lesson.memberNumber})` : lesson.clientName;
+      const row = rows.get(member) || { member, lessons: 0, pros: new Set<string>() };
+      row.lessons += 1;
+      row.pros.add(lesson.coachName);
+      rows.set(member, row);
+    });
+    return Array.from(rows.values())
+      .map((row) => ({ member: row.member, lessons: row.lessons, pros: row.pros.size }))
+      .sort((a, b) => b.lessons - a.lessons)
+      .slice(0, 8);
+  }, [mergedData.lessons]);
   const nextWeekClinics = useMemo(() => {
     const now = new Date();
     const currentWeekday = now.getDay();
@@ -1017,6 +1086,10 @@ export default function RTCAdminPage() {
     () => ["All Events", ...eventMonitor.map((e) => e.title)],
     [eventMonitor]
   );
+  const lessonOptions = useMemo(
+    () => ["All Pros", ...lessonMonitor.map((row) => row.coachName)],
+    [lessonMonitor]
+  );
   const proNameOptions = useMemo(() => {
     const names = new Set<string>([...rtcCoaches.map((coach) => coach.name)]);
     mergedData.proProfiles.forEach((pro) => names.add(pro.displayName));
@@ -1030,14 +1103,20 @@ export default function RTCAdminPage() {
     () => eventMonitor.filter((item) => selectedEvent === "All Events" || item.title === selectedEvent),
     [eventMonitor, selectedEvent]
   );
+  const visibleLessonMonitor = useMemo(
+    () => lessonMonitor.filter((item) => selectedLessonCoach === "All Pros" || item.coachName === selectedLessonCoach),
+    [lessonMonitor, selectedLessonCoach]
+  );
   const programsSummary = useMemo(
     () => ({
       clinics: clinicMonitor.length,
       clinicSignups: clinicMonitor.reduce((sum, item) => sum + item.signups, 0),
+      lessonRequests: mergedData.lessons.length,
+      activePros: lessonMonitor.filter((item) => item.lessons > 0).length,
       events: eventMonitor.length,
       eventGuests: eventMonitor.reduce((sum, item) => sum + item.guests, 0),
     }),
-    [clinicMonitor, eventMonitor]
+    [clinicMonitor, eventMonitor, lessonMonitor, mergedData.lessons.length]
   );
 
   const payoutSummary = useMemo(() => {
@@ -1993,7 +2072,7 @@ export default function RTCAdminPage() {
 
         {activeWorkspace === "programs" && (
           <div className="mt-4 grid gap-4 xl:grid-cols-2">
-            <div className="xl:col-span-2 grid gap-3 sm:grid-cols-4">
+            <div className="xl:col-span-2 grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
               <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3">
                 <p className="text-[10px] uppercase tracking-[0.1em] text-[#8a8477]">Clinics</p>
                 <p className="mt-1 text-[20px] font-semibold">{programsSummary.clinics}</p>
@@ -2001,6 +2080,14 @@ export default function RTCAdminPage() {
               <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3">
                 <p className="text-[10px] uppercase tracking-[0.1em] text-[#8a8477]">Clinic Signups</p>
                 <p className="mt-1 text-[20px] font-semibold">{programsSummary.clinicSignups}</p>
+              </div>
+              <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3">
+                <p className="text-[10px] uppercase tracking-[0.1em] text-[#8a8477]">Lesson Requests</p>
+                <p className="mt-1 text-[20px] font-semibold">{programsSummary.lessonRequests}</p>
+              </div>
+              <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3">
+                <p className="text-[10px] uppercase tracking-[0.1em] text-[#8a8477]">Active Pros</p>
+                <p className="mt-1 text-[20px] font-semibold">{programsSummary.activePros}</p>
               </div>
               <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3">
                 <p className="text-[10px] uppercase tracking-[0.1em] text-[#8a8477]">Events</p>
@@ -2114,6 +2201,70 @@ export default function RTCAdminPage() {
                   ))}
                   {clinicMemberLeaderboard.length === 0 && (
                     <p className="text-[12px] text-[#8a8477]">No repeat clinic member data yet.</p>
+                  )}
+                </div>
+              </div>
+            </details>
+
+            <details className="rounded-xl border border-[#ece8e2] p-4">
+              <summary className="cursor-pointer text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">
+                Lessons Monitor + Past Performance
+              </summary>
+              <div className="mt-3 flex flex-wrap items-center justify-end">
+                <select
+                  value={selectedLessonCoach}
+                  onChange={(e) => setSelectedLessonCoach(e.target.value)}
+                  className="rounded-lg border border-[#e8e5df] px-2 py-1 text-[12px]"
+                >
+                  {lessonOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="mt-3 overflow-x-auto">
+                <table className="w-full min-w-[620px] text-left text-[12px]">
+                  <thead className="text-[#8a8477]">
+                    <tr>
+                      <th className="py-1">Pro</th>
+                      <th className="py-1">Lessons (12M)</th>
+                      <th className="py-1">Unique Members</th>
+                      <th className="py-1">Avg / Week</th>
+                      <th className="py-1">Top Members</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibleLessonMonitor.map((row) => (
+                      <tr key={row.coachName} className="border-t border-[#f0ede8]">
+                        <td className="py-1.5 font-medium">{row.coachName}</td>
+                        <td className="py-1.5">{row.lessons}</td>
+                        <td className="py-1.5">{row.uniqueMembers}</td>
+                        <td className="py-1.5">{row.avgPerWeek.toFixed(1)}</td>
+                        <td className="py-1.5 text-[#6b665e]">{row.topMembers.join(", ") || "No lessons yet"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {visibleLessonMonitor.length === 0 && (
+                  <p className="mt-2 text-[12px] text-[#8a8477]">No lesson data found for this filter.</p>
+                )}
+              </div>
+              <div className="mt-3 rounded-lg border border-[#ece8e2] bg-[#faf9f7] p-3">
+                <p className="text-[11px] uppercase tracking-[0.1em] text-[#8a8477]">
+                  Most Active Lesson Members (Past 12 Months)
+                </p>
+                <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                  {lessonMemberLeaderboard.map((row) => (
+                    <div key={row.member} className="rounded border border-[#ece8e2] bg-white px-2.5 py-2 text-[11px]">
+                      <p className="font-medium">{row.member}</p>
+                      <p className="text-[#6b665e]">
+                        Lessons: {row.lessons} · Pros worked with: {row.pros}
+                      </p>
+                    </div>
+                  ))}
+                  {lessonMemberLeaderboard.length === 0 && (
+                    <p className="text-[12px] text-[#8a8477]">No lesson activity in the last 12 months.</p>
                   )}
                 </div>
               </div>
