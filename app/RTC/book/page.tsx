@@ -785,13 +785,14 @@ export default function RTCBookPage() {
                             </p>
                             {isBlockStart ? (
                               <>
-                                <p className="mt-0.5 truncate text-[#7a756d]">{existing.clientName}</p>
-                                <p className="text-[#a39e95]">${existing.totalAmount}</p>
-                                <p className="text-[#a39e95]">
-                                  {existing.paymentStatus === "paid"
-                                    ? "Paid"
-                                    : "Payment pending"}
-                                </p>
+                                {memberSession ? (
+                                  <>
+                                    <p className="mt-0.5 truncate text-[#7a756d]">{existing.clientName}</p>
+                                    <p className="text-[#a39e95]">Member view: booked court time</p>
+                                  </>
+                                ) : (
+                                  <p className="mt-0.5 text-[#a39e95]">Reserved court time</p>
+                                )}
                               </>
                             ) : (
                               <p className="text-[#a39e95]">Part of multi-hour reservation</p>
