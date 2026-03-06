@@ -357,17 +357,6 @@ export default function RTCBookPage() {
     }
   }
 
-  const todaysOpenSlots = useMemo(() => {
-    let open = 0;
-    for (const court of courts) {
-      for (const hour of hours) {
-        const key = bookingKey(selectedDate, court.id, hour);
-        if (!bookings[key]) open += 1;
-      }
-    }
-    return open;
-  }, [bookings, selectedDate]);
-
   const monthLabel = useMemo(
     () => calendarMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" }),
     [calendarMonth]
@@ -489,18 +478,6 @@ export default function RTCBookPage() {
             <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Member Pricing</p>
             <p className="mt-2 text-[14px]">Indoor: <strong>$62/hr</strong> · Outdoor: <strong>$44/hr</strong></p>
           </div>
-        </div>
-
-        <div className="mt-3 rounded-2xl border border-[#ece8e2] bg-[#faf9f7] p-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Live Availability</p>
-            <span className="rounded-full border border-[#d9d5cf] bg-white px-3 py-1 text-[11px] font-medium text-[#4a4a4a]">
-              {todaysOpenSlots} open slots
-            </span>
-          </div>
-          <p className="mt-1 text-[13px] text-[#6b665e]">
-            Remaining inventory for the selected day across indoor and outdoor courts.
-          </p>
         </div>
 
         <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#ece8e2] bg-[#f9f8f6] px-3 py-2 text-[11px] text-[#7a756d]">
