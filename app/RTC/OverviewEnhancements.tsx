@@ -226,7 +226,7 @@ export default function OverviewEnhancements() {
       <div className="rounded-2xl border border-[#e8e5df] bg-white p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Club Pulse</p>
-          <p className="text-[11px] text-[#8a8477]">Subtle live activity across the club</p>
+          <p className="text-[11px] text-[#8a8477]">Live activity across the club</p>
         </div>
         <div className="mt-3 grid gap-2 sm:grid-cols-3">
           <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] px-3 py-2 text-[12px]">
