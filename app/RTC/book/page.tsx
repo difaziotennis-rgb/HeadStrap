@@ -390,7 +390,7 @@ export default function RTCBookPage() {
               Full-day schedule for all courts. Tap any open cell to reserve and pay.
             </p>
           </div>
-          <div className="relative flex flex-wrap items-center gap-2" ref={calendarRef}>
+          <div className="relative flex w-full flex-wrap items-center gap-2 sm:w-auto" ref={calendarRef}>
             <label className="text-[12px] font-medium text-[#6b665e]">Date</label>
             <button
               type="button"
@@ -398,10 +398,10 @@ export default function RTCBookPage() {
                 setCalendarMonth(new Date(parseDateInput(selectedDate).getFullYear(), parseDateInput(selectedDate).getMonth(), 1));
                 setCalendarOpen((v) => !v);
               }}
-              className="flex items-center gap-2 rounded-lg border border-[#e8e5df] bg-[#faf9f7] px-3 py-2 text-left shadow-[0_4px_12px_rgba(26,26,26,0.04)] transition-colors hover:border-[#d9d5cf]"
+              className="flex w-full items-center gap-2 rounded-lg border border-[#e8e5df] bg-[#faf9f7] px-3 py-2 text-left shadow-[0_4px_12px_rgba(26,26,26,0.04)] transition-colors hover:border-[#d9d5cf] sm:w-auto"
             >
               <span aria-hidden className="text-[13px] text-[#8a8477]">📅</span>
-              <span className="min-w-[170px] text-[13px] font-medium text-[#1a1a1a]">{formatPrettyDate(selectedDate)}</span>
+              <span className="text-[13px] font-medium text-[#1a1a1a] sm:min-w-[170px]">{formatPrettyDate(selectedDate)}</span>
             </button>
             <button
               type="button"
@@ -411,7 +411,7 @@ export default function RTCBookPage() {
               Today
             </button>
             {calendarOpen && (
-              <div className="absolute right-0 top-[calc(100%+8px)] z-30 w-[320px] rounded-xl border border-[#e8e5df] bg-white p-3 shadow-[0_14px_34px_rgba(26,26,26,0.14)]">
+              <div className="absolute left-0 top-[calc(100%+8px)] z-30 w-[min(20rem,calc(100vw-2rem))] rounded-xl border border-[#e8e5df] bg-white p-3 shadow-[0_14px_34px_rgba(26,26,26,0.14)] sm:left-auto sm:right-0">
                 <div className="mb-2 flex items-center justify-between">
                   <button
                     type="button"

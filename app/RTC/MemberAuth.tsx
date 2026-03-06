@@ -90,7 +90,7 @@ export default function MemberAuth() {
       {open && (
         <form
           onSubmit={handleSignIn}
-          className="absolute right-0 top-[calc(100%+8px)] z-50 w-64 rounded-xl border border-[#e8e5df] bg-white p-3 shadow-[0_16px_34px_rgba(26,26,26,0.16)]"
+          className="absolute right-0 top-[calc(100%+8px)] z-50 w-[min(20rem,calc(100vw-2rem))] rounded-xl border border-[#e8e5df] bg-white p-3 shadow-[0_16px_34px_rgba(26,26,26,0.16)]"
         >
           <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Member Access</p>
           <div className="mt-2 grid gap-2">

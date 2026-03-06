@@ -216,7 +216,7 @@ export default function RTCLessonsPage() {
                 placeholder="Phone"
                 className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
               />
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid gap-2 sm:grid-cols-2">
                 <select
                   value={duration}
                   onChange={(e) => setDuration(e.target.value)}

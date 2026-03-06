@@ -88,9 +88,6 @@ export default function RTCPage() {
               >
                 Book Court
               </Link>
-              <Link href="/RTC/member/portal" className="rounded-lg border border-white/50 bg-white/90 px-4 py-2 text-[#1a1a1a] hover:bg-white">
-                Access Member Portal
-              </Link>
               <Link href="/RTC/events" className="rounded-lg border border-white/50 bg-white/90 px-4 py-2 text-[#1a1a1a] hover:bg-white">
                 Explore Events
               </Link>

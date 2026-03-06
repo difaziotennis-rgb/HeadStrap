@@ -20,6 +20,21 @@ const nextConfig = {
       },
     ],
   },
+  // Normalize lowercase rtc routes to canonical /RTC routes
+  async redirects() {
+    return [
+      {
+        source: '/rtc',
+        destination: '/RTC',
+        permanent: true,
+      },
+      {
+        source: '/rtc/:path*',
+        destination: '/RTC/:path*',
+        permanent: true,
+      },
+    ]
+  },
   // Rewrite /strapped SPA routes to serve the static index.html
   async rewrites() {
     return {
