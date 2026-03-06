@@ -112,13 +112,10 @@ export default function RTCPage() {
           </Link>
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-[#e8e5df] bg-white p-5">
+        <div className="mt-4 rounded-2xl border border-[#e8e5df] bg-white p-5">
           <p className="text-[13px] text-[#6b665e]">
-            Looking for your existing DiFazio booking workflows?
+            Rhinebeck Tennis Club online access includes court reservations, lessons, clinics, and member services.
           </p>
-          <Link href="/book" className="rounded-lg border border-[#d9d5cf] px-4 py-2 text-[12px] font-medium hover:bg-[#faf9f7]">
-            Go to Main Booking Site
-          </Link>
         </div>
       </section>
     </main>

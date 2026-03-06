@@ -10,9 +10,7 @@ export default function RTCLayout({ children }: { children: React.ReactNode }) {
             <p className="text-[10px] uppercase tracking-[0.25em] text-[#b0a99f]">DiFazio Tennis</p>
             <h1 className="text-[16px] font-semibold tracking-tight">Rhinebeck Tennis Club</h1>
           </div>
-          <Link href="/book" className="text-[12px] font-medium text-[#7a756d] underline-offset-4 hover:text-[#1a1a1a] hover:underline">
-            Main Booking Site
-          </Link>
+          <span className="text-[11px] uppercase tracking-[0.12em] text-[#a39e95]">Member + Public Access</span>
         </div>
         <div className="border-t border-[#f0ede8]">
           <nav className="mx-auto flex w-full max-w-6xl gap-1 overflow-x-auto px-4 py-2 sm:px-6">
