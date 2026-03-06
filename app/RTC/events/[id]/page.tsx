@@ -6,6 +6,19 @@ type PageProps = {
   params: { id: string };
 };
 
+const eventImageByCategory: Record<string, string> = {
+  Tournament:
+    "https://images.unsplash.com/photo-1600614282844-a885427b0c15?auto=format&fit=crop&w=1800&q=80",
+  Social:
+    "https://images.unsplash.com/photo-1662663560803-db03b7821eb9?auto=format&fit=crop&w=1800&q=80",
+  Family:
+    "https://images.unsplash.com/photo-1560880944-796251b78b4c?auto=format&fit=crop&w=1800&q=80",
+  "Tennis Social":
+    "https://images.unsplash.com/photo-1538510933295-151ff2375694?auto=format&fit=crop&w=1800&q=80",
+  Gala:
+    "https://images.unsplash.com/photo-1650296778058-29543cf76508?auto=format&fit=crop&w=1800&q=80",
+};
+
 function eventMood(category: string): string {
   if (category === "Tournament") return "Signature competitive weekend with elevated social programming.";
   if (category === "Gala") return "Elegant evening format with dinner, awards, and seasonal celebration.";
@@ -17,6 +30,7 @@ export default function RTCEventDetailPage({ params }: PageProps) {
   const { id } = params;
   const event = rtcSummerEvents.find((item) => item.id === id);
   if (!event) notFound();
+  const eventImage = eventImageByCategory[event.category] || eventImageByCategory["Social"];
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
@@ -29,6 +43,13 @@ export default function RTCEventDetailPage({ params }: PageProps) {
         </div>
         <h2 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">{event.title}</h2>
         <p className="mt-3 max-w-3xl text-[14px] leading-relaxed text-[#6b665e]">{event.description}</p>
+        <div className="mt-4 overflow-hidden rounded-xl border border-[#ece8e2]">
+          <img
+            src={eventImage}
+            alt={`${event.title} atmosphere`}
+            className="h-44 w-full object-cover sm:h-56"
+          />
+        </div>
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-4 shadow-[0_6px_18px_rgba(26,26,26,0.03)]">

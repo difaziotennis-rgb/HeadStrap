@@ -124,6 +124,13 @@ export default function RTCLessonsPage() {
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
       <div className="rounded-2xl border border-[#e8e5df] bg-white p-6 sm:p-8">
+        <div className="mb-4 overflow-hidden rounded-xl border border-[#ece8e2]">
+          <img
+            src="https://images.unsplash.com/photo-1587255608209-1476e9589ae9?auto=format&fit=crop&w=1600&q=80"
+            alt="Catskills waterfall and forest"
+            className="h-28 w-full object-cover sm:h-36"
+          />
+        </div>
         <h2 className="text-2xl font-semibold tracking-tight">Private Lessons</h2>
         <p className="mt-2 max-w-3xl text-[14px] text-[#6b665e]">
           Select a coach, pick a time, and reserve your lesson.

@@ -524,6 +524,13 @@ export default function RTCBookPage() {
   return (
     <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-10">
       <div className="overflow-hidden rounded-3xl border border-[#e8e5df] bg-gradient-to-b from-white to-[#fcfbf9] p-6 shadow-[0_18px_42px_rgba(26,26,26,0.06)] sm:p-8">
+        <div className="mb-4 overflow-hidden rounded-2xl border border-[#ece8e2]">
+          <img
+            src="https://images.unsplash.com/photo-1600614282844-a885427b0c15?auto=format&fit=crop&w=1600&q=80"
+            alt="Aerial tennis court surrounded by trees"
+            className="h-32 w-full object-cover sm:h-40"
+          />
+        </div>
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-[10px] uppercase tracking-[0.16em] text-[#8a8477]">Rhinebeck Tennis Club</p>
