@@ -15,7 +15,7 @@ import { ChevronLeft, ChevronRight, X, Pencil, Trash2, Check, Mic, Square, Copy 
 import { TimeSlot } from "@/lib/types";
 import { formatTime, getHoursForDay } from "@/lib/utils";
 import { cn } from "@/lib/utils";
-import { readAllSlots, writeSlots, deleteSlot, buildDateStr } from "@/lib/booking-data";
+import { readAllSlots, readAllBookings, writeSlots, deleteSlot, buildDateStr } from "@/lib/booking-data";
 
 export function AdminDashboard() {
   const [weekStart, setWeekStart] = useState(() =>
@@ -33,12 +33,22 @@ export function AdminDashboard() {
   const [recordingSlotId, setRecordingSlotId] = useState<string | null>(null);
   const [draftBySlotId, setDraftBySlotId] = useState<Record<string, { subject: string; body: string }>>({});
   const [generatingSlotId, setGeneratingSlotId] = useState<string | null>(null);
+  const [emailByClientName, setEmailByClientName] = useState<Record<string, string>>({});
   const speechRecognitionRef = useRef<any>(null);
   const transcriptRef = useRef("");
 
   useEffect(() => {
-    readAllSlots().then((data) => {
-      setSlots(data);
+    Promise.all([readAllSlots(), readAllBookings()]).then(([slotData, bookingsData]) => {
+      setSlots(slotData);
+      const emailMap: Record<string, string> = {};
+      for (const booking of Object.values(bookingsData)) {
+        const name = booking.clientName?.trim().toLowerCase();
+        const email = booking.clientEmail?.trim();
+        if (name && email && !emailMap[name]) {
+          emailMap[name] = email;
+        }
+      }
+      setEmailByClientName(emailMap);
       setLoaded(true);
     });
   }, []);
@@ -180,6 +190,44 @@ export function AdminDashboard() {
     await navigator.clipboard.writeText(text);
     setStatusMsg("Draft copied to clipboard.");
     setTimeout(() => setStatusMsg(null), 2500);
+  }
+
+  function getClientEmail(slot: TimeSlot | null): string {
+    if (!slot) return "";
+    if (slot.bookedEmail?.trim()) return slot.bookedEmail.trim();
+    const key = (slot.bookedBy || "").trim().toLowerCase();
+    return key ? emailByClientName[key] || "" : "";
+  }
+
+  async function copyClientEmail(slot: TimeSlot | null) {
+    const email = getClientEmail(slot);
+    if (!email) {
+      setStatusMsg("No client email found for this lesson.");
+      setTimeout(() => setStatusMsg(null), 3000);
+      return;
+    }
+    await navigator.clipboard.writeText(email);
+    setStatusMsg("Client email copied.");
+    setTimeout(() => setStatusMsg(null), 2500);
+  }
+
+  function openGmailDraft(slot: TimeSlot | null) {
+    if (!slot) return;
+    const draft = draftBySlotId[slot.id];
+    if (!draft) {
+      setStatusMsg("Generate a draft first.");
+      setTimeout(() => setStatusMsg(null), 2500);
+      return;
+    }
+    const to = getClientEmail(slot);
+    const params = new URLSearchParams({
+      view: "cm",
+      fs: "1",
+      su: draft.subject,
+      body: draft.body,
+    });
+    if (to) params.set("to", to);
+    window.open(`https://mail.google.com/mail/?${params.toString()}`, "_blank");
   }
 
   async function handleSaveEdit() {
@@ -414,33 +462,6 @@ export function AdminDashboard() {
                                 </span>
                               )}
                             </button>
-                            {isTrialVoiceSlot(slot) && (
-                              <button
-                                onClick={() => handleVoiceRecord(slot)}
-                                type="button"
-                                className={cn(
-                                  "px-2 py-1 rounded-md text-[11px] font-medium border transition-colors flex items-center gap-1",
-                                  recordingSlotId === slot.id
-                                    ? "bg-[#991b1b] border-[#991b1b] text-white"
-                                    : "bg-white border-[#d9d5cf] text-[#1a1a1a] hover:bg-[#f0ede8]"
-                                )}
-                                title="Record player progress draft"
-                              >
-                                {recordingSlotId === slot.id ? (
-                                  <>
-                                    <Square className="h-3 w-3" />
-                                    Stop
-                                  </>
-                                ) : generatingSlotId === slot.id ? (
-                                  "Generating..."
-                                ) : (
-                                  <>
-                                    <Mic className="h-3 w-3" />
-                                    Record draft
-                                  </>
-                                )}
-                              </button>
-                            )}
                           </div>
                         ) : (
                           <div
@@ -453,79 +474,130 @@ export function AdminDashboard() {
                       )}
                   </div>
 
-                  {booked
-                    .filter((slot) => draftBySlotId[slot.id])
-                    .map((slot) => {
-                      const draft = draftBySlotId[slot.id];
-                      if (!draft) return null;
-                      return (
-                        <div key={`${slot.id}-draft`} className="mt-3 p-3 bg-[#f8fafc] border border-[#dbe3ee] rounded-lg">
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="text-[11px] font-medium text-[#1a1a1a]">
-                              Draft: {slot.bookedBy || "Client"} ({formatTime(slot.hour)})
-                            </p>
-                            <button
-                              type="button"
-                              onClick={() => copyDraft(slot.id)}
-                              className="text-[11px] px-2 py-1 rounded border border-[#d9d5cf] hover:bg-white text-[#1a1a1a] flex items-center gap-1"
-                            >
-                              <Copy className="h-3 w-3" />
-                              Copy
-                            </button>
-                          </div>
-                          <p className="mt-1 text-[11px] text-[#475569]">
-                            <span className="font-medium">Subject:</span> {draft.subject}
-                          </p>
-                          <textarea
-                            value={draft.body}
-                            onChange={(e) =>
-                              setDraftBySlotId((prev) => ({
-                                ...prev,
-                                [slot.id]: { ...prev[slot.id], body: e.target.value },
-                              }))
-                            }
-                            rows={8}
-                            className="mt-2 w-full rounded-md border border-[#d9d5cf] bg-white p-2 text-[11px] text-[#1a1a1a]"
-                          />
-                        </div>
-                      );
-                    })}
-
                   {/* Action menu / edit form for selected slot in this day */}
                   {activeSlotId && activeSlot && activeSlot.date === buildDateStr(day) && (
                     <div className="mt-3 p-4 bg-[#faf9f7] border border-[#e8e5df] rounded-xl">
                       {actionMode === "menu" && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-[12px] text-[#6b665e] mr-auto">
-                            {formatTime(activeSlot.hour)}
-                            {activeSlot.bookedBy && ` — ${activeSlot.bookedBy}`}
-                          </span>
-                          <button
-                            onClick={startEdit}
-                            type="button"
-                            className="flex items-center gap-1.5 px-3 py-2 bg-[#1a1a1a] text-white rounded-lg text-[12px] font-medium hover:bg-[#333] transition-colors"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                            Edit
-                          </button>
-                          <button
-                            onClick={handleDelete}
-                            type="button"
-                            className="flex items-center gap-1.5 px-3 py-2 bg-[#991b1b] text-white rounded-lg text-[12px] font-medium hover:bg-[#7f1d1d] transition-colors"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                            Delete
-                          </button>
-                          <button
-                            onClick={closeAction}
-                            type="button"
-                            className="p-2 hover:bg-[#e8e5df] rounded-lg transition-colors"
-                          >
-                            <X className="h-4 w-4 text-[#a39e95]" />
-                          </button>
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[12px] text-[#6b665e] mr-auto">
+                              {formatTime(activeSlot.hour)}
+                              {activeSlot.bookedBy && ` — ${activeSlot.bookedBy}`}
+                            </span>
+                            {isTrialVoiceSlot(activeSlot) && (
+                              <button
+                                onClick={() => handleVoiceRecord(activeSlot)}
+                                type="button"
+                                className={cn(
+                                  "flex items-center gap-1.5 px-3 py-2 rounded-lg text-[12px] font-medium transition-colors",
+                                  recordingSlotId === activeSlot.id
+                                    ? "bg-[#991b1b] text-white hover:bg-[#7f1d1d]"
+                                    : "bg-[#1a1a1a] text-white hover:bg-[#333]"
+                                )}
+                              >
+                                {recordingSlotId === activeSlot.id ? (
+                                  <>
+                                    <Square className="h-3.5 w-3.5" />
+                                    Stop recording
+                                  </>
+                                ) : generatingSlotId === activeSlot.id ? (
+                                  "Generating draft..."
+                                ) : (
+                                  <>
+                                    <Mic className="h-3.5 w-3.5" />
+                                    Record draft
+                                  </>
+                                )}
+                              </button>
+                            )}
+                            {getClientEmail(activeSlot) && (
+                              <button
+                                type="button"
+                                onClick={() => copyClientEmail(activeSlot)}
+                                className="px-3 py-2 border border-[#d9d5cf] rounded-lg text-[12px] font-medium text-[#1a1a1a] hover:bg-white transition-colors"
+                              >
+                                Copy email
+                              </button>
+                            )}
+                            <button
+                              onClick={startEdit}
+                              type="button"
+                              className="flex items-center gap-1.5 px-3 py-2 bg-[#1a1a1a] text-white rounded-lg text-[12px] font-medium hover:bg-[#333] transition-colors"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                              Edit
+                            </button>
+                            <button
+                              onClick={handleDelete}
+                              type="button"
+                              className="flex items-center gap-1.5 px-3 py-2 bg-[#991b1b] text-white rounded-lg text-[12px] font-medium hover:bg-[#7f1d1d] transition-colors"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              Delete
+                            </button>
+                            <button
+                              onClick={closeAction}
+                              type="button"
+                              className="p-2 hover:bg-[#e8e5df] rounded-lg transition-colors"
+                            >
+                              <X className="h-4 w-4 text-[#a39e95]" />
+                            </button>
+                          </div>
+
+                          {draftBySlotId[activeSlot.id] && (
+                            <div className="p-3 bg-[#f8fafc] border border-[#dbe3ee] rounded-lg">
+                              <div className="flex items-center justify-between gap-2">
+                                <p className="text-[11px] font-medium text-[#1a1a1a]">
+                                  Draft ready for {activeSlot.bookedBy || "Client"}
+                                </p>
+                                <div className="flex items-center gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => copyClientEmail(activeSlot)}
+                                    className="text-[11px] px-2 py-1 rounded border border-[#d9d5cf] hover:bg-white text-[#1a1a1a]"
+                                  >
+                                    Copy email
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => copyDraft(activeSlot.id)}
+                                    className="text-[11px] px-2 py-1 rounded border border-[#d9d5cf] hover:bg-white text-[#1a1a1a] flex items-center gap-1"
+                                  >
+                                    <Copy className="h-3 w-3" />
+                                    Copy draft
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => openGmailDraft(activeSlot)}
+                                    className="text-[11px] px-2 py-1 rounded border border-[#d9d5cf] hover:bg-white text-[#1a1a1a]"
+                                  >
+                                    Open Gmail draft
+                                  </button>
+                                </div>
+                              </div>
+                              {getClientEmail(activeSlot) && (
+                                <p className="mt-1 text-[11px] text-[#475569]">
+                                  <span className="font-medium">To:</span> {getClientEmail(activeSlot)}
+                                </p>
+                              )}
+                              <p className="mt-1 text-[11px] text-[#475569]">
+                                <span className="font-medium">Subject:</span> {draftBySlotId[activeSlot.id].subject}
+                              </p>
+                              <textarea
+                                value={draftBySlotId[activeSlot.id].body}
+                                onChange={(e) =>
+                                  setDraftBySlotId((prev) => ({
+                                    ...prev,
+                                    [activeSlot.id]: { ...prev[activeSlot.id], body: e.target.value },
+                                  }))
+                                }
+                                rows={8}
+                                className="mt-2 w-full rounded-md border border-[#d9d5cf] bg-white p-2 text-[11px] text-[#1a1a1a]"
+                              />
+                            </div>
+                          )}
                         </div>
                       )}
-
                       {actionMode === "edit" && (
                         <div className="space-y-3">
                           <p className="text-[10px] tracking-[0.12em] uppercase text-[#6b665e] font-medium">

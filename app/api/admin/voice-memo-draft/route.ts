@@ -29,6 +29,11 @@ function toBullets(items: string[], max = 3): string[] {
     .map((item) => `- ${item}`);
 }
 
+function hasAny(text: string, terms: string[]): boolean {
+  const normalized = text.toLowerCase();
+  return terms.some((term) => normalized.includes(term));
+}
+
 function extractJsonObject(raw: string): { subject?: string; body?: string } | null {
   const fenced = raw.match(/```json\s*([\s\S]*?)```/i);
   const candidate = fenced?.[1] || raw;
@@ -63,9 +68,18 @@ Rules:
 - Keep the tone professional, warm, and actionable.
 - Write for the student directly.
 - Keep it short enough to read in under 1 minute.
-- Include:
-  1) what we worked on today (2-4 bullets)
-  2) homework / focus before next lesson (2-3 bullets)
+- Lightly edit and clean the coach's wording so it reads clearly.
+- Keep structure simple and elegant for quick reading.
+- Include only what the coach explicitly mentions.
+- If a category is not mentioned, do not include it.
+- Supported categories (use only when present in transcript):
+  1) Summary of what we worked on
+  2) Key areas of focus
+  3) Nutrition / health / workout suggestions
+  4) Matchplay or extra-play recommendations
+  5) Next lesson date/time or potential scheduling notes
+  6) Quick personal message from coach
+- Use short bullets under each included category.
 - Do not invent specific biomechanics details not implied by transcript.
 - End with a brief encouraging sign-off from Derek.
 - Return only strict JSON with keys: "subject" and "body".
@@ -122,6 +136,7 @@ export async function POST(req: Request) {
     const chunks = sentenceChunks(transcript);
     const todayFocus = toBullets(chunks.slice(0, 4), 3);
     const nextSteps = toBullets(chunks.slice(2, 8), 3);
+    const lower = transcript.toLowerCase();
 
     const subjectDate = lessonDate ? ` - ${lessonDate}` : "";
     const subject = `Lesson Recap for ${clientName}${subjectDate}`;
@@ -129,22 +144,42 @@ export async function POST(req: Request) {
     const contextLine = [lessonDate, lessonTime].filter(Boolean).join(" at ");
     const greeting = clientName === "your lesson" ? "Hi," : `Hi ${clientName},`;
 
-    const bodyLines = [
+    const bodyLines: string[] = [
       greeting,
       "",
       `Great work today${contextLine ? ` (${contextLine})` : ""}. Here is your quick recap and what to focus on before we meet again.`,
       "",
-      "Today we focused on:",
-      ...(todayFocus.length > 0 ? todayFocus : ["- Technique and consistency work based on today's session notes"]),
-      "",
-      "Suggested work before next lesson:",
-      ...(nextSteps.length > 0 ? nextSteps : ["- Keep the same technical focus and repeat with quality reps"]),
-      "",
-      "If you have any questions, just reply to this email.",
-      "",
-      "See you on court,",
-      "Derek",
     ];
+
+    bodyLines.push("Summary");
+    bodyLines.push(...(todayFocus.length > 0 ? todayFocus : ["- Technique and consistency work from today's session."]));
+    bodyLines.push("");
+
+    if (hasAny(lower, ["focus", "key area", "forehand", "backhand", "serve", "volley", "footwork", "consistency", "timing"])) {
+      bodyLines.push("Key Areas of Focus");
+      bodyLines.push(...(nextSteps.length > 0 ? nextSteps : ["- Continue the same focus points with quality reps."]));
+      bodyLines.push("");
+    }
+    if (hasAny(lower, ["nutrition", "diet", "hydrate", "hydration", "sleep", "recovery", "workout", "mobility", "stretch", "yoga"])) {
+      bodyLines.push("Health and Recovery Notes");
+      bodyLines.push("- Keep nutrition and recovery habits consistent between sessions.");
+      bodyLines.push("");
+    }
+    if (hasAny(lower, ["match", "set", "tournament", "point play", "play more", "practice match", "extra play"])) {
+      bodyLines.push("Matchplay Recommendations");
+      bodyLines.push("- Add extra point-play or match reps before our next lesson.");
+      bodyLines.push("");
+    }
+    if (hasAny(lower, ["next lesson", "next time", "next week", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday", "am", "pm"])) {
+      bodyLines.push("Next Lesson");
+      bodyLines.push("- I noted your scheduling details and we can confirm the next session timing.");
+      bodyLines.push("");
+    }
+
+    bodyLines.push("If you have any questions, just reply to this email.");
+    bodyLines.push("");
+    bodyLines.push("See you on court,");
+    bodyLines.push("Derek");
 
     return NextResponse.json({
       subject,
