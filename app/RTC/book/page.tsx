@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PAYMENT_CONFIG } from "@/lib/payment-config";
-import { rtcClinicCourtBlocks, rtcSummerEvents } from "../rtc-data";
+import { rtcClinicCourtBlocks, rtcClinics, rtcSummerEvents } from "../rtc-data";
 import {
   MEMBER_SESSION_EVENT,
   MEMBER_SESSION_KEY,
@@ -107,8 +107,23 @@ function formatPrettyDate(value: string): string {
 }
 
 function formatHour(hour: number): string {
-  const h12 = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
-  return `${h12}:00 ${hour >= 12 ? "PM" : "AM"}`;
+  const totalMinutes = Math.round(hour * 60);
+  const normalized = ((totalMinutes % (24 * 60)) + 24 * 60) % (24 * 60);
+  const h24 = Math.floor(normalized / 60);
+  const minutes = normalized % 60;
+  const h12 = h24 > 12 ? h24 - 12 : h24 === 0 ? 12 : h24;
+  return `${h12}:${String(minutes).padStart(2, "0")} ${h24 >= 12 ? "PM" : "AM"}`;
+}
+
+function clinicDurationHours(clinicName: string, fallback: number): number {
+  const clinic = rtcClinics.find((item) => item.name === clinicName);
+  if (!clinic) return fallback;
+  const match = clinic.schedule.match(/(\d+)\s*h(?:\s*(\d+)\s*min)?/i);
+  if (!match) return fallback;
+  const hrs = Number(match[1] || 0);
+  const mins = Number(match[2] || 0);
+  const parsed = hrs + mins / 60;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
 function getRate(type: "indoor" | "outdoor", isMember: boolean): number {
@@ -244,6 +259,28 @@ export default function RTCBookPage() {
     return () => window.removeEventListener(MEMBER_SESSION_EVENT, applySession);
   }, []);
 
+  const displayHours = useMemo(() => {
+    const selectedDay = parseDateInput(selectedDate);
+    const weekday = selectedDay.getDay();
+    let halfHourShiftStart: number | null = null;
+    for (const [clinicName, template] of Object.entries(rtcClinicCourtBlocks)) {
+      if (template.weekday !== weekday) continue;
+      const duration = clinicDurationHours(clinicName, template.durationHours);
+      const end = template.startHour + duration;
+      if (Math.abs((end % 1) - 0.5) < 0.001) {
+        halfHourShiftStart = halfHourShiftStart === null ? end : Math.min(halfHourShiftStart, end);
+      }
+    }
+    if (halfHourShiftStart === null) return hours;
+    const before = hours.filter((hour) => hour < Math.floor(halfHourShiftStart));
+    const shifted: number[] = [];
+    const lastShiftedStart = hours[hours.length - 1] + 0.5;
+    for (let hour = halfHourShiftStart; hour <= lastShiftedStart + 0.001; hour += 1) {
+      shifted.push(Number(hour.toFixed(1)));
+    }
+    return [...before, ...shifted];
+  }, [selectedDate]);
+
   const blockedSlots = useMemo(() => {
     const blocked: Record<string, string> = {};
     const selectedDay = parseDateInput(selectedDate);
@@ -251,32 +288,39 @@ export default function RTCBookPage() {
     const dayStart = selectedDay.getTime();
     const dayEnd = dayStart + 24 * 60 * 60 * 1000;
     const weekday = selectedDay.getDay();
+    const markRangeBlocked = (courtId: string, startHour: number, durationHours: number, reason: string) => {
+      const rangeStart = toDateAtHour(selectedDay, startHour).getTime();
+      const rangeEnd = toDateAtHour(selectedDay, startHour + durationHours).getTime();
+      for (const hour of displayHours) {
+        const slotStart = toDateAtHour(selectedDay, hour).getTime();
+        const slotEnd = toDateAtHour(selectedDay, hour + 1).getTime();
+        if (slotStart < rangeEnd && slotEnd > rangeStart) {
+          blocked[bookingKey(selectedDate, courtId, hour)] = reason;
+        }
+      }
+    };
 
     // Always reserve indoor court for scheduled clinic program blocks.
     for (const [clinicName, template] of Object.entries(rtcClinicCourtBlocks)) {
       if (template.weekday !== weekday) continue;
-      for (let i = 0; i < template.durationHours; i += 1) {
-        const hour = template.startHour + i;
-        blocked[bookingKey(selectedDate, "indoor-1", hour)] = `Reserved for ${clinicName}`;
-      }
+      markRangeBlocked(
+        "indoor-1",
+        template.startHour,
+        clinicDurationHours(clinicName, template.durationHours),
+        `Reserved for ${clinicName}`
+      );
     }
 
     for (const block of adminBlocks) {
       if (block.date !== selectedDate) continue;
-      for (let i = 0; i < block.durationHours; i += 1) {
-        const hour = block.startHour + i;
-        blocked[bookingKey(selectedDate, block.courtId, hour)] = `Reserved: ${block.reason}`;
-      }
+      markRangeBlocked(block.courtId, block.startHour, block.durationHours, `Reserved: ${block.reason}`);
     }
 
     for (const booking of clinicBookings) {
       if (booking.reservedSlots?.length) {
         for (const slot of booking.reservedSlots) {
           if (slot.date !== selectedDate || slot.courtId !== "indoor-1") continue;
-          for (let i = 0; i < slot.durationHours; i += 1) {
-            const hour = slot.startHour + i;
-            blocked[bookingKey(selectedDate, "indoor-1", hour)] = "Reserved for clinic";
-          }
+          markRangeBlocked("indoor-1", slot.startHour, slot.durationHours, "Reserved for clinic");
         }
         continue;
       }
@@ -289,10 +333,12 @@ export default function RTCBookPage() {
         const clinicDate = addDays(baseWeek, weekOffset + template.weekday);
         const clinicDateKey = formatDateInput(clinicDate);
         if (clinicDateKey !== selectedDate) continue;
-        for (let i = 0; i < template.durationHours; i += 1) {
-          const hour = template.startHour + i;
-          blocked[bookingKey(selectedDate, "indoor-1", hour)] = "Reserved for clinic";
-        }
+        markRangeBlocked(
+          "indoor-1",
+          template.startHour,
+          clinicDurationHours(clinicName, template.durationHours),
+          "Reserved for clinic"
+        );
       }
     }
 
@@ -304,11 +350,9 @@ export default function RTCBookPage() {
       const endMs = window.end.getTime();
       if (endMs <= dayStart || startMs >= dayEnd) continue;
       for (const courtId of EVENT_RESERVED_COURTS) {
-        for (const hour of hours) {
-          const slotStart = new Date(selectedDay);
-          slotStart.setHours(hour, 0, 0, 0);
-          const slotEnd = new Date(slotStart);
-          slotEnd.setHours(slotEnd.getHours() + 1);
+        for (const hour of displayHours) {
+          const slotStart = toDateAtHour(selectedDay, hour);
+          const slotEnd = toDateAtHour(selectedDay, hour + 1);
           if (slotStart.getTime() < endMs && slotEnd.getTime() > startMs) {
             blocked[bookingKey(selectedDate, courtId, hour)] = `Reserved for ${event.title}`;
           }
@@ -317,7 +361,7 @@ export default function RTCBookPage() {
     }
 
     return blocked;
-  }, [adminBlocks, clinicBookings, selectedDate]);
+  }, [adminBlocks, clinicBookings, displayHours, selectedDate]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -730,7 +774,7 @@ export default function RTCBookPage() {
               </tr>
             </thead>
             <tbody>
-              {hours.map((hour) => (
+              {displayHours.map((hour) => (
                 <tr key={hour} className="transition-colors hover:bg-[#fcfbf9]">
                   <td className="sticky left-0 z-10 border-r border-t border-[#f0ede8] bg-white px-3 py-2 text-[12px] font-medium text-[#6b665e]">
                     {formatHour(hour)}
