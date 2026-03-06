@@ -107,11 +107,24 @@ type MonthStat = {
   pending: number;
 };
 
-type MemberProfile = {
+type MemberDirectoryRow = {
   memberNumber: string;
   name: string;
-  visits: number;
-  revenue: number;
+  email: string;
+  courtBookings: number;
+  courtHours: number;
+  courtSpend: number;
+  outstanding: number;
+  lessonRequests: number;
+  clinicSignups: number;
+  eventReservations: number;
+  clinicSpend: number;
+  eventSpend: number;
+  totalSpend: number;
+  clinics: string[];
+  events: string[];
+  lastActivity: string | null;
+  note: string;
 };
 
 function safeParse<T>(raw: string | null, fallback: T): T {
@@ -248,37 +261,6 @@ function createMockData() {
   return { courts, lessons, clinics, events, payouts, notes };
 }
 
-function BarChart({
-  title,
-  data,
-}: {
-  title: string;
-  data: Array<{ label: string; value: number }>;
-}) {
-  const max = Math.max(1, ...data.map((item) => item.value));
-  return (
-    <div className="rounded-xl border border-[#ece8e2] p-4">
-      <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">{title}</p>
-      <div className="mt-3 space-y-2">
-        {data.map((item) => (
-          <div key={item.label} className="space-y-1">
-            <div className="flex items-center justify-between text-[11px] text-[#6b665e]">
-              <span>{item.label}</span>
-              <span>{item.value.toLocaleString()}</span>
-            </div>
-            <div className="h-2 rounded-full bg-[#f1efea]">
-              <div
-                className="h-2 rounded-full bg-[#1a1a1a]"
-                style={{ width: `${Math.max(5, (item.value / max) * 100)}%` }}
-              />
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 export default function RTCAdminPage() {
   const [authed, setAuthed] = useState(false);
   const [password, setPassword] = useState("");
@@ -294,6 +276,9 @@ export default function RTCAdminPage() {
   const [proPayouts, setProPayouts] = useState<ProPayout[]>([]);
   const [useMockData, setUseMockData] = useState(true);
   const [selectedTaxYear, setSelectedTaxYear] = useState(new Date().getFullYear());
+  const [selectedClinic, setSelectedClinic] = useState("All Clinics");
+  const [selectedEvent, setSelectedEvent] = useState("All Events");
+  const [selectedMemberNumber, setSelectedMemberNumber] = useState<string | null>(null);
 
   const [newBlock, setNewBlock] = useState({
     date: formatDateInput(new Date()),
@@ -462,27 +447,6 @@ export default function RTCAdminPage() {
     return Array.from(map.values()).sort((a, b) => a.year - b.year);
   }, [monthly]);
 
-  const topMembers = useMemo(() => {
-    const map = new Map<string, MemberProfile>();
-    function bump(memberNumber: string | undefined, amount: number, name: string) {
-      if (!memberNumber) return;
-      const existing = map.get(memberNumber) || {
-        memberNumber,
-        name: name || `Member ${memberNumber}`,
-        visits: 0,
-        revenue: 0,
-      };
-      existing.visits += 1;
-      existing.revenue += amount;
-      map.set(memberNumber, existing);
-    }
-    mergedData.courts.forEach((item) => bump(item.memberNumber, item.totalAmount || 0, item.clientName));
-    mergedData.lessons.forEach((item) => bump(item.memberNumber, 0, item.clientName));
-    mergedData.clinics.forEach((item) => bump(item.memberNumber, item.total || 0, item.clientName));
-    mergedData.events.forEach((item) => bump(item.memberNumber, item.total || 0, item.attendeeName));
-    return Array.from(map.values()).sort((a, b) => b.revenue - a.revenue).slice(0, 8);
-  }, [mergedData]);
-
   const recentActivity = useMemo(() => {
     const rows: Array<{ label: string; detail: string; at: string }> = [];
     mergedData.courts.forEach((item) =>
@@ -522,6 +486,153 @@ export default function RTCAdminPage() {
     );
     return rows.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime()).slice(0, 18);
   }, [mergedData]);
+
+  const clinicMonitor = useMemo(() => {
+    const map = new Map<string, { name: string; signups: number; revenue: number; attendees: Set<string> }>();
+    mergedData.clinics.forEach((booking) => {
+      booking.clinicNames.forEach((clinicName) => {
+        const row = map.get(clinicName) || {
+          name: clinicName,
+          signups: 0,
+          revenue: 0,
+          attendees: new Set<string>(),
+        };
+        row.signups += 1;
+        row.revenue += booking.total / Math.max(booking.clinicNames.length, 1);
+        row.attendees.add(
+          booking.memberNumber
+            ? `${booking.clientName} (Member #${booking.memberNumber})`
+            : booking.clientName
+        );
+        map.set(clinicName, row);
+      });
+    });
+    return Array.from(map.values()).sort((a, b) => b.signups - a.signups);
+  }, [mergedData.clinics]);
+
+  const eventMonitor = useMemo(() => {
+    const map = new Map<
+      string,
+      { title: string; bookings: number; guests: number; revenue: number; attendees: Set<string> }
+    >();
+    mergedData.events.forEach((reservation) => {
+      const row = map.get(reservation.eventTitle) || {
+        title: reservation.eventTitle,
+        bookings: 0,
+        guests: 0,
+        revenue: 0,
+        attendees: new Set<string>(),
+      };
+      row.bookings += 1;
+      row.guests += Math.max(reservation.guestCount || 1, 1);
+      row.revenue += reservation.total || 0;
+      row.attendees.add(
+        reservation.memberNumber
+          ? `${reservation.attendeeName} (Member #${reservation.memberNumber})`
+          : reservation.attendeeName
+      );
+      map.set(reservation.eventTitle, row);
+    });
+    return Array.from(map.values()).sort((a, b) => b.guests - a.guests);
+  }, [mergedData.events]);
+
+  const memberDirectory = useMemo(() => {
+    const map = new Map<string, MemberDirectoryRow>();
+    const noteMap = new Map(mergedData.notes.map((n) => [n.memberNumber, n.note]));
+    function ensureMember(memberNumber: string, nameHint?: string, emailHint?: string): MemberDirectoryRow {
+      const existing = map.get(memberNumber);
+      if (existing) {
+        if (nameHint && existing.name.startsWith("Member ")) existing.name = nameHint;
+        if (emailHint && !existing.email) existing.email = emailHint;
+        return existing;
+      }
+      const row: MemberDirectoryRow = {
+        memberNumber,
+        name: nameHint || `Member ${memberNumber}`,
+        email: emailHint || "",
+        courtBookings: 0,
+        courtHours: 0,
+        courtSpend: 0,
+        outstanding: 0,
+        lessonRequests: 0,
+        clinicSignups: 0,
+        eventReservations: 0,
+        clinicSpend: 0,
+        eventSpend: 0,
+        totalSpend: 0,
+        clinics: [],
+        events: [],
+        lastActivity: null,
+        note: "",
+      };
+      map.set(memberNumber, row);
+      return row;
+    }
+    function bumpActivity(row: MemberDirectoryRow, at: string) {
+      if (!row.lastActivity || new Date(at).getTime() > new Date(row.lastActivity).getTime()) row.lastActivity = at;
+    }
+
+    mergedData.courts.forEach((item) => {
+      if (!item.memberNumber) return;
+      const row = ensureMember(item.memberNumber, item.clientName, item.clientEmail);
+      row.courtBookings += 1;
+      row.courtHours += item.durationHours;
+      row.courtSpend += item.totalAmount || 0;
+      if (item.paymentStatus !== "paid") row.outstanding += item.totalAmount || 0;
+      bumpActivity(row, item.createdAt);
+    });
+    mergedData.lessons.forEach((item) => {
+      if (!item.memberNumber) return;
+      const row = ensureMember(item.memberNumber, item.clientName, item.clientEmail);
+      row.lessonRequests += 1;
+      bumpActivity(row, item.createdAt);
+    });
+    mergedData.clinics.forEach((item) => {
+      if (!item.memberNumber) return;
+      const row = ensureMember(item.memberNumber, item.clientName);
+      row.clinicSignups += item.clinicCount || 1;
+      row.clinicSpend += item.total || 0;
+      row.clinics = Array.from(new Set([...row.clinics, ...item.clinicNames]));
+      bumpActivity(row, item.createdAt);
+    });
+    mergedData.events.forEach((item) => {
+      if (!item.memberNumber) return;
+      const row = ensureMember(item.memberNumber, item.attendeeName);
+      row.eventReservations += item.guestCount || 1;
+      row.eventSpend += item.total || 0;
+      row.events = Array.from(new Set([...row.events, item.eventTitle]));
+      bumpActivity(row, item.createdAt);
+    });
+
+    const rows = Array.from(map.values()).map((row) => ({
+      ...row,
+      totalSpend: row.courtSpend + row.clinicSpend + row.eventSpend,
+      note: noteMap.get(row.memberNumber) || "",
+    }));
+    return rows.sort((a, b) => b.totalSpend - a.totalSpend);
+  }, [mergedData]);
+
+  const selectedMember = useMemo(() => {
+    if (!selectedMemberNumber) return memberDirectory[0] || null;
+    return memberDirectory.find((m) => m.memberNumber === selectedMemberNumber) || memberDirectory[0] || null;
+  }, [memberDirectory, selectedMemberNumber]);
+
+  const clinicOptions = useMemo(
+    () => ["All Clinics", ...clinicMonitor.map((c) => c.name)],
+    [clinicMonitor]
+  );
+  const eventOptions = useMemo(
+    () => ["All Events", ...eventMonitor.map((e) => e.title)],
+    [eventMonitor]
+  );
+  const visibleClinics = useMemo(
+    () => clinicMonitor.filter((item) => selectedClinic === "All Clinics" || item.name === selectedClinic),
+    [clinicMonitor, selectedClinic]
+  );
+  const visibleEvents = useMemo(
+    () => eventMonitor.filter((item) => selectedEvent === "All Events" || item.title === selectedEvent),
+    [eventMonitor, selectedEvent]
+  );
 
   const payoutSummary = useMemo(() => {
     const byPro = new Map<string, { total: number; count: number }>();
@@ -803,9 +914,98 @@ export default function RTCAdminPage() {
           </div>
         </div>
 
-        <div className="mt-5 grid gap-4 lg:grid-cols-2">
-          <BarChart title="Revenue by Month (12M)" data={monthly.map((m) => ({ label: m.label, value: Math.round(m.revenue) }))} />
-          <BarChart title="Visits by Month (12M)" data={monthly.map((m) => ({ label: m.label, value: m.visits }))} />
+        <div id="performance-overview" className="mt-5 grid gap-4 xl:grid-cols-3">
+          <div className="rounded-xl border border-[#ece8e2] p-4">
+            <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Seasonal Performance</p>
+            <div className="mt-3 overflow-x-auto">
+              <table className="w-full min-w-[320px] text-left text-[12px]">
+                <thead className="text-[#8a8477]">
+                  <tr>
+                    <th className="py-1">Season</th>
+                    <th className="py-1">Revenue</th>
+                    <th className="py-1">Visits</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {seasonal.map((row) => (
+                    <tr key={row.label} className="border-t border-[#f0ede8]">
+                      <td className="py-1.5">{row.label}</td>
+                      <td className="py-1.5">{formatCurrency(row.revenue)}</td>
+                      <td className="py-1.5">{row.visits}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-[#ece8e2] p-4">
+            <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Yearly Performance</p>
+            <div className="mt-3 overflow-x-auto">
+              <table className="w-full min-w-[280px] text-left text-[12px]">
+                <thead className="text-[#8a8477]">
+                  <tr>
+                    <th className="py-1">Year</th>
+                    <th className="py-1">Revenue</th>
+                    <th className="py-1">Visits</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {yearly.map((row) => (
+                    <tr key={row.year} className="border-t border-[#f0ede8]">
+                      <td className="py-1.5">{row.year}</td>
+                      <td className="py-1.5">{formatCurrency(row.revenue)}</td>
+                      <td className="py-1.5">{row.visits}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-[#ece8e2] p-4">
+            <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Monthly Performance</p>
+            <div className="mt-3 overflow-x-auto">
+              <table className="w-full min-w-[360px] text-left text-[12px]">
+                <thead className="text-[#8a8477]">
+                  <tr>
+                    <th className="py-1">Month</th>
+                    <th className="py-1">Revenue</th>
+                    <th className="py-1">Visits</th>
+                    <th className="py-1">Pending</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...monthly].reverse().map((row) => (
+                    <tr key={row.key} className="border-t border-[#f0ede8]">
+                      <td className="py-1.5">{row.label}</td>
+                      <td className="py-1.5">{formatCurrency(row.revenue)}</td>
+                      <td className="py-1.5">{row.visits}</td>
+                      <td className="py-1.5">{row.pending}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-4">
+          <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Quick Monitor Links</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <a href="#clinics-monitor" className="rounded-md border border-[#d9d5cf] bg-white px-3 py-1.5 text-[12px] hover:bg-[#fdfcfb]">
+              Clinics Monitor
+            </a>
+            <a href="#events-monitor" className="rounded-md border border-[#d9d5cf] bg-white px-3 py-1.5 text-[12px] hover:bg-[#fdfcfb]">
+              Events Monitor
+            </a>
+            <a href="#members-hub" className="rounded-md border border-[#d9d5cf] bg-white px-3 py-1.5 text-[12px] hover:bg-[#fdfcfb]">
+              Member Directory
+            </a>
+            <a href="#payouts-1099" className="rounded-md border border-[#d9d5cf] bg-white px-3 py-1.5 text-[12px] hover:bg-[#fdfcfb]">
+              Pro Payouts / 1099
+            </a>
+          </div>
         </div>
 
         <div className="mt-5 grid gap-4 xl:grid-cols-3">
@@ -892,7 +1092,137 @@ export default function RTCAdminPage() {
           </section>
         </div>
 
-        <div className="mt-4 rounded-xl border border-[#ece8e2] p-4">
+        <div className="mt-4 grid gap-4 xl:grid-cols-2">
+          <section id="clinics-monitor" className="rounded-xl border border-[#ece8e2] p-4">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Clinics Monitor</p>
+              <select
+                value={selectedClinic}
+                onChange={(e) => setSelectedClinic(e.target.value)}
+                className="rounded-lg border border-[#e8e5df] px-2 py-1 text-[12px]"
+              >
+                {clinicOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="mt-3 space-y-2">
+              {visibleClinics.map((clinic) => (
+                <div key={clinic.name} className="rounded-lg border border-[#ece8e2] bg-[#faf9f7] p-3 text-[12px]">
+                  <p className="font-medium">{clinic.name}</p>
+                  <p className="text-[#6b665e]">
+                    Signups: {clinic.signups} · Collected: {formatCurrency(clinic.revenue)} · Payment status: Paid at booking
+                  </p>
+                  <p className="mt-1 text-[#8a8477]">Signed up: {Array.from(clinic.attendees).join(", ") || "No signups yet."}</p>
+                </div>
+              ))}
+              {visibleClinics.length === 0 && <p className="text-[12px] text-[#8a8477]">No clinic activity yet.</p>}
+            </div>
+          </section>
+
+          <section id="events-monitor" className="rounded-xl border border-[#ece8e2] p-4">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Events Monitor</p>
+              <select
+                value={selectedEvent}
+                onChange={(e) => setSelectedEvent(e.target.value)}
+                className="rounded-lg border border-[#e8e5df] px-2 py-1 text-[12px]"
+              >
+                {eventOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="mt-3 space-y-2">
+              {visibleEvents.map((event) => (
+                <div key={event.title} className="rounded-lg border border-[#ece8e2] bg-[#faf9f7] p-3 text-[12px]">
+                  <p className="font-medium">{event.title}</p>
+                  <p className="text-[#6b665e]">
+                    Reservations: {event.bookings} · Total guests: {event.guests} · Collected: {formatCurrency(event.revenue)}
+                  </p>
+                  <p className="mt-1 text-[#8a8477]">Signed up: {Array.from(event.attendees).join(", ") || "No reservations yet."}</p>
+                </div>
+              ))}
+              {visibleEvents.length === 0 && <p className="text-[12px] text-[#8a8477]">No event activity yet.</p>}
+            </div>
+          </section>
+        </div>
+
+        <section id="members-hub" className="mt-4 rounded-xl border border-[#ece8e2] p-4">
+          <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Membership Area</p>
+          <div className="mt-3 grid gap-4 xl:grid-cols-[1fr_1.2fr]">
+            <div className="rounded-lg border border-[#ece8e2] p-3">
+              <p className="text-[11px] uppercase tracking-[0.1em] text-[#8a8477]">All Members</p>
+              <div className="mt-2 max-h-[360px] space-y-2 overflow-y-auto pr-1">
+                {memberDirectory.map((member) => {
+                  const active = selectedMember?.memberNumber === member.memberNumber;
+                  return (
+                    <button
+                      key={member.memberNumber}
+                      type="button"
+                      onClick={() => setSelectedMemberNumber(member.memberNumber)}
+                      className={`w-full rounded-lg border px-3 py-2 text-left text-[12px] ${
+                        active
+                          ? "border-[#1a1a1a] bg-[#1a1a1a] text-white"
+                          : "border-[#ece8e2] bg-[#faf9f7] hover:bg-white"
+                      }`}
+                    >
+                      <p className="font-medium">
+                        {member.name} · #{member.memberNumber}
+                      </p>
+                      <p className={active ? "text-white/80" : "text-[#6b665e]"}>
+                        Total billed: {formatCurrency(member.totalSpend)} · Outstanding: {formatCurrency(member.outstanding)}
+                      </p>
+                    </button>
+                  );
+                })}
+                {memberDirectory.length === 0 && <p className="text-[12px] text-[#8a8477]">No member records yet.</p>}
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-[#ece8e2] p-3 text-[12px]">
+              <p className="text-[11px] uppercase tracking-[0.1em] text-[#8a8477]">Selected Member Detail</p>
+              {selectedMember ? (
+                <div className="mt-2 space-y-2">
+                  <p className="font-medium">
+                    {selectedMember.name} · Member #{selectedMember.memberNumber}
+                  </p>
+                  <p className="text-[#6b665e]">Email: {selectedMember.email || "Not available yet"}</p>
+                  <p className="text-[#6b665e]">
+                    Court bookings: {selectedMember.courtBookings} ({selectedMember.courtHours} hrs) · Lessons: {selectedMember.lessonRequests}
+                  </p>
+                  <p className="text-[#6b665e]">
+                    Clinic signups: {selectedMember.clinicSignups} · Event guests: {selectedMember.eventReservations}
+                  </p>
+                  <p className="text-[#6b665e]">
+                    Court billed: {formatCurrency(selectedMember.courtSpend)} · Clinic billed: {formatCurrency(selectedMember.clinicSpend)} · Event billed: {formatCurrency(selectedMember.eventSpend)}
+                  </p>
+                  <p className="text-[#6b665e]">
+                    Total billed: {formatCurrency(selectedMember.totalSpend)} · Outstanding: {formatCurrency(selectedMember.outstanding)}
+                  </p>
+                  <p className="text-[#6b665e]">
+                    Clinics: {selectedMember.clinics.length ? selectedMember.clinics.join(", ") : "None yet"}
+                  </p>
+                  <p className="text-[#6b665e]">
+                    Events: {selectedMember.events.length ? selectedMember.events.join(", ") : "None yet"}
+                  </p>
+                  <p className="text-[#6b665e]">
+                    Last activity: {selectedMember.lastActivity ? new Date(selectedMember.lastActivity).toLocaleString() : "No activity"}
+                  </p>
+                  <p className="text-[#8a8477]">Admin note: {selectedMember.note || "No admin note saved"}</p>
+                </div>
+              ) : (
+                <p className="mt-2 text-[#8a8477]">Select a member to view details.</p>
+              )}
+            </div>
+          </div>
+        </section>
+
+        <div id="payouts-1099" className="mt-4 rounded-xl border border-[#ece8e2] p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Pro Payout + 1099 Tracking</p>
             <div className="flex items-center gap-2">
@@ -999,69 +1329,6 @@ export default function RTCAdminPage() {
                 <p className="text-[12px] text-[#8a8477]">No live court bookings available yet.</p>
               )}
             </div>
-          </div>
-        </div>
-
-        <div className="mt-4 grid gap-4 lg:grid-cols-2">
-          <div className="rounded-xl border border-[#ece8e2] p-4">
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Seasonal Performance</p>
-            <div className="mt-3 overflow-x-auto">
-              <table className="w-full min-w-[360px] text-left text-[12px]">
-                <thead className="text-[#8a8477]">
-                  <tr>
-                    <th className="py-1">Season</th>
-                    <th className="py-1">Revenue</th>
-                    <th className="py-1">Visits</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {seasonal.map((row) => (
-                    <tr key={row.label} className="border-t border-[#f0ede8]">
-                      <td className="py-1.5">{row.label}</td>
-                      <td className="py-1.5">{formatCurrency(row.revenue)}</td>
-                      <td className="py-1.5">{row.visits}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-[#ece8e2] p-4">
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Top Member Activity</p>
-            <div className="mt-3 space-y-2">
-              {topMembers.map((member) => (
-                <div key={member.memberNumber} className="rounded-lg border border-[#ece8e2] bg-[#faf9f7] px-3 py-2 text-[12px]">
-                  <p className="font-medium">{member.name} · Member #{member.memberNumber}</p>
-                  <p className="text-[#6b665e]">Visits: {member.visits} · Revenue: {formatCurrency(member.revenue)}</p>
-                </div>
-              ))}
-              {topMembers.length === 0 && <p className="text-[12px] text-[#8a8477]">No member activity yet.</p>}
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-4 rounded-xl border border-[#ece8e2] p-4">
-          <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Yearly Summary</p>
-          <div className="mt-3 overflow-x-auto">
-            <table className="w-full min-w-[320px] text-left text-[12px]">
-              <thead className="text-[#8a8477]">
-                <tr>
-                  <th className="py-1">Year</th>
-                  <th className="py-1">Revenue</th>
-                  <th className="py-1">Visits</th>
-                </tr>
-              </thead>
-              <tbody>
-                {yearly.map((row) => (
-                  <tr key={row.year} className="border-t border-[#f0ede8]">
-                    <td className="py-1.5">{row.year}</td>
-                    <td className="py-1.5">{formatCurrency(row.revenue)}</td>
-                    <td className="py-1.5">{row.visits}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           </div>
         </div>
       </div>
