@@ -388,6 +388,7 @@ export default function RTCAdminPage() {
   const [statementStatus, setStatementStatus] = useState<string | null>(null);
   const [sendingStatements, setSendingStatements] = useState(false);
   const [activeWorkspace, setActiveWorkspace] = useState<AdminWorkspace>("overview");
+  const [performanceView, setPerformanceView] = useState<"monthly" | "seasonal" | "yearly">("monthly");
   const [selectedClinic, setSelectedClinic] = useState("All Clinics");
   const [selectedEvent, setSelectedEvent] = useState("All Events");
   const [selectedMemberNumber, setSelectedMemberNumber] = useState<string | null>(null);
@@ -1234,80 +1235,93 @@ export default function RTCAdminPage() {
         </div>
 
         {activeWorkspace === "overview" && (
-          <div id="performance-overview" className="mt-5 grid gap-4 xl:grid-cols-3">
-          <div className="rounded-xl border border-[#ece8e2] p-4">
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Seasonal Performance</p>
-            <div className="mt-3 overflow-x-auto">
-              <table className="w-full min-w-[320px] text-left text-[12px]">
-                <thead className="text-[#8a8477]">
-                  <tr>
-                    <th className="py-1">Season</th>
-                    <th className="py-1">Revenue</th>
-                    <th className="py-1">Visits</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {seasonal.map((row) => (
-                    <tr key={row.label} className="border-t border-[#f0ede8]">
-                      <td className="py-1.5">{row.label}</td>
-                      <td className="py-1.5">{formatCurrency(row.revenue)}</td>
-                      <td className="py-1.5">{row.visits}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <div id="performance-overview" className="mt-5 rounded-xl border border-[#ece8e2] p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Performance</p>
+                <p className="text-[12px] text-[#6b665e]">Choose monthly, seasonal, or yearly view.</p>
+              </div>
+              <select
+                value={performanceView}
+                onChange={(e) => setPerformanceView(e.target.value as "monthly" | "seasonal" | "yearly")}
+                className="rounded-lg border border-[#e8e5df] bg-white px-3 py-1.5 text-[12px]"
+              >
+                <option value="monthly">Monthly Performance</option>
+                <option value="seasonal">Seasonal Performance</option>
+                <option value="yearly">Yearly Performance</option>
+              </select>
             </div>
-          </div>
 
-          <div className="rounded-xl border border-[#ece8e2] p-4">
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Yearly Performance</p>
-            <div className="mt-3 overflow-x-auto">
-              <table className="w-full min-w-[280px] text-left text-[12px]">
-                <thead className="text-[#8a8477]">
-                  <tr>
-                    <th className="py-1">Year</th>
-                    <th className="py-1">Revenue</th>
-                    <th className="py-1">Visits</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {yearly.map((row) => (
-                    <tr key={row.year} className="border-t border-[#f0ede8]">
-                      <td className="py-1.5">{row.year}</td>
-                      <td className="py-1.5">{formatCurrency(row.revenue)}</td>
-                      <td className="py-1.5">{row.visits}</td>
+            {performanceView === "monthly" && (
+              <div className="mt-3 overflow-x-auto">
+                <table className="w-full min-w-[360px] text-left text-[12px]">
+                  <thead className="text-[#8a8477]">
+                    <tr>
+                      <th className="py-1">Month</th>
+                      <th className="py-1">Revenue</th>
+                      <th className="py-1">Visits</th>
+                      <th className="py-1">Pending</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                  </thead>
+                  <tbody>
+                    {[...monthly].reverse().map((row) => (
+                      <tr key={row.key} className="border-t border-[#f0ede8]">
+                        <td className="py-1.5">{row.label}</td>
+                        <td className="py-1.5">{formatCurrency(row.revenue)}</td>
+                        <td className="py-1.5">{row.visits}</td>
+                        <td className="py-1.5">{row.pending}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
 
-          <div className="rounded-xl border border-[#ece8e2] p-4">
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Monthly Performance</p>
-            <div className="mt-3 overflow-x-auto">
-              <table className="w-full min-w-[360px] text-left text-[12px]">
-                <thead className="text-[#8a8477]">
-                  <tr>
-                    <th className="py-1">Month</th>
-                    <th className="py-1">Revenue</th>
-                    <th className="py-1">Visits</th>
-                    <th className="py-1">Pending</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[...monthly].reverse().map((row) => (
-                    <tr key={row.key} className="border-t border-[#f0ede8]">
-                      <td className="py-1.5">{row.label}</td>
-                      <td className="py-1.5">{formatCurrency(row.revenue)}</td>
-                      <td className="py-1.5">{row.visits}</td>
-                      <td className="py-1.5">{row.pending}</td>
+            {performanceView === "seasonal" && (
+              <div className="mt-3 overflow-x-auto">
+                <table className="w-full min-w-[320px] text-left text-[12px]">
+                  <thead className="text-[#8a8477]">
+                    <tr>
+                      <th className="py-1">Season</th>
+                      <th className="py-1">Revenue</th>
+                      <th className="py-1">Visits</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                  </thead>
+                  <tbody>
+                    {seasonal.map((row) => (
+                      <tr key={row.label} className="border-t border-[#f0ede8]">
+                        <td className="py-1.5">{row.label}</td>
+                        <td className="py-1.5">{formatCurrency(row.revenue)}</td>
+                        <td className="py-1.5">{row.visits}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {performanceView === "yearly" && (
+              <div className="mt-3 overflow-x-auto">
+                <table className="w-full min-w-[280px] text-left text-[12px]">
+                  <thead className="text-[#8a8477]">
+                    <tr>
+                      <th className="py-1">Year</th>
+                      <th className="py-1">Revenue</th>
+                      <th className="py-1">Visits</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {yearly.map((row) => (
+                      <tr key={row.year} className="border-t border-[#f0ede8]">
+                        <td className="py-1.5">{row.year}</td>
+                        <td className="py-1.5">{formatCurrency(row.revenue)}</td>
+                        <td className="py-1.5">{row.visits}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
 
@@ -1800,53 +1814,76 @@ export default function RTCAdminPage() {
           </div>
         )}
 
-        {(activeWorkspace === "overview" || activeWorkspace === "operations") && (
-          <div className="mt-4 grid gap-4 lg:grid-cols-[1.1fr_1fr]">
-          <div className="rounded-xl border border-[#ece8e2] p-4">
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Recent Activity Feed</p>
-            <div className="mt-3 space-y-2">
-              {recentActivity.map((row, idx) => (
-                <div key={`${row.label}-${idx}`} className="rounded-lg border border-[#ece8e2] bg-[#faf9f7] px-3 py-2 text-[12px]">
-                  <p className="font-medium">{row.label}</p>
-                  <p className="text-[#6b665e]">{row.detail}</p>
-                  <p className="text-[#8a8477]">{new Date(row.at).toLocaleString()}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-[#ece8e2] p-4">
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Manage Court Bookings</p>
-            <div className="mt-3 space-y-2">
-              {courtBookings.slice(0, 12).map((booking) => (
-                <div key={booking.id} className="rounded-lg border border-[#ece8e2] bg-[#faf9f7] px-3 py-2 text-[12px]">
-                  <p className="font-medium">{booking.clientName} · {booking.courtName}</p>
-                  <p className="text-[#6b665e]">
-                    {booking.date} · {formatHour(booking.blockStartHour)} · {booking.durationHours} hr · {formatCurrency(booking.totalAmount)}
-                  </p>
-                  <div className="mt-1 flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => markCourtBookingPaid(booking.id)}
-                      className="rounded border border-[#d9d5cf] px-2 py-0.5 text-[10px] hover:bg-white"
-                    >
-                      Mark Paid
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => cancelCourtBooking(booking.id)}
-                      className="rounded border border-[#e6cccc] px-2 py-0.5 text-[10px] text-[#7f1d1d] hover:bg-white"
-                    >
-                      Cancel
-                    </button>
+        {activeWorkspace === "overview" && (
+          <div className="mt-4">
+            <details className="rounded-xl border border-[#ece8e2] bg-white p-4">
+              <summary className="cursor-pointer text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">
+                Recent Activity Feed
+              </summary>
+              <div className="mt-3 space-y-2">
+                {recentActivity.map((row, idx) => (
+                  <div key={`${row.label}-${idx}`} className="rounded-lg border border-[#ece8e2] bg-[#faf9f7] px-3 py-2 text-[12px]">
+                    <p className="font-medium">{row.label}</p>
+                    <p className="text-[#6b665e]">{row.detail}</p>
+                    <p className="text-[#8a8477]">{new Date(row.at).toLocaleString()}</p>
                   </div>
-                </div>
-              ))}
-              {courtBookings.length === 0 && (
-                <p className="text-[12px] text-[#8a8477]">No live court bookings available yet.</p>
-              )}
-            </div>
+                ))}
+              </div>
+            </details>
           </div>
+        )}
+
+        {activeWorkspace === "operations" && (
+          <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_1fr]">
+            <details open className="rounded-xl border border-[#ece8e2] bg-white p-4">
+              <summary className="cursor-pointer text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">
+                Manage Court Bookings
+              </summary>
+              <div className="mt-3 space-y-2">
+                {courtBookings.slice(0, 12).map((booking) => (
+                  <div key={booking.id} className="rounded-lg border border-[#ece8e2] bg-[#faf9f7] px-3 py-2 text-[12px]">
+                    <p className="font-medium">{booking.clientName} · {booking.courtName}</p>
+                    <p className="text-[#6b665e]">
+                      {booking.date} · {formatHour(booking.blockStartHour)} · {booking.durationHours} hr · {formatCurrency(booking.totalAmount)}
+                    </p>
+                    <div className="mt-1 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => markCourtBookingPaid(booking.id)}
+                        className="rounded border border-[#d9d5cf] px-2 py-0.5 text-[10px] hover:bg-white"
+                      >
+                        Mark Paid
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => cancelCourtBooking(booking.id)}
+                        className="rounded border border-[#e6cccc] px-2 py-0.5 text-[10px] text-[#7f1d1d] hover:bg-white"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {courtBookings.length === 0 && (
+                  <p className="text-[12px] text-[#8a8477]">No live court bookings available yet.</p>
+                )}
+              </div>
+            </details>
+
+            <details className="rounded-xl border border-[#ece8e2] bg-white p-4">
+              <summary className="cursor-pointer text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">
+                Recent Activity Feed
+              </summary>
+              <div className="mt-3 space-y-2">
+                {recentActivity.map((row, idx) => (
+                  <div key={`${row.label}-${idx}`} className="rounded-lg border border-[#ece8e2] bg-[#faf9f7] px-3 py-2 text-[12px]">
+                    <p className="font-medium">{row.label}</p>
+                    <p className="text-[#6b665e]">{row.detail}</p>
+                    <p className="text-[#8a8477]">{new Date(row.at).toLocaleString()}</p>
+                  </div>
+                ))}
+              </div>
+            </details>
           </div>
         )}
       </div>
