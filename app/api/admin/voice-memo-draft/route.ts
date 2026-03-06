@@ -46,7 +46,8 @@ function normalizePoint(text: string): string {
     .replace(/^today\s+we\s+spent\s+a\s+lot\s+of\s+time\s+on\s+/i, "We focused on ")
     .replace(/^for\s+this\s+week\s+i\s+want\s+you\s+doing\s+/i, "Homework: do ")
     .replace(/^let'?s\s+tentatively\s+do\s+next\s+lesson\s+/i, "Next lesson: ")
-    .replace(/^we\s+also\s+cleaned\s+up\s+/i, "We improved ");
+    .replace(/^we\s+also\s+cleaned\s+up\s+/i, "We improved ")
+    .replace(/,\s*$/, "");
   if (!cleaned) return "";
   const firstTwoSentences = splitSentences(cleaned).slice(0, 2).join(" ");
   const words = firstTwoSentences.split(/\s+/).filter(Boolean);
@@ -70,6 +71,24 @@ function dedupePoints(points: string[]): string[] {
 function includesAny(text: string, terms: string[]): boolean {
   const lower = text.toLowerCase();
   return terms.some((term) => lower.includes(term));
+}
+
+function splitIntoClauses(text: string): string[] {
+  const base = normalizeLine(text)
+    .replace(/\s+and\s+then\s+/gi, ". ")
+    .replace(/\s+and\s+also\s+/gi, ". ")
+    .replace(/\s+also\s+/gi, ". ")
+    .replace(/\s+plus\s+/gi, ". ")
+    .replace(/\s+then\s+/gi, ". ");
+
+  const parts = base
+    .split(/(?:[.!?;]|,\s+(?=(?:for|next|we|you|on|in|at|try|do|schedule)\b))/i)
+    .map((s) => cleanSentence(s))
+    .filter((s) => s.length >= 12)
+    .filter((s) => s.split(/\s+/).length >= 5)
+    .filter((s) => !/^for\s+match\s+play$/i.test(s));
+
+  return dedupePoints(parts);
 }
 
 function extractJsonObject(raw: string): { subject?: string; body?: string } | null {
@@ -151,50 +170,67 @@ function buildExtractiveDraft(input: {
   lessonTime: string;
   transcript: string;
 }): { subject: string; body: string } {
-  const chunks = sentenceChunks(input.transcript)
-    .map(cleanSentence)
-    .filter((s) => s.length >= 10);
+  const chunks = splitIntoClauses(input.transcript);
 
   const subjectDate = input.lessonDate ? ` - ${input.lessonDate}` : "";
   const subject = `Lesson Recap for ${input.clientName}${subjectDate}`;
 
-  const weightedKeywords = [
-    "forehand","backhand","serve","return","footwork","consistency","depth","timing",
-    "nutrition","diet","sleep","recovery","workout","mobility","match","set","tournament",
-    "next lesson","monday","tuesday","wednesday","thursday","friday","saturday","sunday",
-    "am","pm","reminder","focus","homework","drill",
+  const focusTerms = [
+    "forehand","backhand","serve","return","volley","footwork","timing","consistency","depth","contact","toss","rally","approach","slice","topspin",
+  ];
+  const healthTerms = [
+    "nutrition","diet","hydrate","hydration","sleep","recovery","workout","mobility","stretch","yoga","injury","pain","tight","warm up","cool down",
+  ];
+  const matchTerms = [
+    "match","set","tournament","point play","practice set","compete","ladder","tie break","first-ball","game plan",
+  ];
+  const nextTerms = [
+    "next lesson","next week","monday","tuesday","wednesday","thursday","friday","saturday","sunday","am","pm","schedule","tentative",
+  ];
+  const personalTerms = [
+    "great job","awesome","loved your attitude","proud","keep it up","well done","message",
   ];
 
-  const scored = chunks.map((s) => {
-    const lower = s.toLowerCase();
-    let score = 0;
-    for (const kw of weightedKeywords) {
-      if (lower.includes(kw)) score += kw.includes(" ") ? 3 : 2;
+  const sections: Array<{ title: string; points: string[] }> = [];
+  const used = new Set<string>();
+  const takePoints = (terms: string[], limit: number): string[] => {
+    const points: string[] = [];
+    for (const c of chunks) {
+      if (points.length >= limit) break;
+      if (used.has(c)) continue;
+      if (!includesAny(c, terms)) continue;
+      const point = normalizePoint(c);
+      if (!point) continue;
+      if (point.split(/\s+/).length < 5) continue;
+      points.push(point);
+      used.add(c);
     }
-    if (/\d/.test(lower)) score += 1;
-    if (s.length > 140) score -= 1;
-    return { s, score };
-  });
+    return points;
+  };
 
-  const keyPoints = dedupePoints(
-    scored
-      .sort((a, b) => b.score - a.score)
-      .filter((x) => x.score > 0)
-      .slice(0, 5)
-      .map((x) => normalizePoint(x.s))
-      .filter(Boolean)
-  ).slice(0, 4);
+  const focus = takePoints(focusTerms, 4);
+  if (focus.length > 0) sections.push({ title: "Key Areas of Focus", points: focus });
+  const health = takePoints(healthTerms, 3);
+  if (health.length > 0) sections.push({ title: "Health / Training Notes", points: health });
+  const match = takePoints(matchTerms, 3);
+  if (match.length > 0) sections.push({ title: "Matchplay Recommendations", points: match });
+  const next = takePoints(nextTerms, 2);
+  if (next.length > 0) sections.push({ title: "Next Lesson", points: next });
+  const personal = takePoints(personalTerms, 2);
+  if (personal.length > 0) sections.push({ title: "Quick Note", points: personal });
 
-  const fallbackPoints =
-    keyPoints.length > 0
-      ? keyPoints
-      : dedupePoints(chunks.slice(0, 3).map((s) => normalizePoint(s)).filter(Boolean)).slice(0, 3);
+  if (sections.length === 0) {
+    sections.push({
+      title: "Key Points",
+      points: dedupePoints(chunks.map((c) => normalizePoint(c)).filter(Boolean)).slice(0, 4),
+    });
+  }
 
   const body = formatBodyFromSections({
     clientName: input.clientName,
     lessonDate: input.lessonDate,
     lessonTime: input.lessonTime,
-    sections: [{ title: "Key Points", points: fallbackPoints }],
+    sections,
   });
 
   return { subject, body };
