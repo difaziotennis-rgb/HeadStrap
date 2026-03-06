@@ -46,6 +46,12 @@ const EVENT_RESERVED_COURTS = ["indoor-1", "outdoor-1", "outdoor-2", "outdoor-3"
 type ClinicBooking = {
   clinicNames: string[];
   sessionWindow: string;
+  reservedSlots?: Array<{
+    date: string;
+    courtId: "indoor-1";
+    startHour: number;
+    durationHours: number;
+  }>;
   createdAt: string;
 };
 
@@ -243,6 +249,16 @@ export default function RTCBookPage() {
     const dayEnd = dayStart + 24 * 60 * 60 * 1000;
 
     for (const booking of clinicBookings) {
+      if (booking.reservedSlots?.length) {
+        for (const slot of booking.reservedSlots) {
+          if (slot.date !== selectedDate || slot.courtId !== "indoor-1") continue;
+          for (let i = 0; i < slot.durationHours; i += 1) {
+            const hour = slot.startHour + i;
+            blocked[bookingKey(selectedDate, "indoor-1", hour)] = "Reserved for clinic";
+          }
+        }
+        continue;
+      }
       const bookingDate = new Date(booking.createdAt || Date.now());
       const baseWeek = startOfWeek(bookingDate);
       const weekOffset = booking.sessionWindow === "next_week" ? 7 : 0;

@@ -23,6 +23,18 @@ const SESSION_WINDOWS = [
 
 const BASE_CAPACITY = 12;
 const CLINIC_STORAGE_KEY = "rtc_clinic_bookings_v1";
+const CLINIC_SLOT_TEMPLATES: Record<
+  string,
+  { weekday: number; startHour: number; durationHours: number }
+> = {
+  "Monday Nights with Derek": { weekday: 1, startHour: 18, durationHours: 2 },
+  "Wednesday Nights with Jay": { weekday: 3, startHour: 18, durationHours: 2 },
+  "Friday Nights with Derek": { weekday: 5, startHour: 18, durationHours: 2 },
+  "Saturday Advanced": { weekday: 6, startHour: 9, durationHours: 2 },
+  "Saturday Intermediate": { weekday: 6, startHour: 11, durationHours: 2 },
+  "Sunday Advanced Intermediate": { weekday: 0, startHour: 9, durationHours: 2 },
+  "Sunday Advanced": { weekday: 0, startHour: 11, durationHours: 2 },
+};
 
 type ClinicBooking = {
   id: string;
@@ -37,12 +49,38 @@ type ClinicBooking = {
   clientPhone: string;
   isMember: boolean;
   memberNumber?: string;
+  reservedSlots?: Array<{
+    date: string;
+    courtId: "indoor-1";
+    startHour: number;
+    durationHours: number;
+  }>;
   createdAt: string;
 };
 
 function parsePrice(value: string): number {
   const n = Number(value.replace(/[^\d.]/g, ""));
   return Number.isFinite(n) ? n : 0;
+}
+
+function startOfWeek(date: Date): Date {
+  const next = new Date(date);
+  next.setHours(0, 0, 0, 0);
+  next.setDate(next.getDate() - next.getDay());
+  return next;
+}
+
+function addDays(date: Date, days: number): Date {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function formatDateInput(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 export default function RTCClinicsPage() {
@@ -140,6 +178,22 @@ export default function RTCClinicsPage() {
       setMsg("Select at least one clinic to continue.");
       return;
     }
+    const now = new Date();
+    const weekStart = startOfWeek(now);
+    const weekOffset = sessionWindow === "next_week" ? 7 : 0;
+    const reservedSlots = selectedList.flatMap((item) => {
+      const template = CLINIC_SLOT_TEMPLATES[item.name];
+      if (!template) return [];
+      const clinicDate = addDays(weekStart, weekOffset + template.weekday);
+      return [
+        {
+          date: formatDateInput(clinicDate),
+          courtId: "indoor-1" as const,
+          startHour: template.startHour,
+          durationHours: template.durationHours,
+        },
+      ];
+    });
     const booking: ClinicBooking = {
       id: `clinic-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       clinicNames: selectedList.map((item) => item.name),
@@ -155,6 +209,7 @@ export default function RTCClinicsPage() {
       clientPhone: phone.trim(),
       isMember,
       memberNumber: isMember ? memberSession?.memberNumber || "" : "",
+      reservedSlots,
       createdAt: new Date().toISOString(),
     };
     const next = [booking, ...bookings].slice(0, 20);
