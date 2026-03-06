@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { rtcClinics, rtcCoaches } from "../rtc-data";
 
 const ADMIN_AUTH_KEY = "rtc_admin_auth_v1";
@@ -274,6 +274,11 @@ function createMockData() {
     { memberNumber: "318", note: "Interested in recurring Sunday clinics.", updatedAt: makeDate(-2, 8) },
   ];
   const coaches = rtcCoaches.map((coach) => coach.name);
+  const clinicCatalog = rtcClinics.map((clinic) => {
+    const member = Number(clinic.memberPrice.replace(/[^0-9.]/g, "")) || 75;
+    const publicRate = Number(clinic.publicPrice.replace(/[^0-9.]/g, "")) || member + 15;
+    return { name: clinic.name, member, publicRate };
+  });
   coaches.forEach((coach, idx) => {
     proProfiles.push({
       id: `mock-pro-${idx}`,
@@ -335,16 +340,29 @@ function createMockData() {
       memberNumber: lessonMember.number,
       createdAt: makeDate(i, 10),
     });
-    const clinicMember = members[mod(i + 3, members.length)];
-    clinics.push({
-      id: `mock-clinic-${i}`,
-      clinicNames: ["Monday Nights with Derek"],
-      clinicCount: 1,
-      total: 75,
-      clientName: clinicMember.name,
-      memberNumber: clinicMember.number,
-      createdAt: makeDate(i, 12),
-    });
+    const month = dt.getMonth();
+    const peakSeason = month >= 4 && month <= 8;
+    const maintenanceWindow = month <= 1 || month === 11;
+    const clinicEntries = Math.max(
+      0,
+      (peakSeason ? 2 : 1) + mod(i + month, peakSeason ? 3 : 2) - (maintenanceWindow && mod(i, 4) === 0 ? 1 : 0)
+    );
+    for (let k = 0; k < clinicEntries; k += 1) {
+      const clinicMember = members[mod(i + 3 + k, members.length)];
+      const clinicTemplate = clinicCatalog[mod(i * 3 + k + month, clinicCatalog.length)];
+      const usesPublicRate = mod(i + month + k, 4) === 0;
+      const baseRate = usesPublicRate ? clinicTemplate.publicRate : clinicTemplate.member;
+      const priceAdjust = (mod(i * 7 + k * 5 + month, 5) - 2) * 3;
+      clinics.push({
+        id: `mock-clinic-${i}-${k}`,
+        clinicNames: [clinicTemplate.name],
+        clinicCount: 1,
+        total: Math.max(55, baseRate + priceAdjust),
+        clientName: clinicMember.name,
+        memberNumber: clinicMember.number,
+        createdAt: makeDate(i, 11 + (k % 8)),
+      });
+    }
     const eventMember = members[mod(i + 4, members.length)];
     events.push({
       id: `mock-event-${i}`,
@@ -399,6 +417,10 @@ export default function RTCAdminPage() {
   const [selectedMemberDetailTab, setSelectedMemberDetailTab] = useState<
     "courts" | "clinics" | "events" | "lessons"
   >("courts");
+  const [selectedFinanceProName, setSelectedFinanceProName] = useState<string | null>(null);
+  const [quickJumpQuery, setQuickJumpQuery] = useState("");
+  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
+  const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
 
   const [newBlock, setNewBlock] = useState({
     date: formatDateInput(new Date()),
@@ -437,7 +459,7 @@ export default function RTCAdminPage() {
     active: true,
   });
 
-  function loadLiveData() {
+  const loadLiveData = useCallback(() => {
     if (typeof window === "undefined") return;
     const map = safeParse<Record<string, CourtBooking>>(localStorage.getItem(COURT_KEY), {});
     const seen = new Set<string>();
@@ -458,13 +480,46 @@ export default function RTCAdminPage() {
     setQuarterlyEmailLog(
       safeParse<Record<string, string>>(localStorage.getItem(ADMIN_QUARTERLY_EMAIL_LOG_KEY), {})
     );
-  }
+    setLastSyncedAt(new Date().toISOString());
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     setAuthed(localStorage.getItem(ADMIN_AUTH_KEY) === "true");
     loadLiveData();
-  }, []);
+  }, [loadLiveData]);
+
+  useEffect(() => {
+    if (!adminMsg) return;
+    const timer = window.setTimeout(() => setAdminMsg(null), 3200);
+    return () => window.clearTimeout(timer);
+  }, [adminMsg]);
+
+  useEffect(() => {
+    if (!authed || typeof window === "undefined") return;
+    const liveKeys = new Set([
+      COURT_KEY,
+      LESSON_KEY,
+      CLINIC_KEY,
+      EVENT_KEY,
+      ADMIN_COURT_BLOCKS_KEY,
+      ADMIN_MEMBER_NOTES_KEY,
+      ADMIN_PRO_PAYOUTS_KEY,
+      ADMIN_PRO_PROFILES_KEY,
+      ADMIN_QUARTERLY_EMAIL_LOG_KEY,
+    ]);
+    const onStorage = (event: StorageEvent) => {
+      if (!event.key || liveKeys.has(event.key)) loadLiveData();
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [authed, loadLiveData]);
+
+  useEffect(() => {
+    if (!authed || !autoRefreshEnabled || typeof window === "undefined") return;
+    const timer = window.setInterval(() => loadLiveData(), 15000);
+    return () => window.clearInterval(timer);
+  }, [authed, autoRefreshEnabled, loadLiveData]);
 
   const mergedData = useMemo(() => {
     const mock = createMockData();
@@ -1012,6 +1067,163 @@ export default function RTCAdminPage() {
     }),
     [mergedData.payouts, proCompliance, selectedTaxYear]
   );
+  const financeBillingSummary = useMemo(() => {
+    const courtRevenue = mergedData.courts.reduce((sum, item) => sum + (item.totalAmount || 0), 0);
+    const clinicRevenue = mergedData.clinics.reduce((sum, item) => sum + (item.total || 0), 0);
+    const eventRevenue = mergedData.events.reduce((sum, item) => sum + (item.total || 0), 0);
+    const outstanding = mergedData.courts
+      .filter((item) => item.paymentStatus !== "paid")
+      .reduce((sum, item) => sum + (item.totalAmount || 0), 0);
+    return {
+      courtRevenue,
+      clinicRevenue,
+      eventRevenue,
+      outstanding,
+      totalRevenue: courtRevenue + clinicRevenue + eventRevenue,
+    };
+  }, [mergedData]);
+  const financeRecentBillingItems = useMemo(() => {
+    const rows: Array<{ type: string; who: string; detail: string; amount: number; at: string }> = [];
+    mergedData.courts.forEach((item) =>
+      rows.push({
+        type: "Court",
+        who: item.clientName,
+        detail: `${item.courtName} · ${item.date}`,
+        amount: item.totalAmount || 0,
+        at: item.createdAt || `${item.date}T12:00:00`,
+      })
+    );
+    mergedData.clinics.forEach((item) =>
+      rows.push({
+        type: "Clinic",
+        who: item.clientName,
+        detail: item.clinicNames.join(", "),
+        amount: item.total || 0,
+        at: item.createdAt,
+      })
+    );
+    mergedData.events.forEach((item) =>
+      rows.push({
+        type: "Event",
+        who: item.attendeeName,
+        detail: item.eventTitle,
+        amount: item.total || 0,
+        at: item.createdAt,
+      })
+    );
+    return rows.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime()).slice(0, 14);
+  }, [mergedData]);
+  const topOutstandingMembers = useMemo(() => {
+    return [...memberDirectory]
+      .filter((member) => member.outstanding > 0)
+      .sort((a, b) => b.outstanding - a.outstanding)
+      .slice(0, 8);
+  }, [memberDirectory]);
+  const proDirectory = useMemo(() => {
+    const byName = new Map<string, (typeof proCompliance)[number]>();
+    proCompliance.forEach((pro) => {
+      const existing = byName.get(pro.displayName);
+      if (!existing) byName.set(pro.displayName, pro);
+      else if (new Date(pro.updatedAt).getTime() > new Date(existing.updatedAt).getTime()) {
+        byName.set(pro.displayName, pro);
+      }
+    });
+    return Array.from(byName.values()).sort((a, b) => a.displayName.localeCompare(b.displayName));
+  }, [proCompliance]);
+  const selectedFinancePro = useMemo(() => {
+    if (!proDirectory.length) return null;
+    const target = selectedFinanceProName || proDirectory[0].displayName;
+    return proDirectory.find((pro) => pro.displayName === target) || proDirectory[0];
+  }, [proDirectory, selectedFinanceProName]);
+  const selectedFinanceProPayouts = useMemo(() => {
+    if (!selectedFinancePro) return [];
+    return mergedData.payouts
+      .filter((item) => item.proName === selectedFinancePro.displayName)
+      .sort((a, b) => new Date(b.payDate).getTime() - new Date(a.payDate).getTime())
+      .slice(0, 12);
+  }, [mergedData.payouts, selectedFinancePro]);
+  const quickJumpResults = useMemo(() => {
+    const query = quickJumpQuery.trim().toLowerCase();
+    if (!query) return [];
+    const results: Array<
+      | { type: "member"; id: string; label: string; hint: string }
+      | { type: "pro"; id: string; label: string; hint: string }
+      | { type: "clinic"; id: string; label: string; hint: string }
+      | { type: "event"; id: string; label: string; hint: string }
+    > = [];
+    memberDirectory.forEach((member) => {
+      if (
+        member.name.toLowerCase().includes(query) ||
+        member.memberNumber.toLowerCase().includes(query) ||
+        member.email.toLowerCase().includes(query)
+      ) {
+        results.push({
+          type: "member",
+          id: member.memberNumber,
+          label: `${member.name} (#${member.memberNumber})`,
+          hint: "Open in Members",
+        });
+      }
+    });
+    proDirectory.forEach((pro) => {
+      if (pro.displayName.toLowerCase().includes(query) || pro.legalName.toLowerCase().includes(query)) {
+        results.push({
+          type: "pro",
+          id: pro.displayName,
+          label: pro.displayName,
+          hint: "Open in Finance",
+        });
+      }
+    });
+    clinicMonitor.forEach((clinic) => {
+      if (clinic.name.toLowerCase().includes(query)) {
+        results.push({
+          type: "clinic",
+          id: clinic.name,
+          label: clinic.name,
+          hint: "Filter Programs",
+        });
+      }
+    });
+    eventMonitor.forEach((event) => {
+      if (event.title.toLowerCase().includes(query)) {
+        results.push({
+          type: "event",
+          id: event.title,
+          label: event.title,
+          hint: "Filter Programs",
+        });
+      }
+    });
+    return results.slice(0, 8);
+  }, [clinicMonitor, eventMonitor, memberDirectory, proDirectory, quickJumpQuery]);
+
+  function jumpToResult(
+    result:
+      | { type: "member"; id: string }
+      | { type: "pro"; id: string }
+      | { type: "clinic"; id: string }
+      | { type: "event"; id: string }
+  ) {
+    if (result.type === "member") {
+      setActiveWorkspace("members");
+      setSelectedMemberNumber(result.id);
+      setSelectedMemberDetailTab("courts");
+    }
+    if (result.type === "pro") {
+      setActiveWorkspace("finance");
+      setSelectedFinanceProName(result.id);
+    }
+    if (result.type === "clinic") {
+      setActiveWorkspace("programs");
+      setSelectedClinic(result.id);
+    }
+    if (result.type === "event") {
+      setActiveWorkspace("programs");
+      setSelectedEvent(result.id);
+    }
+    setQuickJumpQuery("");
+  }
 
   function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -1222,6 +1434,7 @@ export default function RTCAdminPage() {
     const next = [profile, ...proProfiles.filter((p) => p.displayName !== displayName)];
     setProProfiles(next);
     localStorage.setItem(ADMIN_PRO_PROFILES_KEY, JSON.stringify(next));
+    setSelectedFinanceProName(displayName);
     setProProfileForm((prev) => ({ ...prev, legalName: "", email: "", address: "", taxIdLast4: "" }));
     setAdminMsg("Pro profile saved.");
   }
@@ -1341,6 +1554,103 @@ export default function RTCAdminPage() {
         </div>
 
         {adminMsg && <p className="mt-3 rounded-lg border border-[#dbead3] bg-[#f4faf1] px-3 py-2 text-[12px] text-[#2d5016]">{adminMsg}</p>}
+
+        <div className="sticky top-2 z-20 mt-4 rounded-xl border border-[#ece8e2] bg-[#faf9f7]/95 p-4 backdrop-blur">
+          <div className="flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Workspace Navigation</p>
+              <p className="mt-1 text-[12px] text-[#6b665e]">
+                Open one focused workspace at a time to reduce clutter.
+              </p>
+            </div>
+            <p className="text-[11px] text-[#8a8477]">
+              Active:{" "}
+              <span className="font-medium text-[#4a4a4a]">
+                {activeWorkspace === "overview" && "Overview"}
+                {activeWorkspace === "operations" && "Operations"}
+                {activeWorkspace === "programs" && "Programs"}
+                {activeWorkspace === "members" && "Members"}
+                {activeWorkspace === "finance" && "Finance"}
+              </span>
+            </p>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {(
+              [
+                ["overview", "Overview", "KPI + performance + activity"],
+                ["operations", "Operations", "Court controls + booking actions"],
+                ["programs", "Programs", "Clinics + events monitoring"],
+                ["members", "Members", "Directory + quarterly statements"],
+                ["finance", "Finance", "Pro registry + payouts + 1099"],
+              ] as Array<[AdminWorkspace, string, string]>
+            ).map(([key, label, hint]) => {
+              const active = activeWorkspace === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setActiveWorkspace(key)}
+                  className={`rounded-md border px-3 py-1.5 text-left text-[12px] transition-colors ${
+                    active
+                      ? "border-[#1a1a1a] bg-[#1a1a1a] text-white"
+                      : "border-[#d9d5cf] bg-white hover:bg-[#fdfcfb]"
+                  }`}
+                  title={hint}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+          <div className="mt-3 grid gap-2 lg:grid-cols-[minmax(0,1fr)_auto]">
+            <div>
+              <input
+                value={quickJumpQuery}
+                onChange={(e) => setQuickJumpQuery(e.target.value)}
+                placeholder="Quick jump: member, pro, clinic, event..."
+                className="w-full rounded-lg border border-[#e8e5df] bg-white px-3 py-2 text-[12px]"
+              />
+              {quickJumpResults.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {quickJumpResults.map((row) => (
+                    <button
+                      key={`${row.type}-${row.id}`}
+                      type="button"
+                      onClick={() => jumpToResult(row)}
+                      className="rounded-md border border-[#d9d5cf] bg-white px-3 py-1.5 text-[12px] hover:bg-[#fdfcfb]"
+                      title={row.hint}
+                    >
+                      {row.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+              <p className="text-[11px] text-[#8a8477]">
+                Live sync: {lastSyncedAt ? new Date(lastSyncedAt).toLocaleTimeString() : "Not synced yet"}
+              </p>
+              <button
+                type="button"
+                onClick={() => loadLiveData()}
+                className="rounded-md border border-[#d9d5cf] bg-white px-3 py-1.5 text-[12px] hover:bg-[#fdfcfb]"
+              >
+                Refresh now
+              </button>
+              <button
+                type="button"
+                onClick={() => setAutoRefreshEnabled((v) => !v)}
+                className={`rounded-md border px-3 py-1.5 text-[12px] ${
+                  autoRefreshEnabled
+                    ? "border-[#1a1a1a] bg-[#1a1a1a] text-white"
+                    : "border-[#d9d5cf] bg-white text-[#4a4a4a] hover:bg-[#fdfcfb]"
+                }`}
+              >
+                Auto-refresh: {autoRefreshEnabled ? "On" : "Off"}
+              </button>
+            </div>
+          </div>
+        </div>
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-4">
@@ -1490,59 +1800,12 @@ export default function RTCAdminPage() {
           </div>
         )}
 
-        <div className="mt-4 rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-4">
-          <div className="flex flex-wrap items-end justify-between gap-2">
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Workspace Navigation</p>
-              <p className="mt-1 text-[12px] text-[#6b665e]">
-                Open one focused workspace at a time to reduce clutter.
-              </p>
-            </div>
-            <p className="text-[11px] text-[#8a8477]">
-              Active:{" "}
-              <span className="font-medium text-[#4a4a4a]">
-                {activeWorkspace === "overview" && "Overview"}
-                {activeWorkspace === "operations" && "Operations"}
-                {activeWorkspace === "programs" && "Programs"}
-                {activeWorkspace === "members" && "Members"}
-                {activeWorkspace === "finance" && "Finance"}
-              </span>
-            </p>
-          </div>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {(
-              [
-                ["overview", "Overview", "KPI + performance + activity"],
-                ["operations", "Operations", "Court controls + booking actions"],
-                ["programs", "Programs", "Clinics + events monitoring"],
-                ["members", "Members", "Directory + quarterly statements"],
-                ["finance", "Finance", "Pro registry + payouts + 1099"],
-              ] as Array<[AdminWorkspace, string, string]>
-            ).map(([key, label, hint]) => {
-              const active = activeWorkspace === key;
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setActiveWorkspace(key)}
-                  className={`rounded-md border px-3 py-1.5 text-left text-[12px] transition-colors ${
-                    active
-                      ? "border-[#1a1a1a] bg-[#1a1a1a] text-white"
-                      : "border-[#d9d5cf] bg-white hover:bg-[#fdfcfb]"
-                  }`}
-                  title={hint}
-                >
-                  {label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
         {activeWorkspace === "operations" && (
-          <div className="mt-5 grid gap-4 xl:grid-cols-3">
-          <section className="rounded-xl border border-[#ece8e2] p-4">
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Court Control Panel</p>
+          <div className="mt-5 grid gap-4 md:grid-cols-3">
+          <details className="rounded-xl border border-[#ece8e2] p-4">
+            <summary className="cursor-pointer text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">
+              Court Control Panel
+            </summary>
             <form onSubmit={createCourtBlock} className="mt-3 grid gap-2">
               <input type="date" value={newBlock.date} onChange={(e) => setNewBlock((p) => ({ ...p, date: e.target.value }))} className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[12px]" />
               <select value={newBlock.courtId} onChange={(e) => setNewBlock((p) => ({ ...p, courtId: e.target.value }))} className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[12px]">
@@ -1550,7 +1813,7 @@ export default function RTCAdminPage() {
                   <option key={court.id} value={court.id}>{court.name}</option>
                 ))}
               </select>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <select value={newBlock.startHour} onChange={(e) => setNewBlock((p) => ({ ...p, startHour: Number(e.target.value) }))} className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[12px]">
                   {HOURS.map((hour) => <option key={hour} value={hour}>{formatHour(hour)}</option>)}
                 </select>
@@ -1569,20 +1832,22 @@ export default function RTCAdminPage() {
                   <p className="font-medium">{COURTS.find((c) => c.id === block.courtId)?.name || block.courtId}</p>
                   <p className="text-[#6b665e]">{block.date} · {formatHour(block.startHour)} · {block.durationHours} hr</p>
                   <p className="text-[#8a8477]">{block.reason}</p>
-                  <button type="button" onClick={() => removeCourtBlock(block.id)} className="mt-1 rounded border border-[#d9d5cf] px-2 py-0.5 text-[10px] hover:bg-white">Remove</button>
+                  <button type="button" onClick={() => removeCourtBlock(block.id)} className="mt-1 rounded border border-[#d9d5cf] px-2 py-1 text-[10px] hover:bg-white">Remove</button>
                 </div>
               ))}
             </div>
-          </section>
+          </details>
 
-          <section className="rounded-xl border border-[#ece8e2] p-4">
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Manual Court Booking</p>
+          <details className="rounded-xl border border-[#ece8e2] p-4">
+            <summary className="cursor-pointer text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">
+              Manual Court Booking
+            </summary>
             <form onSubmit={createManualCourtBooking} className="mt-3 grid gap-2">
               <input type="date" value={manualBooking.date} onChange={(e) => setManualBooking((p) => ({ ...p, date: e.target.value }))} className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[12px]" />
               <select value={manualBooking.courtId} onChange={(e) => setManualBooking((p) => ({ ...p, courtId: e.target.value }))} className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[12px]">
                 {COURTS.map((court) => <option key={court.id} value={court.id}>{court.name}</option>)}
               </select>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <select value={manualBooking.startHour} onChange={(e) => setManualBooking((p) => ({ ...p, startHour: Number(e.target.value) }))} className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[12px]">
                   {HOURS.map((hour) => <option key={hour} value={hour}>{formatHour(hour)}</option>)}
                 </select>
@@ -1594,7 +1859,7 @@ export default function RTCAdminPage() {
               </div>
               <input value={manualBooking.clientName} onChange={(e) => setManualBooking((p) => ({ ...p, clientName: e.target.value }))} placeholder="Client name" className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[12px]" />
               <input value={manualBooking.clientEmail} onChange={(e) => setManualBooking((p) => ({ ...p, clientEmail: e.target.value }))} placeholder="Client email" className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[12px]" />
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <input value={manualBooking.memberNumber} onChange={(e) => setManualBooking((p) => ({ ...p, memberNumber: e.target.value }))} placeholder="Member #" className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[12px]" />
                 <input value={manualBooking.totalAmount} onChange={(e) => setManualBooking((p) => ({ ...p, totalAmount: e.target.value }))} placeholder="Total amount" className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[12px]" />
               </div>
@@ -1604,10 +1869,12 @@ export default function RTCAdminPage() {
               </select>
               <button type="submit" className="rounded-lg bg-[#1a1a1a] px-3 py-2 text-[12px] font-medium text-white hover:bg-[#2c2c2c]">Create Booking</button>
             </form>
-          </section>
+          </details>
 
-          <section className="rounded-xl border border-[#ece8e2] p-4">
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Member Notes</p>
+          <details className="rounded-xl border border-[#ece8e2] p-4">
+            <summary className="cursor-pointer text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">
+              Member Notes
+            </summary>
             <form onSubmit={saveMemberNote} className="mt-3 grid gap-2">
               <input value={noteForm.memberNumber} onChange={(e) => setNoteForm((p) => ({ ...p, memberNumber: e.target.value }))} placeholder="Member number" className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[12px]" />
               <textarea value={noteForm.note} onChange={(e) => setNoteForm((p) => ({ ...p, note: e.target.value }))} rows={3} placeholder="Operational note, preference, follow-up..." className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[12px]" />
@@ -1621,7 +1888,7 @@ export default function RTCAdminPage() {
                 </div>
               ))}
             </div>
-          </section>
+          </details>
           </div>
         )}
 
@@ -1646,7 +1913,7 @@ export default function RTCAdminPage() {
               </div>
             </div>
 
-            <details id="clinics-monitor" open className="rounded-xl border border-[#ece8e2] p-4">
+            <details id="clinics-monitor" className="rounded-xl border border-[#ece8e2] p-4">
               <summary className="cursor-pointer text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">
                 Clinics Monitor
               </summary>
@@ -1731,12 +1998,12 @@ export default function RTCAdminPage() {
             </div>
           </div>
 
-          <details id="members-hub" open className="rounded-xl border border-[#ece8e2] p-4">
+          <details id="members-hub" className="rounded-xl border border-[#ece8e2] p-4">
           <summary className="cursor-pointer text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Membership Area</summary>
           <div className="mt-3 grid gap-4 xl:grid-cols-[1fr_1.2fr]">
             <div className="rounded-lg border border-[#ece8e2] p-3">
               <p className="text-[11px] uppercase tracking-[0.1em] text-[#8a8477]">All Members</p>
-              <div className="mt-2 max-h-[360px] space-y-2 overflow-y-auto pr-1">
+              <div className="mt-2 max-h-[45vh] space-y-2 overflow-y-auto pr-1 sm:max-h-[360px]">
                 {memberDirectory.map((member) => {
                   const active = selectedMember?.memberNumber === member.memberNumber;
                   return (
@@ -1828,7 +2095,7 @@ export default function RTCAdminPage() {
                       })}
                     </div>
 
-                    <div className="mt-2 max-h-[240px] space-y-2 overflow-y-auto pr-1">
+                    <div className="mt-2 max-h-[45vh] space-y-2 overflow-y-auto pr-1 sm:max-h-[240px]">
                       {selectedMemberDetailTab === "courts" &&
                         selectedMemberYearlyDetails.courts.map((item) => (
                           <div key={`court-${item.id}-${item.blockStartHour}-${item.date}`} className="rounded-md border border-[#e8e5df] bg-white px-2.5 py-2 text-[11px]">
@@ -1913,9 +2180,9 @@ export default function RTCAdminPage() {
             </div>
           </div>
 
-          <details id="pro-registry" open className="rounded-xl border border-[#ece8e2] p-4">
+          <details id="pro-registry" className="rounded-xl border border-[#ece8e2] p-4">
           <summary className="cursor-pointer text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Pro Profile Registry (1099 Readiness)</summary>
-          <div className="mt-3 grid gap-4 xl:grid-cols-[1fr_1.1fr]">
+          <div className="mt-3 grid gap-4 xl:grid-cols-[1fr_0.8fr_1.1fr]">
             <form onSubmit={saveProProfile} className="grid gap-2 rounded-lg border border-[#ece8e2] bg-[#faf9f7] p-3">
               <input
                 value={proProfileForm.displayName}
@@ -1979,24 +2246,145 @@ export default function RTCAdminPage() {
             </form>
 
             <div className="rounded-lg border border-[#ece8e2] p-3">
-              <p className="text-[11px] uppercase tracking-[0.1em] text-[#8a8477]">Compliance Snapshot ({selectedTaxYear})</p>
-              <div className="mt-2 space-y-2">
-                {proCompliance.map((pro) => (
-                  <div key={pro.id} className="rounded-lg border border-[#ece8e2] bg-[#faf9f7] px-2.5 py-2 text-[11px]">
-                    <p className="font-medium">
-                      {pro.displayName} {pro.active ? "" : "(Inactive)"}
-                    </p>
-                    <p className="text-[#6b665e]">Legal: {pro.legalName || "Not set"}</p>
-                    <p className="text-[#6b665e]">Tax ID last4: {pro.taxIdLast4 || "Not set"} · W-9: {pro.w9OnFile ? "On file" : "Missing"}</p>
-                    <p className="text-[#6b665e]">
-                      {selectedTaxYear} payout total: {formatCurrency(pro.yearTotal)} · 1099: {pro.needs1099 ? "Likely required" : "Below threshold"}
-                    </p>
-                  </div>
-                ))}
-                {proCompliance.length === 0 && <p className="text-[12px] text-[#8a8477]">No pro profiles yet.</p>}
+              <p className="text-[11px] uppercase tracking-[0.1em] text-[#8a8477]">Pro Directory</p>
+              <div className="mt-2 max-h-[45vh] space-y-2 overflow-y-auto pr-1 sm:max-h-[360px]">
+                {proDirectory.map((pro) => {
+                  const active = selectedFinancePro?.displayName === pro.displayName;
+                  return (
+                    <button
+                      key={pro.id}
+                      type="button"
+                      onClick={() => setSelectedFinanceProName(pro.displayName)}
+                      className={`w-full rounded-lg border px-2.5 py-2 text-left text-[11px] transition-colors ${
+                        active
+                          ? "border-[#1a1a1a] bg-[#1a1a1a] text-white"
+                          : "border-[#ece8e2] bg-[#faf9f7] hover:bg-white"
+                      }`}
+                    >
+                      <p className="font-medium">
+                        {pro.displayName} {pro.active ? "" : "(Inactive)"}
+                      </p>
+                      <p className={active ? "text-white/80" : "text-[#6b665e]"}>
+                        {selectedTaxYear} total: {formatCurrency(pro.yearTotal)}
+                      </p>
+                    </button>
+                  );
+                })}
+                {proDirectory.length === 0 && <p className="text-[12px] text-[#8a8477]">No pro profiles yet.</p>}
               </div>
             </div>
+
+            <div className="rounded-lg border border-[#ece8e2] p-3 text-[12px]">
+              <p className="text-[11px] uppercase tracking-[0.1em] text-[#8a8477]">Selected Pro Detail</p>
+              {selectedFinancePro ? (
+                <div className="mt-2 space-y-2">
+                  <p className="font-medium">
+                    {selectedFinancePro.displayName} {selectedFinancePro.active ? "" : "(Inactive)"}
+                  </p>
+                  <p className="text-[#6b665e]">Legal name: {selectedFinancePro.legalName || "Not set"}</p>
+                  <p className="text-[#6b665e]">Email: {selectedFinancePro.email || "Not set"}</p>
+                  <p className="text-[#6b665e]">Address: {selectedFinancePro.address || "Not set"}</p>
+                  <p className="text-[#6b665e]">
+                    Tax ID last4: {selectedFinancePro.taxIdLast4 || "Not set"} · W-9:{" "}
+                    {selectedFinancePro.w9OnFile ? "On file" : "Missing"}
+                  </p>
+                  <p className="text-[#6b665e]">
+                    {selectedTaxYear} payout total: {formatCurrency(selectedFinancePro.yearTotal)} · 1099:{" "}
+                    {selectedFinancePro.needs1099 ? "Likely required" : "Below threshold"}
+                  </p>
+                  <div className="rounded-md border border-[#ece8e2] bg-[#faf9f7] p-2">
+                    <p className="text-[10px] uppercase tracking-[0.1em] text-[#8a8477]">Recent Payouts</p>
+                    <div className="mt-1 max-h-[35vh] space-y-1 overflow-y-auto pr-1 text-[11px] sm:max-h-[140px]">
+                      {selectedFinanceProPayouts.map((row) => (
+                        <div key={row.id} className="rounded border border-[#ece8e2] bg-white px-2 py-1.5">
+                          <p className="font-medium">
+                            {formatCurrency(row.amount)} · {new Date(row.payDate).toLocaleDateString()}
+                          </p>
+                          <p className="text-[#6b665e]">
+                            {row.method.toUpperCase()} · {row.category}
+                            {row.notes ? ` · ${row.notes}` : ""}
+                          </p>
+                        </div>
+                      ))}
+                      {selectedFinanceProPayouts.length === 0 && (
+                        <p className="text-[#8a8477]">No payouts recorded for this pro yet.</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <p className="mt-2 text-[#8a8477]">No pro selected yet.</p>
+              )}
+            </div>
           </div>
+          </details>
+
+          <details id="billing-overview" className="rounded-xl border border-[#ece8e2] p-4">
+            <summary className="cursor-pointer text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">
+              Billing Overview
+            </summary>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+              <div className="rounded-lg border border-[#ece8e2] bg-[#faf9f7] p-3">
+                <p className="text-[10px] uppercase tracking-[0.1em] text-[#8a8477]">Total Billed</p>
+                <p className="mt-1 text-[18px] font-semibold">{formatCurrency(financeBillingSummary.totalRevenue)}</p>
+              </div>
+              <div className="rounded-lg border border-[#ece8e2] bg-[#faf9f7] p-3">
+                <p className="text-[10px] uppercase tracking-[0.1em] text-[#8a8477]">Court Billing</p>
+                <p className="mt-1 text-[18px] font-semibold">{formatCurrency(financeBillingSummary.courtRevenue)}</p>
+              </div>
+              <div className="rounded-lg border border-[#ece8e2] bg-[#faf9f7] p-3">
+                <p className="text-[10px] uppercase tracking-[0.1em] text-[#8a8477]">Clinic Billing</p>
+                <p className="mt-1 text-[18px] font-semibold">{formatCurrency(financeBillingSummary.clinicRevenue)}</p>
+              </div>
+              <div className="rounded-lg border border-[#ece8e2] bg-[#faf9f7] p-3">
+                <p className="text-[10px] uppercase tracking-[0.1em] text-[#8a8477]">Event Billing</p>
+                <p className="mt-1 text-[18px] font-semibold">{formatCurrency(financeBillingSummary.eventRevenue)}</p>
+              </div>
+              <div className="rounded-lg border border-[#ece8e2] bg-[#faf9f7] p-3">
+                <p className="text-[10px] uppercase tracking-[0.1em] text-[#8a8477]">Outstanding</p>
+                <p className="mt-1 text-[18px] font-semibold">{formatCurrency(financeBillingSummary.outstanding)}</p>
+              </div>
+            </div>
+
+            <div className="mt-3 grid gap-3 xl:grid-cols-2">
+              <div className="rounded-lg border border-[#ece8e2] p-3">
+                <p className="text-[11px] uppercase tracking-[0.1em] text-[#8a8477]">Top Outstanding Members</p>
+                <div className="mt-2 space-y-2">
+                  {topOutstandingMembers.map((member) => (
+                    <div key={member.memberNumber} className="rounded-lg border border-[#ece8e2] bg-[#faf9f7] px-2.5 py-2 text-[11px]">
+                      <p className="font-medium">
+                        {member.name} · #{member.memberNumber}
+                      </p>
+                      <p className="text-[#6b665e]">
+                        Outstanding: {formatCurrency(member.outstanding)} · Total billed: {formatCurrency(member.totalSpend)}
+                      </p>
+                    </div>
+                  ))}
+                  {topOutstandingMembers.length === 0 && (
+                    <p className="text-[12px] text-[#8a8477]">No outstanding balances right now.</p>
+                  )}
+                </div>
+              </div>
+              <div className="rounded-lg border border-[#ece8e2] p-3">
+                <p className="text-[11px] uppercase tracking-[0.1em] text-[#8a8477]">Recent Billing Activity</p>
+                <div className="mt-2 max-h-[45vh] space-y-2 overflow-y-auto pr-1 sm:max-h-[260px]">
+                  {financeRecentBillingItems.map((row, idx) => (
+                    <div key={`${row.type}-${row.at}-${idx}`} className="rounded-lg border border-[#ece8e2] bg-[#faf9f7] px-2.5 py-2 text-[11px]">
+                      <p className="font-medium">
+                        {row.type} · {row.who}
+                      </p>
+                      <p className="text-[#6b665e]">
+                        {row.detail} · {formatCurrency(row.amount)}
+                      </p>
+                      <p className="text-[#8a8477]">{new Date(row.at).toLocaleString()}</p>
+                    </div>
+                  ))}
+                  {financeRecentBillingItems.length === 0 && (
+                    <p className="text-[12px] text-[#8a8477]">No billing activity yet.</p>
+                  )}
+                </div>
+              </div>
+            </div>
           </details>
           </div>
         )}
@@ -2037,7 +2425,7 @@ export default function RTCAdminPage() {
           <div className="mt-3 grid gap-3 xl:grid-cols-2">
             <div className="rounded-lg border border-[#ece8e2] p-3">
               <p className="text-[11px] uppercase tracking-[0.1em] text-[#8a8477]">Ready to Email ({statementSendable.length})</p>
-              <div className="mt-2 max-h-[240px] space-y-2 overflow-y-auto">
+              <div className="mt-2 max-h-[45vh] space-y-2 overflow-y-auto sm:max-h-[240px]">
                 {statementSendable.map((row) => (
                   <div key={row.memberNumber} className="rounded-lg border border-[#ece8e2] bg-[#faf9f7] px-2.5 py-2 text-[11px]">
                     <p className="font-medium">
@@ -2054,7 +2442,7 @@ export default function RTCAdminPage() {
             </div>
             <div className="rounded-lg border border-[#ece8e2] p-3">
               <p className="text-[11px] uppercase tracking-[0.1em] text-[#8a8477]">Missing Email ({statementMissingEmail.length})</p>
-              <div className="mt-2 max-h-[240px] space-y-2 overflow-y-auto">
+              <div className="mt-2 max-h-[45vh] space-y-2 overflow-y-auto sm:max-h-[240px]">
                 {statementMissingEmail.map((row) => (
                   <div key={row.memberNumber} className="rounded-lg border border-[#ece8e2] bg-[#faf9f7] px-2.5 py-2 text-[11px]">
                     <p className="font-medium">
@@ -2156,7 +2544,7 @@ export default function RTCAdminPage() {
 
         {activeWorkspace === "operations" && (
           <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_1fr]">
-            <details open className="rounded-xl border border-[#ece8e2] bg-white p-4">
+            <details className="rounded-xl border border-[#ece8e2] bg-white p-4">
               <summary className="cursor-pointer text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">
                 Manage Court Bookings
               </summary>
