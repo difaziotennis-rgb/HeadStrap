@@ -14,7 +14,7 @@ type CourtBooking = {
   date: string;
   hour: number;
   blockStartHour: number;
-  durationHours: 1 | 2;
+  durationHours: 1 | 2 | 3;
   courtId: string;
   courtName: string;
   type: "indoor" | "outdoor";
@@ -158,8 +158,8 @@ export default function RTCMemberPortalPage() {
       setModifyMsg("This booking is inside the 72-hour policy window and cannot be edited online.");
       return;
     }
-    if (booking.durationHours === 2 && editForm.startHour + 1 > HOURS[HOURS.length - 1]) {
-      setModifyMsg("Two-hour bookings must start at least one hour earlier.");
+    if (editForm.startHour + (booking.durationHours - 1) > HOURS[HOURS.length - 1]) {
+      setModifyMsg(`${booking.durationHours}-hour bookings must start earlier in the day.`);
       return;
     }
 
@@ -266,7 +266,7 @@ export default function RTCMemberPortalPage() {
                     <p className="font-medium">{booking.courtName}</p>
                     <p className="text-[#6b665e]">
                       {booking.date} · {formatHour(booking.blockStartHour)}
-                      {booking.durationHours === 2 ? " (2 hours)" : ""}
+                      {booking.durationHours > 1 ? ` (${booking.durationHours} hours)` : ""}
                     </p>
                     <p className="text-[#6b665e]">
                       ${booking.totalAmount} · {booking.paymentStatus === "paid" ? "Paid" : "Payment pending"}
@@ -352,7 +352,7 @@ export default function RTCMemberPortalPage() {
                       <p className="font-medium">{booking.courtName}</p>
                       <p className="text-[#6b665e]">
                         {booking.date} · {formatHour(booking.blockStartHour)}
-                        {booking.durationHours === 2 ? " (2 hours)" : ""}
+                        {booking.durationHours > 1 ? ` (${booking.durationHours} hours)` : ""}
                       </p>
                       <p className="text-[#8a8477]">{canModify ? "Eligible to edit online" : "Locked by 72-hour policy"}</p>
                       {booking.memberNumber && <p className="text-[#8a8477]">Member #{booking.memberNumber}</p>}

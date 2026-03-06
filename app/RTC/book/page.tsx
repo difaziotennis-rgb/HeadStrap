@@ -20,7 +20,7 @@ type Booking = {
   date: string;
   hour: number;
   blockStartHour: number;
-  durationHours: 1 | 2;
+  durationHours: 1 | 2 | 3;
   courtId: string;
   courtName: string;
   type: "indoor" | "outdoor";
@@ -180,7 +180,7 @@ export default function RTCBookPage() {
   const [clinicBookings, setClinicBookings] = useState<ClinicBooking[]>([]);
   const [activeCourt, setActiveCourt] = useState<Court | null>(null);
   const [activeHour, setActiveHour] = useState<number | null>(null);
-  const [durationHours, setDurationHours] = useState<1 | 2>(1);
+  const [durationHours, setDurationHours] = useState<1 | 2 | 3>(1);
   const [memberSession, setMemberSession] = useState<ReturnType<typeof parseMemberSession>>(null);
   const [form, setForm] = useState({
     name: "",
@@ -302,15 +302,20 @@ export default function RTCBookPage() {
         setStatusMsg("Payment successful. Refresh to view your updated booking.");
       } else {
         const firstKey = bookingKey(pending.date, pending.courtId, pending.blockStartHour);
-        const secondKey =
-          pending.durationHours === 2
-            ? bookingKey(pending.date, pending.courtId, pending.blockStartHour + 1)
-            : null;
-        if (
+        const hasConflict =
           bookings[firstKey] ||
           blockedSlots[firstKey] ||
-          (secondKey && (bookings[secondKey] || blockedSlots[secondKey]))
-        ) {
+          Array.from({ length: Math.max(0, pending.durationHours - 1) }, (_, idx) => idx + 1).some(
+            (offset) => {
+              const slotKey = bookingKey(
+                pending.date,
+                pending.courtId,
+                pending.blockStartHour + offset
+              );
+              return !!bookings[slotKey] || !!blockedSlots[slotKey];
+            }
+          );
+        if (hasConflict) {
           setStatusMsg("Payment received, but that slot is no longer available. Please contact the club.");
         } else {
           const next = { ...bookings };
@@ -383,7 +388,8 @@ export default function RTCBookPage() {
     setSelectedDate(targetDate);
     setActiveCourt(court);
     setActiveHour(startHour);
-    setDurationHours(duration === 2 ? 2 : 1);
+    if (duration === 2 || duration === 3) setDurationHours(duration);
+    else setDurationHours(1);
     setBookingStep(1);
     setStatusMsg(null);
     window.history.replaceState({}, "", "/RTC/book");
@@ -398,7 +404,8 @@ export default function RTCBookPage() {
   const activeAmount = useMemo(() => {
     if (!activeCourt) return 0;
     const hourlyRate = getRate(activeCourt.type, !!memberSession);
-    const discount = durationHours === 2 ? Math.round(hourlyRate * 0.1 * 100) / 100 : 0;
+    const discount =
+      durationHours > 1 ? Math.round(hourlyRate * 0.1 * (durationHours - 1) * 100) / 100 : 0;
     return hourlyRate * durationHours - discount;
   }, [activeCourt, memberSession, durationHours]);
 
@@ -424,14 +431,15 @@ export default function RTCBookPage() {
       setStatusMsg("Name and email are required.");
       return null;
     }
-    if (durationHours === 2 && activeHour + 1 > hours[hours.length - 1]) {
-      setStatusMsg("Two-hour bookings must start at least one hour earlier.");
+    const lastHour = hours[hours.length - 1];
+    if (activeHour + (durationHours - 1) > lastHour) {
+      setStatusMsg(`${durationHours}-hour bookings must start earlier in the day.`);
       return null;
     }
-    if (durationHours === 2) {
-      const secondKey = bookingKey(selectedDate, activeCourt.id, activeHour + 1);
-      if (bookings[secondKey] || blockedSlots[secondKey]) {
-        setStatusMsg("The next consecutive hour is not available.");
+    for (let i = 1; i < durationHours; i += 1) {
+      const nextKey = bookingKey(selectedDate, activeCourt.id, activeHour + i);
+      if (bookings[nextKey] || blockedSlots[nextKey]) {
+        setStatusMsg("One of the additional consecutive hours is not available.");
         return null;
       }
     }
@@ -445,7 +453,7 @@ export default function RTCBookPage() {
     const id = `rtc-booking-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const hourlyRate = getRate(activeCourt.type, isMember);
     const discountApplied =
-      durationHours === 2 ? Math.round(hourlyRate * 0.1 * 100) / 100 : 0;
+      durationHours > 1 ? Math.round(hourlyRate * 0.1 * (durationHours - 1) * 100) / 100 : 0;
     const totalAmount = hourlyRate * durationHours - discountApplied;
     const createdAt = new Date().toISOString();
 
@@ -482,14 +490,15 @@ export default function RTCBookPage() {
       setStatusMsg("This slot is no longer available.");
       return;
     }
-    if (durationHours === 2) {
-      if (activeHour + 1 > hours[hours.length - 1]) {
-        setStatusMsg("Two-hour bookings must start at least one hour earlier.");
-        return;
-      }
-      const secondKey = bookingKey(selectedDate, activeCourt.id, activeHour + 1);
-      if (bookings[secondKey] || blockedSlots[secondKey]) {
-        setStatusMsg("The next consecutive hour is not available.");
+    const lastHour = hours[hours.length - 1];
+    if (activeHour + (durationHours - 1) > lastHour) {
+      setStatusMsg(`${durationHours}-hour bookings must start earlier in the day.`);
+      return;
+    }
+    for (let i = 1; i < durationHours; i += 1) {
+      const nextKey = bookingKey(selectedDate, activeCourt.id, activeHour + i);
+      if (bookings[nextKey] || blockedSlots[nextKey]) {
+        setStatusMsg("One of the additional consecutive hours is not available.");
         return;
       }
     }
@@ -763,7 +772,7 @@ export default function RTCBookPage() {
                                 </p>
                               </>
                             ) : (
-                              <p className="text-[#a39e95]">Part of 2-hour reservation</p>
+                              <p className="text-[#a39e95]">Part of multi-hour reservation</p>
                             )}
                           </div>
                         ) : blockedReason ? (
@@ -797,7 +806,7 @@ export default function RTCBookPage() {
 
       {activeCourt && activeHour !== null && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
-          <div className="w-full max-w-lg rounded-3xl border border-[#e8e5df] bg-white p-5 shadow-[0_28px_60px_rgba(15,15,15,0.35)] sm:p-6">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-[#e8e5df] bg-white p-5 shadow-[0_28px_60px_rgba(15,15,15,0.35)] sm:p-6">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Reserve Court</p>
@@ -830,14 +839,28 @@ export default function RTCBookPage() {
 
               {bookingStep === 1 && (
                 <div className="grid gap-2">
-                  <select
-                    value={durationHours}
-                    onChange={(e) => setDurationHours(Number(e.target.value) === 2 ? 2 : 1)}
-                    className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
-                  >
-                    <option value={1}>1 hour</option>
-                    <option value={2}>2 consecutive hours (10% savings)</option>
-                  </select>
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    {[1, 2, 3].map((hoursOption) => {
+                      const active = durationHours === hoursOption;
+                      return (
+                        <button
+                          key={hoursOption}
+                          type="button"
+                          onClick={() => setDurationHours(hoursOption as 1 | 2 | 3)}
+                          className={`rounded-lg border px-3 py-2 text-[12px] font-medium transition-colors ${
+                            active
+                              ? "border-[#1a1a1a] bg-[#1a1a1a] text-white"
+                              : "border-[#d9d5cf] bg-white hover:bg-[#faf9f7]"
+                          }`}
+                        >
+                          {hoursOption} hr
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[11px] text-[#8a8477]">
+                    One hour stays the default. Add more time only when needed.
+                  </p>
                   <button
                     type="button"
                     onClick={proceedToDetailsStep}
@@ -899,9 +922,9 @@ export default function RTCBookPage() {
 
             <div className="mt-4 rounded-xl border border-[#ece8e2] bg-[#faf9f7] px-3 py-2 text-[13px]">
               Rate: <strong>${activeAmount}</strong> ({memberSession ? "member" : "public"})
-              {durationHours === 2 && activeCourt && (
+              {durationHours > 1 && activeCourt && (
                 <p className="mt-1 text-[12px] text-[#7a756d]">
-                  Includes 10% discount on the second hour for consecutive bookings.
+                  Includes 10% savings on each additional consecutive hour.
                 </p>
               )}
             </div>

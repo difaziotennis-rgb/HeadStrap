@@ -79,6 +79,30 @@ type MemberPreferences = {
   preferredSurface: "Indoor" | "Outdoor" | "No preference";
 };
 
+const MOCK_BILLING_ITEMS: BillingItem[] = [
+  {
+    id: "mock-court-1",
+    label: "Indoor Court booking",
+    amount: 111.6,
+    status: "Paid",
+    at: new Date().toISOString(),
+  },
+  {
+    id: "mock-clinic-1",
+    label: "Clinic enrollment",
+    amount: 75,
+    status: "Paid",
+    at: new Date(Date.now() - 86400000 * 3).toISOString(),
+  },
+  {
+    id: "mock-court-2",
+    label: "Outdoor Court booking",
+    amount: 52.2,
+    status: "Pending",
+    at: new Date(Date.now() - 86400000 * 6).toISOString(),
+  },
+];
+
 function formatCurrency(amount: number): string {
   return `$${amount.toFixed(2)}`;
 }
@@ -229,12 +253,15 @@ export default function RTCMemberPage() {
   }, []);
 
   const totals = useMemo(() => {
-    const paid = billing.filter((item) => item.status === "Paid").reduce((sum, item) => sum + item.amount, 0);
-    const pending = billing
+    const source = session && billing.length === 0 ? MOCK_BILLING_ITEMS : billing;
+    const paid = source.filter((item) => item.status === "Paid").reduce((sum, item) => sum + item.amount, 0);
+    const pending = source
       .filter((item) => item.status === "Pending")
       .reduce((sum, item) => sum + item.amount, 0);
     return { paid, pending };
-  }, [billing]);
+  }, [billing, session]);
+  const displayBilling = session && billing.length === 0 ? MOCK_BILLING_ITEMS : billing;
+  const displayPendingLessons = session && pendingLessons === 0 ? 1 : pendingLessons;
 
   function saveProfile(e: React.FormEvent) {
     e.preventDefault();
@@ -507,13 +534,13 @@ export default function RTCMemberPage() {
         <div className="mt-5 rounded-xl border border-[#ece8e2] p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Billing Detail + History</p>
-            <span className="text-[11px] text-[#8a8477]">{billing.length} account charge entries</span>
+            <span className="text-[11px] text-[#8a8477]">{displayBilling.length} account charge entries</span>
           </div>
           <div className="mt-3 space-y-2">
-            {billing.length === 0 ? (
+            {displayBilling.length === 0 ? (
               <p className="text-[13px] text-[#8a8477]">No billing entries yet for this member account.</p>
             ) : (
-              billing.slice(0, 12).map((item) => (
+              displayBilling.slice(0, 12).map((item) => (
                 <div
                   key={item.id}
                   className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[#e8e5df] bg-[#faf9f7] px-3 py-2 text-[12px]"
@@ -530,8 +557,11 @@ export default function RTCMemberPage() {
               ))
             )}
           </div>
+          {session && billing.length === 0 && (
+            <p className="mt-2 text-[11px] text-[#8a8477]">Preview data shown until your first live charges sync.</p>
+          )}
           <p className="mt-3 text-[11px] text-[#8a8477]">
-            Lesson requests awaiting confirmation: <strong>{pendingLessons}</strong>
+            Lesson requests awaiting confirmation: <strong>{displayPendingLessons}</strong>
           </p>
         </div>
 

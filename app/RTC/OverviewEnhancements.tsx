@@ -15,7 +15,7 @@ type CourtBooking = {
   date: string;
   hour: number;
   blockStartHour: number;
-  durationHours: 1 | 2;
+  durationHours: 1 | 2 | 3;
   courtId: string;
   courtName: string;
   memberNumber?: string;
@@ -69,6 +69,18 @@ const atmosphereNotes: AtmosphereNote[] = [
       "https://images.unsplash.com/photo-1517649763962-0c623066013b?auto=format&fit=crop&w=1400&q=80",
   },
 ];
+
+const MOCK_PULSE = {
+  clinicSignups: 16,
+  eventGuests: 34,
+  paidCourts: 22,
+};
+
+const MOCK_MEMBER_ACTIVITY = {
+  lessons: 2,
+  clinics: 1,
+  events: 1,
+};
 
 function toDate(date: string, hour: number): Date {
   const [year, month, day] = date.split("-").map(Number);
@@ -177,6 +189,9 @@ export default function OverviewEnhancements() {
     const paidCourts = courtBookings.filter((booking) => booking.paymentStatus === "paid").length;
     return { clinicSignups, eventGuests, paidCourts };
   }, [clinics, events, courtBookings]);
+  const hasLiveData =
+    courtBookings.length > 0 || lessons.length > 0 || clinics.length > 0 || events.length > 0;
+  const displayPulse = hasLiveData ? socialPulse : MOCK_PULSE;
 
   const nextEvent = useMemo(() => {
     return rtcSummerEvents
@@ -191,6 +206,12 @@ export default function OverviewEnhancements() {
       .reduce((sum, event) => sum + Math.max(1, event.guestCount || 0), 0);
     return Math.max(nextEvent.capacity - reserved, 0);
   }, [events, nextEvent]);
+
+  const displayActivity = {
+    lessons: memberLessons.length || (!hasLiveData && memberNumber ? MOCK_MEMBER_ACTIVITY.lessons : 0),
+    clinics: memberClinics.length || (!hasLiveData && memberNumber ? MOCK_MEMBER_ACTIVITY.clinics : 0),
+    events: memberEvents.length || (!hasLiveData && memberNumber ? MOCK_MEMBER_ACTIVITY.events : 0),
+  };
 
   const atmosphereCard = atmosphereNotes[new Date().getDay() % atmosphereNotes.length];
   const rebookHref =
@@ -209,15 +230,15 @@ export default function OverviewEnhancements() {
         </div>
         <div className="mt-3 grid gap-2 sm:grid-cols-3">
           <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] px-3 py-2 text-[12px]">
-            <span className="font-semibold text-[#1a1a1a]">{socialPulse.clinicSignups}</span> clinic signups
+            <span className="font-semibold text-[#1a1a1a]">{displayPulse.clinicSignups}</span> clinic signups
             in the booking flow
           </div>
           <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] px-3 py-2 text-[12px]">
-            <span className="font-semibold text-[#1a1a1a]">{socialPulse.eventGuests}</span> guest RSVP seats
+            <span className="font-semibold text-[#1a1a1a]">{displayPulse.eventGuests}</span> guest RSVP seats
             reserved
           </div>
           <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] px-3 py-2 text-[12px]">
-            <span className="font-semibold text-[#1a1a1a]">{socialPulse.paidCourts}</span> paid court
+            <span className="font-semibold text-[#1a1a1a]">{displayPulse.paidCourts}</span> paid court
             reservations recorded
           </div>
         </div>
@@ -247,14 +268,18 @@ export default function OverviewEnhancements() {
                   })}
                 </p>
               ) : (
-                <p className="mt-1 text-[13px] text-[#6b665e]">No upcoming court on file yet.</p>
+                <p className="mt-1 text-[13px] text-[#6b665e]">
+                  {memberNumber
+                    ? "No upcoming court on file yet. Your next booking appears here."
+                    : "No upcoming court on file yet."}
+                </p>
               )}
             </div>
             <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3">
               <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Your Activity</p>
               <p className="mt-1 text-[13px] text-[#4a4a4a]">
-                {memberLessons.length} lessons, {memberClinics.length} clinics, {memberEvents.length} event
-                RSVPs
+                {displayActivity.lessons} lessons, {displayActivity.clinics} clinics,{" "}
+                {displayActivity.events} event RSVPs
               </p>
             </div>
           </div>
