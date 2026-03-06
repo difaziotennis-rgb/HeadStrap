@@ -26,7 +26,6 @@ type LessonRequest = {
   coachName: string;
   slot: string;
   duration: string;
-  focus: string;
   clientName: string;
   clientEmail: string;
   clientPhone: string;
@@ -40,7 +39,6 @@ export default function RTCLessonsPage() {
   const [coachName, setCoachName] = useState(rtcCoaches[0]?.name || "");
   const [selectedSlot, setSelectedSlot] = useState(LESSON_SLOTS[0]);
   const [duration, setDuration] = useState("60");
-  const [playerFocus, setPlayerFocus] = useState("Matchplay");
   const [memberSession, setMemberSession] = useState<ReturnType<typeof parseMemberSession>>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -96,7 +94,6 @@ export default function RTCLessonsPage() {
       coachName: selectedCoach?.name || coachName,
       slot: selectedSlot,
       duration,
-      focus: playerFocus,
       clientName: isMember
         ? memberSession?.memberName || `Member #${memberSession?.memberNumber || "RTC"}`
         : name.trim(),
@@ -207,7 +204,7 @@ export default function RTCLessonsPage() {
                   />
                 </>
               )}
-              <div className="grid gap-2 sm:grid-cols-2">
+              <div className="grid gap-2">
                 <select
                   value={duration}
                   onChange={(e) => setDuration(e.target.value)}
@@ -215,16 +212,6 @@ export default function RTCLessonsPage() {
                 >
                   <option value="60">60 min</option>
                   <option value="90">90 min</option>
-                </select>
-                <select
-                  value={playerFocus}
-                  onChange={(e) => setPlayerFocus(e.target.value)}
-                  className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
-                >
-                  <option>Matchplay</option>
-                  <option>Technique</option>
-                  <option>Serve + Return</option>
-                  <option>Junior Development</option>
                 </select>
               </div>
               {isMember && (
@@ -289,7 +276,7 @@ export default function RTCLessonsPage() {
               {requests.slice(0, 6).map((request) => (
                 <div key={request.id} className="rounded-lg border border-[#e8e5df] bg-white px-3 py-2 text-[12px]">
                   <p className="font-medium">{request.coachName}</p>
-                  <p className="text-[#6b665e]">{request.slot} · {request.duration} min · {request.focus}</p>
+                  <p className="text-[#6b665e]">{request.slot} · {request.duration} min</p>
                   <p className="text-[#8a8477]">{request.clientName}</p>
                   {request.memberNumber && <p className="text-[#8a8477]">Member #{request.memberNumber}</p>}
                 </div>
