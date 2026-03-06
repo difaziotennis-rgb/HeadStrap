@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { rtcClinics } from "../rtc-data";
+import { rtcClinicCourtBlocks, rtcClinics } from "../rtc-data";
 import {
   MEMBER_SESSION_EVENT,
   MEMBER_SESSION_KEY,
@@ -23,19 +23,6 @@ const SESSION_WINDOWS = [
 
 const BASE_CAPACITY = 12;
 const CLINIC_STORAGE_KEY = "rtc_clinic_bookings_v1";
-const CLINIC_SLOT_TEMPLATES: Record<
-  string,
-  { weekday: number; startHour: number; durationHours: number }
-> = {
-  "Monday Nights with Derek": { weekday: 1, startHour: 18, durationHours: 2 },
-  "Wednesday Nights with Jay": { weekday: 3, startHour: 18, durationHours: 2 },
-  "Friday Nights with Derek": { weekday: 5, startHour: 18, durationHours: 2 },
-  "Saturday Advanced": { weekday: 6, startHour: 9, durationHours: 2 },
-  "Saturday Intermediate": { weekday: 6, startHour: 11, durationHours: 2 },
-  "Sunday Advanced Intermediate": { weekday: 0, startHour: 9, durationHours: 2 },
-  "Sunday Advanced": { weekday: 0, startHour: 11, durationHours: 2 },
-};
-
 type ClinicBooking = {
   id: string;
   clinicNames: string[];
@@ -182,7 +169,7 @@ export default function RTCClinicsPage() {
     const weekStart = startOfWeek(now);
     const weekOffset = sessionWindow === "next_week" ? 7 : 0;
     const reservedSlots = selectedList.flatMap((item) => {
-      const template = CLINIC_SLOT_TEMPLATES[item.name];
+      const template = rtcClinicCourtBlocks[item.name];
       if (!template) return [];
       const clinicDate = addDays(weekStart, weekOffset + template.weekday);
       return [

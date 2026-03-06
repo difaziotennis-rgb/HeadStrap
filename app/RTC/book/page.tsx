@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PAYMENT_CONFIG } from "@/lib/payment-config";
-import { rtcSummerEvents } from "../rtc-data";
+import { rtcClinicCourtBlocks, rtcSummerEvents } from "../rtc-data";
 import {
   MEMBER_SESSION_EVENT,
   MEMBER_SESSION_KEY,
@@ -60,19 +60,6 @@ type MemberPreferences = {
   preferredStartTime: string;
   preferredCoach: string;
   preferredSurface: "Indoor" | "Outdoor" | "No preference";
-};
-
-const CLINIC_SLOT_TEMPLATES: Record<
-  string,
-  { weekday: number; startHour: number; durationHours: number }
-> = {
-  "Monday Nights with Derek": { weekday: 1, startHour: 18, durationHours: 2 },
-  "Wednesday Nights with Jay": { weekday: 3, startHour: 18, durationHours: 2 },
-  "Friday Nights with Derek": { weekday: 5, startHour: 18, durationHours: 2 },
-  "Saturday Advanced": { weekday: 6, startHour: 9, durationHours: 2 },
-  "Saturday Intermediate": { weekday: 6, startHour: 11, durationHours: 2 },
-  "Sunday Advanced Intermediate": { weekday: 0, startHour: 9, durationHours: 2 },
-  "Sunday Advanced": { weekday: 0, startHour: 11, durationHours: 2 },
 };
 
 const courts: Court[] = [
@@ -247,6 +234,16 @@ export default function RTCBookPage() {
     selectedDay.setHours(0, 0, 0, 0);
     const dayStart = selectedDay.getTime();
     const dayEnd = dayStart + 24 * 60 * 60 * 1000;
+    const weekday = selectedDay.getDay();
+
+    // Always reserve indoor court for scheduled clinic program blocks.
+    for (const [clinicName, template] of Object.entries(rtcClinicCourtBlocks)) {
+      if (template.weekday !== weekday) continue;
+      for (let i = 0; i < template.durationHours; i += 1) {
+        const hour = template.startHour + i;
+        blocked[bookingKey(selectedDate, "indoor-1", hour)] = `Reserved for ${clinicName}`;
+      }
+    }
 
     for (const booking of clinicBookings) {
       if (booking.reservedSlots?.length) {
@@ -263,7 +260,7 @@ export default function RTCBookPage() {
       const baseWeek = startOfWeek(bookingDate);
       const weekOffset = booking.sessionWindow === "next_week" ? 7 : 0;
       for (const clinicName of booking.clinicNames || []) {
-        const template = CLINIC_SLOT_TEMPLATES[clinicName];
+        const template = rtcClinicCourtBlocks[clinicName];
         if (!template) continue;
         const clinicDate = addDays(baseWeek, weekOffset + template.weekday);
         const clinicDateKey = formatDateInput(clinicDate);
