@@ -211,7 +211,11 @@ function seasonLabel(date: Date): string {
 
 function makeDate(monthOffset: number, day: number, hour = 12): string {
   const now = new Date();
-  const dt = new Date(now.getFullYear(), now.getMonth() + monthOffset, day, hour, 0, 0, 0);
+  const year = now.getFullYear();
+  const month = now.getMonth() + monthOffset;
+  const maxDay = new Date(year, month + 1, 0).getDate();
+  const safeDay = Math.min(Math.max(day, 1), maxDay);
+  const dt = new Date(year, month, safeDay, hour, 0, 0, 0);
   return dt.toISOString();
 }
 
@@ -330,19 +334,25 @@ function createMockData() {
         createdAt: makeDate(i, 5 + j),
       });
     }
-    const lessonMember = members[mod(i + 2, members.length)];
-    lessons.push({
-      id: `mock-lesson-${i}`,
-      coachName: coaches[mod(i, coaches.length)],
-      slot: "Tue 5:00 PM",
-      clientName: lessonMember.name,
-      clientEmail: lessonMember.email,
-      memberNumber: lessonMember.number,
-      createdAt: makeDate(i, 10),
-    });
     const month = dt.getMonth();
     const peakSeason = month >= 4 && month <= 8;
     const maintenanceWindow = month <= 1 || month === 11;
+    const lessonLoad = peakSeason ? 4 + mod(i + month, 4) : 2 + mod(i + month, 3);
+    for (let l = 0; l < lessonLoad; l += 1) {
+      const lessonMember = members[mod(i * 2 + l + 2, members.length)];
+      const lessonCoach = coaches[mod(i + l, coaches.length)];
+      const lessonHour = 8 + mod(i * 3 + l * 2, 9);
+      const lessonDay = 4 + mod(i * 5 + l * 7, 24);
+      lessons.push({
+        id: `mock-lesson-${i}-${l}`,
+        coachName: lessonCoach,
+        slot: `${["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][mod(i + l, 6)]} ${formatHour(lessonHour)}`,
+        clientName: lessonMember.name,
+        clientEmail: lessonMember.email,
+        memberNumber: lessonMember.number,
+        createdAt: makeDate(i, lessonDay, lessonHour),
+      });
+    }
     const clinicEntries = Math.max(
       0,
       (peakSeason ? 2 : 1) + mod(i + month, peakSeason ? 3 : 2) - (maintenanceWindow && mod(i, 4) === 0 ? 1 : 0)
@@ -577,8 +587,9 @@ export default function RTCAdminPage() {
   const monthly = useMemo(() => {
     const map = new Map<string, MonthStat>();
     for (let i = -11; i <= 0; i += 1) {
-      const dt = new Date();
-      dt.setMonth(dt.getMonth() + i);
+      const now = new Date();
+      const periodEnd = new Date(now.getFullYear(), now.getMonth() + i + 1, 0, 23, 59, 59, 999);
+      const dt = periodEnd;
       const key = monthKey(dt);
       map.set(key, {
         key,
