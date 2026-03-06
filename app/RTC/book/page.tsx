@@ -365,23 +365,24 @@ export default function RTCBookPage() {
 
   return (
     <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-10">
-      <div className="rounded-2xl border border-[#e8e5df] bg-white p-6 sm:p-8">
+      <div className="overflow-hidden rounded-3xl border border-[#e8e5df] bg-gradient-to-b from-white to-[#fcfbf9] p-6 shadow-[0_18px_42px_rgba(26,26,26,0.06)] sm:p-8">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-semibold tracking-tight">Court Booking</h2>
+            <p className="text-[10px] uppercase tracking-[0.16em] text-[#8a8477]">Rhinebeck Tennis Club</p>
+            <h2 className="mt-1 text-2xl font-semibold tracking-tight sm:text-[30px]">Court Booking</h2>
             <p className="mt-1 text-[14px] text-[#6b665e]">
               Full-day schedule for all courts. Tap any open cell to reserve and pay.
             </p>
           </div>
           <div className="relative flex w-full flex-wrap items-center gap-2 sm:w-auto" ref={calendarRef}>
-            <label className="text-[12px] font-medium text-[#6b665e]">Date</label>
+            <label className="text-[11px] uppercase tracking-[0.12em] text-[#7a756d]">Date</label>
             <button
               type="button"
               onClick={() => {
                 setCalendarMonth(new Date(parseDateInput(selectedDate).getFullYear(), parseDateInput(selectedDate).getMonth(), 1));
                 setCalendarOpen((v) => !v);
               }}
-              className="flex w-full items-center gap-2 rounded-lg border border-[#e8e5df] bg-[#faf9f7] px-3 py-2 text-left shadow-[0_4px_12px_rgba(26,26,26,0.04)] transition-colors hover:border-[#d9d5cf] sm:w-auto"
+              className="flex w-full items-center gap-2 rounded-xl border border-[#e8e5df] bg-[#faf9f7] px-3 py-2 text-left shadow-[0_4px_12px_rgba(26,26,26,0.04)] transition-all hover:border-[#cfc9c0] hover:shadow-[0_6px_14px_rgba(26,26,26,0.06)] sm:w-auto"
             >
               <span aria-hidden className="text-[13px] text-[#8a8477]">📅</span>
               <span className="text-[13px] font-medium text-[#1a1a1a] sm:min-w-[170px]">{formatPrettyDate(selectedDate)}</span>
@@ -389,7 +390,7 @@ export default function RTCBookPage() {
             <button
               type="button"
               onClick={() => setSelectedDate(formatDateInput(new Date()))}
-              className="rounded-lg border border-[#d9d5cf] px-3 py-2 text-[12px] font-medium text-[#6b665e] hover:bg-[#faf9f7]"
+              className="rounded-xl border border-[#d9d5cf] px-3 py-2 text-[12px] font-medium text-[#6b665e] transition-colors hover:bg-[#faf9f7]"
             >
               Today
             </button>
@@ -451,24 +452,29 @@ export default function RTCBookPage() {
         </div>
 
         <div className="mt-5 grid gap-3 md:grid-cols-2">
-          <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-4">
+          <div className="rounded-2xl border border-[#ece8e2] bg-[#faf9f7] p-4 shadow-[0_6px_18px_rgba(26,26,26,0.03)]">
             <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Public Pricing</p>
             <p className="mt-2 text-[14px]">Indoor: <strong>$74/hr</strong> · Outdoor: <strong>$58/hr</strong></p>
           </div>
-          <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-4">
+          <div className="rounded-2xl border border-[#ece8e2] bg-[#faf9f7] p-4 shadow-[0_6px_18px_rgba(26,26,26,0.03)]">
             <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Member Pricing</p>
             <p className="mt-2 text-[14px]">Indoor: <strong>$62/hr</strong> · Outdoor: <strong>$44/hr</strong></p>
           </div>
         </div>
 
-        <div className="mt-3 rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-4">
-          <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Live Availability</p>
+        <div className="mt-3 rounded-2xl border border-[#ece8e2] bg-[#faf9f7] p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Live Availability</p>
+            <span className="rounded-full border border-[#d9d5cf] bg-white px-3 py-1 text-[11px] font-medium text-[#4a4a4a]">
+              {todaysOpenSlots} open slots
+            </span>
+          </div>
           <p className="mt-1 text-[13px] text-[#6b665e]">
-            {todaysOpenSlots} open slots remaining today across all courts.
+            Remaining inventory for the selected day across indoor and outdoor courts.
           </p>
         </div>
 
-        <div className="mt-5 overflow-x-auto rounded-xl border border-[#ece8e2]">
+        <div className="mt-5 overflow-x-auto rounded-2xl border border-[#ece8e2] bg-white shadow-[0_10px_24px_rgba(26,26,26,0.04)]">
           <table className="min-w-[980px] w-full border-collapse">
             <thead>
               <tr className="bg-[#faf9f7]">
@@ -502,7 +508,7 @@ export default function RTCBookPage() {
                     return (
                       <td key={key} className="border-t border-[#f0ede8] p-1.5 align-top">
                         {existing ? (
-                          <div className="rounded-lg border border-[#f0d9d9] bg-[#fff6f6] px-2 py-2 text-[11px]">
+                          <div className="rounded-lg border border-[#ead2d2] bg-[#fff7f7] px-2 py-2 text-[11px] shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]">
                             <p className="font-medium text-[#7f1d1d]">
                               {isBlockStart ? "Booked" : "Booked (cont.)"}
                             </p>
@@ -529,7 +535,7 @@ export default function RTCBookPage() {
                           <button
                             type="button"
                             onClick={() => openBooking(court, hour)}
-                            className="w-full rounded-lg border border-[#d9d5cf] px-2 py-2 text-[11px] font-medium text-[#1a1a1a] hover:bg-[#faf9f7]"
+                            className="w-full rounded-lg border border-[#d9d5cf] bg-white px-2 py-2 text-[11px] font-medium text-[#1a1a1a] transition-all hover:border-[#c7c1b8] hover:bg-[#faf9f7] hover:shadow-[0_4px_10px_rgba(26,26,26,0.05)]"
                           >
                             Book
                           </button>
@@ -546,7 +552,7 @@ export default function RTCBookPage() {
 
       {activeCourt && activeHour !== null && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
-          <div className="w-full max-w-lg rounded-2xl border border-[#e8e5df] bg-white p-5 shadow-xl sm:p-6">
+          <div className="w-full max-w-lg rounded-3xl border border-[#e8e5df] bg-white p-5 shadow-[0_28px_60px_rgba(15,15,15,0.35)] sm:p-6">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Reserve Court</p>
@@ -602,7 +608,7 @@ export default function RTCBookPage() {
               )}
             </div>
 
-            <div className="mt-4 rounded-lg border border-[#ece8e2] bg-[#faf9f7] px-3 py-2 text-[13px]">
+            <div className="mt-4 rounded-xl border border-[#ece8e2] bg-[#faf9f7] px-3 py-2 text-[13px]">
               Rate: <strong>${activeAmount}</strong> ({memberSession ? "member" : "public"})
               {durationHours === 2 && activeCourt && (
                 <p className="mt-1 text-[12px] text-[#7a756d]">
@@ -615,7 +621,7 @@ export default function RTCBookPage() {
               <button
                 type="button"
                 onClick={handleReserveOnly}
-                className="rounded-lg border border-[#d9d5cf] px-4 py-2 text-[12px] font-medium hover:bg-[#faf9f7]"
+                className="rounded-xl border border-[#d9d5cf] px-4 py-2 text-[12px] font-medium transition-colors hover:bg-[#faf9f7]"
               >
                 Reserve Without Paying
               </button>
@@ -623,7 +629,7 @@ export default function RTCBookPage() {
                 type="button"
                 onClick={handleStripeCheckout}
                 disabled={isCreatingStripe}
-                className="rounded-lg bg-[#1a1a1a] px-4 py-2 text-[12px] font-medium text-white hover:bg-[#2c2c2c] disabled:opacity-60"
+                className="rounded-xl bg-[#1a1a1a] px-4 py-2 text-[12px] font-medium text-white transition-colors hover:bg-[#2c2c2c] disabled:opacity-60"
               >
                 {isCreatingStripe ? "Opening Stripe..." : "Pay with Card (Stripe)"}
               </button>
@@ -635,7 +641,7 @@ export default function RTCBookPage() {
                   window.open(buildVenmoUrl(booking), "_blank");
                   setStatusMsg("Venmo opened in a new tab.");
                 }}
-                className="rounded-lg border border-[#d9d5cf] px-4 py-2 text-[12px] font-medium hover:bg-[#faf9f7]"
+                className="rounded-xl border border-[#d9d5cf] px-4 py-2 text-[12px] font-medium transition-colors hover:bg-[#faf9f7]"
               >
                 Pay with Venmo
               </button>
@@ -647,7 +653,7 @@ export default function RTCBookPage() {
                   window.open(buildPaypalUrl(booking), "_blank");
                   setStatusMsg("PayPal opened in a new tab.");
                 }}
-                className="rounded-lg border border-[#d9d5cf] px-4 py-2 text-[12px] font-medium hover:bg-[#faf9f7]"
+                className="rounded-xl border border-[#d9d5cf] px-4 py-2 text-[12px] font-medium transition-colors hover:bg-[#faf9f7]"
               >
                 Pay with PayPal
               </button>
@@ -655,7 +661,7 @@ export default function RTCBookPage() {
 
             {statusMsg && <p className="mt-3 text-[12px] text-[#2d5016]">{statusMsg}</p>}
             {lastBooked && (
-              <div className="mt-3 rounded-lg border border-[#ece8e2] bg-[#faf9f7] px-3 py-2 text-[12px]">
+              <div className="mt-3 rounded-xl border border-[#ece8e2] bg-[#faf9f7] px-3 py-2 text-[12px]">
                 <p className="font-medium">Concierge Confirmation</p>
                 <p className="text-[#6b665e]">
                   {lastBooked.courtName} · {lastBooked.date} · {formatHour(lastBooked.blockStartHour)} · $
