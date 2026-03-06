@@ -241,11 +241,13 @@ export function AdminDashboard() {
     if (to) params.set("to", to);
 
     const webUrl = `https://mail.google.com/mail/?${params.toString()}`;
-    const appComposeParams = new URLSearchParams({
-      subject: draft.subject,
-      body: draft.body,
-    });
-    if (to) appComposeParams.set("to", to);
+    // Gmail app deep links are sensitive to '+' spacing from URLSearchParams.
+    // Build app query manually with encodeURIComponent so spaces become %20.
+    const appQuery = [
+      `subject=${encodeURIComponent(draft.subject)}`,
+      `body=${encodeURIComponent(draft.body)}`,
+      ...(to ? [`to=${encodeURIComponent(to)}`] : []),
+    ].join("&");
 
     const ua = navigator.userAgent || "";
     const isIOS = /iPhone|iPad|iPod/i.test(ua);
@@ -253,13 +255,13 @@ export function AdminDashboard() {
 
     // Try Gmail app first on mobile, then fall back to Gmail web.
     if (isIOS) {
-      window.location.href = `googlegmail:///co?${appComposeParams.toString()}`;
+      window.location.href = `googlegmail:///co?${appQuery}`;
       window.setTimeout(() => window.open(webUrl, "_blank"), 1200);
       return;
     }
 
     if (isAndroid) {
-      const intentUrl = `intent://co?${appComposeParams.toString()}#Intent;scheme=googlegmail;package=com.google.android.gm;end`;
+      const intentUrl = `intent://co?${appQuery}#Intent;scheme=googlegmail;package=com.google.android.gm;end`;
       window.location.href = intentUrl;
       window.setTimeout(() => window.open(webUrl, "_blank"), 1200);
       return;
