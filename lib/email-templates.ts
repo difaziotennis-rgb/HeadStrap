@@ -62,32 +62,20 @@ function formatTime(hour: number): string {
   return `${h}:${minutes.toString().padStart(2, "0")} ${hour >= 12 ? "PM" : "AM"}`;
 }
 
-function buildCancellationMailto(booking: Booking, formattedDate: string, formattedTime: string): string {
-  const subject = `Lesson Cancellation Request - ${formattedDate} at ${formattedTime}`;
-  const bodyLines = [
-    "Hi Coach Derek,",
-    "",
-    "I need to cancel my lesson and am submitting this request through the cancellation link.",
-    "",
-    "Lesson details:",
-    `- Name: ${booking.clientName || "Not provided"}`,
-    `- Email: ${booking.clientEmail || "Not provided"}`,
-    `- Date: ${formattedDate}`,
-    `- Time: ${formattedTime}`,
-    `Booking ID: ${booking.id}`,
-    "",
-    "Reason for cancellation (optional):",
-    "",
-    "I understand the 72-hour cancellation policy.",
-    "",
-    "Please confirm cancellation when you can.",
-    "",
-    "Thanks,",
-    booking.clientName || "Client",
-  ];
-  return `mailto:difaziotennis@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(
-    bodyLines.join("\n")
-  )}`;
+function buildCancellationUrl(booking: Booking): string {
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://difaziotennis.com";
+  const tokenPayload = {
+    bookingId: booking.id,
+    timeSlotId: booking.timeSlotId,
+    date: booking.date,
+    hour: booking.hour,
+    clientName: booking.clientName,
+    clientEmail: booking.clientEmail,
+    clientPhone: booking.clientPhone,
+    amount: booking.amount,
+  };
+  const token = Buffer.from(JSON.stringify(tokenPayload)).toString("base64url");
+  return `${baseUrl}/api/cancel-booking?token=${encodeURIComponent(token)}`;
 }
 
 // Build payment links
@@ -114,7 +102,7 @@ export function clientConfirmationEmail(booking: Booking, stripeCheckoutUrl?: st
   const date = formatBookingDate(booking.date);
   const time = formatTime(booking.hour);
   const isMember = !!booking.memberCode;
-  const cancellationLink = buildCancellationMailto(booking, date, time);
+  const cancellationLink = buildCancellationUrl(booking);
 
   // Member confirmation — no payment links, just auto-charge note
   if (isMember) {
@@ -159,8 +147,8 @@ export function clientConfirmationEmail(booking: Booking, stripeCheckoutUrl?: st
 
         <div style="margin-top:16px; padding:14px 16px; background:#faf9f7; border:1px solid #ece8e2; border-radius:10px; text-align:center;">
           <p style="font-size:12px; color:#8a8477; margin:0 0 8px;">Need to cancel?</p>
-          <a href="${cancellationLink}" class="btn btn-outline" style="font-size:12px; padding:10px 18px;">Open Cancellation Email Draft</a>
-          <p class="muted" style="margin-top:8px;">72-hour cancellation policy applies. Please include any details in the draft before sending.</p>
+          <a href="${cancellationLink}" class="btn btn-outline" style="font-size:11px; padding:7px 14px;">Cancel Lesson</a>
+          <p class="muted" style="margin-top:8px;">72-hour cancellation policy applies.</p>
         </div>
       </div>
 
@@ -243,8 +231,8 @@ difaziotennis@gmail.com | 631-901-5220
 
       <div style="margin-top:16px; padding:14px 16px; background:#faf9f7; border:1px solid #ece8e2; border-radius:10px; text-align:center;">
         <p style="font-size:12px; color:#8a8477; margin:0 0 8px;">Need to cancel?</p>
-        <a href="${cancellationLink}" class="btn btn-outline" style="font-size:12px; padding:10px 18px;">Open Cancellation Email Draft</a>
-        <p class="muted" style="margin-top:8px;">72-hour cancellation policy applies. Please include any details in the draft before sending.</p>
+        <a href="${cancellationLink}" class="btn btn-outline" style="font-size:11px; padding:7px 14px;">Cancel Lesson</a>
+        <p class="muted" style="margin-top:8px;">72-hour cancellation policy applies.</p>
       </div>
 
     </div>
@@ -371,6 +359,88 @@ ${isMember && cancelAutoChargeUrl ? `Cancel auto-charge: ${cancelAutoChargeUrl}`
   `.trim();
 
   const subject = `Confirmed: ${booking.clientName || "Client"} - ${date} at ${time}`;
+
+  return { subject, html, text };
+}
+
+// ─── ADMIN CANCELLATION EMAIL ────────────────────────────────────
+
+export function adminCancellationEmail(booking: Booking) {
+  const date = formatBookingDate(booking.date);
+  const time = formatTime(booking.hour);
+  const cancelledAt = new Date().toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+
+  const html = emailWrapper(`
+    <div class="header">
+      <div class="brand">DiFazio Tennis</div>
+      <div style="display:flex; align-items:center; gap:10px; margin-top:6px;">
+        <h1>Lesson cancelled</h1>
+        <span class="tag tag-amber">Cancelled</span>
+      </div>
+    </div>
+
+    <div class="body">
+      <p>A client cancelled their lesson from the confirmation email link. The schedule has been updated and the slot is now open.</p>
+
+      <div class="detail-grid">
+        <div class="detail-row">
+          <span class="detail-label">Client</span>
+          <span class="detail-value">${booking.clientName || "Not provided"}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Email</span>
+          <span class="detail-value">${booking.clientEmail || "Not provided"}</span>
+        </div>
+        ${booking.clientPhone ? `
+        <div class="detail-row">
+          <span class="detail-label">Phone</span>
+          <span class="detail-value">${booking.clientPhone}</span>
+        </div>` : ""}
+        <div class="detail-row">
+          <span class="detail-label">Date</span>
+          <span class="detail-value">${date}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Time</span>
+          <span class="detail-value">${time}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Amount</span>
+          <span class="detail-value">$${booking.amount}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Booking ID</span>
+          <span class="detail-value" style="font-size:12px;">${booking.id}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="footer-text">Cancelled ${cancelledAt}</div>
+    </div>
+  `);
+
+  const text = `
+Lesson Cancelled
+
+Client: ${booking.clientName || "Not provided"}
+Email: ${booking.clientEmail || "Not provided"}
+Phone: ${booking.clientPhone || "Not provided"}
+Date: ${date}
+Time: ${time}
+Amount: $${booking.amount}
+Booking ID: ${booking.id}
+
+Cancelled ${cancelledAt}
+  `.trim();
+
+  const subject = `Cancelled: ${booking.clientName || "Client"} - ${date} at ${time}`;
 
   return { subject, html, text };
 }
