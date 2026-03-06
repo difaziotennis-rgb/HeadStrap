@@ -396,6 +396,9 @@ export default function RTCAdminPage() {
   const [selectedClinic, setSelectedClinic] = useState("All Clinics");
   const [selectedEvent, setSelectedEvent] = useState("All Events");
   const [selectedMemberNumber, setSelectedMemberNumber] = useState<string | null>(null);
+  const [selectedMemberDetailTab, setSelectedMemberDetailTab] = useState<
+    "courts" | "clinics" | "events" | "lessons"
+  >("courts");
 
   const [newBlock, setNewBlock] = useState({
     date: formatDateInput(new Date()),
@@ -813,6 +816,44 @@ export default function RTCAdminPage() {
     if (!selectedMemberNumber) return memberDirectory[0] || null;
     return memberDirectory.find((m) => m.memberNumber === selectedMemberNumber) || memberDirectory[0] || null;
   }, [memberDirectory, selectedMemberNumber]);
+  const selectedMemberYearlyDetails = useMemo(() => {
+    const memberNumber = selectedMember?.memberNumber;
+    const currentYear = new Date().getFullYear();
+    if (!memberNumber) {
+      return {
+        year: currentYear,
+        courts: [] as CourtBooking[],
+        clinics: [] as ClinicBooking[],
+        events: [] as EventReservation[],
+        lessons: [] as LessonBooking[],
+      };
+    }
+    const inYear = (dateValue: string) => {
+      const dt = new Date(dateValue);
+      return Number.isFinite(dt.getTime()) && dt.getFullYear() === currentYear;
+    };
+    const courts = mergedData.courts
+      .filter((item) => item.memberNumber === memberNumber)
+      .filter((item) => inYear(item.createdAt || `${item.date}T12:00:00`))
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt || `${b.date}T12:00:00`).getTime() -
+          new Date(a.createdAt || `${a.date}T12:00:00`).getTime()
+      );
+    const clinics = mergedData.clinics
+      .filter((item) => item.memberNumber === memberNumber)
+      .filter((item) => inYear(item.createdAt))
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const events = mergedData.events
+      .filter((item) => item.memberNumber === memberNumber)
+      .filter((item) => inYear(item.createdAt))
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const lessons = mergedData.lessons
+      .filter((item) => item.memberNumber === memberNumber)
+      .filter((item) => inYear(item.createdAt))
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return { year: currentYear, courts, clinics, events, lessons };
+  }, [mergedData, selectedMember]);
 
   const clinicOptions = useMemo(
     () => ["All Clinics", ...clinicMonitor.map((c) => c.name)],
@@ -1702,7 +1743,10 @@ export default function RTCAdminPage() {
                     <button
                       key={member.memberNumber}
                       type="button"
-                      onClick={() => setSelectedMemberNumber(member.memberNumber)}
+                      onClick={() => {
+                        setSelectedMemberNumber(member.memberNumber);
+                        setSelectedMemberDetailTab("courts");
+                      }}
                       className={`w-full rounded-lg border px-3 py-2 text-left text-[12px] ${
                         active
                           ? "border-[#1a1a1a] bg-[#1a1a1a] text-white"
@@ -1752,6 +1796,92 @@ export default function RTCAdminPage() {
                     Last activity: {selectedMember.lastActivity ? new Date(selectedMember.lastActivity).toLocaleString() : "No activity"}
                   </p>
                   <p className="text-[#8a8477]">Admin note: {selectedMember.note || "No admin note saved"}</p>
+
+                  <div className="mt-3 rounded-lg border border-[#ece8e2] bg-[#faf9f7] p-3">
+                    <p className="text-[11px] uppercase tracking-[0.1em] text-[#8a8477]">
+                      This Year Activity Details ({selectedMemberYearlyDetails.year})
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {(
+                        [
+                          ["courts", `Court Bookings (${selectedMemberYearlyDetails.courts.length})`],
+                          ["clinics", `Clinics (${selectedMemberYearlyDetails.clinics.length})`],
+                          ["events", `Events (${selectedMemberYearlyDetails.events.length})`],
+                          ["lessons", `Lessons (${selectedMemberYearlyDetails.lessons.length})`],
+                        ] as Array<["courts" | "clinics" | "events" | "lessons", string]>
+                      ).map(([tab, label]) => {
+                        const active = selectedMemberDetailTab === tab;
+                        return (
+                          <button
+                            key={tab}
+                            type="button"
+                            onClick={() => setSelectedMemberDetailTab(tab)}
+                            className={`rounded-md border px-2.5 py-1 text-[11px] ${
+                              active
+                                ? "border-[#1a1a1a] bg-[#1a1a1a] text-white"
+                                : "border-[#d9d5cf] bg-white hover:bg-[#fdfcfb]"
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div className="mt-2 max-h-[240px] space-y-2 overflow-y-auto pr-1">
+                      {selectedMemberDetailTab === "courts" &&
+                        selectedMemberYearlyDetails.courts.map((item) => (
+                          <div key={`court-${item.id}-${item.blockStartHour}-${item.date}`} className="rounded-md border border-[#e8e5df] bg-white px-2.5 py-2 text-[11px]">
+                            <p className="font-medium">
+                              {item.courtName} · {item.date} · {formatHour(item.blockStartHour)}
+                            </p>
+                            <p className="text-[#6b665e]">
+                              {formatCurrency(item.totalAmount)} · {item.paymentStatus === "paid" ? "Completed (Paid)" : "Booked (Pending)"}
+                            </p>
+                          </div>
+                        ))}
+                      {selectedMemberDetailTab === "clinics" &&
+                        selectedMemberYearlyDetails.clinics.map((item) => (
+                          <div key={`clinic-${item.id}`} className="rounded-md border border-[#e8e5df] bg-white px-2.5 py-2 text-[11px]">
+                            <p className="font-medium">{item.clinicNames.join(", ")}</p>
+                            <p className="text-[#6b665e]">
+                              {new Date(item.createdAt).toLocaleDateString()} · {formatCurrency(item.total)} · Completed
+                            </p>
+                          </div>
+                        ))}
+                      {selectedMemberDetailTab === "events" &&
+                        selectedMemberYearlyDetails.events.map((item) => (
+                          <div key={`event-${item.id}`} className="rounded-md border border-[#e8e5df] bg-white px-2.5 py-2 text-[11px]">
+                            <p className="font-medium">{item.eventTitle}</p>
+                            <p className="text-[#6b665e]">
+                              {new Date(item.createdAt).toLocaleDateString()} · Guests: {item.guestCount} · {formatCurrency(item.total)}
+                            </p>
+                          </div>
+                        ))}
+                      {selectedMemberDetailTab === "lessons" &&
+                        selectedMemberYearlyDetails.lessons.map((item) => (
+                          <div key={`lesson-${item.id}`} className="rounded-md border border-[#e8e5df] bg-white px-2.5 py-2 text-[11px]">
+                            <p className="font-medium">{item.coachName}</p>
+                            <p className="text-[#6b665e]">
+                              {new Date(item.createdAt).toLocaleDateString()} · {item.slot}
+                            </p>
+                          </div>
+                        ))}
+
+                      {selectedMemberDetailTab === "courts" && selectedMemberYearlyDetails.courts.length === 0 && (
+                        <p className="text-[11px] text-[#8a8477]">No court bookings found this year.</p>
+                      )}
+                      {selectedMemberDetailTab === "clinics" && selectedMemberYearlyDetails.clinics.length === 0 && (
+                        <p className="text-[11px] text-[#8a8477]">No clinic bookings found this year.</p>
+                      )}
+                      {selectedMemberDetailTab === "events" && selectedMemberYearlyDetails.events.length === 0 && (
+                        <p className="text-[11px] text-[#8a8477]">No event reservations found this year.</p>
+                      )}
+                      {selectedMemberDetailTab === "lessons" && selectedMemberYearlyDetails.lessons.length === 0 && (
+                        <p className="text-[11px] text-[#8a8477]">No lesson requests found this year.</p>
+                      )}
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <p className="mt-2 text-[#8a8477]">Select a member to view details.</p>
