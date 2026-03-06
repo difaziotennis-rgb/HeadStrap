@@ -168,15 +168,21 @@ type QuarterlyStatement = {
 type MarketingChannel = "email" | "facebook" | "instagram" | "google";
 type MarketingAudience = "members" | "nonmembers" | "all";
 type MarketingTarget = "events" | "clinics" | "lessons" | "open-courts" | "membership";
+type MarketingRecipientMode = "list" | "specific";
 
 type MarketingCampaign = {
   id: string;
   name: string;
   target: MarketingTarget;
   audience: MarketingAudience;
+  recipientMode: MarketingRecipientMode;
+  selectedRecipients: string[];
   channels: MarketingChannel[];
   subject: string;
   message: string;
+  facebookCopy: string;
+  instagramCopy: string;
+  googleCopy: string;
   status: "draft" | "launched";
   createdAt: string;
   launchedAt?: string;
@@ -288,6 +294,34 @@ function parseCoachRate(coachName: string): number {
   if (!coach) return 150;
   const raw = Number((coach.rate || "").replace(/[^0-9.]/g, ""));
   return Number.isFinite(raw) && raw > 0 ? raw : 150;
+}
+
+function titleCase(value: string): string {
+  return value
+    .trim()
+    .split(/\s+/)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function buildMarketingDraft(target: MarketingTarget, campaignName: string) {
+  const cleanName = titleCase(campaignName || "RTC Update");
+  const targetLabel =
+    target === "open-courts"
+      ? "Open Court Times"
+      : target === "lessons"
+      ? "Private Lessons"
+      : target === "clinics"
+      ? "Clinics"
+      : target === "events"
+      ? "Events"
+      : "Membership";
+  const subject = `${cleanName} - ${targetLabel} at Rhinebeck Tennis Club`;
+  const message = `Hi from Rhinebeck Tennis Club,\n\n${cleanName} is now available. Reply to this message if you want help reserving your preferred ${targetLabel.toLowerCase()} option.\n\nSee details and book directly through your RTC portal.\n\n- RTC Team`;
+  const facebookCopy = `${cleanName} is live at Rhinebeck Tennis Club. ${targetLabel} spots are now open. Message us to reserve your preferred time.`;
+  const instagramCopy = `${cleanName} at RTC 🎾\n${targetLabel} options are now open.\nDM us to reserve your spot. #rhinebecktennis #hudsonvalley`;
+  const googleCopy = `${cleanName} is now available at Rhinebeck Tennis Club. View current ${targetLabel.toLowerCase()} availability and book online today.`;
+  return { subject, message, facebookCopy, instagramCopy, googleCopy };
 }
 
 function createMockData() {
@@ -428,10 +462,18 @@ function createMockData() {
       name: "Spring Clinic Push",
       target: "clinics",
       audience: "all",
+      recipientMode: "list",
+      selectedRecipients: [],
       channels: ["email", "facebook", "instagram"],
       subject: "Spring clinic sessions now open at RTC",
       message:
         "Join us this week for clinic sessions at RTC. Reply if you want us to reserve your preferred day/time.",
+      facebookCopy:
+        "Spring clinic sessions are now open at Rhinebeck Tennis Club. Reserve your preferred day and time now.",
+      instagramCopy:
+        "Spring clinics are open at RTC 🎾\nReserve your preferred day/time now.\n#rhinebecktennis",
+      googleCopy:
+        "Spring clinics now open at Rhinebeck Tennis Club. View availability and reserve online.",
       status: "launched",
       createdAt: makeDate(-2, 3),
       launchedAt: makeDate(-2, 4),
@@ -442,9 +484,14 @@ function createMockData() {
       name: "Evening Open Courts",
       target: "open-courts",
       audience: "members",
+      recipientMode: "list",
+      selectedRecipients: [],
       channels: ["email", "google"],
       subject: "Evening open-court windows this week",
       message: "Several evening court windows are currently open. Book directly in the RTC court grid.",
+      facebookCopy: "Evening open-court windows available now at RTC.",
+      instagramCopy: "Evening open-court windows available now at RTC 🎾",
+      googleCopy: "Evening open-court windows available now at Rhinebeck Tennis Club.",
       status: "draft",
       createdAt: makeDate(-1, 18),
       recipientCount: 0,
@@ -528,10 +575,16 @@ export default function RTCAdminPage() {
     name: "",
     target: "events" as MarketingTarget,
     audience: "all" as MarketingAudience,
+    recipientMode: "list" as MarketingRecipientMode,
+    selectedRecipients: [] as string[],
     channels: ["email"] as MarketingChannel[],
     subject: "",
     message: "",
+    facebookCopy: "",
+    instagramCopy: "",
+    googleCopy: "",
   });
+  const [marketingRecipientSearch, setMarketingRecipientSearch] = useState("");
 
   const loadLiveData = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -1205,6 +1258,23 @@ export default function RTCAdminPage() {
       allEmails: Array.from(allEmails),
     };
   }, [memberDirectory, mergedData.courts, mergedData.lessons]);
+  const marketingRecipientPool = useMemo(() => {
+    const memberSet = new Set(marketingAudience.memberEmails);
+    const nonMemberSet = new Set(marketingAudience.nonMemberEmails);
+    return marketingAudience.allEmails
+      .map((email) => ({
+        email,
+        segment: memberSet.has(email) ? "Member" : nonMemberSet.has(email) ? "Non-member" : "Saved",
+      }))
+      .sort((a, b) => a.email.localeCompare(b.email));
+  }, [marketingAudience]);
+  const filteredMarketingRecipients = useMemo(() => {
+    const query = marketingRecipientSearch.trim().toLowerCase();
+    if (!query) return marketingRecipientPool.slice(0, 200);
+    return marketingRecipientPool
+      .filter((item) => item.email.toLowerCase().includes(query) || item.segment.toLowerCase().includes(query))
+      .slice(0, 200);
+  }, [marketingRecipientPool, marketingRecipientSearch]);
   const marketingSummary = useMemo(() => {
     const launched = mergedData.campaigns.filter((campaign) => campaign.status === "launched").length;
     const drafts = mergedData.campaigns.length - launched;
@@ -1593,7 +1663,14 @@ export default function RTCAdminPage() {
     setQuickJumpQuery("");
   }
 
-  function getCampaignRecipients(audience: MarketingAudience): string[] {
+  function getCampaignRecipients(
+    audience: MarketingAudience,
+    recipientMode: MarketingRecipientMode = "list",
+    selectedRecipients: string[] = []
+  ): string[] {
+    if (recipientMode === "specific") {
+      return Array.from(new Set(selectedRecipients.map((email) => email.trim().toLowerCase()).filter(Boolean)));
+    }
     if (audience === "members") return marketingAudience.memberEmails;
     if (audience === "nonmembers") return marketingAudience.nonMemberEmails;
     return marketingAudience.allEmails;
@@ -1612,14 +1689,24 @@ export default function RTCAdminPage() {
       setAdminMsg("Select at least one channel.");
       return;
     }
+    if (marketingForm.recipientMode === "specific" && marketingForm.selectedRecipients.length === 0) {
+      setAdminMsg("Select at least one specific recipient.");
+      return;
+    }
     const campaign: MarketingCampaign = {
       id: `campaign-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       name,
       target: marketingForm.target,
       audience: marketingForm.audience,
+      recipientMode: marketingForm.recipientMode,
+      selectedRecipients: marketingForm.selectedRecipients,
       channels: marketingForm.channels,
       subject,
       message,
+      facebookCopy: marketingForm.facebookCopy.trim() || buildMarketingDraft(marketingForm.target, name).facebookCopy,
+      instagramCopy:
+        marketingForm.instagramCopy.trim() || buildMarketingDraft(marketingForm.target, name).instagramCopy,
+      googleCopy: marketingForm.googleCopy.trim() || buildMarketingDraft(marketingForm.target, name).googleCopy,
       status: "draft",
       createdAt: new Date().toISOString(),
       recipientCount: 0,
@@ -1627,14 +1714,28 @@ export default function RTCAdminPage() {
     const next = [campaign, ...marketingCampaigns];
     setMarketingCampaigns(next);
     localStorage.setItem(ADMIN_MARKETING_CAMPAIGNS_KEY, JSON.stringify(next));
-    setMarketingForm((prev) => ({ ...prev, name: "", subject: "", message: "" }));
+    setMarketingForm((prev) => ({
+      ...prev,
+      name: "",
+      subject: "",
+      message: "",
+      facebookCopy: "",
+      instagramCopy: "",
+      googleCopy: "",
+      selectedRecipients: [],
+    }));
+    setMarketingRecipientSearch("");
     setAdminMsg("Marketing campaign saved as draft.");
   }
 
   function launchCampaign(campaignId: string) {
     const next = marketingCampaigns.map((campaign) => {
       if (campaign.id !== campaignId) return campaign;
-      const recipients = getCampaignRecipients(campaign.audience);
+      const recipients = getCampaignRecipients(
+        campaign.audience,
+        campaign.recipientMode,
+        campaign.selectedRecipients
+      );
       return {
         ...campaign,
         status: "launched" as const,
@@ -1648,7 +1749,7 @@ export default function RTCAdminPage() {
   }
 
   function exportCampaignRecipients(campaign: MarketingCampaign) {
-    const recipients = getCampaignRecipients(campaign.audience);
+    const recipients = getCampaignRecipients(campaign.audience, campaign.recipientMode, campaign.selectedRecipients);
     const csv = ["email", ...recipients].join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -1663,7 +1764,7 @@ export default function RTCAdminPage() {
   }
 
   async function copyCampaignRecipients(campaign: MarketingCampaign) {
-    const recipients = getCampaignRecipients(campaign.audience);
+    const recipients = getCampaignRecipients(campaign.audience, campaign.recipientMode, campaign.selectedRecipients);
     if (!recipients.length) {
       setAdminMsg("No recipient emails available for this campaign audience.");
       return;
@@ -1677,7 +1778,7 @@ export default function RTCAdminPage() {
   }
 
   function openCampaignEmailDraft(campaign: MarketingCampaign) {
-    const recipients = getCampaignRecipients(campaign.audience);
+    const recipients = getCampaignRecipients(campaign.audience, campaign.recipientMode, campaign.selectedRecipients);
     const bcc = recipients.join(",");
     const params = new URLSearchParams({
       subject: campaign.subject,
@@ -1690,14 +1791,46 @@ export default function RTCAdminPage() {
     window.open(`mailto:?${params.toString()}`, "_blank");
   }
 
-  function openExternalMarketing(channel: MarketingChannel) {
+  async function openExternalMarketing(channel: MarketingChannel, campaign?: MarketingCampaign) {
     const urls: Record<MarketingChannel, string> = {
       email: "https://mail.google.com",
       facebook: "https://business.facebook.com/latest/ads_manager",
       instagram: "https://business.facebook.com/latest/ads_manager",
       google: "https://ads.google.com/home/",
     };
+    if (campaign && channel !== "email") {
+      const draft =
+        channel === "facebook"
+          ? campaign.facebookCopy
+          : channel === "instagram"
+          ? campaign.instagramCopy
+          : campaign.googleCopy;
+      try {
+        await navigator.clipboard.writeText(draft);
+        setAdminMsg(`${channel} draft copied. Paste it into the platform composer.`);
+      } catch {
+        setAdminMsg(`Open ${channel} and use the saved campaign copy.`);
+      }
+    }
     window.open(urls[channel], "_blank");
+  }
+
+  function applyAutoCampaignDraft() {
+    const sourceName = marketingForm.name.trim();
+    if (!sourceName) {
+      setAdminMsg("Enter a campaign or event name first.");
+      return;
+    }
+    const draft = buildMarketingDraft(marketingForm.target, sourceName);
+    setMarketingForm((prev) => ({
+      ...prev,
+      subject: draft.subject,
+      message: draft.message,
+      facebookCopy: draft.facebookCopy,
+      instagramCopy: draft.instagramCopy,
+      googleCopy: draft.googleCopy,
+    }));
+    setAdminMsg("Campaign draft copy generated from campaign name.");
   }
 
   function createCourtBlock(e: React.FormEvent) {
@@ -3040,7 +3173,7 @@ export default function RTCAdminPage() {
                 <input
                   value={marketingForm.name}
                   onChange={(e) => setMarketingForm((prev) => ({ ...prev, name: e.target.value }))}
-                  placeholder="Campaign name"
+                  placeholder="Campaign / event name"
                   className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[12px]"
                 />
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -3063,12 +3196,126 @@ export default function RTCAdminPage() {
                       setMarketingForm((prev) => ({ ...prev, audience: e.target.value as MarketingAudience }))
                     }
                     className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[12px]"
+                    disabled={marketingForm.recipientMode === "specific"}
                   >
                     <option value="all">All saved emails</option>
                     <option value="members">Members only</option>
                     <option value="nonmembers">Non-members only</option>
                   </select>
                 </div>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <select
+                    value={marketingForm.recipientMode}
+                    onChange={(e) =>
+                      setMarketingForm((prev) => ({
+                        ...prev,
+                        recipientMode: e.target.value as MarketingRecipientMode,
+                        selectedRecipients: e.target.value === "specific" ? prev.selectedRecipients : [],
+                      }))
+                    }
+                    className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[12px]"
+                  >
+                    <option value="list">Use audience list</option>
+                    <option value="specific">Select specific recipients</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={applyAutoCampaignDraft}
+                    className="rounded-lg border border-[#d9d5cf] bg-white px-3 py-2 text-[12px] font-medium hover:bg-[#fdfcfb]"
+                  >
+                    Auto-Generate Draft Copy
+                  </button>
+                </div>
+                {marketingForm.recipientMode === "specific" && (
+                  <div className="rounded-lg border border-[#ece8e2] bg-[#faf9f7] p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-[11px] uppercase tracking-[0.1em] text-[#8a8477]">Specific Recipients</p>
+                      <p className="text-[11px] text-[#8a8477]">
+                        Selected: {marketingForm.selectedRecipients.length}
+                      </p>
+                    </div>
+                    <input
+                      value={marketingRecipientSearch}
+                      onChange={(e) => setMarketingRecipientSearch(e.target.value)}
+                      placeholder="Search emails..."
+                      className="mt-2 w-full rounded-lg border border-[#e8e5df] bg-white px-3 py-2 text-[12px]"
+                    />
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setMarketingForm((prev) => ({
+                            ...prev,
+                            selectedRecipients: marketingAudience.memberEmails,
+                          }))
+                        }
+                        className="rounded-md border border-[#d9d5cf] bg-white px-2.5 py-1 text-[11px] hover:bg-[#fdfcfb]"
+                      >
+                        Select all members
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setMarketingForm((prev) => ({
+                            ...prev,
+                            selectedRecipients: marketingAudience.nonMemberEmails,
+                          }))
+                        }
+                        className="rounded-md border border-[#d9d5cf] bg-white px-2.5 py-1 text-[11px] hover:bg-[#fdfcfb]"
+                      >
+                        Select all non-members
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setMarketingForm((prev) => ({
+                            ...prev,
+                            selectedRecipients: marketingAudience.allEmails,
+                          }))
+                        }
+                        className="rounded-md border border-[#d9d5cf] bg-white px-2.5 py-1 text-[11px] hover:bg-[#fdfcfb]"
+                      >
+                        Select all saved emails
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setMarketingForm((prev) => ({ ...prev, selectedRecipients: [] }))}
+                        className="rounded-md border border-[#d9d5cf] bg-white px-2.5 py-1 text-[11px] hover:bg-[#fdfcfb]"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                    <div className="mt-2 max-h-[180px] space-y-1 overflow-y-auto rounded-lg border border-[#ece8e2] bg-white p-2">
+                      {filteredMarketingRecipients.map((recipient) => {
+                        const checked = marketingForm.selectedRecipients.includes(recipient.email);
+                        return (
+                          <label
+                            key={recipient.email}
+                            className="flex items-center justify-between gap-2 rounded-md border border-[#f0ede8] px-2 py-1 text-[11px]"
+                          >
+                            <span className="truncate text-[#4a4a4a]">{recipient.email}</span>
+                            <span className="text-[#8a8477]">{recipient.segment}</span>
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={(e) =>
+                                setMarketingForm((prev) => ({
+                                  ...prev,
+                                  selectedRecipients: e.target.checked
+                                    ? [...prev.selectedRecipients, recipient.email]
+                                    : prev.selectedRecipients.filter((item) => item !== recipient.email),
+                                }))
+                              }
+                            />
+                          </label>
+                        );
+                      })}
+                      {filteredMarketingRecipients.length === 0 && (
+                        <p className="text-[11px] text-[#8a8477]">No matching recipients.</p>
+                      )}
+                    </div>
+                  </div>
+                )}
                 <div className="flex flex-wrap gap-2">
                   {(["email", "facebook", "instagram", "google"] as MarketingChannel[]).map((channel) => {
                     const active = marketingForm.channels.includes(channel);
@@ -3108,6 +3355,27 @@ export default function RTCAdminPage() {
                   placeholder="Campaign message"
                   className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[12px]"
                 />
+                <textarea
+                  value={marketingForm.facebookCopy}
+                  onChange={(e) => setMarketingForm((prev) => ({ ...prev, facebookCopy: e.target.value }))}
+                  rows={2}
+                  placeholder="Facebook draft copy"
+                  className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[12px]"
+                />
+                <textarea
+                  value={marketingForm.instagramCopy}
+                  onChange={(e) => setMarketingForm((prev) => ({ ...prev, instagramCopy: e.target.value }))}
+                  rows={2}
+                  placeholder="Instagram draft copy"
+                  className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[12px]"
+                />
+                <textarea
+                  value={marketingForm.googleCopy}
+                  onChange={(e) => setMarketingForm((prev) => ({ ...prev, googleCopy: e.target.value }))}
+                  rows={2}
+                  placeholder="Google ads/search draft copy"
+                  className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[12px]"
+                />
                 <button
                   type="submit"
                   className="rounded-lg bg-[#1a1a1a] px-3 py-2 text-[12px] font-medium text-white hover:bg-[#2c2c2c]"
@@ -3129,6 +3397,12 @@ export default function RTCAdminPage() {
                         <p className="font-medium">{campaign.name}</p>
                         <p className="text-[#6b665e]">
                           {campaign.target} · {campaign.audience} · channels: {campaign.channels.join(", ")}
+                        </p>
+                        <p className="text-[#8a8477]">
+                          Recipients:{" "}
+                          {campaign.recipientMode === "specific"
+                            ? `${campaign.selectedRecipients.length} specific`
+                            : `${campaign.audience} list`}
                         </p>
                         <p className="text-[#8a8477]">
                           Status: {campaign.status}
@@ -3171,6 +3445,9 @@ export default function RTCAdminPage() {
                       <span className="font-medium">Subject:</span> {campaign.subject}
                     </p>
                     <p className="mt-1 text-[#6b665e]">{campaign.message}</p>
+                    <p className="mt-1 text-[#8a8477]">Facebook: {campaign.facebookCopy}</p>
+                    <p className="mt-1 text-[#8a8477]">Instagram: {campaign.instagramCopy}</p>
+                    <p className="mt-1 text-[#8a8477]">Google: {campaign.googleCopy}</p>
                     <div className="mt-2 flex flex-wrap gap-2">
                       {campaign.channels
                         .filter((channel) => channel !== "email")
@@ -3178,7 +3455,7 @@ export default function RTCAdminPage() {
                           <button
                             key={`${campaign.id}-${channel}`}
                             type="button"
-                            onClick={() => openExternalMarketing(channel)}
+                            onClick={() => openExternalMarketing(channel, campaign)}
                             className="rounded-md border border-[#d9d5cf] bg-white px-2.5 py-1 text-[11px] hover:bg-[#fdfcfb]"
                           >
                             Open {channel}
