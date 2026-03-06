@@ -71,8 +71,11 @@ export default function RTCLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
         <div className="border-t border-[#e8e5df]">
-          <div className="mx-auto w-full max-w-6xl px-4 py-3 sm:px-6">
+          <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-2 px-4 py-3 sm:px-6">
             <p className="text-[11px] text-[#8a8477]">Boutique tennis club in the Hudson Valley.</p>
+            <Link href="/RTC/admin" className="text-[10px] uppercase tracking-[0.1em] text-[#b0a99f] hover:text-[#6b665e]">
+              Admin
+            </Link>
           </div>
         </div>
       </footer>
