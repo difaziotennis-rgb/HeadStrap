@@ -12,6 +12,7 @@ const ADMIN_MEMBER_NOTES_KEY = "rtc_admin_member_notes_v1";
 const ADMIN_PRO_PAYOUTS_KEY = "rtc_admin_pro_payouts_v1";
 const ADMIN_PRO_PROFILES_KEY = "rtc_admin_pro_profiles_v1";
 const ADMIN_QUARTERLY_EMAIL_LOG_KEY = "rtc_admin_quarterly_email_log_v1";
+const ADMIN_MARKETING_CAMPAIGNS_KEY = "rtc_admin_marketing_campaigns_v1";
 
 const HOURS = Array.from({ length: 15 }, (_, i) => i + 7);
 const COURTS = [
@@ -164,7 +165,25 @@ type QuarterlyStatement = {
   lineItems: StatementLineItem[];
 };
 
-type AdminWorkspace = "overview" | "operations" | "programs" | "members" | "finance";
+type MarketingChannel = "email" | "facebook" | "instagram" | "google";
+type MarketingAudience = "members" | "nonmembers" | "all";
+type MarketingTarget = "events" | "clinics" | "lessons" | "open-courts" | "membership";
+
+type MarketingCampaign = {
+  id: string;
+  name: string;
+  target: MarketingTarget;
+  audience: MarketingAudience;
+  channels: MarketingChannel[];
+  subject: string;
+  message: string;
+  status: "draft" | "launched";
+  createdAt: string;
+  launchedAt?: string;
+  recipientCount: number;
+};
+
+type AdminWorkspace = "overview" | "operations" | "programs" | "members" | "finance" | "marketing";
 
 function safeParse<T>(raw: string | null, fallback: T): T {
   if (!raw) return fallback;
@@ -278,6 +297,7 @@ function createMockData() {
   const events: EventReservation[] = [];
   const payouts: ProPayout[] = [];
   const proProfiles: ProProfile[] = [];
+  const campaigns: MarketingCampaign[] = [];
   const notes: MemberNote[] = [
     { memberNumber: "101", note: "Prefers indoor evening slots.", updatedAt: makeDate(-1, 11) },
     { memberNumber: "318", note: "Interested in recurring Sunday clinics.", updatedAt: makeDate(-2, 8) },
@@ -402,7 +422,36 @@ function createMockData() {
     });
   }
 
-  return { courts, lessons, clinics, events, payouts, notes, proProfiles };
+  campaigns.push(
+    {
+      id: "mock-campaign-clinics-spring",
+      name: "Spring Clinic Push",
+      target: "clinics",
+      audience: "all",
+      channels: ["email", "facebook", "instagram"],
+      subject: "Spring clinic sessions now open at RTC",
+      message:
+        "Join us this week for clinic sessions at RTC. Reply if you want us to reserve your preferred day/time.",
+      status: "launched",
+      createdAt: makeDate(-2, 3),
+      launchedAt: makeDate(-2, 4),
+      recipientCount: 148,
+    },
+    {
+      id: "mock-campaign-open-courts-evening",
+      name: "Evening Open Courts",
+      target: "open-courts",
+      audience: "members",
+      channels: ["email", "google"],
+      subject: "Evening open-court windows this week",
+      message: "Several evening court windows are currently open. Book directly in the RTC court grid.",
+      status: "draft",
+      createdAt: makeDate(-1, 18),
+      recipientCount: 0,
+    }
+  );
+
+  return { courts, lessons, clinics, events, payouts, notes, proProfiles, campaigns };
 }
 
 export default function RTCAdminPage() {
@@ -416,6 +465,7 @@ export default function RTCAdminPage() {
   const [memberNotes, setMemberNotes] = useState<MemberNote[]>([]);
   const [proPayouts, setProPayouts] = useState<ProPayout[]>([]);
   const [proProfiles, setProProfiles] = useState<ProProfile[]>([]);
+  const [marketingCampaigns, setMarketingCampaigns] = useState<MarketingCampaign[]>([]);
   const [quarterlyEmailLog, setQuarterlyEmailLog] = useState<Record<string, string>>({});
   const [useMockData, setUseMockData] = useState(true);
   const [selectedTaxYear, setSelectedTaxYear] = useState(new Date().getFullYear());
@@ -474,6 +524,14 @@ export default function RTCAdminPage() {
     w9OnFile: true,
     active: true,
   });
+  const [marketingForm, setMarketingForm] = useState({
+    name: "",
+    target: "events" as MarketingTarget,
+    audience: "all" as MarketingAudience,
+    channels: ["email"] as MarketingChannel[],
+    subject: "",
+    message: "",
+  });
 
   const loadLiveData = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -493,6 +551,9 @@ export default function RTCAdminPage() {
     setMemberNotes(safeParse<MemberNote[]>(localStorage.getItem(ADMIN_MEMBER_NOTES_KEY), []));
     setProPayouts(safeParse<ProPayout[]>(localStorage.getItem(ADMIN_PRO_PAYOUTS_KEY), []));
     setProProfiles(safeParse<ProProfile[]>(localStorage.getItem(ADMIN_PRO_PROFILES_KEY), []));
+    setMarketingCampaigns(
+      safeParse<MarketingCampaign[]>(localStorage.getItem(ADMIN_MARKETING_CAMPAIGNS_KEY), [])
+    );
     setQuarterlyEmailLog(
       safeParse<Record<string, string>>(localStorage.getItem(ADMIN_QUARTERLY_EMAIL_LOG_KEY), {})
     );
@@ -526,6 +587,7 @@ export default function RTCAdminPage() {
       ADMIN_MEMBER_NOTES_KEY,
       ADMIN_PRO_PAYOUTS_KEY,
       ADMIN_PRO_PROFILES_KEY,
+      ADMIN_MARKETING_CAMPAIGNS_KEY,
       ADMIN_QUARTERLY_EMAIL_LOG_KEY,
     ]);
     const onStorage = (event: StorageEvent) => {
@@ -551,6 +613,7 @@ export default function RTCAdminPage() {
       payouts: useMockData ? [...mock.payouts, ...proPayouts] : proPayouts,
       notes: useMockData ? [...mock.notes, ...memberNotes] : memberNotes,
       proProfiles: useMockData ? [...mock.proProfiles, ...proProfiles] : proProfiles,
+      campaigns: useMockData ? [...mock.campaigns, ...marketingCampaigns] : marketingCampaigns,
     };
   }, [
     courtBookings,
@@ -560,6 +623,7 @@ export default function RTCAdminPage() {
     proPayouts,
     memberNotes,
     proProfiles,
+    marketingCampaigns,
     useMockData,
   ]);
 
@@ -1117,6 +1181,48 @@ export default function RTCAdminPage() {
     () => ["All Pros", ...lessonMonitor.map((row) => row.coachName)],
     [lessonMonitor]
   );
+  const marketingAudience = useMemo(() => {
+    const memberEmails = new Set<string>();
+    memberDirectory.forEach((member) => {
+      const email = member.email.trim().toLowerCase();
+      if (email) memberEmails.add(email);
+    });
+    const nonMemberEmails = new Set<string>();
+    mergedData.courts.forEach((booking) => {
+      if (booking.memberNumber) return;
+      const email = (booking.clientEmail || "").trim().toLowerCase();
+      if (email) nonMemberEmails.add(email);
+    });
+    mergedData.lessons.forEach((lesson) => {
+      if (lesson.memberNumber) return;
+      const email = (lesson.clientEmail || "").trim().toLowerCase();
+      if (email) nonMemberEmails.add(email);
+    });
+    const allEmails = new Set<string>([...memberEmails, ...nonMemberEmails]);
+    return {
+      memberEmails: Array.from(memberEmails),
+      nonMemberEmails: Array.from(nonMemberEmails),
+      allEmails: Array.from(allEmails),
+    };
+  }, [memberDirectory, mergedData.courts, mergedData.lessons]);
+  const marketingSummary = useMemo(() => {
+    const launched = mergedData.campaigns.filter((campaign) => campaign.status === "launched").length;
+    const drafts = mergedData.campaigns.length - launched;
+    const lastLaunch = [...mergedData.campaigns]
+      .filter((campaign) => campaign.launchedAt)
+      .sort((a, b) => new Date(b.launchedAt || 0).getTime() - new Date(a.launchedAt || 0).getTime())[0];
+    return {
+      total: mergedData.campaigns.length,
+      launched,
+      drafts,
+      audienceReach: marketingAudience.allEmails.length,
+      lastLaunchAt: lastLaunch?.launchedAt || null,
+    };
+  }, [marketingAudience.allEmails.length, mergedData.campaigns]);
+  const marketingCampaignList = useMemo(
+    () => [...mergedData.campaigns].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+    [mergedData.campaigns]
+  );
   const proNameOptions = useMemo(() => {
     const names = new Set<string>([...rtcCoaches.map((coach) => coach.name)]);
     mergedData.proProfiles.forEach((pro) => names.add(pro.displayName));
@@ -1487,6 +1593,113 @@ export default function RTCAdminPage() {
     setQuickJumpQuery("");
   }
 
+  function getCampaignRecipients(audience: MarketingAudience): string[] {
+    if (audience === "members") return marketingAudience.memberEmails;
+    if (audience === "nonmembers") return marketingAudience.nonMemberEmails;
+    return marketingAudience.allEmails;
+  }
+
+  function createMarketingCampaign(e: React.FormEvent) {
+    e.preventDefault();
+    const name = marketingForm.name.trim();
+    const subject = marketingForm.subject.trim();
+    const message = marketingForm.message.trim();
+    if (!name || !subject || !message) {
+      setAdminMsg("Campaign name, subject, and message are required.");
+      return;
+    }
+    if (!marketingForm.channels.length) {
+      setAdminMsg("Select at least one channel.");
+      return;
+    }
+    const campaign: MarketingCampaign = {
+      id: `campaign-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      name,
+      target: marketingForm.target,
+      audience: marketingForm.audience,
+      channels: marketingForm.channels,
+      subject,
+      message,
+      status: "draft",
+      createdAt: new Date().toISOString(),
+      recipientCount: 0,
+    };
+    const next = [campaign, ...marketingCampaigns];
+    setMarketingCampaigns(next);
+    localStorage.setItem(ADMIN_MARKETING_CAMPAIGNS_KEY, JSON.stringify(next));
+    setMarketingForm((prev) => ({ ...prev, name: "", subject: "", message: "" }));
+    setAdminMsg("Marketing campaign saved as draft.");
+  }
+
+  function launchCampaign(campaignId: string) {
+    const next = marketingCampaigns.map((campaign) => {
+      if (campaign.id !== campaignId) return campaign;
+      const recipients = getCampaignRecipients(campaign.audience);
+      return {
+        ...campaign,
+        status: "launched" as const,
+        launchedAt: new Date().toISOString(),
+        recipientCount: recipients.length,
+      };
+    });
+    setMarketingCampaigns(next);
+    localStorage.setItem(ADMIN_MARKETING_CAMPAIGNS_KEY, JSON.stringify(next));
+    setAdminMsg("Campaign launched and tracking updated.");
+  }
+
+  function exportCampaignRecipients(campaign: MarketingCampaign) {
+    const recipients = getCampaignRecipients(campaign.audience);
+    const csv = ["email", ...recipients].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${campaign.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-recipients.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    setAdminMsg(`Exported ${recipients.length} recipients.`);
+  }
+
+  async function copyCampaignRecipients(campaign: MarketingCampaign) {
+    const recipients = getCampaignRecipients(campaign.audience);
+    if (!recipients.length) {
+      setAdminMsg("No recipient emails available for this campaign audience.");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(recipients.join(", "));
+      setAdminMsg(`Copied ${recipients.length} recipient emails.`);
+    } catch {
+      setAdminMsg("Unable to copy recipients. Please use CSV export.");
+    }
+  }
+
+  function openCampaignEmailDraft(campaign: MarketingCampaign) {
+    const recipients = getCampaignRecipients(campaign.audience);
+    const bcc = recipients.join(",");
+    const params = new URLSearchParams({
+      subject: campaign.subject,
+      body: campaign.message,
+    });
+    if (bcc.length && bcc.length < 1200) params.set("bcc", bcc);
+    else if (bcc.length >= 1200) {
+      setAdminMsg("Recipient list is large. Use CSV export for full email blast upload.");
+    }
+    window.open(`mailto:?${params.toString()}`, "_blank");
+  }
+
+  function openExternalMarketing(channel: MarketingChannel) {
+    const urls: Record<MarketingChannel, string> = {
+      email: "https://mail.google.com",
+      facebook: "https://business.facebook.com/latest/ads_manager",
+      instagram: "https://business.facebook.com/latest/ads_manager",
+      google: "https://ads.google.com/home/",
+    };
+    window.open(urls[channel], "_blank");
+  }
+
   function createCourtBlock(e: React.FormEvent) {
     e.preventDefault();
     const block: AdminCourtBlock = {
@@ -1778,6 +1991,7 @@ export default function RTCAdminPage() {
                 {activeWorkspace === "programs" && "Programs"}
                 {activeWorkspace === "members" && "Members"}
                 {activeWorkspace === "finance" && "Finance"}
+                {activeWorkspace === "marketing" && "Marketing"}
               </span>
             </p>
           </div>
@@ -1789,6 +2003,7 @@ export default function RTCAdminPage() {
                 ["programs", "Programs", "Clinics + events monitoring"],
                 ["members", "Members", "Directory + quarterly statements"],
                 ["finance", "Finance", "Pro registry + payouts + 1099"],
+                ["marketing", "Marketing", "Campaign planning + launch tracking"],
               ] as Array<[AdminWorkspace, string, string]>
             ).map(([key, label, hint]) => {
               const active = activeWorkspace === key;
@@ -2787,6 +3002,196 @@ export default function RTCAdminPage() {
               </div>
             </div>
           </details>
+          </div>
+        )}
+
+        {activeWorkspace === "marketing" && (
+          <div className="mt-4 grid gap-4">
+            <div className="grid gap-3 sm:grid-cols-5">
+              <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3">
+                <p className="text-[10px] uppercase tracking-[0.1em] text-[#8a8477]">Campaigns</p>
+                <p className="mt-1 text-[20px] font-semibold">{marketingSummary.total}</p>
+              </div>
+              <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3">
+                <p className="text-[10px] uppercase tracking-[0.1em] text-[#8a8477]">Launched</p>
+                <p className="mt-1 text-[20px] font-semibold">{marketingSummary.launched}</p>
+              </div>
+              <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3">
+                <p className="text-[10px] uppercase tracking-[0.1em] text-[#8a8477]">Drafts</p>
+                <p className="mt-1 text-[20px] font-semibold">{marketingSummary.drafts}</p>
+              </div>
+              <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3">
+                <p className="text-[10px] uppercase tracking-[0.1em] text-[#8a8477]">Reachable Emails</p>
+                <p className="mt-1 text-[20px] font-semibold">{marketingSummary.audienceReach}</p>
+              </div>
+              <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3">
+                <p className="text-[10px] uppercase tracking-[0.1em] text-[#8a8477]">Last Launch</p>
+                <p className="mt-1 text-[12px] font-medium">
+                  {marketingSummary.lastLaunchAt ? new Date(marketingSummary.lastLaunchAt).toLocaleString() : "None yet"}
+                </p>
+              </div>
+            </div>
+
+            <details className="rounded-xl border border-[#ece8e2] p-4">
+              <summary className="cursor-pointer text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">
+                Campaign Builder
+              </summary>
+              <form onSubmit={createMarketingCampaign} className="mt-3 grid gap-2">
+                <input
+                  value={marketingForm.name}
+                  onChange={(e) => setMarketingForm((prev) => ({ ...prev, name: e.target.value }))}
+                  placeholder="Campaign name"
+                  className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[12px]"
+                />
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <select
+                    value={marketingForm.target}
+                    onChange={(e) =>
+                      setMarketingForm((prev) => ({ ...prev, target: e.target.value as MarketingTarget }))
+                    }
+                    className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[12px]"
+                  >
+                    <option value="events">Events</option>
+                    <option value="clinics">Clinics</option>
+                    <option value="lessons">Private Lessons</option>
+                    <option value="open-courts">Open Courts</option>
+                    <option value="membership">Membership</option>
+                  </select>
+                  <select
+                    value={marketingForm.audience}
+                    onChange={(e) =>
+                      setMarketingForm((prev) => ({ ...prev, audience: e.target.value as MarketingAudience }))
+                    }
+                    className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[12px]"
+                  >
+                    <option value="all">All saved emails</option>
+                    <option value="members">Members only</option>
+                    <option value="nonmembers">Non-members only</option>
+                  </select>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {(["email", "facebook", "instagram", "google"] as MarketingChannel[]).map((channel) => {
+                    const active = marketingForm.channels.includes(channel);
+                    return (
+                      <button
+                        key={channel}
+                        type="button"
+                        onClick={() =>
+                          setMarketingForm((prev) => ({
+                            ...prev,
+                            channels: active
+                              ? prev.channels.filter((item) => item !== channel)
+                              : [...prev.channels, channel],
+                          }))
+                        }
+                        className={`rounded-md border px-2.5 py-1 text-[11px] ${
+                          active
+                            ? "border-[#1a1a1a] bg-[#1a1a1a] text-white"
+                            : "border-[#d9d5cf] bg-white hover:bg-[#fdfcfb]"
+                        }`}
+                      >
+                        {channel}
+                      </button>
+                    );
+                  })}
+                </div>
+                <input
+                  value={marketingForm.subject}
+                  onChange={(e) => setMarketingForm((prev) => ({ ...prev, subject: e.target.value }))}
+                  placeholder="Email subject"
+                  className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[12px]"
+                />
+                <textarea
+                  value={marketingForm.message}
+                  onChange={(e) => setMarketingForm((prev) => ({ ...prev, message: e.target.value }))}
+                  rows={4}
+                  placeholder="Campaign message"
+                  className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[12px]"
+                />
+                <button
+                  type="submit"
+                  className="rounded-lg bg-[#1a1a1a] px-3 py-2 text-[12px] font-medium text-white hover:bg-[#2c2c2c]"
+                >
+                  Save Campaign Draft
+                </button>
+              </form>
+            </details>
+
+            <details className="rounded-xl border border-[#ece8e2] p-4">
+              <summary className="cursor-pointer text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">
+                Campaign Center
+              </summary>
+              <div className="mt-3 space-y-2">
+                {marketingCampaignList.map((campaign) => (
+                  <div key={campaign.id} className="rounded-lg border border-[#ece8e2] bg-[#faf9f7] p-3 text-[12px]">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <p className="font-medium">{campaign.name}</p>
+                        <p className="text-[#6b665e]">
+                          {campaign.target} · {campaign.audience} · channels: {campaign.channels.join(", ")}
+                        </p>
+                        <p className="text-[#8a8477]">
+                          Status: {campaign.status}
+                          {campaign.launchedAt ? ` · launched ${new Date(campaign.launchedAt).toLocaleString()}` : ""}
+                          {campaign.recipientCount ? ` · recipients ${campaign.recipientCount}` : ""}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => launchCampaign(campaign.id)}
+                          className="rounded-md border border-[#1a1a1a] bg-[#1a1a1a] px-2.5 py-1 text-[11px] text-white hover:bg-[#2c2c2c]"
+                        >
+                          Launch
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openCampaignEmailDraft(campaign)}
+                          className="rounded-md border border-[#d9d5cf] bg-white px-2.5 py-1 text-[11px] hover:bg-[#fdfcfb]"
+                        >
+                          Email Blast
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => copyCampaignRecipients(campaign)}
+                          className="rounded-md border border-[#d9d5cf] bg-white px-2.5 py-1 text-[11px] hover:bg-[#fdfcfb]"
+                        >
+                          Copy Recipients
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => exportCampaignRecipients(campaign)}
+                          className="rounded-md border border-[#d9d5cf] bg-white px-2.5 py-1 text-[11px] hover:bg-[#fdfcfb]"
+                        >
+                          Export CSV
+                        </button>
+                      </div>
+                    </div>
+                    <p className="mt-2 text-[#6b665e]">
+                      <span className="font-medium">Subject:</span> {campaign.subject}
+                    </p>
+                    <p className="mt-1 text-[#6b665e]">{campaign.message}</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {campaign.channels
+                        .filter((channel) => channel !== "email")
+                        .map((channel) => (
+                          <button
+                            key={`${campaign.id}-${channel}`}
+                            type="button"
+                            onClick={() => openExternalMarketing(channel)}
+                            className="rounded-md border border-[#d9d5cf] bg-white px-2.5 py-1 text-[11px] hover:bg-[#fdfcfb]"
+                          >
+                            Open {channel}
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+                ))}
+                {marketingCampaignList.length === 0 && (
+                  <p className="text-[12px] text-[#8a8477]">No campaigns yet. Create your first campaign draft.</p>
+                )}
+              </div>
+            </details>
           </div>
         )}
 
