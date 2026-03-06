@@ -135,13 +135,6 @@ export default function RTCLessonsPage() {
         <div className="mt-5 grid gap-4 lg:grid-cols-[1.2fr_1fr]">
           <div className="space-y-3">
             <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-4">
-              <div className="mb-3 overflow-hidden rounded-lg border border-[#e8e5df]">
-                <img
-                  src="https://images.unsplash.com/photo-1587255608209-1476e9589ae9?auto=format&fit=crop&w=1400&q=80"
-                  alt="Hudson Valley nature"
-                  className="h-24 w-full object-cover"
-                />
-              </div>
               <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Choose Your Coach</p>
               <div className="mt-3 grid gap-2">
                 {rtcCoaches.map((coach) => {
