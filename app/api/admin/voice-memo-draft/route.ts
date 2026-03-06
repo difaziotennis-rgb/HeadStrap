@@ -61,15 +61,16 @@ function normalizeStructuredDraft(raw: any, fallbackSubject: string): Structured
   const subject = typeof raw.subject === "string" && raw.subject.trim() ? raw.subject.trim() : fallbackSubject;
   const rawSections = Array.isArray(raw.sections) ? raw.sections : [];
 
+  type DraftSection = { title: string; bullets: string[] };
   const sections = rawSections
-    .map((section: any) => {
+    .map((section: any): DraftSection => {
       const title = typeof section?.title === "string" ? section.title.trim() : "";
       const bullets = Array.isArray(section?.bullets)
         ? dedupeBullets(section.bullets.map((b: any) => cleanBullet(String(b || ""))).filter(Boolean))
         : [];
       return { title, bullets };
     })
-    .filter((s) => s.title && s.bullets.length > 0)
+    .filter((s: DraftSection) => s.title && s.bullets.length > 0)
     .slice(0, 6);
 
   if (!sections.length) return null;
