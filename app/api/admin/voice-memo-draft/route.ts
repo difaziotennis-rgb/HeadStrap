@@ -50,6 +50,21 @@ function splitIntoClauses(text: string): string[] {
   return out;
 }
 
+function splitLongClause(clause: string): string[] {
+  const normalized = cleanText(clause);
+  if (normalized.split(/\s+/).length < 14) return [normalized];
+
+  const pieces = normalized
+    .replace(/\s+and\s+then\s+/gi, ". ")
+    .replace(/,\s+and\s+/gi, ". ")
+    .replace(/\s+and\s+/gi, ". ")
+    .split(/[.]/)
+    .map((s) => cleanText(s))
+    .filter((s) => s.length >= 10);
+
+  return pieces.length > 1 ? pieces : [normalized];
+}
+
 function includesAny(text: string, terms: string[]): boolean {
   const lower = text.toLowerCase();
   return terms.some((term) => lower.includes(term));
@@ -69,7 +84,11 @@ function normalizePoint(clause: string): string {
 
   if (!cleaned) return "";
 
-  const words = cleaned.split(/\s+/).filter(Boolean);
+  const words = cleaned
+    .replace(/\s+next\s+lesson\s+sunday\s+at\s+/i, " Next lesson: Sunday at ")
+    .replace(/\s+next\s+lesson\s+on\s+/i, " Next lesson: ")
+    .split(/\s+/)
+    .filter(Boolean);
   let capped = words.join(" ");
   if (words.length > 24) {
     const first24 = words.slice(0, 24).join(" ");
@@ -90,7 +109,7 @@ function pushPoint(target: string[], point: string, max: number): void {
 }
 
 function distillTranscript(transcript: string): Section[] {
-  const clauses = splitIntoClauses(transcript);
+  const clauses = splitIntoClauses(transcript).flatMap(splitLongClause);
 
   const focusTerms = [
     "forehand","backhand","serve","return","volley","footwork","timing","consistency","depth","contact","toss","rally","approach","slice","topspin","pattern",
