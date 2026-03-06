@@ -4,8 +4,6 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { rtcSummerEvents } from "../rtc-data";
 import {
-  isValidMemberNumber,
-  MEMBER_MODE_KEY,
   MEMBER_SESSION_EVENT,
   MEMBER_SESSION_KEY,
   parseMemberSession,
@@ -37,10 +35,10 @@ export default function RTCEventsPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [guestCount, setGuestCount] = useState(1);
-  const [isMember, setIsMember] = useState(false);
-  const [memberNumber, setMemberNumber] = useState("");
+  const [memberSession, setMemberSession] = useState<ReturnType<typeof parseMemberSession>>(null);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
   const [reservations, setReservations] = useState<EventReservation[]>([]);
+  const isMember = !!memberSession;
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -56,12 +54,7 @@ export default function RTCEventsPage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     function applySession() {
-      const session = parseMemberSession(localStorage.getItem(MEMBER_SESSION_KEY));
-      const memberMode = localStorage.getItem(MEMBER_MODE_KEY) === "true";
-      if (session || memberMode) {
-        setIsMember(true);
-        if (session?.memberNumber) setMemberNumber(session.memberNumber);
-      }
+      setMemberSession(parseMemberSession(localStorage.getItem(MEMBER_SESSION_KEY)));
     }
     applySession();
     window.addEventListener(MEMBER_SESSION_EVENT, applySession);
@@ -92,12 +85,8 @@ export default function RTCEventsPage() {
 
   function handleReserve(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedEvent || !name.trim() || !email.trim()) {
+    if (!selectedEvent || (!isMember && (!name.trim() || !email.trim()))) {
       setStatusMsg("Please complete name, email, and event selection.");
-      return;
-    }
-    if (isMember && !isValidMemberNumber(memberNumber.trim())) {
-      setStatusMsg("Please enter your 3-digit member number.");
       return;
     }
 
@@ -106,11 +95,13 @@ export default function RTCEventsPage() {
       eventId: selectedEvent.id,
       eventTitle: selectedEvent.title,
       eventDateLabel: selectedEvent.dateLabel,
-      attendeeName: name.trim(),
-      attendeeEmail: email.trim(),
+      attendeeName: isMember
+        ? memberSession?.memberName || `Member #${memberSession?.memberNumber || "RTC"}`
+        : name.trim(),
+      attendeeEmail: isMember ? memberSession?.memberEmail || "" : email.trim(),
       guestCount,
       isMember,
-      memberNumber: isMember ? memberNumber.trim() : "",
+      memberNumber: isMember ? memberSession?.memberNumber || "" : "",
       total: totalPrice,
       createdAt: new Date().toISOString(),
     };
@@ -125,7 +116,6 @@ export default function RTCEventsPage() {
     setName("");
     setEmail("");
     setGuestCount(1);
-    setMemberNumber("");
   }
 
   return (
@@ -215,18 +205,22 @@ export default function RTCEventsPage() {
                   </option>
                 ))}
               </select>
-              <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Full name"
-                className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
-              />
-              <input
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Email"
-                className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
-              />
+              {!isMember && (
+                <>
+                  <input
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Full name"
+                    className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
+                  />
+                  <input
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Email"
+                    className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
+                  />
+                </>
+              )}
               <div className="grid gap-2 sm:grid-cols-2">
                 <select
                   value={guestCount}
@@ -238,30 +232,12 @@ export default function RTCEventsPage() {
                   <option value={3}>3 guests</option>
                   <option value={4}>4 guests</option>
                 </select>
-                <label className="flex items-center gap-2 rounded-lg border border-[#e8e5df] px-3 py-2 text-[12px] text-[#4a4a4a]">
-                  <input
-                    type="checkbox"
-                    checked={isMember}
-                    onChange={(e) => {
-                      setIsMember(e.target.checked);
-                      if (typeof window !== "undefined") {
-                        localStorage.setItem(MEMBER_MODE_KEY, String(e.target.checked));
-                      }
-                    }}
-                  />
-                  Member
-                </label>
+                {isMember && (
+                  <p className="rounded-lg border border-[#dbead3] bg-[#f4faf1] px-3 py-2 text-[11px] text-[#2d5016]">
+                    Booking as Member #{memberSession?.memberNumber}.
+                  </p>
+                )}
               </div>
-              {isMember && (
-                <input
-                  value={memberNumber}
-                  onChange={(e) => setMemberNumber(e.target.value.replace(/\D/g, "").slice(0, 3))}
-                  placeholder="Member number (3 digits)"
-                  inputMode="numeric"
-                  maxLength={3}
-                  className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
-                />
-              )}
             </div>
 
             <div className="mt-4 rounded-lg border border-[#ece8e2] bg-[#faf9f7] px-3 py-2 text-[13px]">

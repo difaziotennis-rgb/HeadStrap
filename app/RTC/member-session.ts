@@ -5,6 +5,7 @@ export const MEMBER_SESSION_EVENT = "rtc-member-session-changed";
 export type MemberSession = {
   memberNumber: string;
   memberEmail: string;
+  memberName?: string;
   signedInAt: string;
 };
 
@@ -20,6 +21,7 @@ export function parseMemberSession(raw: string | null): MemberSession | null {
     return {
       memberNumber: parsed.memberNumber.trim(),
       memberEmail: String(parsed.memberEmail || "").trim(),
+      memberName: String(parsed.memberName || "").trim(),
       signedInAt: String(parsed.signedInAt || new Date().toISOString()),
     };
   } catch {

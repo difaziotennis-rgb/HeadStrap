@@ -30,13 +30,18 @@ export default function MemberAuth() {
 
   function handleSignIn(e: React.FormEvent) {
     e.preventDefault();
-    if (!isValidMemberNumber(memberNumber)) {
+    const trimmedNumber = memberNumber.trim();
+    const trimmedEmail = memberEmail.trim();
+    const quickTestSignIn = !trimmedNumber && !trimmedEmail;
+
+    if (!quickTestSignIn && !isValidMemberNumber(trimmedNumber)) {
       setMsg("Please enter a valid 3-digit member number.");
       return;
     }
     const next: MemberSession = {
-      memberNumber,
-      memberEmail: memberEmail.trim(),
+      memberNumber: quickTestSignIn ? "000" : trimmedNumber,
+      memberEmail: quickTestSignIn ? "" : trimmedEmail,
+      memberName: quickTestSignIn ? "Derek DiFazio" : "",
       signedInAt: new Date().toISOString(),
     };
     localStorage.setItem(MEMBER_SESSION_KEY, JSON.stringify(next));
@@ -62,7 +67,7 @@ export default function MemberAuth() {
     return (
       <div className="flex items-center gap-2">
         <span className="hidden rounded-md border border-[#dbead3] bg-[#f4faf1] px-2.5 py-1 text-[11px] font-medium text-[#2d5016] sm:inline">
-          Member #{session.memberNumber}
+          {session.memberName ? `${session.memberName} · ` : ""}Member #{session.memberNumber}
         </span>
         <button
           type="button"
@@ -114,6 +119,9 @@ export default function MemberAuth() {
             >
               Stay Signed In
             </button>
+            <p className="text-[10px] text-[#8a8477]">
+              Leave both fields blank for test sign-in as Derek DiFazio (Member #000).
+            </p>
             {msg && <p className="text-[11px] text-[#7f1d1d]">{msg}</p>}
           </div>
         </form>

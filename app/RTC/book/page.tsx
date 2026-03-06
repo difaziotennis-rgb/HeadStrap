@@ -3,8 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PAYMENT_CONFIG } from "@/lib/payment-config";
 import {
-  isValidMemberNumber,
-  MEMBER_MODE_KEY,
   MEMBER_SESSION_EVENT,
   MEMBER_SESSION_KEY,
   parseMemberSession,
@@ -89,17 +87,15 @@ function bookingKey(date: string, courtId: string, hour: number): string {
 
 export default function RTCBookPage() {
   const [selectedDate, setSelectedDate] = useState(formatDateInput(new Date()));
-  const [memberView, setMemberView] = useState(false);
   const [bookings, setBookings] = useState<Record<string, Booking>>({});
   const [activeCourt, setActiveCourt] = useState<Court | null>(null);
   const [activeHour, setActiveHour] = useState<number | null>(null);
   const [durationHours, setDurationHours] = useState<1 | 2>(1);
+  const [memberSession, setMemberSession] = useState<ReturnType<typeof parseMemberSession>>(null);
   const [form, setForm] = useState({
     name: "",
     email: "",
     phone: "",
-    isMember: false,
-    memberNumber: "",
   });
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
   const [isCreatingStripe, setIsCreatingStripe] = useState(false);
@@ -126,18 +122,7 @@ export default function RTCBookPage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     function applySession() {
-      const session = parseMemberSession(localStorage.getItem(MEMBER_SESSION_KEY));
-      const memberMode = localStorage.getItem(MEMBER_MODE_KEY) === "true";
-      if (session || memberMode) {
-        setMemberView(true);
-        setForm((prev) => ({
-          ...prev,
-          isMember: true,
-          memberNumber: session?.memberNumber || prev.memberNumber,
-        }));
-      } else {
-        setMemberView(false);
-      }
+      setMemberSession(parseMemberSession(localStorage.getItem(MEMBER_SESSION_KEY)));
     }
     applySession();
     window.addEventListener(MEMBER_SESSION_EVENT, applySession);
@@ -198,15 +183,14 @@ export default function RTCBookPage() {
 
   const activeAmount = useMemo(() => {
     if (!activeCourt) return 0;
-    const hourlyRate = getRate(activeCourt.type, form.isMember);
+    const hourlyRate = getRate(activeCourt.type, !!memberSession);
     const discount = durationHours === 2 ? Math.round(hourlyRate * 0.1 * 100) / 100 : 0;
     return hourlyRate * durationHours - discount;
-  }, [activeCourt, form.isMember, durationHours]);
+  }, [activeCourt, memberSession, durationHours]);
 
   function openBooking(court: Court, hour: number) {
     setActiveCourt(court);
     setActiveHour(hour);
-    setForm((prev) => ({ ...prev, isMember: memberView }));
     setDurationHours(1);
     setStatusMsg(null);
   }
@@ -219,12 +203,9 @@ export default function RTCBookPage() {
 
   function saveBooking(paymentMethod: Booking["paymentMethod"] = "manual") {
     if (!activeCourt || activeHour === null) return null;
-    if (!form.name.trim() || !form.email.trim()) {
+    const isMember = !!memberSession;
+    if (!isMember && (!form.name.trim() || !form.email.trim())) {
       setStatusMsg("Name and email are required.");
-      return null;
-    }
-    if (form.isMember && !isValidMemberNumber(form.memberNumber.trim())) {
-      setStatusMsg("Members must enter a valid 3-digit member number.");
       return null;
     }
     if (durationHours === 2 && activeHour + 1 > hours[hours.length - 1]) {
@@ -246,7 +227,7 @@ export default function RTCBookPage() {
     }
 
     const id = `rtc-booking-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const hourlyRate = getRate(activeCourt.type, form.isMember);
+    const hourlyRate = getRate(activeCourt.type, isMember);
     const discountApplied =
       durationHours === 2 ? Math.round(hourlyRate * 0.1 * 100) / 100 : 0;
     const totalAmount = hourlyRate * durationHours - discountApplied;
@@ -264,11 +245,13 @@ export default function RTCBookPage() {
         courtId: activeCourt.id,
         courtName: activeCourt.name,
         type: activeCourt.type,
-        clientName: form.name.trim(),
-        clientEmail: form.email.trim(),
+        clientName: isMember
+          ? memberSession?.memberName || `Member #${memberSession?.memberNumber || "RTC"}`
+          : form.name.trim(),
+        clientEmail: isMember ? memberSession?.memberEmail || "" : form.email.trim(),
         clientPhone: form.phone.trim(),
-        isMember: form.isMember,
-        memberNumber: form.isMember ? form.memberNumber.trim() : "",
+        isMember,
+        memberNumber: isMember ? memberSession?.memberNumber || "" : "",
         amount: hourlyRate,
         totalAmount,
         discountApplied,
@@ -464,25 +447,6 @@ export default function RTCBookPage() {
                 </div>
               </div>
             )}
-            <button
-              type="button"
-              onClick={() =>
-                setMemberView((v) => {
-                  const next = !v;
-                  if (typeof window !== "undefined") {
-                    localStorage.setItem(MEMBER_MODE_KEY, String(next));
-                  }
-                  return next;
-                })
-              }
-              className={`rounded-lg border px-3 py-2 text-[12px] font-medium ${
-                memberView
-                  ? "border-[#2d5016] bg-[#f4faf1] text-[#2d5016]"
-                  : "border-[#d9d5cf] text-[#6b665e]"
-              }`}
-            >
-              {memberView ? "Member View On" : "Member View Off"}
-            </button>
           </div>
         </div>
 
@@ -601,37 +565,28 @@ export default function RTCBookPage() {
             </div>
 
             <div className="mt-4 grid gap-2">
-              <input
-                placeholder="Full name"
-                value={form.name}
-                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
-              />
-              <input
-                placeholder="Email"
-                value={form.email}
-                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
-              />
-              <input
-                placeholder="Phone (optional)"
-                value={form.phone}
-                onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-                className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
-              />
-              <label className="mt-1 flex items-center gap-2 text-[12px] text-[#4a4a4a]">
-                <input
-                  type="checkbox"
-                  checked={form.isMember}
-                  onChange={(e) => {
-                    setForm((f) => ({ ...f, isMember: e.target.checked }));
-                    if (typeof window !== "undefined") {
-                      localStorage.setItem(MEMBER_MODE_KEY, String(e.target.checked));
-                    }
-                  }}
-                />
-                I am an RTC member
-              </label>
+              {!memberSession && (
+                <>
+                  <input
+                    placeholder="Full name"
+                    value={form.name}
+                    onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                    className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
+                  />
+                  <input
+                    placeholder="Email"
+                    value={form.email}
+                    onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                    className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
+                  />
+                  <input
+                    placeholder="Phone (optional)"
+                    value={form.phone}
+                    onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                    className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
+                  />
+                </>
+              )}
               <select
                 value={durationHours}
                 onChange={(e) => setDurationHours(Number(e.target.value) === 2 ? 2 : 1)}
@@ -640,22 +595,15 @@ export default function RTCBookPage() {
                 <option value={1}>1 hour</option>
                 <option value={2}>2 consecutive hours (discount)</option>
               </select>
-              {form.isMember && (
-                <input
-                  placeholder="Member number (3 digits)"
-                  value={form.memberNumber}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, memberNumber: e.target.value.replace(/\D/g, "").slice(0, 3) }))
-                  }
-                  inputMode="numeric"
-                  maxLength={3}
-                  className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
-                />
+              {memberSession && (
+                <p className="rounded-lg border border-[#dbead3] bg-[#f4faf1] px-3 py-2 text-[11px] text-[#2d5016]">
+                  Booking as Member #{memberSession.memberNumber}.
+                </p>
               )}
             </div>
 
             <div className="mt-4 rounded-lg border border-[#ece8e2] bg-[#faf9f7] px-3 py-2 text-[13px]">
-              Rate: <strong>${activeAmount}</strong> ({form.isMember ? "member" : "public"})
+              Rate: <strong>${activeAmount}</strong> ({memberSession ? "member" : "public"})
               {durationHours === 2 && activeCourt && (
                 <p className="mt-1 text-[12px] text-[#7a756d]">
                   Includes 10% discount on the second hour for consecutive bookings.

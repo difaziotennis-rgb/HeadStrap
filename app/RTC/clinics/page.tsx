@@ -3,8 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { rtcClinics } from "../rtc-data";
 import {
-  isValidMemberNumber,
-  MEMBER_MODE_KEY,
   MEMBER_SESSION_EVENT,
   MEMBER_SESSION_KEY,
   parseMemberSession,
@@ -50,14 +48,14 @@ function parsePrice(value: string): number {
 export default function RTCClinicsPage() {
   const [selectedClinics, setSelectedClinics] = useState<Record<string, boolean>>({});
   const [sessionWindow, setSessionWindow] = useState(SESSION_WINDOWS[0].value);
-  const [isMember, setIsMember] = useState(false);
+  const [memberSession, setMemberSession] = useState<ReturnType<typeof parseMemberSession>>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [memberNumber, setMemberNumber] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
   const [bookings, setBookings] = useState<ClinicBooking[]>([]);
   const [lastBooking, setLastBooking] = useState<ClinicBooking | null>(null);
+  const isMember = !!memberSession;
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -74,12 +72,7 @@ export default function RTCClinicsPage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     function applySession() {
-      const session = parseMemberSession(localStorage.getItem(MEMBER_SESSION_KEY));
-      const memberMode = localStorage.getItem(MEMBER_MODE_KEY) === "true";
-      if (session || memberMode) {
-        setIsMember(true);
-        if (session?.memberNumber) setMemberNumber(session.memberNumber);
-      }
+      setMemberSession(parseMemberSession(localStorage.getItem(MEMBER_SESSION_KEY)));
     }
     applySession();
     window.addEventListener(MEMBER_SESSION_EVENT, applySession);
@@ -139,16 +132,12 @@ export default function RTCClinicsPage() {
 
   function submitClinicBooking(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim() || !email.trim()) {
+    if (!isMember && (!name.trim() || !email.trim())) {
       setMsg("Please add your name and email to reserve your clinic spot.");
       return;
     }
     if (selectedCount === 0) {
       setMsg("Select at least one clinic to continue.");
-      return;
-    }
-    if (isMember && !isValidMemberNumber(memberNumber.trim())) {
-      setMsg("Please enter your 3-digit member number.");
       return;
     }
     const booking: ClinicBooking = {
@@ -159,11 +148,13 @@ export default function RTCClinicsPage() {
       subtotal: pricing.subtotal,
       discount: pricing.discount,
       total: pricing.total,
-      clientName: name.trim(),
-      clientEmail: email.trim(),
+      clientName: isMember
+        ? memberSession?.memberName || `Member #${memberSession?.memberNumber || "RTC"}`
+        : name.trim(),
+      clientEmail: isMember ? memberSession?.memberEmail || "" : email.trim(),
       clientPhone: phone.trim(),
       isMember,
-      memberNumber: isMember ? memberNumber.trim() : "",
+      memberNumber: isMember ? memberSession?.memberNumber || "" : "",
       createdAt: new Date().toISOString(),
     };
     const next = [booking, ...bookings].slice(0, 20);
@@ -180,7 +171,6 @@ export default function RTCClinicsPage() {
     setName("");
     setEmail("");
     setPhone("");
-    setMemberNumber("");
   }
 
   return (
@@ -249,24 +239,28 @@ export default function RTCClinicsPage() {
           <form onSubmit={submitClinicBooking} className="rounded-xl border border-[#ece8e2] p-4">
             <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Reserve Your Spot</p>
             <div className="mt-3 grid gap-2">
-              <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Full name"
-                className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
-              />
-              <input
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Email"
-                className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
-              />
-              <input
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="Phone (optional)"
-                className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
-              />
+              {!isMember && (
+                <>
+                  <input
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Full name"
+                    className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
+                  />
+                  <input
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Email"
+                    className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
+                  />
+                  <input
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="Phone (optional)"
+                    className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
+                  />
+                </>
+              )}
               <div className="rounded-lg border border-[#e8e5df] p-2">
                 <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Choose Timeframe</p>
                 <div className="mt-2 grid gap-2 sm:grid-cols-3">
@@ -292,33 +286,10 @@ export default function RTCClinicsPage() {
                   })}
                 </div>
               </div>
-              <label className="flex items-center gap-2 text-[12px] text-[#4a4a4a]">
-                <input
-                  type="checkbox"
-                  checked={isMember}
-                  onChange={(e) => {
-                    setIsMember(e.target.checked);
-                    if (typeof window !== "undefined") {
-                      localStorage.setItem(MEMBER_MODE_KEY, String(e.target.checked));
-                    }
-                  }}
-                />
-                I am an RTC member
-              </label>
               {isMember && (
-                <>
-                  <input
-                    value={memberNumber}
-                    onChange={(e) => setMemberNumber(e.target.value.replace(/\D/g, "").slice(0, 3))}
-                    placeholder="Member number (3 digits)"
-                    inputMode="numeric"
-                    maxLength={3}
-                    className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
-                  />
-                  <p className="text-[11px] text-[#2d5016]">
-                    Member mode active: lower clinic rates and preferred access.
-                  </p>
-                </>
+                <p className="rounded-lg border border-[#dbead3] bg-[#f4faf1] px-3 py-2 text-[11px] text-[#2d5016]">
+                  Booking as Member #{memberSession?.memberNumber}.
+                </p>
               )}
             </div>
 
