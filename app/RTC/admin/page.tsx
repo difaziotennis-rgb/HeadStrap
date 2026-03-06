@@ -162,6 +162,8 @@ type QuarterlyStatement = {
   lineItems: StatementLineItem[];
 };
 
+type AdminWorkspace = "overview" | "operations" | "programs" | "members" | "finance";
+
 function safeParse<T>(raw: string | null, fallback: T): T {
   if (!raw) return fallback;
   try {
@@ -374,6 +376,7 @@ export default function RTCAdminPage() {
   const [selectedStatementQuarter, setSelectedStatementQuarter] = useState(previousQuarterKey());
   const [statementStatus, setStatementStatus] = useState<string | null>(null);
   const [sendingStatements, setSendingStatements] = useState(false);
+  const [activeWorkspace, setActiveWorkspace] = useState<AdminWorkspace>("overview");
   const [selectedClinic, setSelectedClinic] = useState("All Clinics");
   const [selectedEvent, setSelectedEvent] = useState("All Events");
   const [selectedMemberNumber, setSelectedMemberNumber] = useState<string | null>(null);
@@ -1206,7 +1209,8 @@ export default function RTCAdminPage() {
           </div>
         </div>
 
-        <div id="performance-overview" className="mt-5 grid gap-4 xl:grid-cols-3">
+        {activeWorkspace === "overview" && (
+          <div id="performance-overview" className="mt-5 grid gap-4 xl:grid-cols-3">
           <div className="rounded-xl border border-[#ece8e2] p-4">
             <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Seasonal Performance</p>
             <div className="mt-3 overflow-x-auto">
@@ -1280,33 +1284,60 @@ export default function RTCAdminPage() {
               </table>
             </div>
           </div>
-        </div>
+          </div>
+        )}
 
         <div className="mt-4 rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-4">
-          <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Quick Monitor Links</p>
+          <div className="flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Workspace Navigation</p>
+              <p className="mt-1 text-[12px] text-[#6b665e]">
+                Open one focused workspace at a time to reduce clutter.
+              </p>
+            </div>
+            <p className="text-[11px] text-[#8a8477]">
+              Active:{" "}
+              <span className="font-medium text-[#4a4a4a]">
+                {activeWorkspace === "overview" && "Overview"}
+                {activeWorkspace === "operations" && "Operations"}
+                {activeWorkspace === "programs" && "Programs"}
+                {activeWorkspace === "members" && "Members"}
+                {activeWorkspace === "finance" && "Finance"}
+              </span>
+            </p>
+          </div>
           <div className="mt-2 flex flex-wrap gap-2">
-            <a href="#clinics-monitor" className="rounded-md border border-[#d9d5cf] bg-white px-3 py-1.5 text-[12px] hover:bg-[#fdfcfb]">
-              Clinics Monitor
-            </a>
-            <a href="#events-monitor" className="rounded-md border border-[#d9d5cf] bg-white px-3 py-1.5 text-[12px] hover:bg-[#fdfcfb]">
-              Events Monitor
-            </a>
-            <a href="#members-hub" className="rounded-md border border-[#d9d5cf] bg-white px-3 py-1.5 text-[12px] hover:bg-[#fdfcfb]">
-              Member Directory
-            </a>
-            <a href="#payouts-1099" className="rounded-md border border-[#d9d5cf] bg-white px-3 py-1.5 text-[12px] hover:bg-[#fdfcfb]">
-              Pro Payouts / 1099
-            </a>
-            <a href="#pro-registry" className="rounded-md border border-[#d9d5cf] bg-white px-3 py-1.5 text-[12px] hover:bg-[#fdfcfb]">
-              Pro Registry
-            </a>
-            <a href="#quarterly-statements" className="rounded-md border border-[#d9d5cf] bg-white px-3 py-1.5 text-[12px] hover:bg-[#fdfcfb]">
-              Quarterly Statements
-            </a>
+            {(
+              [
+                ["overview", "Overview", "KPI + performance + activity"],
+                ["operations", "Operations", "Court controls + booking actions"],
+                ["programs", "Programs", "Clinics + events monitoring"],
+                ["members", "Members", "Directory + quarterly statements"],
+                ["finance", "Finance", "Pro registry + payouts + 1099"],
+              ] as Array<[AdminWorkspace, string, string]>
+            ).map(([key, label, hint]) => {
+              const active = activeWorkspace === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setActiveWorkspace(key)}
+                  className={`rounded-md border px-3 py-1.5 text-left text-[12px] transition-colors ${
+                    active
+                      ? "border-[#1a1a1a] bg-[#1a1a1a] text-white"
+                      : "border-[#d9d5cf] bg-white hover:bg-[#fdfcfb]"
+                  }`}
+                  title={hint}
+                >
+                  {label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        <div className="mt-5 grid gap-4 xl:grid-cols-3">
+        {activeWorkspace === "operations" && (
+          <div className="mt-5 grid gap-4 xl:grid-cols-3">
           <section className="rounded-xl border border-[#ece8e2] p-4">
             <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Court Control Panel</p>
             <form onSubmit={createCourtBlock} className="mt-3 grid gap-2">
@@ -1388,9 +1419,11 @@ export default function RTCAdminPage() {
               ))}
             </div>
           </section>
-        </div>
+          </div>
+        )}
 
-        <div className="mt-4 grid gap-4 xl:grid-cols-2">
+        {activeWorkspace === "programs" && (
+          <div className="mt-4 grid gap-4 xl:grid-cols-2">
           <section id="clinics-monitor" className="rounded-xl border border-[#ece8e2] p-4">
             <div className="flex items-center justify-between gap-2">
               <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Clinics Monitor</p>
@@ -1448,9 +1481,11 @@ export default function RTCAdminPage() {
               {visibleEvents.length === 0 && <p className="text-[12px] text-[#8a8477]">No event activity yet.</p>}
             </div>
           </section>
-        </div>
+          </div>
+        )}
 
-        <section id="members-hub" className="mt-4 rounded-xl border border-[#ece8e2] p-4">
+        {activeWorkspace === "members" && (
+          <section id="members-hub" className="mt-4 rounded-xl border border-[#ece8e2] p-4">
           <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Membership Area</p>
           <div className="mt-3 grid gap-4 xl:grid-cols-[1fr_1.2fr]">
             <div className="rounded-lg border border-[#ece8e2] p-3">
@@ -1518,9 +1553,11 @@ export default function RTCAdminPage() {
               )}
             </div>
           </div>
-        </section>
+          </section>
+        )}
 
-        <section id="pro-registry" className="mt-4 rounded-xl border border-[#ece8e2] p-4">
+        {activeWorkspace === "finance" && (
+          <section id="pro-registry" className="mt-4 rounded-xl border border-[#ece8e2] p-4">
           <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Pro Profile Registry (1099 Readiness)</p>
           <div className="mt-3 grid gap-4 xl:grid-cols-[1fr_1.1fr]">
             <form onSubmit={saveProProfile} className="grid gap-2 rounded-lg border border-[#ece8e2] bg-[#faf9f7] p-3">
@@ -1604,9 +1641,11 @@ export default function RTCAdminPage() {
               </div>
             </div>
           </div>
-        </section>
+          </section>
+        )}
 
-        <section id="quarterly-statements" className="mt-4 rounded-xl border border-[#ece8e2] p-4">
+        {activeWorkspace === "members" && (
+          <section id="quarterly-statements" className="mt-4 rounded-xl border border-[#ece8e2] p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Quarterly Member Statements</p>
             <div className="flex items-center gap-2">
@@ -1669,9 +1708,11 @@ export default function RTCAdminPage() {
               </div>
             </div>
           </div>
-        </section>
+          </section>
+        )}
 
-        <div id="payouts-1099" className="mt-4 rounded-xl border border-[#ece8e2] p-4">
+        {activeWorkspace === "finance" && (
+          <div id="payouts-1099" className="mt-4 rounded-xl border border-[#ece8e2] p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Pro Payout + 1099 Tracking</p>
             <div className="flex items-center gap-2">
@@ -1731,9 +1772,11 @@ export default function RTCAdminPage() {
               </div>
             </div>
           </div>
-        </div>
+          </div>
+        )}
 
-        <div className="mt-4 grid gap-4 lg:grid-cols-[1.1fr_1fr]">
+        {(activeWorkspace === "overview" || activeWorkspace === "operations") && (
+          <div className="mt-4 grid gap-4 lg:grid-cols-[1.1fr_1fr]">
           <div className="rounded-xl border border-[#ece8e2] p-4">
             <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Recent Activity Feed</p>
             <div className="mt-3 space-y-2">
@@ -1779,7 +1822,8 @@ export default function RTCAdminPage() {
               )}
             </div>
           </div>
-        </div>
+          </div>
+        )}
       </div>
     </main>
   );
