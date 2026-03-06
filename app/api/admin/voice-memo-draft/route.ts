@@ -17,7 +17,24 @@ type ParsedLessonData = {
   personal_note?: string;
 };
 
-function buildMessage(studentName: string, parsed: ParsedLessonData): string {
+function pickClosing(seed: string): { line: string; emoji: string } {
+  const options = [
+    { line: "Keep up the great work!", emoji: "💪" },
+    { line: "Proud of your progress - keep building on this.", emoji: "🎾" },
+    { line: "Great session today, keep that momentum going.", emoji: "🔥" },
+    { line: "You're trending in a great direction - stay consistent.", emoji: "👏" },
+    { line: "Excellent effort today - let's keep stacking wins.", emoji: "✅" },
+  ];
+
+  let hash = 0;
+  for (let i = 0; i < seed.length; i += 1) {
+    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  }
+  return options[hash % options.length];
+}
+
+function buildMessage(studentName: string, parsed: ParsedLessonData, seed: string): string {
+  const closing = pickClosing(seed);
   let message = `Hi ${studentName}! 👋\n\n`;
   message += `Here's a quick update from today's lesson:\n\n`;
 
@@ -58,7 +75,7 @@ function buildMessage(studentName: string, parsed: ParsedLessonData): string {
     message += `• ${formatted}\n\n`;
   }
 
-  message += `Keep up the great work! 💪\n\n`;
+  message += `${closing.line} ${closing.emoji}\n\n`;
   message += `- Coach Derek`;
   return message;
 }
@@ -171,7 +188,7 @@ export async function POST(req: Request) {
     }
 
     const subject = `Lesson Update - ${parsedData.student_name}`;
-    const message = buildMessage(parsedData.student_name, parsedData);
+    const message = buildMessage(parsedData.student_name, parsedData, transcript);
 
     return NextResponse.json({
       subject,
