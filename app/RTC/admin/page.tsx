@@ -285,7 +285,14 @@ function createMockData() {
   });
 
   const courtNames = COURTS.map((c) => c.name);
-  const members = ["101", "204", "318", "427", "536", "642"];
+  const members = [
+    { number: "101", name: "Jenni Ruiz", email: "jenni.ruiz@example.com" },
+    { number: "204", name: "Shane Carter", email: "shane.carter@example.com" },
+    { number: "318", name: "Emily Thompson", email: "emily.thompson@example.com" },
+    { number: "427", name: "Mark Reynolds", email: "mark.reynolds@example.com" },
+    { number: "536", name: "Sarah Kaplan", email: "sarah.kaplan@example.com" },
+    { number: "642", name: "David Morales", email: "david.morales@example.com" },
+  ];
 
   for (let i = -14; i <= 0; i += 1) {
     const dt = new Date();
@@ -295,7 +302,7 @@ function createMockData() {
     ).padStart(2, "0")}`;
     for (let j = 0; j < 3; j += 1) {
       const id = `mock-court-${i}-${j}`;
-      const memberNumber = members[mod(i + j, members.length)];
+      const member = members[mod(i + j, members.length)];
       const amount = 58 + ((i + j + 9) % 4) * 8;
       const courtIdx = mod(j + i + 9, COURTS.length);
       courts.push({
@@ -306,39 +313,43 @@ function createMockData() {
         durationHours: (j % 3 === 0 ? 2 : 1) as 1 | 2 | 3,
         courtId: COURTS[courtIdx].id,
         courtName: courtNames[courtIdx],
-        memberNumber,
-        clientName: `Member ${memberNumber}`,
+        memberNumber: member.number,
+        clientName: member.name,
+        clientEmail: member.email,
         totalAmount: amount,
         paymentStatus: (j + i) % 5 === 0 ? "pending" : "paid",
         createdAt: makeDate(i, 5 + j),
       });
     }
+    const lessonMember = members[mod(i + 2, members.length)];
     lessons.push({
       id: `mock-lesson-${i}`,
       coachName: coaches[mod(i, coaches.length)],
       slot: "Tue 5:00 PM",
-      clientName: `Player ${Math.abs(i) + 1}`,
-      clientEmail: `player${Math.abs(i) + 1}@example.com`,
-      memberNumber: members[mod(i + 2, members.length)],
+      clientName: lessonMember.name,
+      clientEmail: lessonMember.email,
+      memberNumber: lessonMember.number,
       createdAt: makeDate(i, 10),
     });
+    const clinicMember = members[mod(i + 3, members.length)];
     clinics.push({
       id: `mock-clinic-${i}`,
       clinicNames: ["Monday Nights with Derek"],
       clinicCount: 1,
       total: 75,
-      clientName: `Clinic Member ${Math.abs(i) + 10}`,
-      memberNumber: members[mod(i + 3, members.length)],
+      clientName: clinicMember.name,
+      memberNumber: clinicMember.number,
       createdAt: makeDate(i, 12),
     });
+    const eventMember = members[mod(i + 4, members.length)];
     events.push({
       id: `mock-event-${i}`,
       eventTitle: i % 2 === 0 ? "Summer White Party" : "Twilight Mixed Doubles Mixer",
       eventDateLabel: "Aug 16",
       guestCount: 2 + (Math.abs(i) % 3),
       total: 120 + (Math.abs(i) % 3) * 30,
-      attendeeName: `Guest ${Math.abs(i) + 1}`,
-      memberNumber: members[mod(i + 4, members.length)],
+      attendeeName: eventMember.name,
+      memberNumber: eventMember.number,
       createdAt: makeDate(i, 15),
     });
     payouts.push({
