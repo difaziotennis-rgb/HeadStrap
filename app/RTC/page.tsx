@@ -25,6 +25,17 @@ const memberLinks = [
   },
 ];
 
+const catskillsImages = {
+  hills:
+    "https://images.unsplash.com/photo-1560880944-796251b78b4c?auto=format&fit=crop&w=1400&q=80",
+  waterfall:
+    "https://images.unsplash.com/photo-1587255608209-1476e9589ae9?auto=format&fit=crop&w=1400&q=80",
+  river:
+    "https://images.unsplash.com/photo-1662663560803-db03b7821eb9?auto=format&fit=crop&w=1400&q=80",
+  mountains:
+    "https://images.unsplash.com/photo-1538510933295-151ff2375694?auto=format&fit=crop&w=1400&q=80",
+};
+
 export default function RTCPage() {
   return (
     <main>
@@ -63,20 +74,29 @@ export default function RTCPage() {
           </div>
 
           <div className="grid gap-3 bg-[#faf9f7] p-5 sm:grid-cols-3 sm:p-6">
-            <div className="rounded-xl border border-[#e8e5df] bg-white p-4 shadow-[0_5px_14px_rgba(26,26,26,0.03)]">
+            <div className="overflow-hidden rounded-xl border border-[#e8e5df] bg-white shadow-[0_5px_14px_rgba(26,26,26,0.03)]">
+              <img src={catskillsImages.hills} alt="Catskills hills" className="h-20 w-full object-cover" />
+              <div className="p-4">
               <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Court Booking</p>
               <p className="mt-1 text-[16px] font-semibold">See daily availability</p>
               <p className="mt-1 text-[13px] text-[#6b665e]">Simple court grid with fast booking and payment.</p>
+              </div>
             </div>
-            <div className="rounded-xl border border-[#e8e5df] bg-white p-4 shadow-[0_5px_14px_rgba(26,26,26,0.03)]">
+            <div className="overflow-hidden rounded-xl border border-[#e8e5df] bg-white shadow-[0_5px_14px_rgba(26,26,26,0.03)]">
+              <img src={catskillsImages.waterfall} alt="Catskills waterfall forest" className="h-20 w-full object-cover" />
+              <div className="p-4">
               <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Private Lessons</p>
               <p className="mt-1 text-[16px] font-semibold">Book one-on-one coaching</p>
               <p className="mt-1 text-[13px] text-[#6b665e]">Choose your coach, time, and focus area.</p>
+              </div>
             </div>
-            <div className="rounded-xl border border-[#e8e5df] bg-white p-4 shadow-[0_5px_14px_rgba(26,26,26,0.03)]">
+            <div className="overflow-hidden rounded-xl border border-[#e8e5df] bg-white shadow-[0_5px_14px_rgba(26,26,26,0.03)]">
+              <img src={catskillsImages.river} alt="Catskills river and hills" className="h-20 w-full object-cover" />
+              <div className="p-4">
               <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Events</p>
               <p className="mt-1 text-[16px] font-semibold">View the seasonal calendar</p>
               <p className="mt-1 text-[13px] text-[#6b665e]">Club events, social evenings, and family days.</p>
+              </div>
             </div>
           </div>
         </div>
@@ -151,25 +171,41 @@ export default function RTCPage() {
                 <Link
                   key={event.id}
                   href={`/RTC/events/${event.id}`}
-                  className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-4 transition-colors hover:bg-white"
+                  className="relative overflow-hidden rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-4 transition-colors hover:bg-white"
                 >
+                  <img
+                    src={catskillsImages.mountains}
+                    alt="Catskills mountain backdrop"
+                    className="absolute inset-0 h-full w-full object-cover opacity-[0.12]"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-r from-white/80 to-white/55" />
+                  <div className="relative">
                   <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">{event.category}</p>
                   <h4 className="mt-1 text-[17px] font-semibold">{event.title}</h4>
                   <p className="mt-1 text-[13px] text-[#6b665e]">
                     {event.dateLabel} · {event.timeLabel}
                   </p>
+                  </div>
                 </Link>
               ))}
             </div>
           </div>
 
           <div className="space-y-4">
-            <Link href="/RTC/member/portal" className="block rounded-2xl border border-[#e8e5df] bg-white p-6 hover:bg-[#faf9f7]">
+            <Link href="/RTC/member/portal" className="relative block overflow-hidden rounded-2xl border border-[#e8e5df] bg-white p-6 hover:bg-[#faf9f7]">
+              <img
+                src={catskillsImages.hills}
+                alt="Catskills panorama"
+                className="absolute inset-0 h-full w-full object-cover opacity-[0.1]"
+              />
+              <div className="absolute inset-0 bg-gradient-to-b from-white/70 via-white/82 to-white/94" />
+              <div className="relative">
               <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Member Portal</p>
               <h3 className="mt-1 text-[20px] font-semibold">Your upcoming schedule in one place</h3>
               <p className="mt-2 text-[13px] text-[#6b665e]">
                 View upcoming courts, lessons, clinics, and event RSVPs, plus booking modifications when eligible.
               </p>
+              </div>
             </Link>
 
             <div className="rounded-2xl border border-[#e8e5df] bg-white p-6">
