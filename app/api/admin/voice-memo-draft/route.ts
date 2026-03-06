@@ -108,6 +108,9 @@ Hard rules:
 - Each bullet must be at most two short sentences (prefer one).
 - No generic filler such as "keep it up", "continue quality reps", "as discussed".
 - Bullets must be specific to transcript details.
+- If a long rambling thought contains multiple actions, split it into multiple bullets.
+- Improve spelling/grammar and make wording client-friendly.
+- Keep bullets practical and concrete, never vague.
 
 Context:
 - Client: ${input.clientName || "Client"}
@@ -159,9 +162,14 @@ async function callGroq(prompt: string): Promise<any | null> {
       model,
       temperature: 0.2,
       messages: [
-        { role: "system", content: "Return only valid JSON." },
+        {
+          role: "system",
+          content:
+            "You are a tennis coaching communication assistant. Return only valid JSON following the exact requested schema.",
+        },
         { role: "user", content: prompt },
       ],
+      response_format: { type: "json_object" },
     }),
   });
   if (!res.ok) return null;
@@ -247,17 +255,20 @@ export async function POST(req: Request) {
     const fallbackSubject = `Lesson Recap for ${clientName}${lessonDate ? ` - ${lessonDate}` : ""}`;
     const prompt = buildPrompt({ clientName, lessonDate, lessonTime, transcript });
 
+    // Prefer the same Groq JSON path used by /lesson parsing.
     const candidates = await Promise.all([
-      callOpenAI(prompt),
       callGroq(prompt),
+      callOpenAI(prompt),
       callGemini(prompt),
     ]);
 
     let draft: StructuredDraft | null = null;
+    let source = "deterministic-fallback-v1";
     for (const candidate of candidates) {
       const normalized = normalizeStructuredDraft(candidate, fallbackSubject);
       if (normalized) {
         draft = normalized;
+        source = "ai-structured";
         break;
       }
     }
@@ -271,7 +282,7 @@ export async function POST(req: Request) {
       to: clientEmail || "",
       body: formatBody(clientName, lessonDate, lessonTime, draft.sections),
       meta: {
-        source: draft === null ? "unknown" : "ai-first-multi-provider-v1",
+        source,
       },
     });
   } catch (error) {
