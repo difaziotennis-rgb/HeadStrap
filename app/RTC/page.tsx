@@ -52,7 +52,7 @@ export default function RTCPage() {
             <div className="relative mt-7 flex flex-wrap items-center gap-2 text-[12px] font-medium">
               <Link
                 href="/RTC/book"
-                className="rounded-lg bg-[#1a1a1a]/95 px-4 py-2 text-white shadow-[0_7px_20px_rgba(26,26,26,0.35)] hover:bg-[#2c2c2c]"
+                className="rounded-lg border border-white/50 bg-white/90 px-4 py-2 text-[#1a1a1a] hover:bg-white"
               >
                 Book Court
               </Link>
