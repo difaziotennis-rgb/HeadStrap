@@ -93,7 +93,15 @@ export function AdminDashboard() {
   }
 
   function isTrialVoiceSlot(slot: TimeSlot): boolean {
-    return slot.booked && slot.date === "2026-03-01" && (slot.bookedBy || "").toLowerCase().includes("shane");
+    const bookedBy = (slot.bookedBy || "").toLowerCase();
+    const isShaneTest =
+      slot.booked && slot.date === "2026-03-01" && bookedBy.includes("shane");
+    const isJenniTodayThreePm =
+      slot.booked &&
+      slot.date === buildDateStr(new Date()) &&
+      slot.hour === 15 &&
+      (bookedBy.includes("jenni") || bookedBy.includes("jenny"));
+    return isShaneTest || isJenniTodayThreePm;
   }
 
   async function generateDraftForSlot(slot: TimeSlot, transcript: string) {
