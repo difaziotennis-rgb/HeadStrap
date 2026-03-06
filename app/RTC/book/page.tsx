@@ -40,12 +40,20 @@ type Booking = {
 const STORAGE_KEY = "rtc_court_bookings_v1";
 const PENDING_STRIPE_KEY = "rtc_pending_stripe_bookings_v1";
 const CLINIC_STORAGE_KEY = "rtc_clinic_bookings_v1";
+const MEMBER_PREFERENCES_KEY = "rtc_member_preferences_v1";
 const EVENT_RESERVED_COURTS = ["indoor-1", "outdoor-1", "outdoor-2", "outdoor-3"];
 
 type ClinicBooking = {
   clinicNames: string[];
   sessionWindow: string;
   createdAt: string;
+};
+
+type MemberPreferences = {
+  favoriteCourt: string;
+  preferredStartTime: string;
+  preferredCoach: string;
+  preferredSurface: "Indoor" | "Outdoor" | "No preference";
 };
 
 const CLINIC_SLOT_TEMPLATES: Record<
@@ -182,6 +190,8 @@ export default function RTCBookPage() {
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
   const [isCreatingStripe, setIsCreatingStripe] = useState(false);
   const [lastBooked, setLastBooked] = useState<Booking | null>(null);
+  const [bookingStep, setBookingStep] = useState<1 | 2 | 3>(1);
+  const [preferences, setPreferences] = useState<MemberPreferences | null>(null);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState<Date>(() => {
     const now = new Date();
@@ -213,6 +223,12 @@ export default function RTCBookPage() {
     if (typeof window === "undefined") return;
     function applySession() {
       setMemberSession(parseMemberSession(localStorage.getItem(MEMBER_SESSION_KEY)));
+      try {
+        const raw = localStorage.getItem(MEMBER_PREFERENCES_KEY);
+        setPreferences(raw ? (JSON.parse(raw) as MemberPreferences) : null);
+      } catch {
+        setPreferences(null);
+      }
     }
     applySession();
     window.addEventListener(MEMBER_SESSION_EVENT, applySession);
@@ -348,6 +364,31 @@ export default function RTCBookPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [calendarOpen]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const dateParam = params.get("date");
+    const courtId = params.get("courtId");
+    const startHour = Number(params.get("startHour"));
+    const duration = Number(params.get("duration"));
+    if (!courtId || !Number.isFinite(startHour)) return;
+
+    const court = courts.find((item) => item.id === courtId);
+    if (!court) return;
+
+    const targetDate = dateParam || selectedDate;
+    const slotKey = bookingKey(targetDate, court.id, startHour);
+    if (bookings[slotKey] || blockedSlots[slotKey]) return;
+
+    setSelectedDate(targetDate);
+    setActiveCourt(court);
+    setActiveHour(startHour);
+    setDurationHours(duration === 2 ? 2 : 1);
+    setBookingStep(1);
+    setStatusMsg(null);
+    window.history.replaceState({}, "", "/RTC/book");
+  }, [blockedSlots, bookings, selectedDate]);
+
   function persist(next: Record<string, Booking>) {
     setBookings(next);
     if (typeof window === "undefined") return;
@@ -365,6 +406,7 @@ export default function RTCBookPage() {
     setActiveCourt(court);
     setActiveHour(hour);
     setDurationHours(1);
+    setBookingStep(1);
     setStatusMsg(null);
   }
 
@@ -372,6 +414,7 @@ export default function RTCBookPage() {
     setActiveCourt(null);
     setActiveHour(null);
     setStatusMsg(null);
+    setBookingStep(1);
   }
 
   function buildBookingDraft(paymentMethod: Booking["paymentMethod"]) {
@@ -430,6 +473,37 @@ export default function RTCBookPage() {
       createdAt,
     };
     return booking;
+  }
+
+  function proceedToDetailsStep() {
+    if (!activeCourt || activeHour === null) return;
+    const firstKey = bookingKey(selectedDate, activeCourt.id, activeHour);
+    if (bookings[firstKey] || blockedSlots[firstKey]) {
+      setStatusMsg("This slot is no longer available.");
+      return;
+    }
+    if (durationHours === 2) {
+      if (activeHour + 1 > hours[hours.length - 1]) {
+        setStatusMsg("Two-hour bookings must start at least one hour earlier.");
+        return;
+      }
+      const secondKey = bookingKey(selectedDate, activeCourt.id, activeHour + 1);
+      if (bookings[secondKey] || blockedSlots[secondKey]) {
+        setStatusMsg("The next consecutive hour is not available.");
+        return;
+      }
+    }
+    setStatusMsg(null);
+    setBookingStep(2);
+  }
+
+  function proceedToPaymentStep() {
+    if (!memberSession && (!form.name.trim() || !form.email.trim())) {
+      setStatusMsg("Name and email are required.");
+      return;
+    }
+    setStatusMsg(null);
+    setBookingStep(3);
   }
 
   function buildVenmoUrl(booking: Booking): string {
@@ -742,40 +816,84 @@ export default function RTCBookPage() {
             </div>
 
             <div className="mt-4 grid gap-2">
-              {!memberSession && (
-                <>
-                  <input
-                    placeholder="Full name"
-                    value={form.name}
-                    onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              <div className="grid grid-cols-3 gap-2 rounded-lg border border-[#ece8e2] bg-[#faf9f7] p-2 text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">
+                <div className={bookingStep >= 1 ? "font-semibold text-[#1a1a1a]" : ""}>1. Time</div>
+                <div className={bookingStep >= 2 ? "font-semibold text-[#1a1a1a]" : ""}>2. Details</div>
+                <div className={bookingStep >= 3 ? "font-semibold text-[#1a1a1a]" : ""}>3. Pay</div>
+              </div>
+              {memberSession && preferences && (
+                <p className="rounded-lg border border-[#dbead3] bg-[#f4faf1] px-3 py-2 text-[11px] text-[#2d5016]">
+                  Member defaults loaded: {preferences.favoriteCourt}, {preferences.preferredStartTime},{" "}
+                  {preferences.preferredSurface}.
+                </p>
+              )}
+
+              {bookingStep === 1 && (
+                <div className="grid gap-2">
+                  <select
+                    value={durationHours}
+                    onChange={(e) => setDurationHours(Number(e.target.value) === 2 ? 2 : 1)}
                     className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
-                  />
-                  <input
-                    placeholder="Email"
-                    value={form.email}
-                    onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                    className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
-                  />
+                  >
+                    <option value={1}>1 hour</option>
+                    <option value={2}>2 consecutive hours (10% savings)</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={proceedToDetailsStep}
+                    className="rounded-lg bg-[#1a1a1a] px-4 py-2 text-[12px] font-medium text-white hover:bg-[#2c2c2c]"
+                  >
+                    Continue
+                  </button>
+                </div>
+              )}
+
+              {bookingStep === 2 && (
+                <div className="grid gap-2">
+                  {!memberSession && (
+                    <>
+                      <input
+                        placeholder="Full name"
+                        value={form.name}
+                        onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                        className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
+                      />
+                      <input
+                        placeholder="Email"
+                        value={form.email}
+                        onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                        className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
+                      />
+                    </>
+                  )}
                   <input
                     placeholder="Phone (optional)"
                     value={form.phone}
                     onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
                     className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
                   />
-                </>
-              )}
-              <select
-                value={durationHours}
-                onChange={(e) => setDurationHours(Number(e.target.value) === 2 ? 2 : 1)}
-                className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
-              >
-                <option value={1}>1 hour</option>
-                <option value={2}>2 consecutive hours (discount)</option>
-              </select>
-              {memberSession && (
-                <p className="rounded-lg border border-[#dbead3] bg-[#f4faf1] px-3 py-2 text-[11px] text-[#2d5016]">
-                  Booking as Member #{memberSession.memberNumber}.
-                </p>
+                  {memberSession && (
+                    <p className="rounded-lg border border-[#dbead3] bg-[#f4faf1] px-3 py-2 text-[11px] text-[#2d5016]">
+                      Booking as Member #{memberSession.memberNumber}. Member details are prefilled.
+                    </p>
+                  )}
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setBookingStep(1)}
+                      className="rounded-lg border border-[#d9d5cf] px-4 py-2 text-[12px] font-medium hover:bg-[#faf9f7]"
+                    >
+                      Back
+                    </button>
+                    <button
+                      type="button"
+                      onClick={proceedToPaymentStep}
+                      className="rounded-lg bg-[#1a1a1a] px-4 py-2 text-[12px] font-medium text-white hover:bg-[#2c2c2c]"
+                    >
+                      Continue to Payment
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
 
@@ -788,43 +906,54 @@ export default function RTCBookPage() {
               )}
             </div>
 
-            <div className="mt-4 grid gap-2 sm:grid-cols-2">
-              <button
-                type="button"
-                onClick={handleStripeCheckout}
-                disabled={isCreatingStripe}
-                className="rounded-xl bg-[#1a1a1a] px-4 py-2 text-[12px] font-medium text-white transition-colors hover:bg-[#2c2c2c] disabled:opacity-60 sm:col-span-2"
-              >
-                {isCreatingStripe ? "Opening Stripe..." : "Pay with Card (Stripe)"}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const booking = buildBookingDraft("venmo");
-                  if (!booking) return;
-                  window.open(buildVenmoUrl(booking), "_blank");
-                  setStatusMsg("Venmo opened in a new tab. Booking is created only after confirmed payment.");
-                }}
-                className="rounded-xl border border-[#d9d5cf] px-4 py-2 text-[12px] font-medium transition-colors hover:bg-[#faf9f7]"
-              >
-                Pay with Venmo
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const booking = buildBookingDraft("paypal");
-                  if (!booking) return;
-                  window.open(buildPaypalUrl(booking), "_blank");
-                  setStatusMsg("PayPal opened in a new tab. Booking is created only after confirmed payment.");
-                }}
-                className="rounded-xl border border-[#d9d5cf] px-4 py-2 text-[12px] font-medium transition-colors hover:bg-[#faf9f7]"
-              >
-                Pay with PayPal
-              </button>
-            </div>
-            <p className="mt-2 text-[11px] text-[#8a8477]">
-              Payment is required to confirm a court booking.
-            </p>
+            {bookingStep === 3 && (
+              <>
+                <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={handleStripeCheckout}
+                    disabled={isCreatingStripe}
+                    className="rounded-xl bg-[#1a1a1a] px-4 py-2 text-[12px] font-medium text-white transition-colors hover:bg-[#2c2c2c] disabled:opacity-60 sm:col-span-2"
+                  >
+                    {isCreatingStripe ? "Opening Stripe..." : "Pay with Card (Stripe)"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const booking = buildBookingDraft("venmo");
+                      if (!booking) return;
+                      window.open(buildVenmoUrl(booking), "_blank");
+                      setStatusMsg("Venmo opened in a new tab. Booking is created only after confirmed payment.");
+                    }}
+                    className="rounded-xl border border-[#d9d5cf] px-4 py-2 text-[12px] font-medium transition-colors hover:bg-[#faf9f7]"
+                  >
+                    Pay with Venmo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const booking = buildBookingDraft("paypal");
+                      if (!booking) return;
+                      window.open(buildPaypalUrl(booking), "_blank");
+                      setStatusMsg("PayPal opened in a new tab. Booking is created only after confirmed payment.");
+                    }}
+                    className="rounded-xl border border-[#d9d5cf] px-4 py-2 text-[12px] font-medium transition-colors hover:bg-[#faf9f7]"
+                  >
+                    Pay with PayPal
+                  </button>
+                </div>
+                <div className="mt-2 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setBookingStep(2)}
+                    className="rounded-lg border border-[#d9d5cf] px-3 py-1.5 text-[11px] font-medium hover:bg-[#faf9f7]"
+                  >
+                    Back
+                  </button>
+                  <p className="text-[11px] text-[#8a8477]">Payment is required to confirm a court booking.</p>
+                </div>
+              </>
+            )}
 
             {statusMsg && <p className="mt-3 text-[12px] text-[#2d5016]">{statusMsg}</p>}
             {lastBooked && (

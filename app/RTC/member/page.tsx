@@ -16,6 +16,7 @@ const CLINIC_KEY = "rtc_clinic_bookings_v1";
 const EVENT_KEY = "rtc_summer_event_reservations_v1";
 const MEMBER_PROFILE_KEY = "rtc_member_profile_v1";
 const MEMBER_PAYMENT_KEY = "rtc_member_payment_profile_v1";
+const MEMBER_PREFERENCES_KEY = "rtc_member_preferences_v1";
 
 type CourtBooking = {
   id: string;
@@ -71,6 +72,13 @@ type BillingItem = {
   at: string;
 };
 
+type MemberPreferences = {
+  favoriteCourt: string;
+  preferredStartTime: string;
+  preferredCoach: string;
+  preferredSurface: "Indoor" | "Outdoor" | "No preference";
+};
+
 function formatCurrency(amount: number): string {
   return `$${amount.toFixed(2)}`;
 }
@@ -111,9 +119,16 @@ export default function RTCMemberPage() {
     autopay: false,
   });
   const [billing, setBilling] = useState<BillingItem[]>([]);
+  const [preferences, setPreferences] = useState<MemberPreferences>({
+    favoriteCourt: "No preference",
+    preferredStartTime: "No preference",
+    preferredCoach: "No preference",
+    preferredSurface: "No preference",
+  });
   const [pendingLessons, setPendingLessons] = useState(0);
   const [profileMsg, setProfileMsg] = useState<string | null>(null);
   const [paymentMsg, setPaymentMsg] = useState<string | null>(null);
+  const [preferencesMsg, setPreferencesMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -143,6 +158,18 @@ export default function RTCMemberPage() {
           expYear: "",
           billingZip: "",
           autopay: false,
+        }
+      );
+      const storedPreferences = safeParse<MemberPreferences | null>(
+        localStorage.getItem(MEMBER_PREFERENCES_KEY),
+        null
+      );
+      setPreferences(
+        storedPreferences || {
+          favoriteCourt: "No preference",
+          preferredStartTime: "No preference",
+          preferredCoach: "No preference",
+          preferredSurface: "No preference",
         }
       );
 
@@ -241,6 +268,13 @@ export default function RTCMemberPage() {
     if (typeof window === "undefined") return;
     localStorage.setItem(MEMBER_PAYMENT_KEY, JSON.stringify(payment));
     setPaymentMsg("Payment profile updated.");
+  }
+
+  function savePreferences(e: React.FormEvent) {
+    e.preventDefault();
+    if (typeof window === "undefined") return;
+    localStorage.setItem(MEMBER_PREFERENCES_KEY, JSON.stringify(preferences));
+    setPreferencesMsg("Booking preferences saved.");
   }
 
   return (
@@ -396,6 +430,79 @@ export default function RTCMemberPage() {
             {paymentMsg && <p className="mt-2 text-[12px] text-[#2d5016]">{paymentMsg}</p>}
           </form>
         </div>
+
+        <form onSubmit={savePreferences} className="mt-4 rounded-xl border border-[#ece8e2] p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Saved Booking Preferences</p>
+            <p className="text-[11px] text-[#8a8477]">Used for a faster, member-first booking flow</p>
+          </div>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            <select
+              value={preferences.favoriteCourt}
+              onChange={(e) => setPreferences((prev) => ({ ...prev, favoriteCourt: e.target.value }))}
+              disabled={!session}
+              className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px] disabled:bg-[#f5f3ef]"
+            >
+              <option>No preference</option>
+              <option>Indoor Court</option>
+              <option>Court 1</option>
+              <option>Court 2</option>
+              <option>Court 3</option>
+              <option>Court 4</option>
+              <option>Court 5</option>
+            </select>
+            <select
+              value={preferences.preferredStartTime}
+              onChange={(e) => setPreferences((prev) => ({ ...prev, preferredStartTime: e.target.value }))}
+              disabled={!session}
+              className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px] disabled:bg-[#f5f3ef]"
+            >
+              <option>No preference</option>
+              <option>7:00 AM</option>
+              <option>8:00 AM</option>
+              <option>9:00 AM</option>
+              <option>10:00 AM</option>
+              <option>4:00 PM</option>
+              <option>5:00 PM</option>
+              <option>6:00 PM</option>
+              <option>7:00 PM</option>
+            </select>
+            <select
+              value={preferences.preferredCoach}
+              onChange={(e) => setPreferences((prev) => ({ ...prev, preferredCoach: e.target.value }))}
+              disabled={!session}
+              className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px] disabled:bg-[#f5f3ef]"
+            >
+              <option>No preference</option>
+              <option>Derek DiFazio</option>
+              <option>Jay Behrke</option>
+              <option>Jonah Berkowitz</option>
+            </select>
+            <select
+              value={preferences.preferredSurface}
+              onChange={(e) =>
+                setPreferences((prev) => ({
+                  ...prev,
+                  preferredSurface: e.target.value as MemberPreferences["preferredSurface"],
+                }))
+              }
+              disabled={!session}
+              className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px] disabled:bg-[#f5f3ef]"
+            >
+              <option>No preference</option>
+              <option>Indoor</option>
+              <option>Outdoor</option>
+            </select>
+          </div>
+          <button
+            type="submit"
+            disabled={!session}
+            className="mt-3 rounded-lg border border-[#d9d5cf] bg-[#faf9f7] px-4 py-2 text-[12px] font-medium disabled:cursor-not-allowed disabled:opacity-50 hover:bg-white"
+          >
+            Save Preferences
+          </button>
+          {preferencesMsg && <p className="mt-2 text-[12px] text-[#2d5016]">{preferencesMsg}</p>}
+        </form>
 
         <div className="mt-5 rounded-xl border border-[#ece8e2] p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">

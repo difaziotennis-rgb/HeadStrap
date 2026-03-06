@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import OverviewEnhancements from "./OverviewEnhancements";
 import { rtcSummerEvents } from "./rtc-data";
 
 const memberLinks = [
@@ -71,7 +72,7 @@ export default function RTCPage() {
             <Link href="/RTC/lessons" className="rounded-xl border border-[#e8e5df] bg-white p-4 shadow-[0_5px_14px_rgba(26,26,26,0.03)] transition-colors hover:bg-[#faf9f7]">
               <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Private Lessons</p>
               <p className="mt-1 text-[16px] font-semibold">Book one-on-one coaching</p>
-              <p className="mt-1 text-[13px] text-[#6b665e]">Choose your coach, time, and focus area.</p>
+              <p className="mt-1 text-[13px] text-[#6b665e]">Choose your coach and preferred time window.</p>
             </Link>
             <Link href="/RTC/events" className="rounded-xl border border-[#e8e5df] bg-white p-4 shadow-[0_5px_14px_rgba(26,26,26,0.03)] transition-colors hover:bg-[#faf9f7]">
               <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Events</p>
@@ -83,6 +84,8 @@ export default function RTCPage() {
       </section>
 
       <section className="mx-auto w-full max-w-6xl px-4 pb-10 sm:px-6 sm:pb-14">
+        <OverviewEnhancements />
+
         <div id="member-central" className="mb-4 grid gap-4 lg:grid-cols-[1.25fr_1fr] scroll-mt-28">
           <div className="rounded-2xl border border-[#e8e5df] bg-white p-6 sm:p-8">
             <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Start Here</p>
