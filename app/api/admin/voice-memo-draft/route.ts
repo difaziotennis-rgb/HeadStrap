@@ -17,6 +17,28 @@ type ParsedLessonData = {
   personal_note?: string;
 };
 
+function formatLessonDateForSubject(lessonDate?: string): string | null {
+  const raw = (lessonDate || "").trim();
+  if (!raw) return null;
+
+  // Expect YYYY-MM-DD from schedule slot data.
+  const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return raw;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]) - 1;
+  const day = Number(match[3]);
+  const date = new Date(year, month, day, 12, 0, 0);
+
+  if (Number.isNaN(date.getTime())) return raw;
+  return date.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 function pickClosing(seed: string): { line: string; emoji: string } {
   const options = [
     { line: "Keep up the great work!", emoji: "💪" },
@@ -166,6 +188,7 @@ export async function POST(req: Request) {
     const body = (await req.json()) as DraftRequest;
     const clientName = (body.clientName || "").trim() || "Student";
     const clientEmail = (body.clientEmail || "").trim();
+    const lessonDate = (body.lessonDate || "").trim();
     const transcript = (body.transcript || "").trim();
 
     if (!transcript) {
@@ -194,7 +217,10 @@ export async function POST(req: Request) {
       };
     }
 
-    const subject = `Lesson Update - ${parsedData.student_name}`;
+    const lessonDateInSubject = formatLessonDateForSubject(lessonDate);
+    const subject = lessonDateInSubject
+      ? `Lesson Update - ${parsedData.student_name} - ${lessonDateInSubject}`
+      : `Lesson Update - ${parsedData.student_name}`;
     const message = buildMessage(parsedData.student_name, parsedData, transcript);
 
     return NextResponse.json({
