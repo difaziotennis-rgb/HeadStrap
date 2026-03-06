@@ -128,9 +128,6 @@ export default function RTCLessonsPage() {
         <p className="mt-2 max-w-3xl text-[14px] text-[#6b665e]">
           Select a coach, pick a time, and reserve your lesson.
         </p>
-        <div className="mt-3 rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3 text-[12px] text-[#6b665e]">
-          {requests.length} recent lesson request{requests.length === 1 ? "" : "s"} submitted through this page.
-        </div>
 
         <div className="mt-5 grid gap-4 lg:grid-cols-[1.2fr_1fr]">
           <div className="space-y-3">

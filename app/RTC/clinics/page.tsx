@@ -180,9 +180,6 @@ export default function RTCClinicsPage() {
         <p className="mt-2 text-[14px] text-[#6b665e]">
           Select one or multiple clinics, see your total update instantly, and apply weekly bundle savings.
         </p>
-        <div className="mt-3 rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3 text-[12px] text-[#6b665e]">
-          {bookings.length} recent clinic booking{bookings.length === 1 ? "" : "s"} through the concierge flow.
-        </div>
 
         <div className="mt-5 grid gap-4 lg:grid-cols-[1.2fr_1fr]">
           <div className="space-y-3">
