@@ -2,11 +2,25 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { rtcClinics } from "../rtc-data";
+import {
+  isValidMemberNumber,
+  MEMBER_MODE_KEY,
+  MEMBER_SESSION_EVENT,
+  MEMBER_SESSION_KEY,
+  parseMemberSession,
+} from "../member-session";
 
-const SESSION_TIMES = [
-  "This Week",
-  "Next Session",
-  "Next Week",
+const SESSION_WINDOWS = [
+  {
+    value: "this_week",
+    label: "This Week",
+    detail: "Current week schedule",
+  },
+  {
+    value: "next_week",
+    label: "Next Week",
+    detail: "Following week schedule",
+  },
 ];
 
 const BASE_CAPACITY = 12;
@@ -14,25 +28,36 @@ const CLINIC_STORAGE_KEY = "rtc_clinic_bookings_v1";
 
 type ClinicBooking = {
   id: string;
-  clinicName: string;
+  clinicNames: string[];
+  clinicCount: number;
   sessionWindow: string;
-  rate: string;
+  subtotal: number;
+  discount: number;
+  total: number;
   clientName: string;
   clientEmail: string;
   clientPhone: string;
   isMember: boolean;
+  memberNumber?: string;
   createdAt: string;
 };
 
+function parsePrice(value: string): number {
+  const n = Number(value.replace(/[^\d.]/g, ""));
+  return Number.isFinite(n) ? n : 0;
+}
+
 export default function RTCClinicsPage() {
-  const [selectedClinic, setSelectedClinic] = useState(rtcClinics[0]?.name || "");
-  const [sessionWindow, setSessionWindow] = useState(SESSION_TIMES[0]);
+  const [selectedClinics, setSelectedClinics] = useState<Record<string, boolean>>({});
+  const [sessionWindow, setSessionWindow] = useState(SESSION_WINDOWS[0].value);
   const [isMember, setIsMember] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [memberNumber, setMemberNumber] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
   const [bookings, setBookings] = useState<ClinicBooking[]>([]);
+  const [lastBooking, setLastBooking] = useState<ClinicBooking | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -46,16 +71,71 @@ export default function RTCClinicsPage() {
     }
   }, []);
 
-  const clinic = useMemo(
-    () => rtcClinics.find((item) => item.name === selectedClinic) ?? rtcClinics[0],
-    [selectedClinic]
-  );
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    function applySession() {
+      const session = parseMemberSession(localStorage.getItem(MEMBER_SESSION_KEY));
+      const memberMode = localStorage.getItem(MEMBER_MODE_KEY) === "true";
+      if (session || memberMode) {
+        setIsMember(true);
+        if (session?.memberNumber) setMemberNumber(session.memberNumber);
+      }
+    }
+    applySession();
+    window.addEventListener(MEMBER_SESSION_EVENT, applySession);
+    return () => window.removeEventListener(MEMBER_SESSION_EVENT, applySession);
+  }, []);
 
-  const seatsLeft = useMemo(() => {
-    const idx = rtcClinics.findIndex((item) => item.name === selectedClinic);
-    const adjusted = BASE_CAPACITY - ((idx + 3) % 7);
-    return Math.max(adjusted, 3);
-  }, [selectedClinic]);
+  const selectedList = useMemo(
+    () => rtcClinics.filter((clinic) => selectedClinics[clinic.name]),
+    [selectedClinics]
+  );
+  const selectedWindowMeta = useMemo(
+    () => SESSION_WINDOWS.find((window) => window.value === sessionWindow) ?? SESSION_WINDOWS[0],
+    [sessionWindow]
+  );
+  const selectedCount = selectedList.length;
+
+  const pricing = useMemo(() => {
+    const subtotal = selectedList.reduce((sum, clinic) => {
+      return sum + parsePrice(isMember ? clinic.memberPrice : clinic.publicPrice);
+    }, 0);
+
+    let discountRate = 0;
+    if (selectedCount >= 3) discountRate = 0.12;
+    else if (selectedCount === 2) discountRate = 0.06;
+
+    const discount = Math.round(subtotal * discountRate * 100) / 100;
+    const total = Math.max(0, subtotal - discount);
+
+    return { subtotal, discount, total, discountRate };
+  }, [selectedList, isMember, selectedCount]);
+
+  const signupsByClinic = useMemo(() => {
+    const next: Record<string, string[]> = {};
+    for (const clinic of rtcClinics) {
+      next[clinic.name] = [];
+    }
+    for (const booking of bookings) {
+      for (const clinicName of booking.clinicNames) {
+        if (!next[clinicName]) next[clinicName] = [];
+        next[clinicName].push(booking.clientName);
+      }
+    }
+    return next;
+  }, [bookings]);
+
+  function seatsLeftForClinic(clinicName: string): number {
+    const signedUp = signupsByClinic[clinicName]?.length || 0;
+    return Math.max(BASE_CAPACITY - signedUp, 0);
+  }
+
+  function toggleClinic(clinicName: string) {
+    setSelectedClinics((prev) => ({
+      ...prev,
+      [clinicName]: !prev[clinicName],
+    }));
+  }
 
   function submitClinicBooking(e: React.FormEvent) {
     e.preventDefault();
@@ -63,15 +143,27 @@ export default function RTCClinicsPage() {
       setMsg("Please add your name and email to reserve your clinic spot.");
       return;
     }
+    if (selectedCount === 0) {
+      setMsg("Select at least one clinic to continue.");
+      return;
+    }
+    if (isMember && !isValidMemberNumber(memberNumber.trim())) {
+      setMsg("Please enter your 3-digit member number.");
+      return;
+    }
     const booking: ClinicBooking = {
       id: `clinic-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      clinicName: clinic?.name || selectedClinic,
+      clinicNames: selectedList.map((item) => item.name),
+      clinicCount: selectedCount,
       sessionWindow,
-      rate: isMember ? clinic?.memberPrice || "" : clinic?.publicPrice || "",
+      subtotal: pricing.subtotal,
+      discount: pricing.discount,
+      total: pricing.total,
       clientName: name.trim(),
       clientEmail: email.trim(),
       clientPhone: phone.trim(),
       isMember,
+      memberNumber: isMember ? memberNumber.trim() : "",
       createdAt: new Date().toISOString(),
     };
     const next = [booking, ...bookings].slice(0, 20);
@@ -80,10 +172,15 @@ export default function RTCClinicsPage() {
       localStorage.setItem(CLINIC_STORAGE_KEY, JSON.stringify(next));
     }
 
-    setMsg(`Booked: ${clinic?.name} (${sessionWindow}). Confirmation is on the way.`);
+    setLastBooking(booking);
+    setMsg(
+      `Booked ${selectedCount} clinic${selectedCount > 1 ? "s" : ""} for ${selectedWindowMeta.label}.`
+    );
+    setSelectedClinics({});
     setName("");
     setEmail("");
     setPhone("");
+    setMemberNumber("");
   }
 
   return (
@@ -91,21 +188,25 @@ export default function RTCClinicsPage() {
       <div className="rounded-2xl border border-[#e8e5df] bg-white p-6 sm:p-8">
         <h2 className="text-2xl font-semibold tracking-tight">Clinics</h2>
         <p className="mt-2 text-[14px] text-[#6b665e]">
-          Fast, elegant signup with member-first pricing and one-click enrollment.
+          Select one or multiple clinics, see your total update instantly, and apply weekly bundle savings.
         </p>
+        <div className="mt-3 rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3 text-[12px] text-[#6b665e]">
+          {bookings.length} recent clinic booking{bookings.length === 1 ? "" : "s"} through the concierge flow.
+        </div>
 
         <div className="mt-5 grid gap-4 lg:grid-cols-[1.2fr_1fr]">
           <div className="space-y-3">
             {rtcClinics.map((item) => {
-              const active = item.name === selectedClinic;
+              const active = !!selectedClinics[item.name];
+              const seats = seatsLeftForClinic(item.name);
               return (
                 <button
                   key={item.name}
                   type="button"
-                  onClick={() => setSelectedClinic(item.name)}
+                  onClick={() => toggleClinic(item.name)}
                   className={`w-full rounded-xl border p-4 text-left transition-colors ${
                     active
-                      ? "border-[#1a1a1a] bg-white"
+                      ? "border-[#1a1a1a] bg-white shadow-sm"
                       : "border-[#ece8e2] bg-[#faf9f7] hover:bg-white"
                   }`}
                 >
@@ -121,6 +222,25 @@ export default function RTCClinicsPage() {
                     <span className="text-[#8a8477]"> · </span>
                     <span>{item.publicPrice} public</span>
                   </p>
+                  <div className="mt-2 flex items-center justify-between text-[11px] text-[#8a8477]">
+                    <span>{seats} spots left</span>
+                    <span
+                      className={`rounded-full px-2 py-0.5 ${
+                        active ? "bg-[#1a1a1a] text-white" : "bg-[#ece8e2]"
+                      }`}
+                    >
+                      {active ? "Selected" : "Tap to add"}
+                    </span>
+                  </div>
+                  {isMember && (signupsByClinic[item.name]?.length || 0) > 0 && (
+                    <div className="mt-2 rounded-md border border-[#e8e5df] bg-white px-2 py-1.5">
+                      <p className="text-[10px] uppercase tracking-[0.08em] text-[#8a8477]">Signed up so far</p>
+                      <p className="mt-1 text-[11px] text-[#4a4a4a]">
+                        {signupsByClinic[item.name].slice(0, 8).join(", ")}
+                        {signupsByClinic[item.name].length > 8 ? ", ..." : ""}
+                      </p>
+                    </div>
+                  )}
                 </button>
               );
             })}
@@ -147,40 +267,99 @@ export default function RTCClinicsPage() {
                 placeholder="Phone (optional)"
                 className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
               />
-              <select
-                value={sessionWindow}
-                onChange={(e) => setSessionWindow(e.target.value)}
-                className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
-              >
-                {SESSION_TIMES.map((option) => (
-                  <option key={option}>{option}</option>
-                ))}
-              </select>
+              <div className="rounded-lg border border-[#e8e5df] p-2">
+                <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Choose Timeframe</p>
+                <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                  {SESSION_WINDOWS.map((option) => {
+                    const active = sessionWindow === option.value;
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setSessionWindow(option.value)}
+                        className={`rounded-lg border px-2 py-2 text-left transition-colors ${
+                          active
+                            ? "border-[#1a1a1a] bg-[#1a1a1a] text-white"
+                            : "border-[#d9d5cf] bg-white hover:bg-[#faf9f7]"
+                        }`}
+                      >
+                        <p className="text-[12px] font-medium">{option.label}</p>
+                        <p className={`text-[10px] ${active ? "text-white/80" : "text-[#8a8477]"}`}>
+                          {option.detail}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
               <label className="flex items-center gap-2 text-[12px] text-[#4a4a4a]">
                 <input
                   type="checkbox"
                   checked={isMember}
-                  onChange={(e) => setIsMember(e.target.checked)}
+                  onChange={(e) => {
+                    setIsMember(e.target.checked);
+                    if (typeof window !== "undefined") {
+                      localStorage.setItem(MEMBER_MODE_KEY, String(e.target.checked));
+                    }
+                  }}
                 />
                 I am an RTC member
               </label>
+              {isMember && (
+                <>
+                  <input
+                    value={memberNumber}
+                    onChange={(e) => setMemberNumber(e.target.value.replace(/\D/g, "").slice(0, 3))}
+                    placeholder="Member number (3 digits)"
+                    inputMode="numeric"
+                    maxLength={3}
+                    className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
+                  />
+                  <p className="text-[11px] text-[#2d5016]">
+                    Member mode active: lower clinic rates and preferred access.
+                  </p>
+                </>
+              )}
             </div>
 
             <div className="mt-4 rounded-lg border border-[#ece8e2] bg-[#faf9f7] px-3 py-2 text-[13px]">
               <p>
-                <span className="text-[#7a756d]">Clinic:</span> <strong>{clinic?.name}</strong>
+                <span className="text-[#7a756d]">Selected clinics:</span>{" "}
+                <strong>
+                  {selectedCount > 0
+                    ? `${selectedCount} clinic${selectedCount > 1 ? "s" : ""}`
+                    : "None"}
+                </strong>
               </p>
               <p>
-                <span className="text-[#7a756d]">Session:</span> <strong>{sessionWindow}</strong>
+                <span className="text-[#7a756d]">Session:</span> <strong>{selectedWindowMeta.label}</strong>
+              </p>
+              <p className="text-[11px] text-[#8a8477]">
+                {selectedWindowMeta.detail}
               </p>
               <p>
-                <span className="text-[#7a756d]">Rate:</span>{" "}
-                <strong>{isMember ? clinic?.memberPrice : clinic?.publicPrice}</strong>
+                <span className="text-[#7a756d]">Subtotal:</span>{" "}
+                <strong>${pricing.subtotal.toFixed(2)}</strong>
               </p>
               <p>
-                <span className="text-[#7a756d]">Estimated seats left:</span> <strong>{seatsLeft}</strong>
+                <span className="text-[#7a756d]">Weekly bundle discount:</span>{" "}
+                <strong>
+                  {pricing.discount > 0
+                    ? `-$${pricing.discount.toFixed(2)} (${Math.round(
+                        pricing.discountRate * 100
+                      )}% off)`
+                    : "Not applied"}
+                </strong>
+              </p>
+              <p>
+                <span className="text-[#7a756d]">Total:</span>{" "}
+                <strong>${pricing.total.toFixed(2)}</strong>
               </p>
             </div>
+
+            <p className="mt-2 text-[11px] text-[#8a8477]">
+              Book 2 clinics in a week for 6% off. Book 3 or more for 12% off.
+            </p>
 
             <button
               type="submit"
@@ -189,6 +368,21 @@ export default function RTCClinicsPage() {
               Book Clinic Spot
             </button>
             {msg && <p className="mt-2 text-[12px] text-[#2d5016]">{msg}</p>}
+            {lastBooking && (
+              <div className="mt-3 rounded-lg border border-[#ece8e2] bg-[#faf9f7] px-3 py-2 text-[12px]">
+                <p className="font-medium">Concierge Confirmation</p>
+                <p className="text-[#6b665e]">
+                  {lastBooking.clinicCount} clinic{lastBooking.clinicCount > 1 ? "s" : ""} · $
+                  {lastBooking.total.toFixed(2)}
+                </p>
+                <a
+                  href="mailto:difaziotennis@gmail.com?subject=RTC%20Clinic%20Booking%20Update"
+                  className="mt-2 inline-block rounded-md border border-[#d9d5cf] px-2.5 py-1 text-[11px] font-medium hover:bg-white"
+                >
+                  Modify Clinic Booking
+                </a>
+              </div>
+            )}
           </form>
         </div>
 
@@ -198,9 +392,18 @@ export default function RTCClinicsPage() {
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
               {bookings.slice(0, 6).map((booking) => (
                 <div key={booking.id} className="rounded-lg border border-[#e8e5df] bg-white px-3 py-2 text-[12px]">
-                  <p className="font-medium">{booking.clinicName}</p>
-                  <p className="text-[#6b665e]">{booking.sessionWindow} · {booking.rate}</p>
+                  <p className="font-medium">{booking.clinicNames.join(", ")}</p>
+                  <p className="text-[#6b665e]">
+                    {(SESSION_WINDOWS.find((window) => window.value === booking.sessionWindow)?.label ??
+                      booking.sessionWindow)}{" "}
+                    · {booking.clinicCount} clinic{booking.clinicCount > 1 ? "s" : ""}
+                  </p>
+                  <p className="text-[#6b665e]">
+                    Total ${booking.total.toFixed(2)}
+                    {booking.discount > 0 ? ` (saved $${booking.discount.toFixed(2)})` : ""}
+                  </p>
                   <p className="text-[#8a8477]">{booking.clientName}</p>
+                  {booking.memberNumber && <p className="text-[#8a8477]">Member #{booking.memberNumber}</p>}
                 </div>
               ))}
             </div>

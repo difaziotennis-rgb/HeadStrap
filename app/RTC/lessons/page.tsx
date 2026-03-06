@@ -2,6 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { rtcCoaches } from "../rtc-data";
+import {
+  isValidMemberNumber,
+  MEMBER_MODE_KEY,
+  MEMBER_SESSION_EVENT,
+  MEMBER_SESSION_KEY,
+  parseMemberSession,
+} from "../member-session";
 
 const LESSON_SLOTS = [
   "Mon 8:00 AM",
@@ -26,6 +33,7 @@ type LessonRequest = {
   clientEmail: string;
   clientPhone: string;
   isMember: boolean;
+  memberNumber?: string;
   notes: string;
   createdAt: string;
 };
@@ -39,9 +47,11 @@ export default function RTCLessonsPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [memberNumber, setMemberNumber] = useState("");
   const [notes, setNotes] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
   const [requests, setRequests] = useState<LessonRequest[]>([]);
+  const [lastRequest, setLastRequest] = useState<LessonRequest | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -53,6 +63,21 @@ export default function RTCLessonsPage() {
     } catch {
       // Ignore bad local data.
     }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    function applySession() {
+      const session = parseMemberSession(localStorage.getItem(MEMBER_SESSION_KEY));
+      const memberMode = localStorage.getItem(MEMBER_MODE_KEY) === "true";
+      if (session || memberMode) {
+        setIsMember(true);
+        if (session?.memberNumber) setMemberNumber(session.memberNumber);
+      }
+    }
+    applySession();
+    window.addEventListener(MEMBER_SESSION_EVENT, applySession);
+    return () => window.removeEventListener(MEMBER_SESSION_EVENT, applySession);
   }, []);
 
   const selectedCoach = useMemo(
@@ -73,6 +98,10 @@ export default function RTCLessonsPage() {
       setMsg("Please add your name and email to reserve your lesson request.");
       return;
     }
+    if (isMember && !isValidMemberNumber(memberNumber.trim())) {
+      setMsg("Please enter your 3-digit member number.");
+      return;
+    }
     const request: LessonRequest = {
       id: `lesson-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       coachName: selectedCoach?.name || coachName,
@@ -83,6 +112,7 @@ export default function RTCLessonsPage() {
       clientEmail: email.trim(),
       clientPhone: phone.trim(),
       isMember,
+      memberNumber: isMember ? memberNumber.trim() : "",
       notes: notes.trim(),
       createdAt: new Date().toISOString(),
     };
@@ -92,10 +122,12 @@ export default function RTCLessonsPage() {
       localStorage.setItem(LESSON_STORAGE_KEY, JSON.stringify(next));
     }
 
+    setLastRequest(request);
     setMsg(`Lesson booked with ${selectedCoach?.name} for ${selectedSlot}.`);
     setName("");
     setEmail("");
     setPhone("");
+    setMemberNumber("");
     setNotes("");
   }
 
@@ -106,6 +138,9 @@ export default function RTCLessonsPage() {
         <p className="mt-2 max-w-3xl text-[14px] text-[#6b665e]">
           Select a coach, pick a time, and reserve your lesson in one smooth flow.
         </p>
+        <div className="mt-3 rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3 text-[12px] text-[#6b665e]">
+          {requests.length} recent lesson request{requests.length === 1 ? "" : "s"} submitted through this page.
+        </div>
 
         <div className="mt-5 grid gap-4 lg:grid-cols-[1.2fr_1fr]">
           <div className="space-y-3">
@@ -205,10 +240,30 @@ export default function RTCLessonsPage() {
                 <input
                   type="checkbox"
                   checked={isMember}
-                  onChange={(e) => setIsMember(e.target.checked)}
+                  onChange={(e) => {
+                    setIsMember(e.target.checked);
+                    if (typeof window !== "undefined") {
+                      localStorage.setItem(MEMBER_MODE_KEY, String(e.target.checked));
+                    }
+                  }}
                 />
                 I am an RTC member
               </label>
+              {isMember && (
+                <>
+                  <input
+                    value={memberNumber}
+                    onChange={(e) => setMemberNumber(e.target.value.replace(/\D/g, "").slice(0, 3))}
+                    placeholder="Member number (3 digits)"
+                    inputMode="numeric"
+                    maxLength={3}
+                    className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
+                  />
+                  <p className="text-[11px] text-[#2d5016]">
+                    Member mode active: preferred rates and priority scheduling.
+                  </p>
+                </>
+              )}
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
@@ -242,6 +297,20 @@ export default function RTCLessonsPage() {
               Payment options for non-Derek coaches are not yet configured and will be finalized during confirmation.
             </p>
             {msg && <p className="mt-2 text-[12px] text-[#2d5016]">{msg}</p>}
+            {lastRequest && (
+              <div className="mt-3 rounded-lg border border-[#ece8e2] bg-[#faf9f7] px-3 py-2 text-[12px]">
+                <p className="font-medium">Concierge Confirmation</p>
+                <p className="text-[#6b665e]">
+                  {lastRequest.coachName} · {lastRequest.slot} · {lastRequest.duration} min
+                </p>
+                <a
+                  href="mailto:difaziotennis@gmail.com?subject=RTC%20Lesson%20Booking%20Update"
+                  className="mt-2 inline-block rounded-md border border-[#d9d5cf] px-2.5 py-1 text-[11px] font-medium hover:bg-white"
+                >
+                  Modify Lesson Request
+                </a>
+              </div>
+            )}
           </form>
         </div>
 
@@ -254,6 +323,7 @@ export default function RTCLessonsPage() {
                   <p className="font-medium">{request.coachName}</p>
                   <p className="text-[#6b665e]">{request.slot} · {request.duration} min · {request.focus}</p>
                   <p className="text-[#8a8477]">{request.clientName}</p>
+                  {request.memberNumber && <p className="text-[#8a8477]">Member #{request.memberNumber}</p>}
                 </div>
               ))}
             </div>

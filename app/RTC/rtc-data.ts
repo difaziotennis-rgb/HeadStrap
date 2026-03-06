@@ -3,6 +3,7 @@ export const rtcNav = [
   { href: "/RTC/book", label: "Court Booking" },
   { href: "/RTC/lessons", label: "Private Lessons" },
   { href: "/RTC/clinics", label: "Clinics" },
+  { href: "/RTC/events", label: "Events" },
   { href: "/RTC/member", label: "Member Hub" },
 ];
 
@@ -84,4 +85,97 @@ export const rtcSampleSlots = [
   { court: "Outdoor Court 2", time: "Sat, Apr 13 · 9:00 AM" },
   { court: "Outdoor Court 4", time: "Sat, Apr 13 · 10:00 AM" },
   { court: "Outdoor Court 1", time: "Sun, Apr 14 · 8:00 AM" },
+];
+
+export const rtcSummerEvents = [
+  {
+    id: "member-guest-weekend",
+    title: "Member-Guest Tennis Weekend",
+    dateLabel: "July 18-20",
+    timeLabel: "Fri 5:30 PM - Sun 4:00 PM",
+    category: "Tournament",
+    audience: "Members + Guests",
+    capacity: 48,
+    priceMember: "$295 / team",
+    pricePublic: "By invite only",
+    description:
+      "Three-day club signature weekend with doubles play, evening receptions, and Sunday championship finals.",
+    highlights: [
+      "Friday opening night courtside reception",
+      "Saturday all-day match blocks with brunch and lunch service",
+      "Sunday finals and trophy social",
+    ],
+  },
+  {
+    id: "summer-white-party",
+    title: "Summer White Party",
+    dateLabel: "July 27",
+    timeLabel: "5:00 PM - 9:30 PM",
+    category: "Social",
+    audience: "Members + Public",
+    capacity: 80,
+    priceMember: "$65",
+    pricePublic: "$85",
+    description:
+      "An elegant summer evening of music, signature cocktails, and a chef-curated social dinner on the terrace.",
+    highlights: [
+      "Live DJ and sunset welcome toast",
+      "Seasonal charcuterie and passed hors d'oeuvres",
+      "Garden-inspired photo lounge",
+    ],
+  },
+  {
+    id: "junior-family-day",
+    title: "Junior Family Tennis Day",
+    dateLabel: "August 3",
+    timeLabel: "10:00 AM - 2:00 PM",
+    category: "Family",
+    audience: "Members + Public",
+    capacity: 60,
+    priceMember: "$38",
+    pricePublic: "$52",
+    description:
+      "A family-friendly club day with red/orange/green-ball play, parent-child games, and light lunch service.",
+    highlights: [
+      "Age-based mini sessions",
+      "Parent-child challenge court",
+      "Lunch and hydration station included",
+    ],
+  },
+  {
+    id: "twilight-mixed-doubles",
+    title: "Twilight Mixed Doubles Mixer",
+    dateLabel: "August 16",
+    timeLabel: "6:00 PM - 9:00 PM",
+    category: "Tennis Social",
+    audience: "Members + Public",
+    capacity: 56,
+    priceMember: "$45",
+    pricePublic: "$60",
+    description:
+      "Round-robin mixed doubles with curated pairings, post-play bites, and social lounge seating.",
+    highlights: [
+      "Curated rotating partners",
+      "Structured social scoring format",
+      "Clubhouse dessert and espresso service",
+    ],
+  },
+  {
+    id: "season-finale-garden-gala",
+    title: "Season Finale Garden Gala",
+    dateLabel: "September 7",
+    timeLabel: "6:30 PM - 10:30 PM",
+    category: "Gala",
+    audience: "Members + Public",
+    capacity: 120,
+    priceMember: "$110",
+    pricePublic: "$145",
+    description:
+      "A polished end-of-summer celebration featuring member awards, live music, and an elevated dinner program.",
+    highlights: [
+      "Member recognition and seasonal awards",
+      "Live acoustic set and dance floor",
+      "Three-course gala dinner",
+    ],
+  },
 ];

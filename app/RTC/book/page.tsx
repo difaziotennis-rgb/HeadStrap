@@ -1,7 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { PAYMENT_CONFIG } from "@/lib/payment-config";
+import {
+  isValidMemberNumber,
+  MEMBER_MODE_KEY,
+  MEMBER_SESSION_EVENT,
+  MEMBER_SESSION_KEY,
+  parseMemberSession,
+} from "../member-session";
 
 type Court = {
   id: string;
@@ -13,6 +20,8 @@ type Booking = {
   id: string;
   date: string;
   hour: number;
+  blockStartHour: number;
+  durationHours: 1 | 2;
   courtId: string;
   courtName: string;
   type: "indoor" | "outdoor";
@@ -20,8 +29,10 @@ type Booking = {
   clientEmail: string;
   clientPhone: string;
   isMember: boolean;
-  memberCode?: string;
+  memberNumber?: string;
   amount: number;
+  totalAmount: number;
+  discountApplied: number;
   paymentStatus?: "pending" | "paid";
   paymentMethod?: "stripe" | "venmo" | "paypal" | "manual";
   createdAt: string;
@@ -47,6 +58,21 @@ function formatDateInput(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
+function parseDateInput(value: string): Date {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, (month || 1) - 1, day || 1);
+}
+
+function formatPrettyDate(value: string): string {
+  const date = parseDateInput(value);
+  return date.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 function formatHour(hour: number): string {
   const h12 = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
   return `${h12}:00 ${hour >= 12 ? "PM" : "AM"}`;
@@ -67,15 +93,23 @@ export default function RTCBookPage() {
   const [bookings, setBookings] = useState<Record<string, Booking>>({});
   const [activeCourt, setActiveCourt] = useState<Court | null>(null);
   const [activeHour, setActiveHour] = useState<number | null>(null);
+  const [durationHours, setDurationHours] = useState<1 | 2>(1);
   const [form, setForm] = useState({
     name: "",
     email: "",
     phone: "",
     isMember: false,
-    memberCode: "",
+    memberNumber: "",
   });
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
   const [isCreatingStripe, setIsCreatingStripe] = useState(false);
+  const [lastBooked, setLastBooked] = useState<Booking | null>(null);
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState<Date>(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
+  const calendarRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -87,6 +121,27 @@ export default function RTCBookPage() {
     } catch {
       // Ignore corrupted local storage data.
     }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    function applySession() {
+      const session = parseMemberSession(localStorage.getItem(MEMBER_SESSION_KEY));
+      const memberMode = localStorage.getItem(MEMBER_MODE_KEY) === "true";
+      if (session || memberMode) {
+        setMemberView(true);
+        setForm((prev) => ({
+          ...prev,
+          isMember: true,
+          memberNumber: session?.memberNumber || prev.memberNumber,
+        }));
+      } else {
+        setMemberView(false);
+      }
+    }
+    applySession();
+    window.addEventListener(MEMBER_SESSION_EVENT, applySession);
+    return () => window.removeEventListener(MEMBER_SESSION_EVENT, applySession);
   }, []);
 
   useEffect(() => {
@@ -123,6 +178,18 @@ export default function RTCBookPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookings]);
 
+  useEffect(() => {
+    if (!calendarOpen) return;
+    function handleClickOutside(event: MouseEvent) {
+      if (!calendarRef.current) return;
+      if (!calendarRef.current.contains(event.target as Node)) {
+        setCalendarOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [calendarOpen]);
+
   function persist(next: Record<string, Booking>) {
     setBookings(next);
     if (typeof window === "undefined") return;
@@ -131,13 +198,16 @@ export default function RTCBookPage() {
 
   const activeAmount = useMemo(() => {
     if (!activeCourt) return 0;
-    return getRate(activeCourt.type, form.isMember);
-  }, [activeCourt, form.isMember]);
+    const hourlyRate = getRate(activeCourt.type, form.isMember);
+    const discount = durationHours === 2 ? Math.round(hourlyRate * 0.1 * 100) / 100 : 0;
+    return hourlyRate * durationHours - discount;
+  }, [activeCourt, form.isMember, durationHours]);
 
   function openBooking(court: Court, hour: number) {
     setActiveCourt(court);
     setActiveHour(hour);
     setForm((prev) => ({ ...prev, isMember: memberView }));
+    setDurationHours(1);
     setStatusMsg(null);
   }
 
@@ -147,40 +217,76 @@ export default function RTCBookPage() {
     setStatusMsg(null);
   }
 
-  function saveBooking() {
+  function saveBooking(paymentMethod: Booking["paymentMethod"] = "manual") {
     if (!activeCourt || activeHour === null) return null;
     if (!form.name.trim() || !form.email.trim()) {
       setStatusMsg("Name and email are required.");
       return null;
     }
+    if (form.isMember && !isValidMemberNumber(form.memberNumber.trim())) {
+      setStatusMsg("Members must enter a valid 3-digit member number.");
+      return null;
+    }
+    if (durationHours === 2 && activeHour + 1 > hours[hours.length - 1]) {
+      setStatusMsg("Two-hour bookings must start at least one hour earlier.");
+      return null;
+    }
+    if (durationHours === 2) {
+      const secondKey = bookingKey(selectedDate, activeCourt.id, activeHour + 1);
+      if (bookings[secondKey]) {
+        setStatusMsg("The next consecutive hour is not available.");
+        return null;
+      }
+    }
+
+    const firstKey = bookingKey(selectedDate, activeCourt.id, activeHour);
+    if (bookings[firstKey]) {
+      setStatusMsg("This slot is no longer available.");
+      return null;
+    }
+
     const id = `rtc-booking-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const amount = getRate(activeCourt.type, form.isMember);
-    const booking: Booking = {
-      id,
-      date: selectedDate,
-      hour: activeHour,
-      courtId: activeCourt.id,
-      courtName: activeCourt.name,
-      type: activeCourt.type,
-      clientName: form.name.trim(),
-      clientEmail: form.email.trim(),
-      clientPhone: form.phone.trim(),
-      isMember: form.isMember,
-      memberCode: form.isMember ? form.memberCode.trim() : "",
-      amount,
-      paymentStatus: "pending",
-      paymentMethod: "manual",
-      createdAt: new Date().toISOString(),
-    };
-    const key = bookingKey(booking.date, booking.courtId, booking.hour);
-    const next = { ...bookings, [key]: booking };
+    const hourlyRate = getRate(activeCourt.type, form.isMember);
+    const discountApplied =
+      durationHours === 2 ? Math.round(hourlyRate * 0.1 * 100) / 100 : 0;
+    const totalAmount = hourlyRate * durationHours - discountApplied;
+    const createdAt = new Date().toISOString();
+
+    const next = { ...bookings };
+    for (let i = 0; i < durationHours; i += 1) {
+      const slotHour = activeHour + i;
+      const booking: Booking = {
+        id,
+        date: selectedDate,
+        hour: slotHour,
+        blockStartHour: activeHour,
+        durationHours,
+        courtId: activeCourt.id,
+        courtName: activeCourt.name,
+        type: activeCourt.type,
+        clientName: form.name.trim(),
+        clientEmail: form.email.trim(),
+        clientPhone: form.phone.trim(),
+        isMember: form.isMember,
+        memberNumber: form.isMember ? form.memberNumber.trim() : "",
+        amount: hourlyRate,
+        totalAmount,
+        discountApplied,
+        paymentStatus: "pending",
+        paymentMethod,
+        createdAt,
+      };
+      const key = bookingKey(booking.date, booking.courtId, booking.hour);
+      next[key] = booking;
+    }
     persist(next);
-    return booking;
+    return next[firstKey];
   }
 
   async function handleReserveOnly() {
     const booking = saveBooking();
     if (!booking) return;
+    setLastBooked(booking);
     setStatusMsg("Court reserved. You can complete payment now.");
   }
 
@@ -188,22 +294,23 @@ export default function RTCBookPage() {
     const note = `${booking.courtName} - ${booking.date} at ${formatHour(booking.hour)}`;
     return `https://venmo.com/?txn=pay&recipients=${encodeURIComponent(
       PAYMENT_CONFIG.venmoHandle.replace(/^@/, "")
-    )}&amount=${booking.amount}&note=${encodeURIComponent(note)}`;
+    )}&amount=${booking.totalAmount}&note=${encodeURIComponent(note)}`;
   }
 
   function buildPaypalUrl(booking: Booking): string {
     if (PAYMENT_CONFIG.paypalMeUsername) {
-      return `https://www.paypal.me/${PAYMENT_CONFIG.paypalMeUsername}/${booking.amount.toFixed(2)}`;
+      return `https://www.paypal.me/${PAYMENT_CONFIG.paypalMeUsername}/${booking.totalAmount.toFixed(2)}`;
     }
     return `https://www.paypal.com/paypalme/${encodeURIComponent(
       PAYMENT_CONFIG.paypalEmail
-    )}/${booking.amount.toFixed(2)}`;
+    )}/${booking.totalAmount.toFixed(2)}`;
   }
 
   async function handleStripeCheckout() {
     if (!activeCourt || activeHour === null) return;
     const booking = saveBooking();
     if (!booking) return;
+    setLastBooked(booking);
 
     try {
       setIsCreatingStripe(true);
@@ -211,7 +318,7 @@ export default function RTCBookPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          amount: booking.amount,
+          amount: booking.totalAmount,
           clientEmail: booking.clientEmail,
           bookingId: booking.id,
           description: `${booking.courtName} court booking on ${booking.date} at ${formatHour(
@@ -238,6 +345,41 @@ export default function RTCBookPage() {
     }
   }
 
+  const todaysOpenSlots = useMemo(() => {
+    let open = 0;
+    for (const court of courts) {
+      for (const hour of hours) {
+        const key = bookingKey(selectedDate, court.id, hour);
+        if (!bookings[key]) open += 1;
+      }
+    }
+    return open;
+  }, [bookings, selectedDate]);
+
+  const monthLabel = useMemo(
+    () => calendarMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" }),
+    [calendarMonth]
+  );
+
+  const monthCells = useMemo(() => {
+    const year = calendarMonth.getFullYear();
+    const month = calendarMonth.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const firstWeekday = firstDay.getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const cells: Array<{ date: string; day: number } | null> = [];
+    for (let i = 0; i < firstWeekday; i += 1) cells.push(null);
+    for (let day = 1; day <= daysInMonth; day += 1) {
+      cells.push({ date: formatDateInput(new Date(year, month, day)), day });
+    }
+    while (cells.length % 7 !== 0) cells.push(null);
+    return cells;
+  }, [calendarMonth]);
+
+  function shiftCalendarMonth(offset: number) {
+    setCalendarMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + offset, 1));
+  }
+
   return (
     <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-10">
       <div className="rounded-2xl border border-[#e8e5df] bg-white p-6 sm:p-8">
@@ -248,17 +390,91 @@ export default function RTCBookPage() {
               Full-day schedule for all courts. Tap any open cell to reserve and pay.
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="relative flex flex-wrap items-center gap-2" ref={calendarRef}>
             <label className="text-[12px] font-medium text-[#6b665e]">Date</label>
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
-            />
             <button
               type="button"
-              onClick={() => setMemberView((v) => !v)}
+              onClick={() => {
+                setCalendarMonth(new Date(parseDateInput(selectedDate).getFullYear(), parseDateInput(selectedDate).getMonth(), 1));
+                setCalendarOpen((v) => !v);
+              }}
+              className="flex items-center gap-2 rounded-lg border border-[#e8e5df] bg-[#faf9f7] px-3 py-2 text-left shadow-[0_4px_12px_rgba(26,26,26,0.04)] transition-colors hover:border-[#d9d5cf]"
+            >
+              <span aria-hidden className="text-[13px] text-[#8a8477]">📅</span>
+              <span className="min-w-[170px] text-[13px] font-medium text-[#1a1a1a]">{formatPrettyDate(selectedDate)}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedDate(formatDateInput(new Date()))}
+              className="rounded-lg border border-[#d9d5cf] px-3 py-2 text-[12px] font-medium text-[#6b665e] hover:bg-[#faf9f7]"
+            >
+              Today
+            </button>
+            {calendarOpen && (
+              <div className="absolute right-0 top-[calc(100%+8px)] z-30 w-[320px] rounded-xl border border-[#e8e5df] bg-white p-3 shadow-[0_14px_34px_rgba(26,26,26,0.14)]">
+                <div className="mb-2 flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => shiftCalendarMonth(-1)}
+                    className="rounded-md border border-[#e8e5df] px-2 py-1 text-[12px] text-[#6b665e] hover:bg-[#faf9f7]"
+                  >
+                    Prev
+                  </button>
+                  <p className="text-[12px] font-medium text-[#1a1a1a]">{monthLabel}</p>
+                  <button
+                    type="button"
+                    onClick={() => shiftCalendarMonth(1)}
+                    className="rounded-md border border-[#e8e5df] px-2 py-1 text-[12px] text-[#6b665e] hover:bg-[#faf9f7]"
+                  >
+                    Next
+                  </button>
+                </div>
+                <div className="grid grid-cols-7 gap-1">
+                  {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+                    <div key={day} className="py-1 text-center text-[10px] uppercase tracking-[0.08em] text-[#8a8477]">
+                      {day}
+                    </div>
+                  ))}
+                  {monthCells.map((cell, idx) => {
+                    if (!cell) {
+                      return <div key={`empty-${idx}`} className="h-8 rounded-md" />;
+                    }
+                    const isSelected = cell.date === selectedDate;
+                    const isToday = cell.date === formatDateInput(new Date());
+                    return (
+                      <button
+                        key={cell.date}
+                        type="button"
+                        onClick={() => {
+                          setSelectedDate(cell.date);
+                          setCalendarOpen(false);
+                        }}
+                        className={`h-8 rounded-md text-[12px] font-medium transition-colors ${
+                          isSelected
+                            ? "bg-[#1a1a1a] text-white"
+                            : isToday
+                              ? "border border-[#d9d5cf] text-[#1a1a1a]"
+                              : "text-[#4a4a4a] hover:bg-[#f5f3ef]"
+                        }`}
+                      >
+                        {cell.day}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() =>
+                setMemberView((v) => {
+                  const next = !v;
+                  if (typeof window !== "undefined") {
+                    localStorage.setItem(MEMBER_MODE_KEY, String(next));
+                  }
+                  return next;
+                })
+              }
               className={`rounded-lg border px-3 py-2 text-[12px] font-medium ${
                 memberView
                   ? "border-[#2d5016] bg-[#f4faf1] text-[#2d5016]"
@@ -279,6 +495,13 @@ export default function RTCBookPage() {
             <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Member Pricing</p>
             <p className="mt-2 text-[14px]">Indoor: <strong>$62/hr</strong> · Outdoor: <strong>$44/hr</strong></p>
           </div>
+        </div>
+
+        <div className="mt-3 rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-4">
+          <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Live Availability</p>
+          <p className="mt-1 text-[13px] text-[#6b665e]">
+            {todaysOpenSlots} open slots remaining today across all courts.
+          </p>
         </div>
 
         <div className="mt-5 overflow-x-auto rounded-xl border border-[#ece8e2]">
@@ -310,18 +533,33 @@ export default function RTCBookPage() {
                   {courts.map((court) => {
                     const key = bookingKey(selectedDate, court.id, hour);
                     const existing = bookings[key];
+                  const isBlockStart =
+                    !!existing && existing.blockStartHour === existing.hour;
                     return (
                       <td key={key} className="border-t border-[#f0ede8] p-1.5 align-top">
                         {existing ? (
                           <div className="rounded-lg border border-[#f0d9d9] bg-[#fff6f6] px-2 py-2 text-[11px]">
-                            <p className="font-medium text-[#7f1d1d]">Booked</p>
-                            <p className="mt-0.5 truncate text-[#7a756d]">{existing.clientName}</p>
-                            <p className="text-[#a39e95]">${existing.amount}</p>
-                            <p className="text-[#a39e95]">
-                              {existing.paymentStatus === "paid"
-                                ? "Paid"
-                                : "Payment pending"}
+                            <p className="font-medium text-[#7f1d1d]">
+                              {isBlockStart ? "Booked" : "Booked (cont.)"}
                             </p>
+                            {isBlockStart ? (
+                              <>
+                                <p className="mt-0.5 truncate text-[#7a756d]">{existing.clientName}</p>
+                                <p className="text-[#a39e95]">
+                                  ${existing.totalAmount}
+                                  {existing.discountApplied > 0
+                                    ? ` (${existing.durationHours} hrs, discount applied)`
+                                    : ""}
+                                </p>
+                                <p className="text-[#a39e95]">
+                                  {existing.paymentStatus === "paid"
+                                    ? "Paid"
+                                    : "Payment pending"}
+                                </p>
+                              </>
+                            ) : (
+                              <p className="text-[#a39e95]">Part of 2-hour reservation</p>
+                            )}
                           </div>
                         ) : (
                           <button
@@ -385,15 +623,32 @@ export default function RTCBookPage() {
                 <input
                   type="checkbox"
                   checked={form.isMember}
-                  onChange={(e) => setForm((f) => ({ ...f, isMember: e.target.checked }))}
+                  onChange={(e) => {
+                    setForm((f) => ({ ...f, isMember: e.target.checked }));
+                    if (typeof window !== "undefined") {
+                      localStorage.setItem(MEMBER_MODE_KEY, String(e.target.checked));
+                    }
+                  }}
                 />
                 I am an RTC member
               </label>
+              <select
+                value={durationHours}
+                onChange={(e) => setDurationHours(Number(e.target.value) === 2 ? 2 : 1)}
+                className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
+              >
+                <option value={1}>1 hour</option>
+                <option value={2}>2 consecutive hours (discount)</option>
+              </select>
               {form.isMember && (
                 <input
-                  placeholder="Member code"
-                  value={form.memberCode}
-                  onChange={(e) => setForm((f) => ({ ...f, memberCode: e.target.value }))}
+                  placeholder="Member number (3 digits)"
+                  value={form.memberNumber}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, memberNumber: e.target.value.replace(/\D/g, "").slice(0, 3) }))
+                  }
+                  inputMode="numeric"
+                  maxLength={3}
                   className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
                 />
               )}
@@ -401,6 +656,11 @@ export default function RTCBookPage() {
 
             <div className="mt-4 rounded-lg border border-[#ece8e2] bg-[#faf9f7] px-3 py-2 text-[13px]">
               Rate: <strong>${activeAmount}</strong> ({form.isMember ? "member" : "public"})
+              {durationHours === 2 && activeCourt && (
+                <p className="mt-1 text-[12px] text-[#7a756d]">
+                  Includes 10% discount on the second hour for consecutive bookings.
+                </p>
+              )}
             </div>
 
             <div className="mt-4 grid gap-2 sm:grid-cols-2">
@@ -422,16 +682,8 @@ export default function RTCBookPage() {
               <button
                 type="button"
                 onClick={() => {
-                  const booking = saveBooking();
+                  const booking = saveBooking("venmo");
                   if (!booking) return;
-                  const key = bookingKey(booking.date, booking.courtId, booking.hour);
-                  persist({
-                    ...bookings,
-                    [key]: {
-                      ...booking,
-                      paymentMethod: "venmo",
-                    },
-                  });
                   window.open(buildVenmoUrl(booking), "_blank");
                   setStatusMsg("Venmo opened in a new tab.");
                 }}
@@ -442,16 +694,8 @@ export default function RTCBookPage() {
               <button
                 type="button"
                 onClick={() => {
-                  const booking = saveBooking();
+                  const booking = saveBooking("paypal");
                   if (!booking) return;
-                  const key = bookingKey(booking.date, booking.courtId, booking.hour);
-                  persist({
-                    ...bookings,
-                    [key]: {
-                      ...booking,
-                      paymentMethod: "paypal",
-                    },
-                  });
                   window.open(buildPaypalUrl(booking), "_blank");
                   setStatusMsg("PayPal opened in a new tab.");
                 }}
@@ -462,6 +706,33 @@ export default function RTCBookPage() {
             </div>
 
             {statusMsg && <p className="mt-3 text-[12px] text-[#2d5016]">{statusMsg}</p>}
+            {lastBooked && (
+              <div className="mt-3 rounded-lg border border-[#ece8e2] bg-[#faf9f7] px-3 py-2 text-[12px]">
+                <p className="font-medium">Concierge Confirmation</p>
+                <p className="text-[#6b665e]">
+                  {lastBooked.courtName} · {lastBooked.date} · {formatHour(lastBooked.blockStartHour)} · $
+                  {lastBooked.totalAmount.toFixed(2)}
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <a
+                    href={`mailto:${lastBooked.clientEmail}?subject=${encodeURIComponent(
+                      `RTC Court Booking Confirmation - ${lastBooked.courtName}`
+                    )}`}
+                    className="rounded-md border border-[#d9d5cf] px-2.5 py-1 text-[11px] font-medium hover:bg-white"
+                  >
+                    Send Confirmation
+                  </a>
+                  <a
+                    href={`mailto:difaziotennis@gmail.com?subject=${encodeURIComponent(
+                      `RTC Court Booking Update - ${lastBooked.courtName}`
+                    )}`}
+                    className="rounded-md border border-[#d9d5cf] px-2.5 py-1 text-[11px] font-medium hover:bg-white"
+                  >
+                    Modify Booking
+                  </a>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
