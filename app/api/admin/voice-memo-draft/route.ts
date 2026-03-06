@@ -23,7 +23,8 @@ function buildMessage(studentName: string, parsed: ParsedLessonData): string {
   if (parsed.key_areas_focused.length > 0) {
     message += `🎯 Key Areas We Worked On:\n`;
     for (const area of parsed.key_areas_focused) {
-      message += `• ${area}\n`;
+      const formatted = area.charAt(0).toUpperCase() + area.slice(1);
+      message += `• ${formatted}\n`;
     }
     message += `\n`;
   }
@@ -31,7 +32,8 @@ function buildMessage(studentName: string, parsed: ParsedLessonData): string {
   if (parsed.physical_limitations.length > 0) {
     message += `🧠 Health / Body Notes:\n`;
     for (const note of parsed.physical_limitations) {
-      message += `• ${note}\n`;
+      const formatted = note.charAt(0).toUpperCase() + note.slice(1);
+      message += `• ${formatted}\n`;
     }
     message += `\n`;
   }
@@ -39,7 +41,8 @@ function buildMessage(studentName: string, parsed: ParsedLessonData): string {
   if (parsed.future_goals.length > 0) {
     message += `🏆 Goals We're Working Towards:\n`;
     for (const goal of parsed.future_goals) {
-      message += `• ${goal}\n`;
+      const formatted = goal.charAt(0).toUpperCase() + goal.slice(1);
+      message += `• ${formatted}\n`;
     }
     message += `\n`;
   }
@@ -49,7 +52,7 @@ function buildMessage(studentName: string, parsed: ParsedLessonData): string {
   }
 
   message += `Keep up the great work! 💪\n\n`;
-  message += `- DiFazio Tennis`;
+  message += `- Coach Derek`;
   return message;
 }
 
