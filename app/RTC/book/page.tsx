@@ -41,6 +41,7 @@ const STORAGE_KEY = "rtc_court_bookings_v1";
 const PENDING_STRIPE_KEY = "rtc_pending_stripe_bookings_v1";
 const CLINIC_STORAGE_KEY = "rtc_clinic_bookings_v1";
 const MEMBER_PREFERENCES_KEY = "rtc_member_preferences_v1";
+const ADMIN_COURT_BLOCKS_KEY = "rtc_admin_court_blocks_v1";
 const EVENT_RESERVED_COURTS = ["indoor-1", "outdoor-1", "outdoor-2", "outdoor-3"];
 
 type ClinicBooking = {
@@ -52,6 +53,16 @@ type ClinicBooking = {
     startHour: number;
     durationHours: number;
   }>;
+  createdAt: string;
+};
+
+type AdminCourtBlock = {
+  id: string;
+  date: string;
+  courtId: string;
+  startHour: number;
+  durationHours: 1 | 2 | 3;
+  reason: string;
   createdAt: string;
 };
 
@@ -171,6 +182,7 @@ export default function RTCBookPage() {
   const [selectedDate, setSelectedDate] = useState(formatDateInput(new Date()));
   const [bookings, setBookings] = useState<Record<string, Booking>>({});
   const [clinicBookings, setClinicBookings] = useState<ClinicBooking[]>([]);
+  const [adminBlocks, setAdminBlocks] = useState<AdminCourtBlock[]>([]);
   const [activeCourt, setActiveCourt] = useState<Court | null>(null);
   const [activeHour, setActiveHour] = useState<number | null>(null);
   const [durationHours, setDurationHours] = useState<1 | 2 | 3>(1);
@@ -196,19 +208,24 @@ export default function RTCBookPage() {
     if (typeof window === "undefined") return;
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as Record<string, Booking>;
+      const parsed = raw ? (JSON.parse(raw) as Record<string, Booking>) : {};
       setBookings(parsed);
     } catch {
       // Ignore corrupted local storage data.
     }
     try {
       const raw = localStorage.getItem(CLINIC_STORAGE_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as ClinicBooking[];
+      const parsed = raw ? (JSON.parse(raw) as ClinicBooking[]) : [];
       setClinicBookings(parsed);
     } catch {
       // Ignore corrupted clinic storage data.
+    }
+    try {
+      const raw = localStorage.getItem(ADMIN_COURT_BLOCKS_KEY);
+      const parsed = raw ? (JSON.parse(raw) as AdminCourtBlock[]) : [];
+      setAdminBlocks(parsed);
+    } catch {
+      // Ignore corrupted admin block storage data.
     }
   }, []);
 
@@ -242,6 +259,14 @@ export default function RTCBookPage() {
       for (let i = 0; i < template.durationHours; i += 1) {
         const hour = template.startHour + i;
         blocked[bookingKey(selectedDate, "indoor-1", hour)] = `Reserved for ${clinicName}`;
+      }
+    }
+
+    for (const block of adminBlocks) {
+      if (block.date !== selectedDate) continue;
+      for (let i = 0; i < block.durationHours; i += 1) {
+        const hour = block.startHour + i;
+        blocked[bookingKey(selectedDate, block.courtId, hour)] = `Reserved: ${block.reason}`;
       }
     }
 
@@ -293,7 +318,7 @@ export default function RTCBookPage() {
     }
 
     return blocked;
-  }, [clinicBookings, selectedDate]);
+  }, [adminBlocks, clinicBookings, selectedDate]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
