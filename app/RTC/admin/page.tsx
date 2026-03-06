@@ -1214,7 +1214,39 @@ export default function RTCAdminPage() {
     [quarterlyStatements]
   );
   const proCompliance = useMemo(() => {
-    return mergedData.proProfiles.map((pro) => {
+    const byName = new Map<string, ProProfile>();
+    mergedData.proProfiles.forEach((pro) => byName.set(pro.displayName, pro));
+    rtcCoaches.forEach((coach) => {
+      if (!byName.has(coach.name)) {
+        byName.set(coach.name, {
+          id: `derived-${coach.name.toLowerCase().replace(/\s+/g, "-")}`,
+          displayName: coach.name,
+          legalName: "",
+          email: "",
+          address: "",
+          taxIdLast4: "",
+          w9OnFile: false,
+          active: true,
+          updatedAt: new Date(0).toISOString(),
+        });
+      }
+    });
+    mergedData.payouts.forEach((payout) => {
+      if (!byName.has(payout.proName)) {
+        byName.set(payout.proName, {
+          id: `derived-${payout.proName.toLowerCase().replace(/\s+/g, "-")}`,
+          displayName: payout.proName,
+          legalName: "",
+          email: "",
+          address: "",
+          taxIdLast4: "",
+          w9OnFile: false,
+          active: true,
+          updatedAt: new Date(0).toISOString(),
+        });
+      }
+    });
+    return Array.from(byName.values()).map((pro) => {
       const yearTotal = mergedData.payouts
         .filter((p) => p.proName === pro.displayName && p.taxYear === selectedTaxYear)
         .reduce((sum, item) => sum + item.amount, 0);
@@ -2835,12 +2867,25 @@ export default function RTCAdminPage() {
               <p className="text-[11px] uppercase tracking-[0.1em] text-[#8a8477]">Tax Year Summary</p>
               <div className="mt-2 space-y-2">
                 {payoutSummary.map((row) => (
-                  <div key={row.proName} className="rounded-lg border border-[#ece8e2] bg-[#faf9f7] px-2.5 py-2 text-[11px]">
+                  <button
+                    key={row.proName}
+                    type="button"
+                    onClick={() => {
+                      setSelectedFinanceProName(row.proName);
+                      setPayoutForm((prev) => ({ ...prev, proName: row.proName }));
+                      setAdminMsg(`Opened ${row.proName} payout details.`);
+                    }}
+                    className={`w-full rounded-lg border px-2.5 py-2 text-left text-[11px] transition-colors ${
+                      selectedFinancePro?.displayName === row.proName
+                        ? "border-[#1a1a1a] bg-[#1a1a1a] text-white"
+                        : "border-[#ece8e2] bg-[#faf9f7] hover:bg-white"
+                    }`}
+                  >
                     <p className="font-medium">{row.proName}</p>
-                    <p className="text-[#6b665e]">
+                    <p className={selectedFinancePro?.displayName === row.proName ? "text-white/80" : "text-[#6b665e]"}>
                       {row.count} payouts · {formatCurrency(row.total)}
                     </p>
-                  </div>
+                  </button>
                 ))}
                 {payoutSummary.length === 0 && <p className="text-[12px] text-[#8a8477]">No payouts recorded for {selectedTaxYear}.</p>}
               </div>
