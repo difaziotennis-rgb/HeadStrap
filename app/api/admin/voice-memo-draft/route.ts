@@ -20,10 +20,10 @@ type ParsedLessonData = {
 function pickClosing(seed: string): { line: string; emoji: string } {
   const options = [
     { line: "Keep up the great work!", emoji: "💪" },
-    { line: "Proud of your progress - keep building on this.", emoji: "🎾" },
-    { line: "Great session today, keep that momentum going.", emoji: "🔥" },
-    { line: "You're trending in a great direction - stay consistent.", emoji: "👏" },
-    { line: "Excellent effort today - let's keep stacking wins.", emoji: "✅" },
+    { line: "Great effort today - keep building on these habits.", emoji: "🎾" },
+    { line: "Nice work today - stay consistent with this plan.", emoji: "👏" },
+    { line: "Excellent session today - keep practicing with intention.", emoji: "✅" },
+    { line: "Strong work today - keep trusting the process.", emoji: "🔥" },
   ];
 
   let hash = 0;
