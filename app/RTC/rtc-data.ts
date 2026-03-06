@@ -9,6 +9,12 @@ export const rtcNav = [
 
 export const rtcCoaches = [
   {
+    name: "Robert Myerson",
+    role: "Tennis Director",
+    rate: "$165 / hour",
+    bio: "A founding steward of Rhinebeck tennis and longtime club leader, Bob has spent decades building, guiding, and caring for the RTC community. His coaching blends deep experience, clear fundamentals, and the welcoming spirit that helped shape the club.",
+  },
+  {
     name: "Derek DiFazio",
     role: "Head Pro",
     rate: "$160 / hour",
