@@ -145,10 +145,10 @@ export function clientConfirmationEmail(booking: Booking, stripeCheckoutUrl?: st
           <p style="font-size:12px; color:#8a8477; margin:0;">Your card on file will be charged $${booking.amount} the morning after your lesson.</p>
         </div>
 
-        <div style="margin-top:16px; padding:14px 16px; background:#faf9f7; border:1px solid #ece8e2; border-radius:10px; text-align:center;">
-          <p style="font-size:12px; color:#8a8477; margin:0 0 8px;">Need to cancel?</p>
-          <a href="${cancellationLink}" class="btn btn-outline" style="font-size:11px; padding:7px 14px;">Cancel Lesson</a>
-          <p class="muted" style="margin-top:8px;">72-hour cancellation policy applies.</p>
+        <div style="margin-top:12px; padding:10px 12px; background:#faf9f7; border:1px solid #ece8e2; border-radius:10px; text-align:center;">
+          <p style="font-size:11px; color:#8a8477; margin:0 0 6px;">Need to cancel?</p>
+          <a href="${cancellationLink}" class="btn btn-outline" style="font-size:10px; padding:6px 12px;">Cancel Lesson</a>
+          <p class="muted" style="margin-top:6px; font-size:11px;">72-hour cancellation policy applies.</p>
         </div>
       </div>
 
@@ -229,10 +229,10 @@ difaziotennis@gmail.com | 631-901-5220
         ${stripeCheckoutUrl ? `<a href="${stripeCheckoutUrl}" target="_blank" rel="noopener" class="payment-btn btn-dark">Pay $${booking.amount} with Card</a>` : ""}
       </div>
 
-      <div style="margin-top:16px; padding:14px 16px; background:#faf9f7; border:1px solid #ece8e2; border-radius:10px; text-align:center;">
-        <p style="font-size:12px; color:#8a8477; margin:0 0 8px;">Need to cancel?</p>
-        <a href="${cancellationLink}" class="btn btn-outline" style="font-size:11px; padding:7px 14px;">Cancel Lesson</a>
-        <p class="muted" style="margin-top:8px;">72-hour cancellation policy applies.</p>
+      <div style="margin-top:12px; padding:10px 12px; background:#faf9f7; border:1px solid #ece8e2; border-radius:10px; text-align:center;">
+        <p style="font-size:11px; color:#8a8477; margin:0 0 6px;">Need to cancel?</p>
+        <a href="${cancellationLink}" class="btn btn-outline" style="font-size:10px; padding:6px 12px;">Cancel Lesson</a>
+        <p class="muted" style="margin-top:6px; font-size:11px;">72-hour cancellation policy applies.</p>
       </div>
 
     </div>
