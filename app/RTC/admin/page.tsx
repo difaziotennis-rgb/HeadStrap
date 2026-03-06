@@ -115,10 +115,14 @@ type ProProfile = {
 type MonthStat = {
   key: string;
   label: string;
-  revenue: number;
-  visits: number;
-  paid: number;
-  pending: number;
+  courtBookings: number;
+  lessonRequests: number;
+  clinicBookings: number;
+  eventReservations: number;
+  courtRevenue: number;
+  clinicRevenue: number;
+  eventRevenue: number;
+  totalRevenue: number;
 };
 
 type MemberDirectoryRow = {
@@ -521,10 +525,14 @@ export default function RTCAdminPage() {
       map.set(key, {
         key,
         label: monthLabel(dt),
-        revenue: 0,
-        visits: 0,
-        paid: 0,
-        pending: 0,
+        courtBookings: 0,
+        lessonRequests: 0,
+        clinicBookings: 0,
+        eventReservations: 0,
+        courtRevenue: 0,
+        clinicRevenue: 0,
+        eventRevenue: 0,
+        totalRevenue: 0,
       });
     }
     mergedData.courts.forEach((item) => {
@@ -532,53 +540,97 @@ export default function RTCAdminPage() {
       const key = monthKey(dt);
       const month = map.get(key);
       if (!month) return;
-      month.revenue += item.totalAmount || 0;
-      month.visits += 1;
-      if (item.paymentStatus === "paid") month.paid += 1;
-      else month.pending += 1;
+      const amount = item.totalAmount || 0;
+      month.courtBookings += 1;
+      month.courtRevenue += amount;
+      month.totalRevenue += amount;
     });
     mergedData.clinics.forEach((item) => {
       const month = map.get(monthKey(new Date(item.createdAt)));
       if (!month) return;
-      month.revenue += item.total || 0;
-      month.visits += item.clinicCount || 1;
+      const amount = item.total || 0;
+      month.clinicBookings += 1;
+      month.clinicRevenue += amount;
+      month.totalRevenue += amount;
     });
     mergedData.events.forEach((item) => {
       const month = map.get(monthKey(new Date(item.createdAt)));
       if (!month) return;
-      month.revenue += item.total || 0;
-      month.visits += Math.max(1, item.guestCount || 1);
+      const amount = item.total || 0;
+      month.eventReservations += 1;
+      month.eventRevenue += amount;
+      month.totalRevenue += amount;
     });
     mergedData.lessons.forEach((item) => {
       const month = map.get(monthKey(new Date(item.createdAt)));
       if (!month) return;
-      month.visits += 1;
+      month.lessonRequests += 1;
     });
     return Array.from(map.values());
   }, [mergedData]);
 
   const seasonal = useMemo(() => {
-    const map = new Map<string, { label: string; revenue: number; visits: number }>();
+    const map = new Map<
+      string,
+      Omit<MonthStat, "key" | "label"> & { label: string }
+    >();
     monthly.forEach((month) => {
       const dt = new Date(`${month.key}-01T12:00:00`);
       const label = `${seasonLabel(dt)} ${dt.getFullYear()}`;
-      if (!map.has(label)) map.set(label, { label, revenue: 0, visits: 0 });
+      if (!map.has(label))
+        map.set(label, {
+          label,
+          courtBookings: 0,
+          lessonRequests: 0,
+          clinicBookings: 0,
+          eventReservations: 0,
+          courtRevenue: 0,
+          clinicRevenue: 0,
+          eventRevenue: 0,
+          totalRevenue: 0,
+        });
       const row = map.get(label)!;
-      row.revenue += month.revenue;
-      row.visits += month.visits;
+      row.courtBookings += month.courtBookings;
+      row.lessonRequests += month.lessonRequests;
+      row.clinicBookings += month.clinicBookings;
+      row.eventReservations += month.eventReservations;
+      row.courtRevenue += month.courtRevenue;
+      row.clinicRevenue += month.clinicRevenue;
+      row.eventRevenue += month.eventRevenue;
+      row.totalRevenue += month.totalRevenue;
     });
     return Array.from(map.values()).slice(-6);
   }, [monthly]);
 
   const yearly = useMemo(() => {
-    const map = new Map<number, { year: number; revenue: number; visits: number }>();
+    const map = new Map<
+      number,
+      Omit<MonthStat, "key" | "label"> & { year: number }
+    >();
     monthly.forEach((month) => {
       const dt = new Date(`${month.key}-01T12:00:00`);
       const year = dt.getFullYear();
-      if (!map.has(year)) map.set(year, { year, revenue: 0, visits: 0 });
+      if (!map.has(year))
+        map.set(year, {
+          year,
+          courtBookings: 0,
+          lessonRequests: 0,
+          clinicBookings: 0,
+          eventReservations: 0,
+          courtRevenue: 0,
+          clinicRevenue: 0,
+          eventRevenue: 0,
+          totalRevenue: 0,
+        });
       const row = map.get(year)!;
-      row.revenue += month.revenue;
-      row.visits += month.visits;
+      row.courtBookings += month.courtBookings;
+      row.lessonRequests += month.lessonRequests;
+      row.clinicBookings += month.clinicBookings;
+      row.eventReservations += month.eventReservations;
+      row.courtRevenue += month.courtRevenue;
+      row.clinicRevenue += month.clinicRevenue;
+      row.eventRevenue += month.eventRevenue;
+      row.totalRevenue += month.totalRevenue;
     });
     return Array.from(map.values()).sort((a, b) => a.year - b.year);
   }, [monthly]);
@@ -1283,22 +1335,32 @@ export default function RTCAdminPage() {
 
             {performanceView === "monthly" && (
               <div className="mt-3 overflow-x-auto">
-                <table className="w-full min-w-[360px] text-left text-[12px]">
+                <table className="w-full min-w-[980px] text-left text-[12px]">
                   <thead className="text-[#8a8477]">
                     <tr>
                       <th className="py-1">Month</th>
-                      <th className="py-1">Revenue</th>
-                      <th className="py-1">Visits</th>
-                      <th className="py-1">Pending</th>
+                      <th className="py-1">Court Bookings</th>
+                      <th className="py-1">Lesson Requests</th>
+                      <th className="py-1">Clinic Bookings</th>
+                      <th className="py-1">Event Reservations</th>
+                      <th className="py-1">Court Revenue</th>
+                      <th className="py-1">Clinic Revenue</th>
+                      <th className="py-1">Event Revenue</th>
+                      <th className="py-1">Total Revenue</th>
                     </tr>
                   </thead>
                   <tbody>
                     {[...monthly].reverse().map((row) => (
                       <tr key={row.key} className="border-t border-[#f0ede8]">
                         <td className="py-1.5">{row.label}</td>
-                        <td className="py-1.5">{formatCurrency(row.revenue)}</td>
-                        <td className="py-1.5">{row.visits}</td>
-                        <td className="py-1.5">{row.pending}</td>
+                        <td className="py-1.5">{row.courtBookings}</td>
+                        <td className="py-1.5">{row.lessonRequests}</td>
+                        <td className="py-1.5">{row.clinicBookings}</td>
+                        <td className="py-1.5">{row.eventReservations}</td>
+                        <td className="py-1.5">{formatCurrency(row.courtRevenue)}</td>
+                        <td className="py-1.5">{formatCurrency(row.clinicRevenue)}</td>
+                        <td className="py-1.5">{formatCurrency(row.eventRevenue)}</td>
+                        <td className="py-1.5 font-medium">{formatCurrency(row.totalRevenue)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -1308,20 +1370,32 @@ export default function RTCAdminPage() {
 
             {performanceView === "seasonal" && (
               <div className="mt-3 overflow-x-auto">
-                <table className="w-full min-w-[320px] text-left text-[12px]">
+                <table className="w-full min-w-[980px] text-left text-[12px]">
                   <thead className="text-[#8a8477]">
                     <tr>
                       <th className="py-1">Season</th>
-                      <th className="py-1">Revenue</th>
-                      <th className="py-1">Visits</th>
+                      <th className="py-1">Court Bookings</th>
+                      <th className="py-1">Lesson Requests</th>
+                      <th className="py-1">Clinic Bookings</th>
+                      <th className="py-1">Event Reservations</th>
+                      <th className="py-1">Court Revenue</th>
+                      <th className="py-1">Clinic Revenue</th>
+                      <th className="py-1">Event Revenue</th>
+                      <th className="py-1">Total Revenue</th>
                     </tr>
                   </thead>
                   <tbody>
                     {seasonal.map((row) => (
                       <tr key={row.label} className="border-t border-[#f0ede8]">
                         <td className="py-1.5">{row.label}</td>
-                        <td className="py-1.5">{formatCurrency(row.revenue)}</td>
-                        <td className="py-1.5">{row.visits}</td>
+                        <td className="py-1.5">{row.courtBookings}</td>
+                        <td className="py-1.5">{row.lessonRequests}</td>
+                        <td className="py-1.5">{row.clinicBookings}</td>
+                        <td className="py-1.5">{row.eventReservations}</td>
+                        <td className="py-1.5">{formatCurrency(row.courtRevenue)}</td>
+                        <td className="py-1.5">{formatCurrency(row.clinicRevenue)}</td>
+                        <td className="py-1.5">{formatCurrency(row.eventRevenue)}</td>
+                        <td className="py-1.5 font-medium">{formatCurrency(row.totalRevenue)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -1331,20 +1405,32 @@ export default function RTCAdminPage() {
 
             {performanceView === "yearly" && (
               <div className="mt-3 overflow-x-auto">
-                <table className="w-full min-w-[280px] text-left text-[12px]">
+                <table className="w-full min-w-[980px] text-left text-[12px]">
                   <thead className="text-[#8a8477]">
                     <tr>
                       <th className="py-1">Year</th>
-                      <th className="py-1">Revenue</th>
-                      <th className="py-1">Visits</th>
+                      <th className="py-1">Court Bookings</th>
+                      <th className="py-1">Lesson Requests</th>
+                      <th className="py-1">Clinic Bookings</th>
+                      <th className="py-1">Event Reservations</th>
+                      <th className="py-1">Court Revenue</th>
+                      <th className="py-1">Clinic Revenue</th>
+                      <th className="py-1">Event Revenue</th>
+                      <th className="py-1">Total Revenue</th>
                     </tr>
                   </thead>
                   <tbody>
                     {yearly.map((row) => (
                       <tr key={row.year} className="border-t border-[#f0ede8]">
                         <td className="py-1.5">{row.year}</td>
-                        <td className="py-1.5">{formatCurrency(row.revenue)}</td>
-                        <td className="py-1.5">{row.visits}</td>
+                        <td className="py-1.5">{row.courtBookings}</td>
+                        <td className="py-1.5">{row.lessonRequests}</td>
+                        <td className="py-1.5">{row.clinicBookings}</td>
+                        <td className="py-1.5">{row.eventReservations}</td>
+                        <td className="py-1.5">{formatCurrency(row.courtRevenue)}</td>
+                        <td className="py-1.5">{formatCurrency(row.clinicRevenue)}</td>
+                        <td className="py-1.5">{formatCurrency(row.eventRevenue)}</td>
+                        <td className="py-1.5 font-medium">{formatCurrency(row.totalRevenue)}</td>
                       </tr>
                     ))}
                   </tbody>
