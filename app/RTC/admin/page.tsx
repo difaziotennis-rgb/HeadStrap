@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { rtcClinics, rtcCoaches } from "../rtc-data";
+import { rtcClinicCourtBlocks, rtcClinics, rtcCoaches } from "../rtc-data";
 
 const ADMIN_AUTH_KEY = "rtc_admin_auth_v1";
 const ADMIN_PASSWORD = "admin";
@@ -775,6 +775,94 @@ export default function RTCAdminPage() {
     });
     return Array.from(map.values()).sort((a, b) => b.signups - a.signups);
   }, [mergedData.clinics]);
+  const nextWeekClinics = useMemo(() => {
+    const now = new Date();
+    const currentWeekday = now.getDay();
+    const daysUntilNextMonday = ((8 - currentWeekday) % 7) || 7;
+    const nextMonday = new Date(now);
+    nextMonday.setHours(0, 0, 0, 0);
+    nextMonday.setDate(nextMonday.getDate() + daysUntilNextMonday);
+    const rows = rtcClinics
+      .map((clinic) => {
+        const block = rtcClinicCourtBlocks[clinic.name];
+        if (!block) return null;
+        const date = new Date(nextMonday);
+        date.setDate(nextMonday.getDate() + ((block.weekday + 6) % 7));
+        date.setHours(block.startHour, 0, 0, 0);
+        return {
+          name: clinic.name,
+          dateLabel: date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }),
+          timeLabel: formatHour(block.startHour),
+          level: clinic.level,
+          sortAt: date.getTime(),
+        };
+      })
+      .filter(
+        (row): row is { name: string; dateLabel: string; timeLabel: string; level: string; sortAt: number } =>
+          Boolean(row)
+      )
+      .sort((a, b) => a.sortAt - b.sortAt)
+      .map(({ sortAt: _sortAt, ...rest }) => rest);
+    return rows;
+  }, []);
+  const clinicPerformance = useMemo(() => {
+    const monthKeys = new Set(monthly.map((row) => row.key));
+    const monthCount = Math.max(monthKeys.size, 1);
+    const byClinic = new Map<
+      string,
+      {
+        name: string;
+        signups: number;
+        revenue: number;
+        memberCounts: Map<string, number>;
+      }
+    >();
+    rtcClinics.forEach((clinic) => {
+      byClinic.set(clinic.name, { name: clinic.name, signups: 0, revenue: 0, memberCounts: new Map() });
+    });
+    mergedData.clinics.forEach((booking) => {
+      const createdMonthKey = monthKey(new Date(booking.createdAt));
+      if (!monthKeys.has(createdMonthKey)) return;
+      booking.clinicNames.forEach((clinicName) => {
+        const row =
+          byClinic.get(clinicName) || { name: clinicName, signups: 0, revenue: 0, memberCounts: new Map<string, number>() };
+        row.signups += 1;
+        row.revenue += booking.total / Math.max(booking.clinicNames.length, 1);
+        const memberKey = booking.memberNumber ? `${booking.clientName} (#${booking.memberNumber})` : booking.clientName;
+        row.memberCounts.set(memberKey, (row.memberCounts.get(memberKey) || 0) + 1);
+        byClinic.set(clinicName, row);
+      });
+    });
+    return Array.from(byClinic.values())
+      .map((row) => {
+        const topMember = Array.from(row.memberCounts.entries()).sort((a, b) => b[1] - a[1])[0];
+        return {
+          name: row.name,
+          signups: row.signups,
+          avgSignupsPerMonth: row.signups / monthCount,
+          revenue: row.revenue,
+          topMember: topMember ? `${topMember[0]} (${topMember[1]})` : "No repeat data yet",
+        };
+      })
+      .sort((a, b) => b.signups - a.signups);
+  }, [mergedData.clinics, monthly]);
+  const clinicMemberLeaderboard = useMemo(() => {
+    const monthKeys = new Set(monthly.map((row) => row.key));
+    const map = new Map<string, { member: string; visits: number; clinics: Set<string> }>();
+    mergedData.clinics.forEach((booking) => {
+      const createdMonthKey = monthKey(new Date(booking.createdAt));
+      if (!monthKeys.has(createdMonthKey)) return;
+      const member = booking.memberNumber ? `${booking.clientName} (#${booking.memberNumber})` : booking.clientName;
+      const row = map.get(member) || { member, visits: 0, clinics: new Set<string>() };
+      row.visits += 1;
+      booking.clinicNames.forEach((clinicName) => row.clinics.add(clinicName));
+      map.set(member, row);
+    });
+    return Array.from(map.values())
+      .map((row) => ({ member: row.member, visits: row.visits, clinicTypes: row.clinics.size }))
+      .sort((a, b) => b.visits - a.visits)
+      .slice(0, 8);
+  }, [mergedData.clinics, monthly]);
 
   const eventMonitor = useMemo(() => {
     const map = new Map<
@@ -1928,7 +2016,8 @@ export default function RTCAdminPage() {
               <summary className="cursor-pointer text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">
                 Clinics Monitor
               </summary>
-              <div className="mt-3 flex items-center justify-end">
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                <p className="text-[11px] text-[#8a8477]">Compact view: signups, revenue, and top attendee count.</p>
                 <select
                   value={selectedClinic}
                   onChange={(e) => setSelectedClinic(e.target.value)}
@@ -1941,17 +2030,92 @@ export default function RTCAdminPage() {
                   ))}
                 </select>
               </div>
-              <div className="mt-3 space-y-2">
-              {visibleClinics.map((clinic) => (
-                <div key={clinic.name} className="rounded-lg border border-[#ece8e2] bg-[#faf9f7] p-3 text-[12px]">
-                  <p className="font-medium">{clinic.name}</p>
-                  <p className="text-[#6b665e]">
-                    Signups: {clinic.signups} · Collected: {formatCurrency(clinic.revenue)} · Payment status: Paid at booking
-                  </p>
-                  <p className="mt-1 text-[#8a8477]">Signed up: {Array.from(clinic.attendees).join(", ") || "No signups yet."}</p>
+              <div className="mt-3 overflow-x-auto">
+                <table className="w-full min-w-[540px] text-left text-[12px]">
+                  <thead className="text-[#8a8477]">
+                    <tr>
+                      <th className="py-1">Clinic</th>
+                      <th className="py-1">Signups</th>
+                      <th className="py-1">Revenue</th>
+                      <th className="py-1">Unique Players</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibleClinics.map((clinic) => (
+                      <tr key={clinic.name} className="border-t border-[#f0ede8]">
+                        <td className="py-1.5 font-medium">{clinic.name}</td>
+                        <td className="py-1.5">{clinic.signups}</td>
+                        <td className="py-1.5">{formatCurrency(clinic.revenue)}</td>
+                        <td className="py-1.5">{clinic.attendees.size}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {visibleClinics.length === 0 && <p className="mt-2 text-[12px] text-[#8a8477]">No clinic activity yet.</p>}
+              </div>
+            </details>
+
+            <details className="rounded-xl border border-[#ece8e2] p-4">
+              <summary className="cursor-pointer text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">
+                Clinic Schedule + Past Performance
+              </summary>
+              <div className="mt-3 grid gap-3 xl:grid-cols-2">
+                <div className="rounded-lg border border-[#ece8e2] bg-[#faf9f7] p-3">
+                  <p className="text-[11px] uppercase tracking-[0.1em] text-[#8a8477]">Next Week Clinics</p>
+                  <div className="mt-2 space-y-1.5 text-[12px]">
+                    {nextWeekClinics.map((clinic) => (
+                      <div key={`${clinic.name}-${clinic.dateLabel}`} className="rounded border border-[#ece8e2] bg-white px-2.5 py-2">
+                        <p className="font-medium">{clinic.name}</p>
+                        <p className="text-[#6b665e]">
+                          {clinic.dateLabel} at {clinic.timeLabel} · {clinic.level}
+                        </p>
+                      </div>
+                    ))}
+                    {nextWeekClinics.length === 0 && <p className="text-[#8a8477]">No upcoming clinic schedule found.</p>}
+                  </div>
                 </div>
-              ))}
-              {visibleClinics.length === 0 && <p className="text-[12px] text-[#8a8477]">No clinic activity yet.</p>}
+                <div className="rounded-lg border border-[#ece8e2] bg-[#faf9f7] p-3">
+                  <p className="text-[11px] uppercase tracking-[0.1em] text-[#8a8477]">Past 12-Month Clinic Performance</p>
+                  <div className="mt-2 max-h-[45vh] overflow-y-auto sm:max-h-[240px]">
+                    <table className="w-full text-left text-[11px]">
+                      <thead className="text-[#8a8477]">
+                        <tr>
+                          <th className="py-1">Clinic</th>
+                          <th className="py-1">Avg Signups/Mo</th>
+                          <th className="py-1">Top Player</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {clinicPerformance.map((row) => (
+                          <tr key={row.name} className="border-t border-[#ece8e2]">
+                            <td className="py-1.5">{row.name}</td>
+                            <td className="py-1.5">{row.avgSignupsPerMonth.toFixed(1)}</td>
+                            <td className="py-1.5">{row.topMember}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <p className="mt-2 text-[11px] text-[#8a8477]">
+                    Total signups and revenue are tracked in monitor and finance tables.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-3 rounded-lg border border-[#ece8e2] bg-[#faf9f7] p-3">
+                <p className="text-[11px] uppercase tracking-[0.1em] text-[#8a8477]">Most Active Clinic Members (Past 12 Months)</p>
+                <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                  {clinicMemberLeaderboard.map((row) => (
+                    <div key={row.member} className="rounded border border-[#ece8e2] bg-white px-2.5 py-2 text-[11px]">
+                      <p className="font-medium">{row.member}</p>
+                      <p className="text-[#6b665e]">
+                        Visits: {row.visits} · Clinic types: {row.clinicTypes}
+                      </p>
+                    </div>
+                  ))}
+                  {clinicMemberLeaderboard.length === 0 && (
+                    <p className="text-[12px] text-[#8a8477]">No repeat clinic member data yet.</p>
+                  )}
+                </div>
               </div>
             </details>
 
