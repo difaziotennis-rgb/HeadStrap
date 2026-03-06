@@ -227,7 +227,33 @@ export function AdminDashboard() {
       body: draft.body,
     });
     if (to) params.set("to", to);
-    window.open(`https://mail.google.com/mail/?${params.toString()}`, "_blank");
+
+    const webUrl = `https://mail.google.com/mail/?${params.toString()}`;
+    const appComposeParams = new URLSearchParams({
+      subject: draft.subject,
+      body: draft.body,
+    });
+    if (to) appComposeParams.set("to", to);
+
+    const ua = navigator.userAgent || "";
+    const isIOS = /iPhone|iPad|iPod/i.test(ua);
+    const isAndroid = /Android/i.test(ua);
+
+    // Try Gmail app first on mobile, then fall back to Gmail web.
+    if (isIOS) {
+      window.location.href = `googlegmail:///co?${appComposeParams.toString()}`;
+      window.setTimeout(() => window.open(webUrl, "_blank"), 1200);
+      return;
+    }
+
+    if (isAndroid) {
+      const intentUrl = `intent://co?${appComposeParams.toString()}#Intent;scheme=googlegmail;package=com.google.android.gm;end`;
+      window.location.href = intentUrl;
+      window.setTimeout(() => window.open(webUrl, "_blank"), 1200);
+      return;
+    }
+
+    window.open(webUrl, "_blank");
   }
 
   async function handleSaveEdit() {
