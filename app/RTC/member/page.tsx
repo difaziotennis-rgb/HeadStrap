@@ -20,7 +20,7 @@ export default function RTCMemberPage() {
           </div>
 
           <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-4">
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Member Login (Mock)</p>
+            <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Member Login</p>
             <div className="mt-3 grid gap-2">
               <input placeholder="Member email" className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]" />
               <input placeholder="Member code" className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]" />
@@ -32,7 +32,7 @@ export default function RTCMemberPage() {
         </div>
 
         <div className="mt-5 rounded-xl border border-[#d9e8d1] bg-[#f4faf1] p-4">
-          <p className="text-[11px] uppercase tracking-[0.12em] text-[#2d5016]">Member Dashboard Preview</p>
+          <p className="text-[11px] uppercase tracking-[0.12em] text-[#2d5016]">Member Dashboard</p>
           <div className="mt-3 grid gap-2 text-[13px] sm:grid-cols-3">
             <div className="rounded-lg border border-[#dbead3] bg-white px-3 py-2">
               <p className="text-[#7a756d]">Rate Tier</p>

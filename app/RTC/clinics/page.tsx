@@ -25,7 +25,7 @@ export default function RTCClinicsPage() {
         </div>
 
         <div className="mt-5 rounded-xl border border-[#ece8e2] p-4">
-          <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Clinic Signup (Mock)</p>
+          <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Clinic Signup</p>
           <div className="mt-3 grid gap-2 md:grid-cols-4">
             <input placeholder="Full name" className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]" />
             <input placeholder="Email" className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]" />
