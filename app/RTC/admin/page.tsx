@@ -221,7 +221,7 @@ function monthKey(date: Date): string {
 }
 
 function monthLabel(date: Date): string {
-  return date.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
+  return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
 }
 
 function seasonLabel(date: Date): string {
