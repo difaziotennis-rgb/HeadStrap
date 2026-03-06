@@ -37,6 +37,7 @@ type Booking = {
 };
 
 const STORAGE_KEY = "rtc_court_bookings_v1";
+const PENDING_STRIPE_KEY = "rtc_pending_stripe_bookings_v1";
 
 const courts: Court[] = [
   { id: "indoor-1", name: "Indoor Court", type: "indoor" },
@@ -137,25 +138,57 @@ export default function RTCBookPage() {
     if (!payment) return;
 
     if (bookingId && payment === "success") {
-      const next = { ...bookings };
-      let updated = false;
-      for (const key of Object.keys(next)) {
-        if (next[key].id === bookingId) {
-          next[key] = {
-            ...next[key],
-            paymentStatus: "paid",
-            paymentMethod: "stripe",
-          };
-          updated = true;
-          break;
+      let pendingMap: Record<string, Booking> = {};
+      try {
+        const raw = localStorage.getItem(PENDING_STRIPE_KEY);
+        pendingMap = raw ? (JSON.parse(raw) as Record<string, Booking>) : {};
+      } catch {
+        pendingMap = {};
+      }
+      const pending = pendingMap[bookingId];
+      if (!pending) {
+        setStatusMsg("Payment successful. Refresh to view your updated booking.");
+      } else {
+        const firstKey = bookingKey(pending.date, pending.courtId, pending.blockStartHour);
+        const secondKey =
+          pending.durationHours === 2
+            ? bookingKey(pending.date, pending.courtId, pending.blockStartHour + 1)
+            : null;
+        if (bookings[firstKey] || (secondKey && bookings[secondKey])) {
+          setStatusMsg("Payment received, but that slot is no longer available. Please contact the club.");
+        } else {
+          const next = { ...bookings };
+          for (let i = 0; i < pending.durationHours; i += 1) {
+            const slotHour = pending.blockStartHour + i;
+            const key = bookingKey(pending.date, pending.courtId, slotHour);
+            next[key] = {
+              ...pending,
+              hour: slotHour,
+              paymentStatus: "paid",
+              paymentMethod: "stripe",
+            };
+          }
+          persist(next);
+          setLastBooked({ ...pending, paymentStatus: "paid", paymentMethod: "stripe" });
+          setStatusMsg("Payment successful. Your court booking is confirmed.");
+        }
+        delete pendingMap[bookingId];
+        localStorage.setItem(PENDING_STRIPE_KEY, JSON.stringify(pendingMap));
+      }
+    } else if (payment === "cancelled") {
+      if (bookingId) {
+        try {
+          const raw = localStorage.getItem(PENDING_STRIPE_KEY);
+          const pendingMap = raw ? (JSON.parse(raw) as Record<string, Booking>) : {};
+          if (pendingMap[bookingId]) {
+            delete pendingMap[bookingId];
+            localStorage.setItem(PENDING_STRIPE_KEY, JSON.stringify(pendingMap));
+          }
+        } catch {
+          // Ignore malformed pending checkout storage.
         }
       }
-      if (updated) {
-        persist(next);
-      }
-      setStatusMsg("Payment successful. Your court booking is confirmed.");
-    } else if (payment === "cancelled") {
-      setStatusMsg("Stripe checkout cancelled. Your reservation remains pending.");
+      setStatusMsg("Stripe checkout cancelled. No booking was created.");
     }
 
     const clean = window.location.pathname;
@@ -201,7 +234,7 @@ export default function RTCBookPage() {
     setStatusMsg(null);
   }
 
-  function saveBooking(paymentMethod: Booking["paymentMethod"] = "manual") {
+  function buildBookingDraft(paymentMethod: Booking["paymentMethod"]) {
     if (!activeCourt || activeHour === null) return null;
     const isMember = !!memberSession;
     if (!isMember && (!form.name.trim() || !form.email.trim())) {
@@ -233,44 +266,30 @@ export default function RTCBookPage() {
     const totalAmount = hourlyRate * durationHours - discountApplied;
     const createdAt = new Date().toISOString();
 
-    const next = { ...bookings };
-    for (let i = 0; i < durationHours; i += 1) {
-      const slotHour = activeHour + i;
-      const booking: Booking = {
-        id,
-        date: selectedDate,
-        hour: slotHour,
-        blockStartHour: activeHour,
-        durationHours,
-        courtId: activeCourt.id,
-        courtName: activeCourt.name,
-        type: activeCourt.type,
-        clientName: isMember
-          ? memberSession?.memberName || `Member #${memberSession?.memberNumber || "RTC"}`
-          : form.name.trim(),
-        clientEmail: isMember ? memberSession?.memberEmail || "" : form.email.trim(),
-        clientPhone: form.phone.trim(),
-        isMember,
-        memberNumber: isMember ? memberSession?.memberNumber || "" : "",
-        amount: hourlyRate,
-        totalAmount,
-        discountApplied,
-        paymentStatus: "pending",
-        paymentMethod,
-        createdAt,
-      };
-      const key = bookingKey(booking.date, booking.courtId, booking.hour);
-      next[key] = booking;
-    }
-    persist(next);
-    return next[firstKey];
-  }
-
-  async function handleReserveOnly() {
-    const booking = saveBooking();
-    if (!booking) return;
-    setLastBooked(booking);
-    setStatusMsg("Court reserved. You can complete payment now.");
+    const booking: Booking = {
+      id,
+      date: selectedDate,
+      hour: activeHour,
+      blockStartHour: activeHour,
+      durationHours,
+      courtId: activeCourt.id,
+      courtName: activeCourt.name,
+      type: activeCourt.type,
+      clientName: isMember
+        ? memberSession?.memberName || `Member #${memberSession?.memberNumber || "RTC"}`
+        : form.name.trim(),
+      clientEmail: isMember ? memberSession?.memberEmail || "" : form.email.trim(),
+      clientPhone: form.phone.trim(),
+      isMember,
+      memberNumber: isMember ? memberSession?.memberNumber || "" : "",
+      amount: hourlyRate,
+      totalAmount,
+      discountApplied,
+      paymentStatus: "pending",
+      paymentMethod,
+      createdAt,
+    };
+    return booking;
   }
 
   function buildVenmoUrl(booking: Booking): string {
@@ -291,12 +310,20 @@ export default function RTCBookPage() {
 
   async function handleStripeCheckout() {
     if (!activeCourt || activeHour === null) return;
-    const booking = saveBooking();
+    const booking = buildBookingDraft("stripe");
     if (!booking) return;
-    setLastBooked(booking);
 
     try {
       setIsCreatingStripe(true);
+      let pendingMap: Record<string, Booking> = {};
+      try {
+        const raw = localStorage.getItem(PENDING_STRIPE_KEY);
+        pendingMap = raw ? (JSON.parse(raw) as Record<string, Booking>) : {};
+      } catch {
+        pendingMap = {};
+      }
+      pendingMap[booking.id] = booking;
+      localStorage.setItem(PENDING_STRIPE_KEY, JSON.stringify(pendingMap));
       const res = await fetch("/api/rtc/create-checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -318,6 +345,8 @@ export default function RTCBookPage() {
       });
       const data = await res.json();
       if (!res.ok || !data?.url) {
+        delete pendingMap[booking.id];
+        localStorage.setItem(PENDING_STRIPE_KEY, JSON.stringify(pendingMap));
         throw new Error(data?.error || "Stripe checkout failed.");
       }
       window.location.assign(data.url);
@@ -620,26 +649,19 @@ export default function RTCBookPage() {
             <div className="mt-4 grid gap-2 sm:grid-cols-2">
               <button
                 type="button"
-                onClick={handleReserveOnly}
-                className="rounded-xl border border-[#d9d5cf] px-4 py-2 text-[12px] font-medium transition-colors hover:bg-[#faf9f7]"
-              >
-                Reserve Without Paying
-              </button>
-              <button
-                type="button"
                 onClick={handleStripeCheckout}
                 disabled={isCreatingStripe}
-                className="rounded-xl bg-[#1a1a1a] px-4 py-2 text-[12px] font-medium text-white transition-colors hover:bg-[#2c2c2c] disabled:opacity-60"
+                className="rounded-xl bg-[#1a1a1a] px-4 py-2 text-[12px] font-medium text-white transition-colors hover:bg-[#2c2c2c] disabled:opacity-60 sm:col-span-2"
               >
                 {isCreatingStripe ? "Opening Stripe..." : "Pay with Card (Stripe)"}
               </button>
               <button
                 type="button"
                 onClick={() => {
-                  const booking = saveBooking("venmo");
+                  const booking = buildBookingDraft("venmo");
                   if (!booking) return;
                   window.open(buildVenmoUrl(booking), "_blank");
-                  setStatusMsg("Venmo opened in a new tab.");
+                  setStatusMsg("Venmo opened in a new tab. Booking is created only after confirmed payment.");
                 }}
                 className="rounded-xl border border-[#d9d5cf] px-4 py-2 text-[12px] font-medium transition-colors hover:bg-[#faf9f7]"
               >
@@ -648,16 +670,19 @@ export default function RTCBookPage() {
               <button
                 type="button"
                 onClick={() => {
-                  const booking = saveBooking("paypal");
+                  const booking = buildBookingDraft("paypal");
                   if (!booking) return;
                   window.open(buildPaypalUrl(booking), "_blank");
-                  setStatusMsg("PayPal opened in a new tab.");
+                  setStatusMsg("PayPal opened in a new tab. Booking is created only after confirmed payment.");
                 }}
                 className="rounded-xl border border-[#d9d5cf] px-4 py-2 text-[12px] font-medium transition-colors hover:bg-[#faf9f7]"
               >
                 Pay with PayPal
               </button>
             </div>
+            <p className="mt-2 text-[11px] text-[#8a8477]">
+              Payment is required to confirm a court booking.
+            </p>
 
             {statusMsg && <p className="mt-3 text-[12px] text-[#2d5016]">{statusMsg}</p>}
             {lastBooked && (
