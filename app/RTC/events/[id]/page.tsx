@@ -6,17 +6,17 @@ type PageProps = {
   params: { id: string };
 };
 
-const eventImageByCategory: Record<string, string> = {
-  Tournament:
-    "https://images.unsplash.com/photo-1600614282844-a885427b0c15?auto=format&fit=crop&w=1800&q=80",
-  Social:
-    "https://images.unsplash.com/photo-1662663560803-db03b7821eb9?auto=format&fit=crop&w=1800&q=80",
-  Family:
-    "https://images.unsplash.com/photo-1560880944-796251b78b4c?auto=format&fit=crop&w=1800&q=80",
-  "Tennis Social":
-    "https://images.unsplash.com/photo-1538510933295-151ff2375694?auto=format&fit=crop&w=1800&q=80",
-  Gala:
-    "https://images.unsplash.com/photo-1650296778058-29543cf76508?auto=format&fit=crop&w=1800&q=80",
+const eventImageById: Record<string, string> = {
+  "member-guest-weekend":
+    "https://images.unsplash.com/flagged/photo-1576972405668-2d020a01cbfa?auto=format&fit=crop&w=1800&q=80",
+  "summer-white-party":
+    "https://images.unsplash.com/photo-1755238798584-782309132c90?auto=format&fit=crop&w=1800&q=80",
+  "junior-family-day":
+    "https://images.unsplash.com/photo-1504030688812-2c4804e8d291?auto=format&fit=crop&w=1800&q=80",
+  "twilight-mixed-doubles":
+    "https://images.unsplash.com/photo-1542446608-e9525230faed?auto=format&fit=crop&w=1800&q=80",
+  "season-finale-garden-gala":
+    "https://images.unsplash.com/photo-1768594266719-ab1569870a1f?auto=format&fit=crop&w=1800&q=80",
 };
 
 function eventMood(category: string): string {
@@ -30,7 +30,8 @@ export default function RTCEventDetailPage({ params }: PageProps) {
   const { id } = params;
   const event = rtcSummerEvents.find((item) => item.id === id);
   if (!event) notFound();
-  const eventImage = eventImageByCategory[event.category] || eventImageByCategory["Social"];
+  const eventImage =
+    eventImageById[event.id] || "https://images.unsplash.com/photo-1662663560803-db03b7821eb9?auto=format&fit=crop&w=1800&q=80";
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10">

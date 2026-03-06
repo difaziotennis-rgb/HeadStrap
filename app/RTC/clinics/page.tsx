@@ -176,17 +176,21 @@ export default function RTCClinicsPage() {
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
       <div className="rounded-2xl border border-[#e8e5df] bg-white p-6 sm:p-8">
-        <div className="mb-4 overflow-hidden rounded-xl border border-[#ece8e2]">
-          <img
-            src="https://images.unsplash.com/photo-1662663560803-db03b7821eb9?auto=format&fit=crop&w=1600&q=80"
-            alt="Catskills river and hills"
-            className="h-28 w-full object-cover sm:h-36"
-          />
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-2xl font-semibold tracking-tight">Clinics</h2>
+            <p className="mt-2 text-[14px] text-[#6b665e]">
+              Select one or multiple clinics, see your total update instantly, and apply weekly bundle savings.
+            </p>
+          </div>
+          <div className="w-full max-w-[220px] overflow-hidden rounded-xl border border-[#ece8e2]">
+            <img
+              src="https://images.unsplash.com/photo-1662663560803-db03b7821eb9?auto=format&fit=crop&w=1000&q=80"
+              alt="Catskills river and hills"
+              className="h-24 w-full object-cover"
+            />
+          </div>
         </div>
-        <h2 className="text-2xl font-semibold tracking-tight">Clinics</h2>
-        <p className="mt-2 text-[14px] text-[#6b665e]">
-          Select one or multiple clinics, see your total update instantly, and apply weekly bundle savings.
-        </p>
         <div className="mt-3 rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3 text-[12px] text-[#6b665e]">
           {bookings.length} recent clinic booking{bookings.length === 1 ? "" : "s"} through the concierge flow.
         </div>
