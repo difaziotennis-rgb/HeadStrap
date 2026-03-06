@@ -186,9 +186,13 @@ export function AdminDashboard() {
   async function copyDraft(slotId: string) {
     const draft = draftBySlotId[slotId];
     if (!draft) return;
-    const text = `Subject: ${draft.subject}\n\n${draft.body}`;
+    // Copy just the client-ready message body to avoid extra header artifacts.
+    const text = draft.body
+      .replace(/\r\n/g, "\n")
+      .replace(/[ \t]+\n/g, "\n")
+      .trim();
     await navigator.clipboard.writeText(text);
-    setStatusMsg("Draft copied to clipboard.");
+    setStatusMsg("Draft message copied.");
     setTimeout(() => setStatusMsg(null), 2500);
   }
 
@@ -577,13 +581,15 @@ export function AdminDashboard() {
                                   Draft ready for {activeSlot.bookedBy || "Client"}
                                 </p>
                                 <div className="flex items-center gap-1.5">
-                                  <button
-                                    type="button"
-                                    onClick={() => copyClientEmail(activeSlot)}
-                                    className="text-[11px] px-2 py-1 rounded border border-[#d9d5cf] hover:bg-white text-[#1a1a1a]"
-                                  >
-                                    Copy email
-                                  </button>
+                                  {getClientEmail(activeSlot) && (
+                                    <button
+                                      type="button"
+                                      onClick={() => copyClientEmail(activeSlot)}
+                                      className="text-[11px] px-2 py-1 rounded border border-[#d9d5cf] hover:bg-white text-[#1a1a1a]"
+                                    >
+                                      Copy email
+                                    </button>
+                                  )}
                                   <button
                                     type="button"
                                     onClick={() => copyDraft(activeSlot.id)}
