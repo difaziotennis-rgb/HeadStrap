@@ -13,6 +13,8 @@ const EVENT_KEY = "rtc_summer_event_reservations_v1";
 const ADMIN_COURT_BLOCKS_KEY = "rtc_admin_court_blocks_v1";
 const ADMIN_MEMBER_NOTES_KEY = "rtc_admin_member_notes_v1";
 const ADMIN_PRO_PAYOUTS_KEY = "rtc_admin_pro_payouts_v1";
+const ADMIN_PRO_PROFILES_KEY = "rtc_admin_pro_profiles_v1";
+const ADMIN_QUARTERLY_EMAIL_LOG_KEY = "rtc_admin_quarterly_email_log_v1";
 
 const HOURS = Array.from({ length: 15 }, (_, i) => i + 7);
 const COURTS = [
@@ -98,6 +100,18 @@ type ProPayout = {
   notes: string;
 };
 
+type ProProfile = {
+  id: string;
+  displayName: string;
+  legalName: string;
+  email: string;
+  address: string;
+  taxIdLast4: string;
+  w9OnFile: boolean;
+  active: boolean;
+  updatedAt: string;
+};
+
 type MonthStat = {
   key: string;
   label: string;
@@ -125,6 +139,27 @@ type MemberDirectoryRow = {
   events: string[];
   lastActivity: string | null;
   note: string;
+};
+
+type StatementLineItem = {
+  sortAt: string;
+  date: string;
+  category: string;
+  description: string;
+  amount: number;
+  status: "Paid" | "Pending";
+};
+
+type QuarterlyStatement = {
+  memberNumber: string;
+  memberName: string;
+  memberEmail: string;
+  quarterKey: string;
+  quarterLabel: string;
+  totalBilled: number;
+  totalPaid: number;
+  outstanding: number;
+  lineItems: StatementLineItem[];
 };
 
 function safeParse<T>(raw: string | null, fallback: T): T {
@@ -174,6 +209,49 @@ function makeDate(monthOffset: number, day: number, hour = 12): string {
   return dt.toISOString();
 }
 
+function getQuarter(date: Date): { year: number; quarter: 1 | 2 | 3 | 4; key: string; label: string } {
+  const year = date.getFullYear();
+  const quarter = (Math.floor(date.getMonth() / 3) + 1) as 1 | 2 | 3 | 4;
+  const key = `${year}-Q${quarter}`;
+  const label = `Q${quarter} ${year}`;
+  return { year, quarter, key, label };
+}
+
+function quarterStart(quarterKey: string): Date {
+  const [yearStr, qPart] = quarterKey.split("-Q");
+  const year = Number(yearStr);
+  const quarter = Number(qPart);
+  const month = Math.max(0, (quarter - 1) * 3);
+  return new Date(year, month, 1, 0, 0, 0, 0);
+}
+
+function quarterEnd(quarterKey: string): Date {
+  const start = quarterStart(quarterKey);
+  return new Date(start.getFullYear(), start.getMonth() + 3, 0, 23, 59, 59, 999);
+}
+
+function previousQuarterKey(): string {
+  const now = new Date();
+  const current = getQuarter(now);
+  if (current.quarter === 1) return `${current.year - 1}-Q4`;
+  return `${current.year}-Q${current.quarter - 1}`;
+}
+
+function quarterLabelFromKey(key: string): string {
+  const [year, q] = key.split("-Q");
+  return `Q${q} ${year}`;
+}
+
+function quarterOptions(count = 8): string[] {
+  const options: string[] = [];
+  const now = new Date();
+  for (let i = 0; i < count; i += 1) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i * 3, 1);
+    options.push(getQuarter(d).key);
+  }
+  return Array.from(new Set(options));
+}
+
 function mod(value: number, base: number): number {
   return ((value % base) + base) % base;
 }
@@ -184,11 +262,26 @@ function createMockData() {
   const clinics: ClinicBooking[] = [];
   const events: EventReservation[] = [];
   const payouts: ProPayout[] = [];
+  const proProfiles: ProProfile[] = [];
   const notes: MemberNote[] = [
     { memberNumber: "101", note: "Prefers indoor evening slots.", updatedAt: makeDate(-1, 11) },
     { memberNumber: "318", note: "Interested in recurring Sunday clinics.", updatedAt: makeDate(-2, 8) },
   ];
   const coaches = rtcCoaches.map((coach) => coach.name);
+  coaches.forEach((coach, idx) => {
+    proProfiles.push({
+      id: `mock-pro-${idx}`,
+      displayName: coach,
+      legalName: `${coach} LLC`,
+      email: `${coach.toLowerCase().replace(/\s+/g, ".")}@example.com`,
+      address: "2 Salisbury Ct, Rhinebeck, NY 12572",
+      taxIdLast4: String(1200 + idx).slice(-4),
+      w9OnFile: idx % 2 === 0,
+      active: true,
+      updatedAt: makeDate(-1, 1 + idx),
+    });
+  });
+
   const courtNames = COURTS.map((c) => c.name);
   const members = ["101", "204", "318", "427", "536", "642"];
 
@@ -258,7 +351,7 @@ function createMockData() {
     });
   }
 
-  return { courts, lessons, clinics, events, payouts, notes };
+  return { courts, lessons, clinics, events, payouts, notes, proProfiles };
 }
 
 export default function RTCAdminPage() {
@@ -274,8 +367,13 @@ export default function RTCAdminPage() {
   const [adminBlocks, setAdminBlocks] = useState<AdminCourtBlock[]>([]);
   const [memberNotes, setMemberNotes] = useState<MemberNote[]>([]);
   const [proPayouts, setProPayouts] = useState<ProPayout[]>([]);
+  const [proProfiles, setProProfiles] = useState<ProProfile[]>([]);
+  const [quarterlyEmailLog, setQuarterlyEmailLog] = useState<Record<string, string>>({});
   const [useMockData, setUseMockData] = useState(true);
   const [selectedTaxYear, setSelectedTaxYear] = useState(new Date().getFullYear());
+  const [selectedStatementQuarter, setSelectedStatementQuarter] = useState(previousQuarterKey());
+  const [statementStatus, setStatementStatus] = useState<string | null>(null);
+  const [sendingStatements, setSendingStatements] = useState(false);
   const [selectedClinic, setSelectedClinic] = useState("All Clinics");
   const [selectedEvent, setSelectedEvent] = useState("All Events");
   const [selectedMemberNumber, setSelectedMemberNumber] = useState<string | null>(null);
@@ -307,6 +405,15 @@ export default function RTCAdminPage() {
     category: "clinic" as ProPayout["category"],
     notes: "",
   });
+  const [proProfileForm, setProProfileForm] = useState({
+    displayName: rtcCoaches[0]?.name || "Derek DiFazio",
+    legalName: "",
+    email: "",
+    address: "",
+    taxIdLast4: "",
+    w9OnFile: true,
+    active: true,
+  });
 
   function loadLiveData() {
     if (typeof window === "undefined") return;
@@ -325,6 +432,10 @@ export default function RTCAdminPage() {
     setAdminBlocks(safeParse<AdminCourtBlock[]>(localStorage.getItem(ADMIN_COURT_BLOCKS_KEY), []));
     setMemberNotes(safeParse<MemberNote[]>(localStorage.getItem(ADMIN_MEMBER_NOTES_KEY), []));
     setProPayouts(safeParse<ProPayout[]>(localStorage.getItem(ADMIN_PRO_PAYOUTS_KEY), []));
+    setProProfiles(safeParse<ProProfile[]>(localStorage.getItem(ADMIN_PRO_PROFILES_KEY), []));
+    setQuarterlyEmailLog(
+      safeParse<Record<string, string>>(localStorage.getItem(ADMIN_QUARTERLY_EMAIL_LOG_KEY), {})
+    );
   }
 
   useEffect(() => {
@@ -342,8 +453,18 @@ export default function RTCAdminPage() {
       events: useMockData ? [...mock.events, ...eventReservations] : eventReservations,
       payouts: useMockData ? [...mock.payouts, ...proPayouts] : proPayouts,
       notes: useMockData ? [...mock.notes, ...memberNotes] : memberNotes,
+      proProfiles: useMockData ? [...mock.proProfiles, ...proProfiles] : proProfiles,
     };
-  }, [courtBookings, lessonBookings, clinicBookings, eventReservations, proPayouts, memberNotes, useMockData]);
+  }, [
+    courtBookings,
+    lessonBookings,
+    clinicBookings,
+    eventReservations,
+    proPayouts,
+    memberNotes,
+    proProfiles,
+    useMockData,
+  ]);
 
   const kpis = useMemo(() => {
     const revenueCourts = mergedData.courts.reduce((sum, b) => sum + (b.totalAmount || 0), 0);
@@ -625,6 +746,11 @@ export default function RTCAdminPage() {
     () => ["All Events", ...eventMonitor.map((e) => e.title)],
     [eventMonitor]
   );
+  const proNameOptions = useMemo(() => {
+    const names = new Set<string>([...rtcCoaches.map((coach) => coach.name)]);
+    mergedData.proProfiles.forEach((pro) => names.add(pro.displayName));
+    return Array.from(names);
+  }, [mergedData.proProfiles]);
   const visibleClinics = useMemo(
     () => clinicMonitor.filter((item) => selectedClinic === "All Clinics" || item.name === selectedClinic),
     [clinicMonitor, selectedClinic]
@@ -646,6 +772,100 @@ export default function RTCAdminPage() {
       });
     return Array.from(byPro.entries()).map(([proName, data]) => ({ proName, ...data }));
   }, [mergedData.payouts, selectedTaxYear]);
+
+  const statementQuarterOptions = useMemo(() => quarterOptions(10), []);
+  const quarterlyStatements = useMemo(() => {
+    const start = quarterStart(selectedStatementQuarter);
+    const end = quarterEnd(selectedStatementQuarter);
+    const rows = memberDirectory.map((member): QuarterlyStatement => {
+      const lineItems: StatementLineItem[] = [];
+      let totalBilled = 0;
+      let totalPaid = 0;
+      let outstanding = 0;
+      mergedData.courts.forEach((item) => {
+        if (item.memberNumber !== member.memberNumber) return;
+        const at = new Date(item.createdAt || `${item.date}T12:00:00`);
+        if (at < start || at > end) return;
+        const status = item.paymentStatus === "paid" ? "Paid" : "Pending";
+        lineItems.push({
+          sortAt: at.toISOString(),
+          date: at.toLocaleDateString(),
+          category: "Court",
+          description: `${item.courtName} (${item.durationHours} hr)`,
+          amount: item.totalAmount || 0,
+          status,
+        });
+        totalBilled += item.totalAmount || 0;
+        if (status === "Paid") totalPaid += item.totalAmount || 0;
+        else outstanding += item.totalAmount || 0;
+      });
+      mergedData.clinics.forEach((item) => {
+        if (item.memberNumber !== member.memberNumber) return;
+        const at = new Date(item.createdAt);
+        if (at < start || at > end) return;
+        lineItems.push({
+          sortAt: at.toISOString(),
+          date: at.toLocaleDateString(),
+          category: "Clinic",
+          description: item.clinicNames.join(", "),
+          amount: item.total || 0,
+          status: "Paid",
+        });
+        totalBilled += item.total || 0;
+        totalPaid += item.total || 0;
+      });
+      mergedData.events.forEach((item) => {
+        if (item.memberNumber !== member.memberNumber) return;
+        const at = new Date(item.createdAt);
+        if (at < start || at > end) return;
+        lineItems.push({
+          sortAt: at.toISOString(),
+          date: at.toLocaleDateString(),
+          category: "Event",
+          description: item.eventTitle,
+          amount: item.total || 0,
+          status: "Paid",
+        });
+        totalBilled += item.total || 0;
+        totalPaid += item.total || 0;
+      });
+
+      lineItems.sort((a, b) => new Date(a.sortAt).getTime() - new Date(b.sortAt).getTime());
+      return {
+        memberNumber: member.memberNumber,
+        memberName: member.name,
+        memberEmail: member.email,
+        quarterKey: selectedStatementQuarter,
+        quarterLabel: quarterLabelFromKey(selectedStatementQuarter),
+        totalBilled,
+        totalPaid,
+        outstanding,
+        lineItems,
+      };
+    });
+    return rows.filter((row) => row.lineItems.length > 0);
+  }, [memberDirectory, mergedData, selectedStatementQuarter]);
+
+  const statementSendable = useMemo(
+    () => quarterlyStatements.filter((row) => row.memberEmail.trim().length > 0),
+    [quarterlyStatements]
+  );
+  const statementMissingEmail = useMemo(
+    () => quarterlyStatements.filter((row) => !row.memberEmail.trim()),
+    [quarterlyStatements]
+  );
+  const proCompliance = useMemo(() => {
+    return mergedData.proProfiles.map((pro) => {
+      const yearTotal = mergedData.payouts
+        .filter((p) => p.proName === pro.displayName && p.taxYear === selectedTaxYear)
+        .reduce((sum, item) => sum + item.amount, 0);
+      return {
+        ...pro,
+        yearTotal,
+        needs1099: yearTotal >= 600,
+      };
+    });
+  }, [mergedData.payouts, mergedData.proProfiles, selectedTaxYear]);
 
   function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -830,6 +1050,78 @@ export default function RTCAdminPage() {
     setAdminMsg(`Exported ${rows.length} payout rows for ${selectedTaxYear}.`);
   }
 
+  function saveProProfile(e: React.FormEvent) {
+    e.preventDefault();
+    const displayName = proProfileForm.displayName.trim();
+    const legalName = proProfileForm.legalName.trim();
+    if (!displayName || !legalName) {
+      setAdminMsg("Display name and legal name are required.");
+      return;
+    }
+    if (proProfileForm.taxIdLast4 && !/^\d{4}$/.test(proProfileForm.taxIdLast4.trim())) {
+      setAdminMsg("Tax ID last4 must be 4 digits.");
+      return;
+    }
+    const profile: ProProfile = {
+      id: `pro-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      displayName,
+      legalName,
+      email: proProfileForm.email.trim(),
+      address: proProfileForm.address.trim(),
+      taxIdLast4: proProfileForm.taxIdLast4.trim(),
+      w9OnFile: proProfileForm.w9OnFile,
+      active: proProfileForm.active,
+      updatedAt: new Date().toISOString(),
+    };
+    const next = [profile, ...proProfiles.filter((p) => p.displayName !== displayName)];
+    setProProfiles(next);
+    localStorage.setItem(ADMIN_PRO_PROFILES_KEY, JSON.stringify(next));
+    setProProfileForm((prev) => ({ ...prev, legalName: "", email: "", address: "", taxIdLast4: "" }));
+    setAdminMsg("Pro profile saved.");
+  }
+
+  async function sendQuarterlyStatements(mode: "manual" | "auto") {
+    if (!statementSendable.length) {
+      setStatementStatus("No quarterly statements to send (missing emails or no activity).");
+      return;
+    }
+    setSendingStatements(true);
+    setStatementStatus(mode === "auto" ? "Auto-sending quarterly statements..." : "Sending quarterly statements...");
+    try {
+      const res = await fetch("/api/rtc/send-quarterly-statements", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ statements: statementSendable }),
+      });
+      const data = (await res.json()) as { sent: number; failed: number };
+      if (!res.ok) throw new Error("Failed to send statements.");
+      const stamp = new Date().toISOString();
+      const nextLog = { ...quarterlyEmailLog, [selectedStatementQuarter]: stamp };
+      setQuarterlyEmailLog(nextLog);
+      localStorage.setItem(ADMIN_QUARTERLY_EMAIL_LOG_KEY, JSON.stringify(nextLog));
+      setStatementStatus(
+        `${mode === "auto" ? "Auto-send complete" : "Send complete"}: ${data.sent} sent, ${data.failed} failed for ${quarterLabelFromKey(
+          selectedStatementQuarter
+        )}.`
+      );
+    } catch {
+      setStatementStatus("Quarterly statement send failed.");
+    } finally {
+      setSendingStatements(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!authed) return;
+    if (typeof window === "undefined") return;
+    const prevKey = previousQuarterKey();
+    if (selectedStatementQuarter !== prevKey) return;
+    if (quarterlyEmailLog[prevKey]) return;
+    if (!statementSendable.length) return;
+    void sendQuarterlyStatements("auto");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authed, selectedStatementQuarter, quarterlyEmailLog, statementSendable.length]);
+
   if (!authed) {
     return (
       <main className="mx-auto w-full max-w-md px-4 py-12 sm:px-6">
@@ -1004,6 +1296,12 @@ export default function RTCAdminPage() {
             </a>
             <a href="#payouts-1099" className="rounded-md border border-[#d9d5cf] bg-white px-3 py-1.5 text-[12px] hover:bg-[#fdfcfb]">
               Pro Payouts / 1099
+            </a>
+            <a href="#pro-registry" className="rounded-md border border-[#d9d5cf] bg-white px-3 py-1.5 text-[12px] hover:bg-[#fdfcfb]">
+              Pro Registry
+            </a>
+            <a href="#quarterly-statements" className="rounded-md border border-[#d9d5cf] bg-white px-3 py-1.5 text-[12px] hover:bg-[#fdfcfb]">
+              Quarterly Statements
             </a>
           </div>
         </div>
@@ -1222,6 +1520,157 @@ export default function RTCAdminPage() {
           </div>
         </section>
 
+        <section id="pro-registry" className="mt-4 rounded-xl border border-[#ece8e2] p-4">
+          <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Pro Profile Registry (1099 Readiness)</p>
+          <div className="mt-3 grid gap-4 xl:grid-cols-[1fr_1.1fr]">
+            <form onSubmit={saveProProfile} className="grid gap-2 rounded-lg border border-[#ece8e2] bg-[#faf9f7] p-3">
+              <input
+                value={proProfileForm.displayName}
+                onChange={(e) => setProProfileForm((p) => ({ ...p, displayName: e.target.value }))}
+                list="pro-display-name-options"
+                placeholder="Display name used in payouts"
+                className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[12px]"
+              />
+              <datalist id="pro-display-name-options">
+                {proNameOptions.map((name) => (
+                  <option key={name} value={name} />
+                ))}
+              </datalist>
+              <input
+                value={proProfileForm.legalName}
+                onChange={(e) => setProProfileForm((p) => ({ ...p, legalName: e.target.value }))}
+                placeholder="Legal name (for 1099)"
+                className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[12px]"
+              />
+              <input
+                value={proProfileForm.email}
+                onChange={(e) => setProProfileForm((p) => ({ ...p, email: e.target.value }))}
+                placeholder="Payout contact email"
+                className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[12px]"
+              />
+              <input
+                value={proProfileForm.address}
+                onChange={(e) => setProProfileForm((p) => ({ ...p, address: e.target.value }))}
+                placeholder="Mailing address"
+                className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[12px]"
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  value={proProfileForm.taxIdLast4}
+                  onChange={(e) =>
+                    setProProfileForm((p) => ({ ...p, taxIdLast4: e.target.value.replace(/\D/g, "").slice(0, 4) }))
+                  }
+                  placeholder="Tax ID last 4"
+                  className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[12px]"
+                />
+                <label className="flex items-center gap-2 rounded-lg border border-[#e8e5df] px-3 py-2 text-[12px]">
+                  <input
+                    type="checkbox"
+                    checked={proProfileForm.w9OnFile}
+                    onChange={(e) => setProProfileForm((p) => ({ ...p, w9OnFile: e.target.checked }))}
+                  />
+                  W-9 on file
+                </label>
+              </div>
+              <label className="flex items-center gap-2 rounded-lg border border-[#e8e5df] px-3 py-2 text-[12px]">
+                <input
+                  type="checkbox"
+                  checked={proProfileForm.active}
+                  onChange={(e) => setProProfileForm((p) => ({ ...p, active: e.target.checked }))}
+                />
+                Active pro
+              </label>
+              <button type="submit" className="rounded-lg bg-[#1a1a1a] px-3 py-2 text-[12px] font-medium text-white hover:bg-[#2c2c2c]">
+                Save Pro Profile
+              </button>
+            </form>
+
+            <div className="rounded-lg border border-[#ece8e2] p-3">
+              <p className="text-[11px] uppercase tracking-[0.1em] text-[#8a8477]">Compliance Snapshot ({selectedTaxYear})</p>
+              <div className="mt-2 space-y-2">
+                {proCompliance.map((pro) => (
+                  <div key={pro.id} className="rounded-lg border border-[#ece8e2] bg-[#faf9f7] px-2.5 py-2 text-[11px]">
+                    <p className="font-medium">
+                      {pro.displayName} {pro.active ? "" : "(Inactive)"}
+                    </p>
+                    <p className="text-[#6b665e]">Legal: {pro.legalName || "Not set"}</p>
+                    <p className="text-[#6b665e]">Tax ID last4: {pro.taxIdLast4 || "Not set"} · W-9: {pro.w9OnFile ? "On file" : "Missing"}</p>
+                    <p className="text-[#6b665e]">
+                      {selectedTaxYear} payout total: {formatCurrency(pro.yearTotal)} · 1099: {pro.needs1099 ? "Likely required" : "Below threshold"}
+                    </p>
+                  </div>
+                ))}
+                {proCompliance.length === 0 && <p className="text-[12px] text-[#8a8477]">No pro profiles yet.</p>}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="quarterly-statements" className="mt-4 rounded-xl border border-[#ece8e2] p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Quarterly Member Statements</p>
+            <div className="flex items-center gap-2">
+              <select
+                value={selectedStatementQuarter}
+                onChange={(e) => setSelectedStatementQuarter(e.target.value)}
+                className="rounded-lg border border-[#e8e5df] px-2 py-1 text-[12px]"
+              >
+                {statementQuarterOptions.map((key) => (
+                  <option key={key} value={key}>
+                    {quarterLabelFromKey(key)}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => void sendQuarterlyStatements("manual")}
+                disabled={sendingStatements}
+                className="rounded-lg border border-[#d9d5cf] px-3 py-1.5 text-[12px] font-medium hover:bg-[#faf9f7] disabled:opacity-50"
+              >
+                {sendingStatements ? "Sending..." : "Send Statements Now"}
+              </button>
+            </div>
+          </div>
+          <p className="mt-2 text-[12px] text-[#6b665e]">
+            Auto-send runs once when the dashboard opens after quarter close for {quarterLabelFromKey(previousQuarterKey())}.
+            Last send for selected quarter: {quarterlyEmailLog[selectedStatementQuarter] ? new Date(quarterlyEmailLog[selectedStatementQuarter]).toLocaleString() : "Not sent yet"}.
+          </p>
+          {statementStatus && <p className="mt-2 text-[12px] text-[#2d5016]">{statementStatus}</p>}
+          <div className="mt-3 grid gap-3 xl:grid-cols-2">
+            <div className="rounded-lg border border-[#ece8e2] p-3">
+              <p className="text-[11px] uppercase tracking-[0.1em] text-[#8a8477]">Ready to Email ({statementSendable.length})</p>
+              <div className="mt-2 max-h-[240px] space-y-2 overflow-y-auto">
+                {statementSendable.map((row) => (
+                  <div key={row.memberNumber} className="rounded-lg border border-[#ece8e2] bg-[#faf9f7] px-2.5 py-2 text-[11px]">
+                    <p className="font-medium">
+                      {row.memberName} · #{row.memberNumber}
+                    </p>
+                    <p className="text-[#6b665e]">{row.memberEmail}</p>
+                    <p className="text-[#6b665e]">
+                      Billed {formatCurrency(row.totalBilled)} · Paid {formatCurrency(row.totalPaid)} · Outstanding {formatCurrency(row.outstanding)}
+                    </p>
+                  </div>
+                ))}
+                {statementSendable.length === 0 && <p className="text-[12px] text-[#8a8477]">No sendable statements this quarter.</p>}
+              </div>
+            </div>
+            <div className="rounded-lg border border-[#ece8e2] p-3">
+              <p className="text-[11px] uppercase tracking-[0.1em] text-[#8a8477]">Missing Email ({statementMissingEmail.length})</p>
+              <div className="mt-2 max-h-[240px] space-y-2 overflow-y-auto">
+                {statementMissingEmail.map((row) => (
+                  <div key={row.memberNumber} className="rounded-lg border border-[#ece8e2] bg-[#faf9f7] px-2.5 py-2 text-[11px]">
+                    <p className="font-medium">
+                      {row.memberName} · #{row.memberNumber}
+                    </p>
+                    <p className="text-[#6b665e]">No email found in member profile.</p>
+                  </div>
+                ))}
+                {statementMissingEmail.length === 0 && <p className="text-[12px] text-[#8a8477]">All active quarterly statements have an email.</p>}
+              </div>
+            </div>
+          </div>
+        </section>
+
         <div id="payouts-1099" className="mt-4 rounded-xl border border-[#ece8e2] p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Pro Payout + 1099 Tracking</p>
@@ -1241,7 +1690,7 @@ export default function RTCAdminPage() {
           <div className="mt-3 grid gap-4 xl:grid-cols-[1fr_1.1fr]">
             <form onSubmit={recordProPayout} className="grid gap-2 rounded-lg border border-[#ece8e2] bg-[#faf9f7] p-3">
               <select value={payoutForm.proName} onChange={(e) => setPayoutForm((p) => ({ ...p, proName: e.target.value }))} className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[12px]">
-                {rtcCoaches.map((coach) => <option key={coach.name} value={coach.name}>{coach.name}</option>)}
+                {proNameOptions.map((name) => <option key={name} value={name}>{name}</option>)}
               </select>
               <div className="grid grid-cols-2 gap-2">
                 <input value={payoutForm.amount} onChange={(e) => setPayoutForm((p) => ({ ...p, amount: e.target.value }))} placeholder="Amount" className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[12px]" />

@@ -6,6 +6,11 @@ interface SendEmailOptions {
   html: string;
   text: string;
   replyTo?: string;
+  attachments?: Array<{
+    filename: string;
+    content: string;
+    contentType?: string;
+  }>;
 }
 
 // Create a reusable Gmail SMTP transporter
@@ -30,7 +35,14 @@ function createTransporter() {
  * Send an email using Gmail SMTP via Nodemailer.
  * Emails are sent directly from difaziotennis@gmail.com.
  */
-export async function sendEmail({ to, subject, html, text, replyTo }: SendEmailOptions): Promise<{ success: boolean; error?: string }> {
+export async function sendEmail({
+  to,
+  subject,
+  html,
+  text,
+  replyTo,
+  attachments,
+}: SendEmailOptions): Promise<{ success: boolean; error?: string }> {
   const transporter = createTransporter();
 
   if (!transporter) {
@@ -46,6 +58,7 @@ export async function sendEmail({ to, subject, html, text, replyTo }: SendEmailO
       html,
       text,
       replyTo: replyTo || process.env.GMAIL_USER,
+      attachments,
     });
 
     console.log("Email sent:", info.messageId, "to:", to);
