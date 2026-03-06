@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { rtcCoaches } from "../rtc-data";
+import { rtcClinics, rtcCoaches } from "../rtc-data";
 
 const ADMIN_AUTH_KEY = "rtc_admin_auth_v1";
 const ADMIN_PASSWORD = "admin";
@@ -677,6 +677,15 @@ export default function RTCAdminPage() {
 
   const clinicMonitor = useMemo(() => {
     const map = new Map<string, { name: string; signups: number; revenue: number; attendees: Set<string> }>();
+    // Ensure all clinic programs appear even with zero bookings.
+    rtcClinics.forEach((clinic) => {
+      map.set(clinic.name, {
+        name: clinic.name,
+        signups: 0,
+        revenue: 0,
+        attendees: new Set<string>(),
+      });
+    });
     mergedData.clinics.forEach((booking) => {
       booking.clinicNames.forEach((clinicName) => {
         const row = map.get(clinicName) || {
