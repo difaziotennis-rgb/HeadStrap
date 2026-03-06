@@ -34,8 +34,6 @@ export function AdminDashboard() {
   const [draftBySlotId, setDraftBySlotId] = useState<Record<string, { subject: string; body: string }>>({});
   const [generatingSlotId, setGeneratingSlotId] = useState<string | null>(null);
   const [emailByClientName, setEmailByClientName] = useState<Record<string, string>>({});
-  const [micPermission, setMicPermission] = useState<"unknown" | "granted" | "denied">("unknown");
-  const [requestingMic, setRequestingMic] = useState(false);
   const speechRecognitionRef = useRef<any>(null);
   const transcriptRef = useRef("");
 
@@ -53,31 +51,6 @@ export function AdminDashboard() {
       setEmailByClientName(emailMap);
       setLoaded(true);
     });
-  }, []);
-
-  useEffect(() => {
-    if (typeof navigator === "undefined" || !("permissions" in navigator)) return;
-    // Best-effort permission status read; not all browsers fully support this.
-    const nav = navigator as Navigator & {
-      permissions?: {
-        query: (desc: { name: string }) => Promise<{ state: "granted" | "denied" | "prompt"; onchange: null | (() => void) }>;
-      };
-    };
-    nav.permissions
-      ?.query({ name: "microphone" })
-      .then((result) => {
-        if (result.state === "granted") setMicPermission("granted");
-        else if (result.state === "denied") setMicPermission("denied");
-        else setMicPermission("unknown");
-        result.onchange = () => {
-          if (result.state === "granted") setMicPermission("granted");
-          else if (result.state === "denied") setMicPermission("denied");
-          else setMicPermission("unknown");
-        };
-      })
-      .catch(() => {
-        // Ignore - we'll request directly when needed.
-      });
   }, []);
 
   const weekEnd = endOfWeek(weekStart, { weekStartsOn: 0 });
@@ -185,7 +158,7 @@ export function AdminDashboard() {
       return;
     }
 
-    const hasPermission = await requestMicrophonePermission(false);
+    const hasPermission = await requestMicrophonePermission();
     if (!hasPermission) return;
 
     transcriptRef.current = "";
@@ -221,29 +194,20 @@ export function AdminDashboard() {
     recognition.start();
   }
 
-  async function requestMicrophonePermission(manualTrigger = true): Promise<boolean> {
+  async function requestMicrophonePermission(): Promise<boolean> {
     if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
       setStatusMsg("Microphone is not supported in this browser.");
       setTimeout(() => setStatusMsg(null), 3500);
       return false;
     }
     try {
-      setRequestingMic(true);
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       stream.getTracks().forEach((t) => t.stop());
-      setMicPermission("granted");
-      if (manualTrigger) {
-        setStatusMsg("Microphone enabled for this site.");
-        setTimeout(() => setStatusMsg(null), 2500);
-      }
       return true;
     } catch {
-      setMicPermission("denied");
       setStatusMsg("Microphone permission was denied. Please allow it in browser settings.");
       setTimeout(() => setStatusMsg(null), 4000);
       return false;
-    } finally {
-      setRequestingMic(false);
     }
   }
 
@@ -615,16 +579,6 @@ export function AdminDashboard() {
                                     Record draft
                                   </>
                                 )}
-                              </button>
-                            )}
-                            {isTrialVoiceSlot(activeSlot) && micPermission !== "granted" && (
-                              <button
-                                type="button"
-                                onClick={() => requestMicrophonePermission(true)}
-                                disabled={requestingMic}
-                                className="px-3 py-2 border border-[#d9d5cf] rounded-lg text-[12px] font-medium text-[#1a1a1a] hover:bg-white transition-colors whitespace-nowrap disabled:opacity-50"
-                              >
-                                {requestingMic ? "Enabling..." : "Enable microphone"}
                               </button>
                             )}
                             {getClientEmail(activeSlot) && (
