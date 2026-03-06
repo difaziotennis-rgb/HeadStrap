@@ -18,7 +18,7 @@ export const rtcCoaches = [
     name: "Derek DiFazio",
     role: "Head Pro",
     rate: "$160 / hour",
-    bio: "Certified teaching pro, active tournament competitor, and movement-focused coach blending technical development with match-play strategy and sustainable body care.",
+    bio: "Certified teaching pro, active tournament competitor currently ranked #4 in New York in Men's 35's, and movement-focused coach blending technical development, match-play strategy, and junior development.",
   },
   {
     name: "Jay Behrke",
