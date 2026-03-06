@@ -1883,12 +1883,12 @@ export default function RTCAdminPage() {
         </div>
 
         {activeWorkspace === "overview" && (
-          <div id="performance-overview" className="mt-5 rounded-xl border border-[#ece8e2] p-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Performance</p>
-                <p className="text-[12px] text-[#6b665e]">Choose monthly, seasonal, or yearly view.</p>
-              </div>
+          <details id="performance-overview" className="mt-5 rounded-xl border border-[#ece8e2] p-4">
+            <summary className="cursor-pointer text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">
+              Performance
+            </summary>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-[12px] text-[#6b665e]">Choose monthly, seasonal, or yearly view.</p>
               <select
                 value={performanceView}
                 onChange={(e) => setPerformanceView(e.target.value as "monthly" | "seasonal" | "yearly")}
@@ -2004,7 +2004,7 @@ export default function RTCAdminPage() {
                 </table>
               </div>
             )}
-          </div>
+          </details>
         )}
 
         {activeWorkspace === "operations" && (
