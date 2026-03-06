@@ -774,6 +774,15 @@ export default function RTCAdminPage() {
     () => eventMonitor.filter((item) => selectedEvent === "All Events" || item.title === selectedEvent),
     [eventMonitor, selectedEvent]
   );
+  const programsSummary = useMemo(
+    () => ({
+      clinics: clinicMonitor.length,
+      clinicSignups: clinicMonitor.reduce((sum, item) => sum + item.signups, 0),
+      events: eventMonitor.length,
+      eventGuests: eventMonitor.reduce((sum, item) => sum + item.guests, 0),
+    }),
+    [clinicMonitor, eventMonitor]
+  );
 
   const payoutSummary = useMemo(() => {
     const byPro = new Map<string, { total: number; count: number }>();
@@ -881,6 +890,26 @@ export default function RTCAdminPage() {
       };
     });
   }, [mergedData.payouts, mergedData.proProfiles, selectedTaxYear]);
+  const membersSummary = useMemo(
+    () => ({
+      totalMembers: memberDirectory.length,
+      totalBilled: memberDirectory.reduce((sum, row) => sum + row.totalSpend, 0),
+      outstanding: memberDirectory.reduce((sum, row) => sum + row.outstanding, 0),
+      statementReady: statementSendable.length,
+    }),
+    [memberDirectory, statementSendable.length]
+  );
+  const financeSummary = useMemo(
+    () => ({
+      proCount: proCompliance.length,
+      w9Missing: proCompliance.filter((p) => !p.w9OnFile).length,
+      yearlyPayouts: mergedData.payouts
+        .filter((p) => p.taxYear === selectedTaxYear)
+        .reduce((sum, p) => sum + p.amount, 0),
+      likely1099: proCompliance.filter((p) => p.needs1099).length,
+    }),
+    [mergedData.payouts, proCompliance, selectedTaxYear]
+  );
 
   function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -1462,22 +1491,43 @@ export default function RTCAdminPage() {
 
         {activeWorkspace === "programs" && (
           <div className="mt-4 grid gap-4 xl:grid-cols-2">
-          <section id="clinics-monitor" className="rounded-xl border border-[#ece8e2] p-4">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Clinics Monitor</p>
-              <select
-                value={selectedClinic}
-                onChange={(e) => setSelectedClinic(e.target.value)}
-                className="rounded-lg border border-[#e8e5df] px-2 py-1 text-[12px]"
-              >
-                {clinicOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
+            <div className="xl:col-span-2 grid gap-3 sm:grid-cols-4">
+              <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3">
+                <p className="text-[10px] uppercase tracking-[0.1em] text-[#8a8477]">Clinics</p>
+                <p className="mt-1 text-[20px] font-semibold">{programsSummary.clinics}</p>
+              </div>
+              <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3">
+                <p className="text-[10px] uppercase tracking-[0.1em] text-[#8a8477]">Clinic Signups</p>
+                <p className="mt-1 text-[20px] font-semibold">{programsSummary.clinicSignups}</p>
+              </div>
+              <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3">
+                <p className="text-[10px] uppercase tracking-[0.1em] text-[#8a8477]">Events</p>
+                <p className="mt-1 text-[20px] font-semibold">{programsSummary.events}</p>
+              </div>
+              <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3">
+                <p className="text-[10px] uppercase tracking-[0.1em] text-[#8a8477]">Event Guests</p>
+                <p className="mt-1 text-[20px] font-semibold">{programsSummary.eventGuests}</p>
+              </div>
             </div>
-            <div className="mt-3 space-y-2">
+
+            <details id="clinics-monitor" open className="rounded-xl border border-[#ece8e2] p-4">
+              <summary className="cursor-pointer text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">
+                Clinics Monitor
+              </summary>
+              <div className="mt-3 flex items-center justify-end">
+                <select
+                  value={selectedClinic}
+                  onChange={(e) => setSelectedClinic(e.target.value)}
+                  className="rounded-lg border border-[#e8e5df] px-2 py-1 text-[12px]"
+                >
+                  {clinicOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="mt-3 space-y-2">
               {visibleClinics.map((clinic) => (
                 <div key={clinic.name} className="rounded-lg border border-[#ece8e2] bg-[#faf9f7] p-3 text-[12px]">
                   <p className="font-medium">{clinic.name}</p>
@@ -1488,25 +1538,27 @@ export default function RTCAdminPage() {
                 </div>
               ))}
               {visibleClinics.length === 0 && <p className="text-[12px] text-[#8a8477]">No clinic activity yet.</p>}
-            </div>
-          </section>
+              </div>
+            </details>
 
-          <section id="events-monitor" className="rounded-xl border border-[#ece8e2] p-4">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Events Monitor</p>
-              <select
-                value={selectedEvent}
-                onChange={(e) => setSelectedEvent(e.target.value)}
-                className="rounded-lg border border-[#e8e5df] px-2 py-1 text-[12px]"
-              >
-                {eventOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="mt-3 space-y-2">
+            <details id="events-monitor" className="rounded-xl border border-[#ece8e2] p-4">
+              <summary className="cursor-pointer text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">
+                Events Monitor
+              </summary>
+              <div className="mt-3 flex items-center justify-end">
+                <select
+                  value={selectedEvent}
+                  onChange={(e) => setSelectedEvent(e.target.value)}
+                  className="rounded-lg border border-[#e8e5df] px-2 py-1 text-[12px]"
+                >
+                  {eventOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="mt-3 space-y-2">
               {visibleEvents.map((event) => (
                 <div key={event.title} className="rounded-lg border border-[#ece8e2] bg-[#faf9f7] p-3 text-[12px]">
                   <p className="font-medium">{event.title}</p>
@@ -1517,14 +1569,34 @@ export default function RTCAdminPage() {
                 </div>
               ))}
               {visibleEvents.length === 0 && <p className="text-[12px] text-[#8a8477]">No event activity yet.</p>}
-            </div>
-          </section>
+              </div>
+            </details>
           </div>
         )}
 
         {activeWorkspace === "members" && (
-          <section id="members-hub" className="mt-4 rounded-xl border border-[#ece8e2] p-4">
-          <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Membership Area</p>
+          <div className="mt-4 grid gap-4">
+          <div className="grid gap-3 sm:grid-cols-4">
+            <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3">
+              <p className="text-[10px] uppercase tracking-[0.1em] text-[#8a8477]">Members</p>
+              <p className="mt-1 text-[20px] font-semibold">{membersSummary.totalMembers}</p>
+            </div>
+            <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3">
+              <p className="text-[10px] uppercase tracking-[0.1em] text-[#8a8477]">Total Billed</p>
+              <p className="mt-1 text-[20px] font-semibold">{formatCurrency(membersSummary.totalBilled)}</p>
+            </div>
+            <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3">
+              <p className="text-[10px] uppercase tracking-[0.1em] text-[#8a8477]">Outstanding</p>
+              <p className="mt-1 text-[20px] font-semibold">{formatCurrency(membersSummary.outstanding)}</p>
+            </div>
+            <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3">
+              <p className="text-[10px] uppercase tracking-[0.1em] text-[#8a8477]">Statements Ready</p>
+              <p className="mt-1 text-[20px] font-semibold">{membersSummary.statementReady}</p>
+            </div>
+          </div>
+
+          <details id="members-hub" open className="rounded-xl border border-[#ece8e2] p-4">
+          <summary className="cursor-pointer text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Membership Area</summary>
           <div className="mt-3 grid gap-4 xl:grid-cols-[1fr_1.2fr]">
             <div className="rounded-lg border border-[#ece8e2] p-3">
               <p className="text-[11px] uppercase tracking-[0.1em] text-[#8a8477]">All Members</p>
@@ -1591,12 +1663,33 @@ export default function RTCAdminPage() {
               )}
             </div>
           </div>
-          </section>
+          </details>
+          </div>
         )}
 
         {activeWorkspace === "finance" && (
-          <section id="pro-registry" className="mt-4 rounded-xl border border-[#ece8e2] p-4">
-          <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Pro Profile Registry (1099 Readiness)</p>
+          <div className="mt-4 grid gap-4">
+          <div className="grid gap-3 sm:grid-cols-4">
+            <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3">
+              <p className="text-[10px] uppercase tracking-[0.1em] text-[#8a8477]">Pros</p>
+              <p className="mt-1 text-[20px] font-semibold">{financeSummary.proCount}</p>
+            </div>
+            <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3">
+              <p className="text-[10px] uppercase tracking-[0.1em] text-[#8a8477]">W-9 Missing</p>
+              <p className="mt-1 text-[20px] font-semibold">{financeSummary.w9Missing}</p>
+            </div>
+            <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3">
+              <p className="text-[10px] uppercase tracking-[0.1em] text-[#8a8477]">{selectedTaxYear} Payouts</p>
+              <p className="mt-1 text-[20px] font-semibold">{formatCurrency(financeSummary.yearlyPayouts)}</p>
+            </div>
+            <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3">
+              <p className="text-[10px] uppercase tracking-[0.1em] text-[#8a8477]">Likely 1099</p>
+              <p className="mt-1 text-[20px] font-semibold">{financeSummary.likely1099}</p>
+            </div>
+          </div>
+
+          <details id="pro-registry" open className="rounded-xl border border-[#ece8e2] p-4">
+          <summary className="cursor-pointer text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Pro Profile Registry (1099 Readiness)</summary>
           <div className="mt-3 grid gap-4 xl:grid-cols-[1fr_1.1fr]">
             <form onSubmit={saveProProfile} className="grid gap-2 rounded-lg border border-[#ece8e2] bg-[#faf9f7] p-3">
               <input
@@ -1679,13 +1772,15 @@ export default function RTCAdminPage() {
               </div>
             </div>
           </div>
-          </section>
+          </details>
+          </div>
         )}
 
         {activeWorkspace === "members" && (
-          <section id="quarterly-statements" className="mt-4 rounded-xl border border-[#ece8e2] p-4">
+          <details id="quarterly-statements" className="mt-4 rounded-xl border border-[#ece8e2] p-4">
+          <summary className="cursor-pointer text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Quarterly Member Statements</summary>
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Quarterly Member Statements</p>
+            <div />
             <div className="flex items-center gap-2">
               <select
                 value={selectedStatementQuarter}
@@ -1747,13 +1842,14 @@ export default function RTCAdminPage() {
               </div>
             </div>
           </div>
-          </section>
+          </details>
         )}
 
         {activeWorkspace === "finance" && (
-          <div id="payouts-1099" className="mt-4 rounded-xl border border-[#ece8e2] p-4">
+          <details id="payouts-1099" className="mt-4 rounded-xl border border-[#ece8e2] p-4">
+          <summary className="cursor-pointer text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Pro Payout + 1099 Tracking</summary>
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Pro Payout + 1099 Tracking</p>
+            <div />
             <div className="flex items-center gap-2">
               <input
                 type="number"
@@ -1811,7 +1907,7 @@ export default function RTCAdminPage() {
               </div>
             </div>
           </div>
-          </div>
+          </details>
         )}
 
         {activeWorkspace === "overview" && (
