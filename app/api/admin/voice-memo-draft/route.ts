@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 
 type DraftRequest = {
   clientName?: string;
@@ -9,61 +8,44 @@ type DraftRequest = {
   transcript?: string;
 };
 
+type Section = {
+  title: string;
+  points: string[];
+};
+
 function normalizeLine(value: string): string {
   return value.replace(/\s+/g, " ").trim();
 }
 
-function sentenceChunks(text: string): string[] {
-  const normalized = normalizeLine(text);
-  if (!normalized) return [];
-  return normalized
-    .split(/[.!?]+/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
-
-function cleanSentence(value: string): string {
-  return value
-    .replace(/\b(um+|uh+|like|you know|sort of|kind of|basically)\b/gi, "")
+function cleanText(value: string): string {
+  return normalizeLine(value)
+    .replace(/\b(um+|uh+|you know|sort of|kind of|basically)\b/gi, "")
     .replace(/\s+/g, " ")
     .trim();
 }
 
-function splitSentences(text: string): string[] {
-  return text
-    .replace(/\s+/g, " ")
-    .trim()
-    .split(/(?<=[.!?])\s+/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
+function splitIntoClauses(text: string): string[] {
+  const normalized = cleanText(text)
+    .replace(/\s+and\s+then\s+/gi, ". ")
+    .replace(/,\s+and\s+if\s+/gi, ". If ")
+    .replace(/,\s+and\s+/gi, ". ")
+    .replace(/\s+also\s+/gi, ". ")
+    .replace(/\s+plus\s+/gi, ". ")
+    .replace(/\s+then\s+/gi, ". ");
 
-function normalizePoint(text: string): string {
-  const cleaned = cleanSentence(text)
-    .replace(/^[-*]\s*/, "")
-    .replace(/^okay\s+so\s+/i, "")
-    .replace(/^so\s+/i, "")
-    .replace(/^today\s+we\s+spent\s+a\s+lot\s+of\s+time\s+on\s+/i, "We focused on ")
-    .replace(/^for\s+this\s+week\s+i\s+want\s+you\s+doing\s+/i, "Homework: do ")
-    .replace(/^let'?s\s+tentatively\s+do\s+next\s+lesson\s+/i, "Next lesson: ")
-    .replace(/^we\s+also\s+cleaned\s+up\s+/i, "We improved ")
-    .replace(/,\s*$/, "");
-  if (!cleaned) return "";
-  const firstTwoSentences = splitSentences(cleaned).slice(0, 2).join(" ");
-  const words = firstTwoSentences.split(/\s+/).filter(Boolean);
-  const cappedWords = words.slice(0, 24).join(" ");
-  const punctuated = /[.!?]$/.test(cappedWords) ? cappedWords : `${cappedWords}.`;
-  return punctuated.charAt(0).toUpperCase() + punctuated.slice(1);
-}
+  const parts = normalized
+    .split(/(?:[.!?;]|,\s+(?=(?:for|next|we|you|on|in|at|try|do|schedule|if)\b))/i)
+    .map((s) => cleanText(s))
+    .filter((s) => s.length >= 12)
+    .filter((s) => s.split(/\s+/).length >= 5);
 
-function dedupePoints(points: string[]): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
-  for (const p of points) {
-    const key = p.toLowerCase().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ").trim();
+  for (const part of parts) {
+    const key = part.toLowerCase().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ").trim();
     if (!key || seen.has(key)) continue;
     seen.add(key);
-    out.push(p);
+    out.push(part);
   }
   return out;
 }
@@ -73,68 +55,127 @@ function includesAny(text: string, terms: string[]): boolean {
   return terms.some((term) => lower.includes(term));
 }
 
-function splitIntoClauses(text: string): string[] {
-  const base = normalizeLine(text)
-    .replace(/\s+and\s+then\s+/gi, ". ")
-    .replace(/\s+and\s+also\s+/gi, ". ")
-    .replace(/\s+also\s+/gi, ". ")
-    .replace(/\s+plus\s+/gi, ". ")
-    .replace(/\s+then\s+/gi, ". ");
+function normalizePoint(clause: string): string {
+  const cleaned = cleanText(clause)
+    .replace(/^okay\s+so\s+/i, "")
+    .replace(/^so\s+/i, "")
+    .replace(/^today\s+we\s+spent\s+a\s+lot\s+of\s+time\s+on\s+/i, "We focused on ")
+    .replace(/^we\s+worked\s+on\s+/i, "We focused on ")
+    .replace(/^we\s+also\s+cleaned\s+up\s+/i, "We improved ")
+    .replace(/^for\s+this\s+week\s+i\s+want\s+you\s+doing\s+/i, "Homework: do ")
+    .replace(/^for\s+match\s+play,\s*/i, "")
+    .replace(/^let'?s\s+tentatively\s+do\s+next\s+lesson\s+/i, "Next lesson: ")
+    .replace(/,\s*$/, "");
 
-  const parts = base
-    .split(/(?:[.!?;]|,\s+(?=(?:for|next|we|you|on|in|at|try|do|schedule)\b))/i)
-    .map((s) => cleanSentence(s))
-    .filter((s) => s.length >= 12)
-    .filter((s) => s.split(/\s+/).length >= 5)
-    .filter((s) => !/^for\s+match\s+play$/i.test(s));
+  if (!cleaned) return "";
 
-  return dedupePoints(parts);
-}
-
-function extractJsonObject(raw: string): { subject?: string; body?: string } | null {
-  const fenced = raw.match(/```json\s*([\s\S]*?)```/i);
-  const candidate = fenced?.[1] || raw;
-  const start = candidate.indexOf("{");
-  const end = candidate.lastIndexOf("}");
-  if (start < 0 || end < start) return null;
-  const jsonString = candidate.slice(start, end + 1);
-  try {
-    return JSON.parse(jsonString) as { subject?: string; body?: string };
-  } catch {
-    return null;
+  const words = cleaned.split(/\s+/).filter(Boolean);
+  let capped = words.join(" ");
+  if (words.length > 24) {
+    const first24 = words.slice(0, 24).join(" ");
+    const lastComma = first24.lastIndexOf(",");
+    capped = lastComma > 20 ? first24.slice(0, lastComma) : first24;
   }
+  const punctuated = /[.!?]$/.test(capped) ? capped : `${capped}.`;
+  return punctuated.charAt(0).toUpperCase() + punctuated.slice(1);
 }
 
-type StructuredDraft = {
-  subject?: string;
-  sections?: Array<{ title?: string; points?: string[] }>;
-};
+function pushPoint(target: string[], point: string, max: number): void {
+  if (!point || target.length >= max) return;
+  const key = point.toLowerCase().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ").trim();
+  const exists = target.some(
+    (p) => p.toLowerCase().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ").trim() === key
+  );
+  if (!exists) target.push(point);
+}
 
-function extractStructured(raw: string): StructuredDraft | null {
-  const fenced = raw.match(/```json\s*([\s\S]*?)```/i);
-  const candidate = fenced?.[1] || raw;
-  const start = candidate.indexOf("{");
-  const end = candidate.lastIndexOf("}");
-  if (start < 0 || end < start) return null;
-  const jsonString = candidate.slice(start, end + 1);
-  try {
-    return JSON.parse(jsonString) as StructuredDraft;
-  } catch {
-    return null;
+function distillTranscript(transcript: string): Section[] {
+  const clauses = splitIntoClauses(transcript);
+
+  const focusTerms = [
+    "forehand","backhand","serve","return","volley","footwork","timing","consistency","depth","contact","toss","rally","approach","slice","topspin","pattern",
+  ];
+  const healthTerms = [
+    "nutrition","diet","hydrate","hydration","sleep","recovery","workout","mobility","stretch","yoga","injury","pain","tight","warm up","cool down",
+  ];
+  const matchTerms = [
+    "match","tournament","point play","practice set","ladder","tie break","first-ball","game plan","compete",
+  ];
+  const nextTerms = [
+    "next lesson","next week","tentative","am","pm",
+  ];
+  const personalTerms = [
+    "great job","awesome","loved your attitude","proud","keep it up","well done","good effort",
+  ];
+  const homeworkTerms = ["homework", "for this week", "do ", "practice", "drill", "reps", "every day"];
+
+  const focus: string[] = [];
+  const homework: string[] = [];
+  const health: string[] = [];
+  const match: string[] = [];
+  const next: string[] = [];
+  const personal: string[] = [];
+  const catchAll: string[] = [];
+
+  for (const clause of clauses) {
+    const point = normalizePoint(clause);
+    if (!point) continue;
+
+    if (includesAny(clause, nextTerms)) {
+      pushPoint(next, point, 2);
+      continue;
+    }
+    if (includesAny(clause, personalTerms)) {
+      pushPoint(personal, point, 2);
+      continue;
+    }
+    if (includesAny(clause, matchTerms)) {
+      pushPoint(match, point, 3);
+      continue;
+    }
+    if (includesAny(clause, healthTerms)) {
+      pushPoint(health, point, 3);
+      continue;
+    }
+    if (includesAny(clause, homeworkTerms)) {
+      pushPoint(homework, point, 3);
+      continue;
+    }
+    if (includesAny(clause, focusTerms)) {
+      pushPoint(focus, point, 4);
+      continue;
+    }
+    pushPoint(catchAll, point, 4);
   }
+
+  const sections: Section[] = [];
+  if (focus.length) sections.push({ title: "Key Areas of Focus", points: focus });
+  if (homework.length) sections.push({ title: "Training Plan", points: homework });
+  if (health.length) sections.push({ title: "Health / Recovery", points: health });
+  if (match.length) sections.push({ title: "Matchplay Recommendations", points: match });
+  if (next.length) sections.push({ title: "Next Lesson", points: next });
+  if (personal.length) sections.push({ title: "Quick Note", points: personal });
+
+  if (sections.length === 0) {
+    sections.push({ title: "Key Points", points: catchAll.slice(0, 4) });
+  } else if (catchAll.length > 0 && sections.length < 3) {
+    sections.push({ title: "Key Points", points: catchAll.slice(0, 2) });
+  }
+
+  return sections;
 }
 
-function formatBodyFromSections(input: {
-  clientName: string;
-  lessonDate: string;
-  lessonTime: string;
-  sections: Array<{ title: string; points: string[] }>;
-}): string {
-  const greeting = input.clientName === "your lesson" ? "Hi," : `Hi ${input.clientName},`;
-  const contextLine = [input.lessonDate, input.lessonTime].filter(Boolean).join(" at ");
-  const lines: string[] = [greeting, "", `Great work today${contextLine ? ` (${contextLine})` : ""}.`, ""];
+function formatEmailBody(clientName: string, lessonDate: string, lessonTime: string, sections: Section[]): string {
+  const greeting = clientName === "your lesson" ? "Hi," : `Hi ${clientName},`;
+  const contextLine = [lessonDate, lessonTime].filter(Boolean).join(" at ");
+  const lines: string[] = [
+    greeting,
+    "",
+    `Great work today${contextLine ? ` (${contextLine})` : ""}.`,
+    "",
+  ];
 
-  for (const section of input.sections) {
+  for (const section of sections) {
     if (!section.points.length) continue;
     lines.push(section.title);
     for (const point of section.points) {
@@ -146,175 +187,6 @@ function formatBodyFromSections(input: {
   lines.push("See you on court,");
   lines.push("Derek");
   return lines.join("\n");
-}
-
-function looksGeneric(body: string): boolean {
-  const genericSnippets = [
-    "continue the same focus points",
-    "quality reps",
-    "add extra match",
-    "keep nutrition and recovery habits consistent",
-    "we can confirm the next session timing",
-    "technique and consistency work from today's session",
-    "good effort today",
-    "keep up the good work",
-    "as discussed",
-  ];
-  const lower = body.toLowerCase();
-  return genericSnippets.some((s) => lower.includes(s));
-}
-
-function buildExtractiveDraft(input: {
-  clientName: string;
-  lessonDate: string;
-  lessonTime: string;
-  transcript: string;
-}): { subject: string; body: string } {
-  const chunks = splitIntoClauses(input.transcript);
-
-  const subjectDate = input.lessonDate ? ` - ${input.lessonDate}` : "";
-  const subject = `Lesson Recap for ${input.clientName}${subjectDate}`;
-
-  const focusTerms = [
-    "forehand","backhand","serve","return","volley","footwork","timing","consistency","depth","contact","toss","rally","approach","slice","topspin",
-  ];
-  const healthTerms = [
-    "nutrition","diet","hydrate","hydration","sleep","recovery","workout","mobility","stretch","yoga","injury","pain","tight","warm up","cool down",
-  ];
-  const matchTerms = [
-    "match","set","tournament","point play","practice set","compete","ladder","tie break","first-ball","game plan",
-  ];
-  const nextTerms = [
-    "next lesson","next week","monday","tuesday","wednesday","thursday","friday","saturday","sunday","am","pm","schedule","tentative",
-  ];
-  const personalTerms = [
-    "great job","awesome","loved your attitude","proud","keep it up","well done","message",
-  ];
-
-  const sections: Array<{ title: string; points: string[] }> = [];
-  const used = new Set<string>();
-  const takePoints = (terms: string[], limit: number): string[] => {
-    const points: string[] = [];
-    for (const c of chunks) {
-      if (points.length >= limit) break;
-      if (used.has(c)) continue;
-      if (!includesAny(c, terms)) continue;
-      const point = normalizePoint(c);
-      if (!point) continue;
-      if (point.split(/\s+/).length < 5) continue;
-      points.push(point);
-      used.add(c);
-    }
-    return points;
-  };
-
-  const focus = takePoints(focusTerms, 4);
-  if (focus.length > 0) sections.push({ title: "Key Areas of Focus", points: focus });
-  const health = takePoints(healthTerms, 3);
-  if (health.length > 0) sections.push({ title: "Health / Training Notes", points: health });
-  const match = takePoints(matchTerms, 3);
-  if (match.length > 0) sections.push({ title: "Matchplay Recommendations", points: match });
-  const next = takePoints(nextTerms, 2);
-  if (next.length > 0) sections.push({ title: "Next Lesson", points: next });
-  const personal = takePoints(personalTerms, 2);
-  if (personal.length > 0) sections.push({ title: "Quick Note", points: personal });
-
-  if (sections.length === 0) {
-    sections.push({
-      title: "Key Points",
-      points: dedupePoints(chunks.map((c) => normalizePoint(c)).filter(Boolean)).slice(0, 4),
-    });
-  }
-
-  const body = formatBodyFromSections({
-    clientName: input.clientName,
-    lessonDate: input.lessonDate,
-    lessonTime: input.lessonTime,
-    sections,
-  });
-
-  return { subject, body };
-}
-
-async function generateWithGemini(input: {
-  clientName: string;
-  lessonDate: string;
-  lessonTime: string;
-  transcript: string;
-}): Promise<{ subject: string; body: string } | null> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return null;
-
-  const modelName = process.env.GEMINI_PROGRESS_EMAIL_MODEL || "gemini-2.5-pro";
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: modelName });
-
-  const prompt = `
-You are an elite tennis coaching assistant. Turn a coach's rambling voice note into a short, client-ready recap email.
-
-Rules:
-- Distill, do not transcribe.
-- Never mirror the full transcript chronology.
-- Keep only high-signal takeaways the client should remember.
-- 3-6 points total, max two short sentences per point.
-- Every point must come from transcript facts.
-- No generic filler advice.
-- Omit categories not mentioned.
-- Allowed categories: Summary, Key Areas of Focus, Health / Training Notes, Matchplay Recommendations, Next Lesson, Quick Note.
-
-Return STRICT JSON ONLY in this format:
-{
-  "subject": "string",
-  "sections": [
-    { "title": "Summary", "points": ["point 1", "point 2"] }
-  ]
-}
-
-Context:
-- Student: ${input.clientName || "Client"}
-- Lesson date: ${input.lessonDate || "N/A"}
-- Lesson time: ${input.lessonTime || "N/A"}
-
-Transcript:
-${input.transcript}
-`.trim();
-
-  try {
-    const response = await model.generateContent(prompt);
-    const text = response.response.text();
-    const structured = extractStructured(text);
-    if (structured?.subject && structured.sections && structured.sections.length > 0) {
-      const sections = structured.sections
-        .map((section) => ({
-          title: (section.title || "").trim(),
-          points: dedupePoints(
-            (section.points || [])
-              .map((p) => normalizePoint(p))
-              .filter(Boolean)
-          ).slice(0, 4),
-        }))
-        .filter((section) => section.title && section.points.length > 0)
-        .slice(0, 5);
-
-      if (sections.length > 0) {
-        const body = formatBodyFromSections({
-          clientName: input.clientName,
-          lessonDate: input.lessonDate,
-          lessonTime: input.lessonTime,
-          sections,
-        });
-        if (looksGeneric(body)) return null;
-        return { subject: structured.subject.trim(), body };
-      }
-    }
-
-    const parsed = extractJsonObject(text);
-    if (!parsed?.subject || !parsed?.body) return null;
-    if (looksGeneric(parsed.body)) return null;
-    return { subject: parsed.subject.trim(), body: parsed.body.trim() };
-  } catch {
-    return null;
-  }
 }
 
 export async function POST(req: Request) {
@@ -330,39 +202,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Transcript is required." }, { status: 400 });
     }
 
-    // Preferred path: strongest available model in backend config.
-    // Default is Gemini 2.5 Pro unless GEMINI_PROGRESS_EMAIL_MODEL is set.
-    const modelDraft = await generateWithGemini({
-      clientName,
-      lessonDate,
-      lessonTime,
-      transcript,
-    });
-    if (modelDraft) {
-      return NextResponse.json({
-        subject: modelDraft.subject,
-        to: clientEmail || "",
-        body: modelDraft.body,
-        meta: {
-          source: "gemini",
-          model: process.env.GEMINI_PROGRESS_EMAIL_MODEL || "gemini-2.5-pro",
-        },
-      });
-    }
-
-    const extractive = buildExtractiveDraft({
-      clientName,
-      lessonDate,
-      lessonTime,
-      transcript,
-    });
+    const subjectDate = lessonDate ? ` - ${lessonDate}` : "";
+    const subject = `Lesson Recap for ${clientName}${subjectDate}`;
+    const sections = distillTranscript(transcript);
+    const bodyText = formatEmailBody(clientName, lessonDate, lessonTime, sections);
 
     return NextResponse.json({
-      subject: extractive.subject,
+      subject,
       to: clientEmail || "",
-      body: extractive.body,
+      body: bodyText,
       meta: {
-        source: "extractive-transcript-draft",
+        source: "deterministic-distiller-v1",
       },
     });
   } catch (error) {
