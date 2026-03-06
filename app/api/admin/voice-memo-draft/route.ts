@@ -33,9 +33,16 @@ function pickClosing(seed: string): { line: string; emoji: string } {
   return options[hash % options.length];
 }
 
+function firstNameOnly(fullName: string): string {
+  const trimmed = fullName.trim();
+  if (!trimmed) return "there";
+  return trimmed.split(/\s+/)[0];
+}
+
 function buildMessage(studentName: string, parsed: ParsedLessonData, seed: string): string {
   const closing = pickClosing(seed);
-  let message = `Hi ${studentName}! 👋\n\n`;
+  const firstName = firstNameOnly(studentName);
+  let message = `Hi ${firstName}! 👋\n\n`;
   message += `Here's a quick update from today's lesson:\n\n`;
 
   if (parsed.key_areas_focused.length > 0) {
