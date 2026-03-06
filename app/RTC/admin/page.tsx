@@ -3,9 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { rtcClinicCourtBlocks, rtcClinics, rtcCoaches } from "../rtc-data";
 
-const ADMIN_AUTH_KEY = "rtc_admin_auth_v1";
-const ADMIN_PASSWORD = "admin";
-
 const COURT_KEY = "rtc_court_bookings_v1";
 const LESSON_KEY = "rtc_lesson_requests_v1";
 const CLINIC_KEY = "rtc_clinic_bookings_v1";
@@ -409,9 +406,6 @@ function createMockData() {
 }
 
 export default function RTCAdminPage() {
-  const [authed, setAuthed] = useState(false);
-  const [password, setPassword] = useState("");
-  const [loginMsg, setLoginMsg] = useState<string | null>(null);
   const [adminMsg, setAdminMsg] = useState<string | null>(null);
 
   const [courtBookings, setCourtBookings] = useState<CourtBooking[]>([]);
@@ -507,7 +501,6 @@ export default function RTCAdminPage() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    setAuthed(localStorage.getItem(ADMIN_AUTH_KEY) === "true");
     loadLiveData();
   }, [loadLiveData]);
 
@@ -523,7 +516,7 @@ export default function RTCAdminPage() {
   }, [selectedLessonCoach]);
 
   useEffect(() => {
-    if (!authed || typeof window === "undefined") return;
+    if (typeof window === "undefined") return;
     const liveKeys = new Set([
       COURT_KEY,
       LESSON_KEY,
@@ -540,13 +533,13 @@ export default function RTCAdminPage() {
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
-  }, [authed, loadLiveData]);
+  }, [loadLiveData]);
 
   useEffect(() => {
-    if (!authed || !autoRefreshEnabled || typeof window === "undefined") return;
+    if (!autoRefreshEnabled || typeof window === "undefined") return;
     const timer = window.setInterval(() => loadLiveData(), 15000);
     return () => window.clearInterval(timer);
-  }, [authed, autoRefreshEnabled, loadLiveData]);
+  }, [autoRefreshEnabled, loadLiveData]);
 
   const mergedData = useMemo(() => {
     const mock = createMockData();
@@ -1478,23 +1471,6 @@ export default function RTCAdminPage() {
     setQuickJumpQuery("");
   }
 
-  function handleLogin(e: React.FormEvent) {
-    e.preventDefault();
-    if (password === ADMIN_PASSWORD) {
-      if (typeof window !== "undefined") localStorage.setItem(ADMIN_AUTH_KEY, "true");
-      setAuthed(true);
-      setLoginMsg(null);
-      setPassword("");
-      return;
-    }
-    setLoginMsg("Incorrect password.");
-  }
-
-  function signOut() {
-    if (typeof window !== "undefined") localStorage.removeItem(ADMIN_AUTH_KEY);
-    setAuthed(false);
-  }
-
   function createCourtBlock(e: React.FormEvent) {
     e.preventDefault();
     const block: AdminCourtBlock = {
@@ -1737,7 +1713,6 @@ export default function RTCAdminPage() {
   }
 
   useEffect(() => {
-    if (!authed) return;
     if (typeof window === "undefined") return;
     const prevKey = previousQuarterKey();
     if (selectedStatementQuarter !== prevKey) return;
@@ -1745,37 +1720,7 @@ export default function RTCAdminPage() {
     if (!statementSendable.length) return;
     void sendQuarterlyStatements("auto");
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authed, selectedStatementQuarter, quarterlyEmailLog, statementSendable.length]);
-
-  if (!authed) {
-    return (
-      <main className="mx-auto w-full max-w-md px-4 py-12 sm:px-6">
-        <div className="rounded-2xl border border-[#e8e5df] bg-white p-6 shadow-[0_12px_28px_rgba(26,26,26,0.06)]">
-          <p className="text-[11px] uppercase tracking-[0.14em] text-[#8a8477]">RTC Admin</p>
-          <h2 className="mt-1 text-2xl font-semibold tracking-tight">Manager Login</h2>
-          <p className="mt-2 text-[13px] text-[#6b665e]">
-            Enter your admin password to open the club operations dashboard.
-          </p>
-          <form onSubmit={handleLogin} className="mt-4 grid gap-2">
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
-            />
-            <button
-              type="submit"
-              className="rounded-lg bg-[#1a1a1a] px-4 py-2 text-[12px] font-medium text-white hover:bg-[#2c2c2c]"
-            >
-              Open Dashboard
-            </button>
-            {loginMsg && <p className="text-[12px] text-[#7f1d1d]">{loginMsg}</p>}
-          </form>
-        </div>
-      </main>
-    );
-  }
+  }, [selectedStatementQuarter, quarterlyEmailLog, statementSendable.length]);
 
   return (
     <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-10">
@@ -1795,13 +1740,6 @@ export default function RTCAdminPage() {
               className="rounded-lg border border-[#d9d5cf] px-3 py-2 text-[12px] font-medium hover:bg-[#faf9f7]"
             >
               {useMockData ? "Mock Data: On" : "Mock Data: Off"}
-            </button>
-            <button
-              type="button"
-              onClick={signOut}
-              className="rounded-lg border border-[#d9d5cf] px-3 py-2 text-[12px] font-medium hover:bg-[#faf9f7]"
-            >
-              Sign out
             </button>
           </div>
         </div>
