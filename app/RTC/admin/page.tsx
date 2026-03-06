@@ -527,6 +527,7 @@ export default function RTCAdminPage() {
   const [selectedLessonYear, setSelectedLessonYear] = useState(new Date().getFullYear());
   const [selectedLessonDetailCoach, setSelectedLessonDetailCoach] = useState<string | null>(null);
   const [selectedMemberNumber, setSelectedMemberNumber] = useState<string | null>(null);
+  const [memberSearchQuery, setMemberSearchQuery] = useState("");
   const [selectedMemberDetailTab, setSelectedMemberDetailTab] = useState<
     "courts" | "clinics" | "events" | "lessons"
   >("courts");
@@ -1183,6 +1184,16 @@ export default function RTCAdminPage() {
     if (!selectedMemberNumber) return memberDirectory[0] || null;
     return memberDirectory.find((m) => m.memberNumber === selectedMemberNumber) || memberDirectory[0] || null;
   }, [memberDirectory, selectedMemberNumber]);
+  const filteredMemberDirectory = useMemo(() => {
+    const query = memberSearchQuery.trim().toLowerCase();
+    if (!query) return memberDirectory;
+    return memberDirectory.filter(
+      (member) =>
+        member.name.toLowerCase().includes(query) ||
+        member.memberNumber.toLowerCase().includes(query) ||
+        member.email.toLowerCase().includes(query)
+    );
+  }, [memberDirectory, memberSearchQuery]);
   const selectedMemberYearlyDetails = useMemo(() => {
     const memberNumber = selectedMember?.memberNumber;
     const currentYear = new Date().getFullYear();
@@ -2751,9 +2762,20 @@ export default function RTCAdminPage() {
           <summary className="cursor-pointer text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Membership Area</summary>
           <div className="mt-3 grid gap-4 xl:grid-cols-[1fr_1.2fr]">
             <div className="rounded-lg border border-[#ece8e2] p-3">
-              <p className="text-[11px] uppercase tracking-[0.1em] text-[#8a8477]">All Members</p>
-              <div className="mt-2 max-h-[45vh] space-y-2 overflow-y-auto pr-1 sm:max-h-[360px]">
-                {memberDirectory.map((member) => {
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-[11px] uppercase tracking-[0.1em] text-[#8a8477]">All Members</p>
+                <p className="text-[11px] text-[#8a8477]">
+                  Showing {filteredMemberDirectory.length} of {memberDirectory.length}
+                </p>
+              </div>
+              <input
+                value={memberSearchQuery}
+                onChange={(e) => setMemberSearchQuery(e.target.value)}
+                placeholder="Search by name, member #, or email"
+                className="mt-2 w-full rounded-lg border border-[#e8e5df] bg-white px-3 py-2 text-[12px]"
+              />
+              <div className="mt-2 max-h-[52vh] space-y-2 overflow-y-auto pr-1 sm:max-h-[420px]">
+                {filteredMemberDirectory.map((member) => {
                   const active = selectedMember?.memberNumber === member.memberNumber;
                   return (
                     <button
@@ -2778,7 +2800,11 @@ export default function RTCAdminPage() {
                     </button>
                   );
                 })}
-                {memberDirectory.length === 0 && <p className="text-[12px] text-[#8a8477]">No member records yet.</p>}
+                {filteredMemberDirectory.length === 0 && (
+                  <p className="text-[12px] text-[#8a8477]">
+                    {memberDirectory.length === 0 ? "No member records yet." : "No members match your search."}
+                  </p>
+                )}
               </div>
             </div>
 
