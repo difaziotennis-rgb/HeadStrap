@@ -22,16 +22,24 @@ function sentenceChunks(text: string): string[] {
     .filter(Boolean);
 }
 
-function toBullets(items: string[], max = 3): string[] {
-  return items
-    .filter((item) => item.length > 2)
-    .slice(0, max)
-    .map((item) => `- ${item}`);
+function cleanSentence(value: string): string {
+  return value
+    .replace(/\b(um+|uh+|like|you know|sort of|kind of|basically)\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
-function hasAny(text: string, terms: string[]): boolean {
-  const normalized = text.toLowerCase();
-  return terms.some((term) => normalized.includes(term));
+function sentenceToBullet(value: string): string {
+  const cleaned = cleanSentence(value);
+  const lower = cleaned.toLowerCase();
+  if (lower.startsWith("we ")) return `- ${cleaned}`;
+  if (lower.startsWith("i ")) return `- ${cleaned}`;
+  return `- ${cleaned.charAt(0).toUpperCase()}${cleaned.slice(1)}`;
+}
+
+function includesAny(text: string, terms: string[]): boolean {
+  const lower = text.toLowerCase();
+  return terms.some((term) => lower.includes(term));
 }
 
 function extractJsonObject(raw: string): { subject?: string; body?: string } | null {
@@ -46,6 +54,174 @@ function extractJsonObject(raw: string): { subject?: string; body?: string } | n
   } catch {
     return null;
   }
+}
+
+function looksGeneric(body: string): boolean {
+  const genericSnippets = [
+    "continue the same focus points",
+    "quality reps",
+    "add extra match",
+    "keep nutrition and recovery habits consistent",
+    "we can confirm the next session timing",
+    "technique and consistency work from today's session",
+  ];
+  const lower = body.toLowerCase();
+  return genericSnippets.some((s) => lower.includes(s));
+}
+
+function buildExtractiveDraft(input: {
+  clientName: string;
+  lessonDate: string;
+  lessonTime: string;
+  transcript: string;
+}): { subject: string; body: string } {
+  const chunks = sentenceChunks(input.transcript)
+    .map(cleanSentence)
+    .filter((s) => s.length >= 8);
+
+  const subjectDate = input.lessonDate ? ` - ${input.lessonDate}` : "";
+  const subject = `Lesson Recap for ${input.clientName}${subjectDate}`;
+  const greeting = input.clientName === "your lesson" ? "Hi," : `Hi ${input.clientName},`;
+  const contextLine = [input.lessonDate, input.lessonTime].filter(Boolean).join(" at ");
+
+  const used = new Set<string>();
+  const pick = (terms: string[], limit: number): string[] => {
+    const picks: string[] = [];
+    for (const sentence of chunks) {
+      if (picks.length >= limit) break;
+      if (used.has(sentence)) continue;
+      if (!includesAny(sentence, terms)) continue;
+      picks.push(sentenceToBullet(sentence));
+      used.add(sentence);
+    }
+    return picks;
+  };
+
+  const sections: Array<{ title: string; bullets: string[] }> = [];
+
+  const summary = chunks
+    .filter((s) => !used.has(s))
+    .slice(0, 3)
+    .map((s) => {
+      used.add(s);
+      return sentenceToBullet(s);
+    });
+  if (summary.length > 0) sections.push({ title: "Summary", bullets: summary });
+
+  const focus = pick(
+    [
+      "forehand",
+      "backhand",
+      "serve",
+      "volley",
+      "return",
+      "footwork",
+      "timing",
+      "contact",
+      "consistency",
+      "depth",
+      "net",
+      "split step",
+      "rally",
+      "approach",
+      "slice",
+      "topspin",
+    ],
+    4
+  );
+  if (focus.length > 0) sections.push({ title: "Key Areas of Focus", bullets: focus });
+
+  const health = pick(
+    [
+      "nutrition",
+      "diet",
+      "hydrate",
+      "hydration",
+      "sleep",
+      "recovery",
+      "workout",
+      "mobility",
+      "stretch",
+      "yoga",
+      "injury",
+      "pain",
+      "warm up",
+      "cool down",
+    ],
+    3
+  );
+  if (health.length > 0) sections.push({ title: "Health / Training Notes", bullets: health });
+
+  const matchplay = pick(
+    [
+      "match",
+      "set",
+      "tournament",
+      "point play",
+      "practice set",
+      "compete",
+      "ladder",
+      "play with",
+      "drill match",
+      "tie break",
+    ],
+    3
+  );
+  if (matchplay.length > 0) sections.push({ title: "Matchplay Recommendations", bullets: matchplay });
+
+  const nextLesson = pick(
+    [
+      "next lesson",
+      "next week",
+      "monday",
+      "tuesday",
+      "wednesday",
+      "thursday",
+      "friday",
+      "saturday",
+      "sunday",
+      "am",
+      "pm",
+      ":00",
+      ":30",
+      "at ",
+      "schedule",
+    ],
+    2
+  );
+  if (nextLesson.length > 0) sections.push({ title: "Next Lesson", bullets: nextLesson });
+
+  const personal = pick(
+    ["great job", "proud", "keep it up", "good work", "awesome", "nice work", "message", "reminder"],
+    2
+  );
+  if (personal.length > 0) sections.push({ title: "Quick Note", bullets: personal });
+
+  // If categorization found nothing, still provide cleaned bullets only from transcript.
+  if (sections.length === 0) {
+    sections.push({
+      title: "Session Notes",
+      bullets: chunks.slice(0, 4).map(sentenceToBullet),
+    });
+  }
+
+  const bodyLines: string[] = [
+    greeting,
+    "",
+    `Great work today${contextLine ? ` (${contextLine})` : ""}.`,
+    "",
+  ];
+
+  for (const section of sections) {
+    bodyLines.push(section.title);
+    bodyLines.push(...section.bullets);
+    bodyLines.push("");
+  }
+
+  bodyLines.push("See you on court,");
+  bodyLines.push("Derek");
+
+  return { subject, body: bodyLines.join("\n") };
 }
 
 async function generateWithGemini(input: {
@@ -72,6 +248,8 @@ Rules:
 - Keep structure simple and elegant for quick reading.
 - Include only what the coach explicitly mentions.
 - If a category is not mentioned, do not include it.
+- Never insert generic filler advice.
+- Every bullet must reflect a concrete point that appears in the transcript.
 - Supported categories (use only when present in transcript):
   1) Summary of what we worked on
   2) Key areas of focus
@@ -97,6 +275,7 @@ ${input.transcript}
   const text = response.response.text();
   const parsed = extractJsonObject(text);
   if (!parsed?.subject || !parsed?.body) return null;
+  if (looksGeneric(parsed.body)) return null;
   return { subject: parsed.subject.trim(), body: parsed.body.trim() };
 }
 
@@ -133,60 +312,19 @@ export async function POST(req: Request) {
       });
     }
 
-    const chunks = sentenceChunks(transcript);
-    const todayFocus = toBullets(chunks.slice(0, 4), 3);
-    const nextSteps = toBullets(chunks.slice(2, 8), 3);
-    const lower = transcript.toLowerCase();
-
-    const subjectDate = lessonDate ? ` - ${lessonDate}` : "";
-    const subject = `Lesson Recap for ${clientName}${subjectDate}`;
-
-    const contextLine = [lessonDate, lessonTime].filter(Boolean).join(" at ");
-    const greeting = clientName === "your lesson" ? "Hi," : `Hi ${clientName},`;
-
-    const bodyLines: string[] = [
-      greeting,
-      "",
-      `Great work today${contextLine ? ` (${contextLine})` : ""}. Here is your quick recap and what to focus on before we meet again.`,
-      "",
-    ];
-
-    bodyLines.push("Summary");
-    bodyLines.push(...(todayFocus.length > 0 ? todayFocus : ["- Technique and consistency work from today's session."]));
-    bodyLines.push("");
-
-    if (hasAny(lower, ["focus", "key area", "forehand", "backhand", "serve", "volley", "footwork", "consistency", "timing"])) {
-      bodyLines.push("Key Areas of Focus");
-      bodyLines.push(...(nextSteps.length > 0 ? nextSteps : ["- Continue the same focus points with quality reps."]));
-      bodyLines.push("");
-    }
-    if (hasAny(lower, ["nutrition", "diet", "hydrate", "hydration", "sleep", "recovery", "workout", "mobility", "stretch", "yoga"])) {
-      bodyLines.push("Health and Recovery Notes");
-      bodyLines.push("- Keep nutrition and recovery habits consistent between sessions.");
-      bodyLines.push("");
-    }
-    if (hasAny(lower, ["match", "set", "tournament", "point play", "play more", "practice match", "extra play"])) {
-      bodyLines.push("Matchplay Recommendations");
-      bodyLines.push("- Add extra point-play or match reps before our next lesson.");
-      bodyLines.push("");
-    }
-    if (hasAny(lower, ["next lesson", "next time", "next week", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday", "am", "pm"])) {
-      bodyLines.push("Next Lesson");
-      bodyLines.push("- I noted your scheduling details and we can confirm the next session timing.");
-      bodyLines.push("");
-    }
-
-    bodyLines.push("If you have any questions, just reply to this email.");
-    bodyLines.push("");
-    bodyLines.push("See you on court,");
-    bodyLines.push("Derek");
+    const extractive = buildExtractiveDraft({
+      clientName,
+      lessonDate,
+      lessonTime,
+      transcript,
+    });
 
     return NextResponse.json({
-      subject,
+      subject: extractive.subject,
       to: clientEmail || "",
-      body: bodyLines.join("\n"),
+      body: extractive.body,
       meta: {
-        source: "trial-rule-based-draft",
+        source: "extractive-transcript-draft",
       },
     });
   } catch (error) {
