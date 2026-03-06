@@ -49,6 +49,7 @@ type LessonBooking = {
   clientName: string;
   clientEmail: string;
   memberNumber?: string;
+  amountCharged?: number;
   createdAt: string;
 };
 
@@ -266,6 +267,13 @@ function mod(value: number, base: number): number {
   return ((value % base) + base) % base;
 }
 
+function parseCoachRate(coachName: string): number {
+  const coach = rtcCoaches.find((item) => item.name === coachName);
+  if (!coach) return 150;
+  const raw = Number((coach.rate || "").replace(/[^0-9.]/g, ""));
+  return Number.isFinite(raw) && raw > 0 ? raw : 150;
+}
+
 function createMockData() {
   const courts: CourtBooking[] = [];
   const lessons: LessonBooking[] = [];
@@ -350,6 +358,7 @@ function createMockData() {
         clientName: lessonMember.name,
         clientEmail: lessonMember.email,
         memberNumber: lessonMember.number,
+        amountCharged: Math.max(95, parseCoachRate(lessonCoach) - 20 + mod(i + l, 4) * 5),
         createdAt: makeDate(i, lessonDay, lessonHour),
       });
     }
@@ -424,6 +433,8 @@ export default function RTCAdminPage() {
   const [selectedClinic, setSelectedClinic] = useState("All Clinics");
   const [selectedEvent, setSelectedEvent] = useState("All Events");
   const [selectedLessonCoach, setSelectedLessonCoach] = useState("All Pros");
+  const [selectedLessonYear, setSelectedLessonYear] = useState(new Date().getFullYear());
+  const [selectedLessonDetailCoach, setSelectedLessonDetailCoach] = useState<string | null>(null);
   const [selectedMemberNumber, setSelectedMemberNumber] = useState<string | null>(null);
   const [selectedMemberDetailTab, setSelectedMemberDetailTab] = useState<
     "courts" | "clinics" | "events" | "lessons"
@@ -505,6 +516,11 @@ export default function RTCAdminPage() {
     const timer = window.setTimeout(() => setAdminMsg(null), 3200);
     return () => window.clearTimeout(timer);
   }, [adminMsg]);
+
+  useEffect(() => {
+    if (selectedLessonCoach === "All Pros") return;
+    setSelectedLessonDetailCoach(selectedLessonCoach);
+  }, [selectedLessonCoach]);
 
   useEffect(() => {
     if (!authed || typeof window === "undefined") return;
@@ -777,9 +793,6 @@ export default function RTCAdminPage() {
     return Array.from(map.values()).sort((a, b) => b.signups - a.signups);
   }, [mergedData.clinics]);
   const lessonMonitor = useMemo(() => {
-    const now = new Date();
-    const yearAgo = new Date(now);
-    yearAgo.setFullYear(yearAgo.getFullYear() - 1);
     const rows = new Map<
       string,
       {
@@ -799,7 +812,7 @@ export default function RTCAdminPage() {
     });
     mergedData.lessons.forEach((lesson) => {
       const at = new Date(lesson.createdAt);
-      if (at < yearAgo) return;
+      if (!Number.isFinite(at.getTime()) || at.getFullYear() !== selectedLessonYear) return;
       const key = lesson.coachName || "Unassigned";
       const row =
         rows.get(key) || { coachName: key, lessons: 0, members: new Set<string>(), memberCounts: new Map<string, number>() };
@@ -824,15 +837,12 @@ export default function RTCAdminPage() {
         };
       })
       .sort((a, b) => b.lessons - a.lessons);
-  }, [mergedData.lessons]);
+  }, [mergedData.lessons, selectedLessonYear]);
   const lessonMemberLeaderboard = useMemo(() => {
-    const now = new Date();
-    const yearAgo = new Date(now);
-    yearAgo.setFullYear(yearAgo.getFullYear() - 1);
     const rows = new Map<string, { member: string; lessons: number; pros: Set<string> }>();
     mergedData.lessons.forEach((lesson) => {
       const at = new Date(lesson.createdAt);
-      if (at < yearAgo) return;
+      if (!Number.isFinite(at.getTime()) || at.getFullYear() !== selectedLessonYear) return;
       const member = lesson.memberNumber ? `${lesson.clientName} (#${lesson.memberNumber})` : lesson.clientName;
       const row = rows.get(member) || { member, lessons: 0, pros: new Set<string>() };
       row.lessons += 1;
@@ -843,6 +853,14 @@ export default function RTCAdminPage() {
       .map((row) => ({ member: row.member, lessons: row.lessons, pros: row.pros.size }))
       .sort((a, b) => b.lessons - a.lessons)
       .slice(0, 8);
+  }, [mergedData.lessons, selectedLessonYear]);
+  const lessonYearOptions = useMemo(() => {
+    const years = new Set<number>([new Date().getFullYear()]);
+    mergedData.lessons.forEach((lesson) => {
+      const year = new Date(lesson.createdAt).getFullYear();
+      if (Number.isFinite(year)) years.add(year);
+    });
+    return Array.from(years).sort((a, b) => b - a);
   }, [mergedData.lessons]);
   const nextWeekClinics = useMemo(() => {
     const now = new Date();
@@ -1107,6 +1125,31 @@ export default function RTCAdminPage() {
     () => lessonMonitor.filter((item) => selectedLessonCoach === "All Pros" || item.coachName === selectedLessonCoach),
     [lessonMonitor, selectedLessonCoach]
   );
+  const selectedLessonDetailRows = useMemo(() => {
+    if (!selectedLessonDetailCoach) return [];
+    return mergedData.lessons
+      .filter((lesson) => lesson.coachName === selectedLessonDetailCoach)
+      .filter((lesson) => {
+        const year = new Date(lesson.createdAt).getFullYear();
+        return Number.isFinite(year) && year === selectedLessonYear;
+      })
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .map((lesson) => {
+        const memberType = lesson.memberNumber ? "Member" : "Non-member";
+        const baseRate = parseCoachRate(lesson.coachName);
+        const amount =
+          typeof lesson.amountCharged === "number"
+            ? lesson.amountCharged
+            : lesson.memberNumber
+            ? Math.max(95, baseRate - 20)
+            : baseRate + 20;
+        return {
+          ...lesson,
+          memberType,
+          amount,
+        };
+      });
+  }, [mergedData.lessons, selectedLessonDetailCoach, selectedLessonYear]);
   const programsSummary = useMemo(
     () => ({
       clinics: clinicMonitor.length,
@@ -2242,7 +2285,18 @@ export default function RTCAdminPage() {
               <summary className="cursor-pointer text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">
                 Lessons Monitor + Past Performance
               </summary>
-              <div className="mt-3 flex flex-wrap items-center justify-end">
+              <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
+                <select
+                  value={selectedLessonYear}
+                  onChange={(e) => setSelectedLessonYear(Number(e.target.value) || new Date().getFullYear())}
+                  className="rounded-lg border border-[#e8e5df] px-2 py-1 text-[12px]"
+                >
+                  {lessonYearOptions.map((year) => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
                 <select
                   value={selectedLessonCoach}
                   onChange={(e) => setSelectedLessonCoach(e.target.value)}
@@ -2268,7 +2322,13 @@ export default function RTCAdminPage() {
                   </thead>
                   <tbody>
                     {visibleLessonMonitor.map((row) => (
-                      <tr key={row.coachName} className="border-t border-[#f0ede8]">
+                      <tr
+                        key={row.coachName}
+                        className={`cursor-pointer border-t border-[#f0ede8] ${
+                          selectedLessonDetailCoach === row.coachName ? "bg-[#faf9f7]" : "hover:bg-[#fdfcfb]"
+                        }`}
+                        onClick={() => setSelectedLessonDetailCoach(row.coachName)}
+                      >
                         <td className="py-1.5 font-medium">{row.coachName}</td>
                         <td className="py-1.5">{row.lessons}</td>
                         <td className="py-1.5">{row.uniqueMembers}</td>
@@ -2282,9 +2342,38 @@ export default function RTCAdminPage() {
                   <p className="mt-2 text-[12px] text-[#8a8477]">No lesson data found for this filter.</p>
                 )}
               </div>
+              {selectedLessonDetailCoach && (
+                <div className="mt-3 rounded-lg border border-[#ece8e2] bg-[#faf9f7] p-3">
+                  <p className="text-[11px] uppercase tracking-[0.1em] text-[#8a8477]">
+                    {selectedLessonDetailCoach} Lesson Summary ({selectedLessonYear})
+                  </p>
+                  <div className="mt-2 max-h-[45vh] space-y-2 overflow-y-auto pr-1 sm:max-h-[260px]">
+                    {selectedLessonDetailRows.map((lesson) => (
+                      <div key={lesson.id} className="rounded border border-[#ece8e2] bg-white px-2.5 py-2 text-[11px]">
+                        <p className="font-medium">
+                          {new Date(lesson.createdAt).toLocaleDateString()} · {lesson.slot}
+                        </p>
+                        <p className="text-[#6b665e]">
+                          {lesson.clientName}
+                          {lesson.clientEmail ? ` · ${lesson.clientEmail}` : ""}
+                        </p>
+                        <p className="text-[#6b665e]">
+                          {lesson.memberType}
+                          {lesson.memberNumber ? ` (#${lesson.memberNumber})` : ""} · Charged {formatCurrency(lesson.amount)}
+                        </p>
+                      </div>
+                    ))}
+                    {selectedLessonDetailRows.length === 0 && (
+                      <p className="text-[12px] text-[#8a8477]">
+                        No lesson records for {selectedLessonDetailCoach} in {selectedLessonYear}.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
               <div className="mt-3 rounded-lg border border-[#ece8e2] bg-[#faf9f7] p-3">
                 <p className="text-[11px] uppercase tracking-[0.1em] text-[#8a8477]">
-                  Most Active Lesson Members (Past 12 Months)
+                  Most Active Lesson Members ({selectedLessonYear})
                 </p>
                 <div className="mt-2 grid gap-2 sm:grid-cols-2">
                   {lessonMemberLeaderboard.map((row) => (
@@ -2296,7 +2385,7 @@ export default function RTCAdminPage() {
                     </div>
                   ))}
                   {lessonMemberLeaderboard.length === 0 && (
-                    <p className="text-[12px] text-[#8a8477]">No lesson activity in the last 12 months.</p>
+                    <p className="text-[12px] text-[#8a8477]">No lesson activity in {selectedLessonYear}.</p>
                   )}
                 </div>
               </div>
