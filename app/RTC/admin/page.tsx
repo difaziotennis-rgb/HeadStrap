@@ -595,57 +595,73 @@ export default function RTCAdminPage() {
   }, [mergedData]);
 
   const monthly = useMemo(() => {
-    const map = new Map<string, MonthStat>();
+    const periods: Array<{
+      start: Date;
+      end: Date;
+      stat: MonthStat;
+    }> = [];
+    const now = new Date();
     for (let i = -11; i <= 0; i += 1) {
-      const now = new Date();
-      const periodEnd = new Date(now.getFullYear(), now.getMonth() + i + 1, 0, 23, 59, 59, 999);
-      const dt = periodEnd;
-      const key = monthKey(dt);
-      map.set(key, {
-        key,
-        label: monthLabel(dt),
-        courtBookings: 0,
-        lessonRequests: 0,
-        clinicBookings: 0,
-        eventReservations: 0,
-        courtRevenue: 0,
-        clinicRevenue: 0,
-        eventRevenue: 0,
-        totalRevenue: 0,
+      const start = new Date(now.getFullYear(), now.getMonth() + i, 1, 0, 0, 0, 0);
+      const end = new Date(now.getFullYear(), now.getMonth() + i + 1, 0, 23, 59, 59, 999);
+      periods.push({
+        start,
+        end,
+        stat: {
+          key: monthKey(start),
+          label: monthLabel(start),
+          courtBookings: 0,
+          lessonRequests: 0,
+          clinicBookings: 0,
+          eventReservations: 0,
+          courtRevenue: 0,
+          clinicRevenue: 0,
+          eventRevenue: 0,
+          totalRevenue: 0,
+        },
       });
     }
+    const findPeriod = (at: Date) =>
+      periods.find((period) => at.getTime() >= period.start.getTime() && at.getTime() <= period.end.getTime());
+
     mergedData.courts.forEach((item) => {
-      const dt = new Date(item.createdAt || `${item.date}T12:00:00`);
-      const key = monthKey(dt);
-      const month = map.get(key);
-      if (!month) return;
+      const at = new Date(item.createdAt || `${item.date}T12:00:00`);
+      if (!Number.isFinite(at.getTime())) return;
+      const period = findPeriod(at);
+      if (!period) return;
       const amount = item.totalAmount || 0;
-      month.courtBookings += 1;
-      month.courtRevenue += amount;
-      month.totalRevenue += amount;
+      period.stat.courtBookings += 1;
+      period.stat.courtRevenue += amount;
+      period.stat.totalRevenue += amount;
     });
     mergedData.clinics.forEach((item) => {
-      const month = map.get(monthKey(new Date(item.createdAt)));
-      if (!month) return;
+      const at = new Date(item.createdAt);
+      if (!Number.isFinite(at.getTime())) return;
+      const period = findPeriod(at);
+      if (!period) return;
       const amount = item.total || 0;
-      month.clinicBookings += 1;
-      month.clinicRevenue += amount;
-      month.totalRevenue += amount;
+      period.stat.clinicBookings += 1;
+      period.stat.clinicRevenue += amount;
+      period.stat.totalRevenue += amount;
     });
     mergedData.events.forEach((item) => {
-      const month = map.get(monthKey(new Date(item.createdAt)));
-      if (!month) return;
+      const at = new Date(item.createdAt);
+      if (!Number.isFinite(at.getTime())) return;
+      const period = findPeriod(at);
+      if (!period) return;
       const amount = item.total || 0;
-      month.eventReservations += 1;
-      month.eventRevenue += amount;
-      month.totalRevenue += amount;
+      period.stat.eventReservations += 1;
+      period.stat.eventRevenue += amount;
+      period.stat.totalRevenue += amount;
     });
     mergedData.lessons.forEach((item) => {
-      const month = map.get(monthKey(new Date(item.createdAt)));
-      if (!month) return;
-      month.lessonRequests += 1;
+      const at = new Date(item.createdAt);
+      if (!Number.isFinite(at.getTime())) return;
+      const period = findPeriod(at);
+      if (!period) return;
+      period.stat.lessonRequests += 1;
     });
-    return Array.from(map.values());
+    return periods.map((period) => period.stat);
   }, [mergedData]);
 
   const seasonal = useMemo(() => {
