@@ -20,25 +20,19 @@ const nextConfig = {
       },
     ],
   },
-  // Normalize lowercase rtc routes to canonical /RTC routes
-  async redirects() {
-    return [
-      {
-        source: '/rtc',
-        destination: '/RTC',
-        permanent: true,
-      },
-      {
-        source: '/rtc/:path*',
-        destination: '/RTC/:path*',
-        permanent: true,
-      },
-    ]
-  },
   // Rewrite /strapped SPA routes to serve the static index.html
   async rewrites() {
     return {
       beforeFiles: [
+        // Support lowercase rtc paths without redirects
+        {
+          source: '/rtc',
+          destination: '/RTC',
+        },
+        {
+          source: '/rtc/:path*',
+          destination: '/RTC/:path*',
+        },
         // Proxy API calls to the LogicVault backend (configure LOGICVAULT_API_URL in Vercel env)
         {
           source: '/strapped/api/:path*',
