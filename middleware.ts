@@ -3,28 +3,26 @@ import type { NextRequest } from "next/server";
 
 const OWNER_ACCESS_COOKIE = "rtc_owner_access_v1";
 const DEMO_ACCESS_COOKIE = "rtc_demo_access_v1";
-const DEMO_TOKEN_QUERY = "t";
 
-// 24-hour demo window (set when this link was created).
-const DEMO_ACCESS_TOKEN = "rtc_demo_24h_8d3f1c";
-const DEMO_EXPIRES_AT = "2026-03-07T23:59:59.000Z";
+// 24-hour demo window.
+const DEMO_EXPIRES_AT = "2026-03-07T17:00:00.000Z";
 
 function isDemoWindowOpen(): boolean {
   return Date.now() < new Date(DEMO_EXPIRES_AT).getTime();
 }
 
 export function middleware(request: NextRequest) {
-  const { pathname, searchParams } = request.nextUrl;
+  const { pathname } = request.nextUrl;
 
-  // Shared demo entry URL:
-  // /rtc-demo-access?t=<token>
-  if (pathname === "/rtc-demo-access") {
-    const token = searchParams.get(DEMO_TOKEN_QUERY);
-    if (token !== DEMO_ACCESS_TOKEN || !isDemoWindowOpen()) {
+  // Public demo entry URL:
+  // /demo (and /demo/*)
+  if (pathname === "/demo" || pathname.startsWith("/demo/")) {
+    if (!isDemoWindowOpen()) {
       return NextResponse.redirect(new URL("/", request.url));
     }
-
-    const response = NextResponse.redirect(new URL("/RTC", request.url));
+    const rtcPath = pathname === "/demo" ? "/RTC" : pathname.replace(/^\/demo/, "/RTC");
+    const rewriteUrl = new URL(rtcPath, request.url);
+    const response = NextResponse.rewrite(rewriteUrl);
     response.cookies.set(DEMO_ACCESS_COOKIE, "true", {
       expires: new Date(DEMO_EXPIRES_AT),
       httpOnly: true,
@@ -65,5 +63,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/rtc", "/rtc/:path*", "/RTC", "/RTC/:path*", "/rtc-demo-access"],
+  matcher: ["/rtc", "/rtc/:path*", "/RTC", "/RTC/:path*", "/demo", "/demo/:path*"],
 };
