@@ -209,7 +209,7 @@ export default function RTCBookPage() {
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
   const [isCreatingStripe, setIsCreatingStripe] = useState(false);
   const [lastBooked, setLastBooked] = useState<Booking | null>(null);
-  const [bookingStep, setBookingStep] = useState<1 | 2 | 3>(1);
+  const [bookingStep, setBookingStep] = useState<2 | 3>(2);
   const [preferences, setPreferences] = useState<MemberPreferences | null>(null);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState<Date>(() => {
@@ -457,7 +457,7 @@ export default function RTCBookPage() {
     setActiveCourt(court);
     setActiveHour(startHour);
     const hasMultiHourHint = duration > 1;
-    setBookingStep(1);
+    setBookingStep(2);
     setStatusMsg(hasMultiHourHint ? "Court booking is currently 1 hour at a time." : null);
     window.history.replaceState({}, "", "/RTC/book");
   }, [blockedSlots, bookings, selectedDate]);
@@ -477,7 +477,7 @@ export default function RTCBookPage() {
   function openBooking(court: Court, hour: number) {
     setActiveCourt(court);
     setActiveHour(hour);
-    setBookingStep(1);
+    setBookingStep(2);
     setStatusMsg(null);
   }
 
@@ -485,7 +485,7 @@ export default function RTCBookPage() {
     setActiveCourt(null);
     setActiveHour(null);
     setStatusMsg(null);
-    setBookingStep(1);
+    setBookingStep(2);
   }
 
   function buildBookingDraft(paymentMethod: Booking["paymentMethod"]) {
@@ -531,17 +531,6 @@ export default function RTCBookPage() {
       createdAt,
     };
     return booking;
-  }
-
-  function proceedToDetailsStep() {
-    if (!activeCourt || activeHour === null) return;
-    const firstKey = bookingKey(selectedDate, activeCourt.id, activeHour);
-    if (bookings[firstKey] || blockedSlots[firstKey]) {
-      setStatusMsg("This slot is no longer available.");
-      return;
-    }
-    setStatusMsg(null);
-    setBookingStep(2);
   }
 
   function proceedToPaymentStep() {
@@ -858,10 +847,9 @@ export default function RTCBookPage() {
             </div>
 
             <div className="mt-4 grid gap-2">
-              <div className="grid grid-cols-3 gap-2 rounded-lg border border-[#ece8e2] bg-[#faf9f7] p-2 text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">
-                <div className={bookingStep >= 1 ? "font-semibold text-[#1a1a1a]" : ""}>1. Time</div>
-                <div className={bookingStep >= 2 ? "font-semibold text-[#1a1a1a]" : ""}>2. Details</div>
-                <div className={bookingStep >= 3 ? "font-semibold text-[#1a1a1a]" : ""}>3. Pay</div>
+              <div className="grid grid-cols-2 gap-2 rounded-lg border border-[#ece8e2] bg-[#faf9f7] p-2 text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">
+                <div className={bookingStep >= 2 ? "font-semibold text-[#1a1a1a]" : ""}>1. Details</div>
+                <div className={bookingStep >= 3 ? "font-semibold text-[#1a1a1a]" : ""}>2. Pay</div>
               </div>
               {memberSession && preferences && (
                 <p className="rounded-lg border border-[#dbead3] bg-[#f4faf1] px-3 py-2 text-[11px] text-[#2d5016]">
@@ -870,23 +858,11 @@ export default function RTCBookPage() {
                 </p>
               )}
 
-              {bookingStep === 1 && (
-                <div className="grid gap-2">
-                  <p className="text-[11px] text-[#8a8477]">
-                    Court booking is currently set to one hour per reservation.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={proceedToDetailsStep}
-                    className="rounded-lg bg-[#1a1a1a] px-4 py-2 text-[12px] font-medium text-white hover:bg-[#2c2c2c]"
-                  >
-                    Continue
-                  </button>
-                </div>
-              )}
-
               {bookingStep === 2 && (
                 <div className="grid gap-2">
+                  <p className="text-[11px] text-[#8a8477]">
+                    One-hour booking. Enter details and continue to payment.
+                  </p>
                   {!memberSession && (
                     <>
                       <input
@@ -914,22 +890,13 @@ export default function RTCBookPage() {
                       Booking as Member #{memberSession.memberNumber}. Member details are prefilled.
                     </p>
                   )}
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setBookingStep(1)}
-                      className="rounded-lg border border-[#d9d5cf] px-4 py-2 text-[12px] font-medium hover:bg-[#faf9f7]"
-                    >
-                      Back
-                    </button>
-                    <button
-                      type="button"
-                      onClick={proceedToPaymentStep}
-                      className="rounded-lg bg-[#1a1a1a] px-4 py-2 text-[12px] font-medium text-white hover:bg-[#2c2c2c]"
-                    >
-                      Continue to Payment
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={proceedToPaymentStep}
+                    className="rounded-lg bg-[#1a1a1a] px-4 py-2 text-[12px] font-medium text-white hover:bg-[#2c2c2c]"
+                  >
+                    Continue to Payment
+                  </button>
                 </div>
               )}
             </div>
