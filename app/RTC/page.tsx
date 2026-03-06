@@ -25,27 +25,6 @@ const memberLinks = [
   },
 ];
 
-const overviewMoodImages = [
-  {
-    title: "Hudson Valley Landscape",
-    note: "Local reference",
-    src: "/images/hudson-valley.png",
-    href: "/RTC",
-  },
-  {
-    title: "Aerial Club Layout",
-    note: "Design inspiration",
-    src: "https://images.unsplash.com/photo-1522733964843-5f525f0b3050?auto=format&fit=crop&w=1200&q=80",
-    href: "https://unsplash.com/photos/aerial-view-of-a-tennis-club-with-courts-and-pool-8U6uJIOy0h4",
-  },
-  {
-    title: "Evening Court Atmosphere",
-    note: "Lighting inspiration",
-    src: "https://images.unsplash.com/photo-1710746669605-29fca4a4f095?auto=format&fit=crop&w=1200&q=80",
-    href: "https://unsplash.com/id/foto/lapangan-tenis-yang-menyala-di-malam-hari-dengan-lampu-_FLyMtBmaas",
-  },
-];
-
 export default function RTCPage() {
   return (
     <main>
@@ -104,34 +83,6 @@ export default function RTCPage() {
       </section>
 
       <section className="mx-auto w-full max-w-6xl px-4 pb-10 sm:px-6 sm:pb-14">
-        <div className="mb-4 rounded-2xl border border-[#e8e5df] bg-white p-5">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Club Atmosphere</p>
-            <p className="text-[11px] text-[#8a8477]">Subtle visual references</p>
-          </div>
-          <div className="mt-3 grid gap-3 md:grid-cols-3">
-            {overviewMoodImages.map((image) => (
-              <a
-                key={image.title}
-                href={image.href}
-                target={image.href.startsWith("http") ? "_blank" : undefined}
-                rel={image.href.startsWith("http") ? "noreferrer" : undefined}
-                className="group overflow-hidden rounded-xl border border-[#ece8e2] bg-[#faf9f7]"
-              >
-                <img
-                  src={image.src}
-                  alt={image.title}
-                  className="h-28 w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-                />
-                <div className="px-3 py-2">
-                  <p className="text-[12px] font-medium text-[#4a4a4a]">{image.title}</p>
-                  <p className="text-[11px] text-[#8a8477]">{image.note}</p>
-                </div>
-              </a>
-            ))}
-          </div>
-        </div>
-
         <div id="member-central" className="mb-4 grid gap-4 lg:grid-cols-[1.25fr_1fr] scroll-mt-28">
           <div className="rounded-2xl border border-[#e8e5df] bg-white p-6 sm:p-8">
             <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Start Here</p>
