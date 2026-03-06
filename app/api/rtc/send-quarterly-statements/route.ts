@@ -105,10 +105,28 @@ function buildHtml(statement: StatementPayload): string {
 
 export async function POST(request: Request) {
   try {
+    const emailsEnabled = process.env.RTC_ENABLE_STATEMENT_EMAILS === "true";
     const body = (await request.json()) as QuarterlyStatementRequest;
     const statements = Array.isArray(body.statements) ? body.statements : [];
     if (!statements.length) {
-      return NextResponse.json({ sent: 0, failed: 0, details: [] });
+      return NextResponse.json({ mode: emailsEnabled ? "live" : "preview", sent: 0, failed: 0, details: [] });
+    }
+
+    // Safety default: preview mode unless explicitly enabled via env var.
+    if (!emailsEnabled) {
+      const previewDetails = statements.map((statement) => ({
+        memberNumber: statement.memberNumber,
+        email: statement.memberEmail,
+        sent: false,
+        error: "Preview mode only - no email sent",
+      }));
+      return NextResponse.json({
+        mode: "preview",
+        sent: 0,
+        failed: 0,
+        wouldSend: statements.length,
+        details: previewDetails,
+      });
     }
 
     const details: Array<{ memberNumber: string; email: string; sent: boolean; error?: string }> = [];
@@ -165,7 +183,7 @@ export async function POST(request: Request) {
       }
     }
 
-    return NextResponse.json({ sent, failed, details });
+    return NextResponse.json({ mode: "live", sent, failed, details });
   } catch (error) {
     console.error("[rtc/send-quarterly-statements] error", error);
     return NextResponse.json(

@@ -1107,8 +1107,21 @@ export default function RTCAdminPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ statements: statementSendable }),
       });
-      const data = (await res.json()) as { sent: number; failed: number };
+      const data = (await res.json()) as {
+        mode?: "live" | "preview";
+        sent: number;
+        failed: number;
+        wouldSend?: number;
+      };
       if (!res.ok) throw new Error("Failed to send statements.");
+      if (data.mode === "preview") {
+        setStatementStatus(
+          `Preview mode only: no emails sent. ${data.wouldSend || 0} statement emails are queued for preview in ${quarterLabelFromKey(
+            selectedStatementQuarter
+          )}.`
+        );
+        return;
+      }
       const stamp = new Date().toISOString();
       const nextLog = { ...quarterlyEmailLog, [selectedStatementQuarter]: stamp };
       setQuarterlyEmailLog(nextLog);
@@ -1684,6 +1697,7 @@ export default function RTCAdminPage() {
           <p className="mt-2 text-[12px] text-[#6b665e]">
             Auto-send runs once when the dashboard opens after quarter close for {quarterLabelFromKey(previousQuarterKey())}.
             Last send for selected quarter: {quarterlyEmailLog[selectedStatementQuarter] ? new Date(quarterlyEmailLog[selectedStatementQuarter]).toLocaleString() : "Not sent yet"}.
+            Quarterly emails are currently in preview mode until `RTC_ENABLE_STATEMENT_EMAILS=true` is added.
           </p>
           {statementStatus && <p className="mt-2 text-[12px] text-[#2d5016]">{statementStatus}</p>}
           <div className="mt-3 grid gap-3 xl:grid-cols-2">
