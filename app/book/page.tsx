@@ -10,7 +10,7 @@ import { AdminDashboard } from "@/components/admin-dashboard";
 import { AdminRecurring } from "@/components/admin-recurring";
 import { TimeSlot } from "@/lib/types";
 import { migrateFromLocalStorage, readSlotsForDate } from "@/lib/booking-data";
-import { LogOut, Lock, Trophy, LayoutDashboard, CalendarDays, Repeat } from "lucide-react";
+import { LogOut, Lock, LayoutDashboard, CalendarDays, Repeat } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type AdminTab = "dashboard" | "calendar" | "recurring";
@@ -32,7 +32,6 @@ function BookPageContent() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      // Migrate any existing localStorage data to Supabase (one-time)
       migrateFromLocalStorage();
       const auth = sessionStorage.getItem("adminAuth");
       if (auth === "true") {
@@ -41,7 +40,6 @@ function BookPageContent() {
     }
   }, []);
 
-  // Handle deep link from email (e.g. /book?date=2026-02-11&hour=10)
   useEffect(() => {
     if (hasHandledDeepLink.current) return;
     const dateParam = searchParams.get("date");
@@ -52,7 +50,6 @@ function BookPageContent() {
       const date = new Date(dateParam + "T12:00:00");
       setSelectedDate(date);
 
-      // Fetch the slot for this date/hour and open the booking modal
       readSlotsForDate(dateParam).then((slots) => {
         const slotId = `${dateParam}-${hour}`;
         const slot = slots[slotId];
@@ -102,7 +99,6 @@ function BookPageContent() {
 
   return (
     <div className="min-h-screen bg-[#f7f7f5]">
-      {/* Top Navigation Bar */}
       <header className="bg-[#faf9f7] border-b border-[#e8e5df] sticky top-0 z-40">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between">
@@ -156,9 +152,7 @@ function BookPageContent() {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8" role="main">
-        {/* Admin Tab Switcher */}
         {isAdminMode && (
           <div className="flex items-center gap-1 mb-5 bg-[#f0ede8] rounded-xl p-1 max-w-md">
             <button
@@ -200,7 +194,6 @@ function BookPageContent() {
           </div>
         )}
 
-        {/* Content Card */}
         <div className="bg-white rounded-2xl shadow-sm border border-[#e8e5df] p-5 sm:p-8 mb-8">
           {isAdminMode ? (
             adminTab === "dashboard" ? (
@@ -220,7 +213,6 @@ function BookPageContent() {
           )}
         </div>
 
-        {/* Booking Modal */}
         {isModalOpen && selectedSlot && !isAdminMode && (
           <BookingModal
             slot={selectedSlot}
@@ -231,10 +223,8 @@ function BookPageContent() {
         )}
       </main>
 
-      {/* Footer */}
       <footer className="border-t border-[#e8e5df] mt-8">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
-          {/* Member Login Link */}
           {!isAdminMode && (
             <div className="mb-4 text-center">
               <Link
@@ -267,7 +257,6 @@ function BookPageContent() {
             </p>
           </div>
 
-          {/* Admin Login Section */}
           {!isAdminMode && (
             <div className="max-w-sm mx-auto mt-8 pt-6 border-t border-[#e8e5df]">
               {!showAdminLogin ? (

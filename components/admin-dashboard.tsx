@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   format,
   startOfWeek,
@@ -11,7 +11,7 @@ import {
   isToday,
   isSameDay,
 } from "date-fns";
-import { ChevronLeft, ChevronRight, X, Pencil, Trash2, Check } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, Pencil, Trash2, Check, Mic, Square, Copy } from "lucide-react";
 import { TimeSlot } from "@/lib/types";
 import { formatTime, getHoursForDay } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -30,6 +30,11 @@ export function AdminDashboard() {
   const [editName, setEditName] = useState("");
   const [editHour, setEditHour] = useState(0);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
+  const [recordingSlotId, setRecordingSlotId] = useState<string | null>(null);
+  const [draftBySlotId, setDraftBySlotId] = useState<Record<string, { subject: string; body: string }>>({});
+  const [generatingSlotId, setGeneratingSlotId] = useState<string | null>(null);
+  const speechRecognitionRef = useRef<any>(null);
+  const transcriptRef = useRef("");
 
   useEffect(() => {
     readAllSlots().then((data) => {
@@ -75,6 +80,106 @@ export function AdminDashboard() {
     setActionMode(null);
     setEditName("");
     setEditHour(0);
+  }
+
+  function isTrialVoiceSlot(slot: TimeSlot): boolean {
+    return slot.booked && slot.date === "2026-03-01" && (slot.bookedBy || "").toLowerCase().includes("shane");
+  }
+
+  async function generateDraftForSlot(slot: TimeSlot, transcript: string) {
+    if (!transcript.trim()) {
+      setStatusMsg("No voice transcript captured. Please try again.");
+      setTimeout(() => setStatusMsg(null), 3000);
+      return;
+    }
+    try {
+      setGeneratingSlotId(slot.id);
+      const res = await fetch("/api/admin/voice-memo-draft", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientName: slot.bookedBy || "Client",
+          lessonDate: slot.date,
+          lessonTime: formatTime(slot.hour),
+          transcript,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to generate email draft.");
+      }
+      setDraftBySlotId((prev) => ({
+        ...prev,
+        [slot.id]: {
+          subject: data.subject || "Lesson recap",
+          body: data.body || "",
+        },
+      }));
+      setStatusMsg("Draft ready for review below.");
+      setTimeout(() => setStatusMsg(null), 3500);
+    } catch (err: any) {
+      setStatusMsg(err?.message || "Failed to generate draft.");
+      setTimeout(() => setStatusMsg(null), 3500);
+    } finally {
+      setGeneratingSlotId(null);
+    }
+  }
+
+  async function handleVoiceRecord(slot: TimeSlot) {
+    const w = window as any;
+    const Recognition = w.SpeechRecognition || w.webkitSpeechRecognition;
+    if (!Recognition) {
+      setStatusMsg("Speech recognition is not supported in this browser.");
+      setTimeout(() => setStatusMsg(null), 3500);
+      return;
+    }
+
+    if (recordingSlotId === slot.id && speechRecognitionRef.current) {
+      speechRecognitionRef.current.stop();
+      setRecordingSlotId(null);
+      return;
+    }
+
+    transcriptRef.current = "";
+    setRecordingSlotId(slot.id);
+
+    const recognition = new Recognition();
+    recognition.lang = "en-US";
+    recognition.continuous = true;
+    recognition.interimResults = true;
+
+    recognition.onresult = (event: any) => {
+      let combined = "";
+      for (let i = 0; i < event.results.length; i += 1) {
+        combined += `${event.results[i][0].transcript} `;
+      }
+      transcriptRef.current = combined.trim();
+    };
+
+    recognition.onerror = () => {
+      setRecordingSlotId(null);
+      setStatusMsg("Could not capture voice notes. Please try again.");
+      setTimeout(() => setStatusMsg(null), 3500);
+    };
+
+    recognition.onend = async () => {
+      const transcript = transcriptRef.current.trim();
+      setRecordingSlotId(null);
+      if (!transcript) return;
+      await generateDraftForSlot(slot, transcript);
+    };
+
+    speechRecognitionRef.current = recognition;
+    recognition.start();
+  }
+
+  async function copyDraft(slotId: string) {
+    const draft = draftBySlotId[slotId];
+    if (!draft) return;
+    const text = `Subject: ${draft.subject}\n\n${draft.body}`;
+    await navigator.clipboard.writeText(text);
+    setStatusMsg("Draft copied to clipboard.");
+    setTimeout(() => setStatusMsg(null), 2500);
   }
 
   async function handleSaveEdit() {
@@ -291,24 +396,52 @@ export function AdminDashboard() {
                       .sort((a, b) => a.hour - b.hour)
                       .map((slot) =>
                         slot.booked ? (
-                          <button
-                            key={slot.id}
-                            onClick={() => openMenu(slot)}
-                            type="button"
-                            className={cn(
-                              "px-2.5 py-1 rounded-md text-[11px] font-medium transition-all active:scale-95",
-                              activeSlotId === slot.id
-                                ? "bg-[#333] text-white ring-2 ring-[#1a1a1a]/30"
-                                : "bg-[#1a1a1a] text-white hover:bg-[#333]"
+                          <div key={slot.id} className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => openMenu(slot)}
+                              type="button"
+                              className={cn(
+                                "px-2.5 py-1 rounded-md text-[11px] font-medium transition-all active:scale-95",
+                                activeSlotId === slot.id
+                                  ? "bg-[#333] text-white ring-2 ring-[#1a1a1a]/30"
+                                  : "bg-[#1a1a1a] text-white hover:bg-[#333]"
+                              )}
+                            >
+                              {formatTime(slot.hour)}
+                              {slot.bookedBy && (
+                                <span className="text-white/60 ml-1">
+                                  · {slot.bookedBy.split(" ")[0]}
+                                </span>
+                              )}
+                            </button>
+                            {isTrialVoiceSlot(slot) && (
+                              <button
+                                onClick={() => handleVoiceRecord(slot)}
+                                type="button"
+                                className={cn(
+                                  "px-2 py-1 rounded-md text-[11px] font-medium border transition-colors flex items-center gap-1",
+                                  recordingSlotId === slot.id
+                                    ? "bg-[#991b1b] border-[#991b1b] text-white"
+                                    : "bg-white border-[#d9d5cf] text-[#1a1a1a] hover:bg-[#f0ede8]"
+                                )}
+                                title="Record player progress draft"
+                              >
+                                {recordingSlotId === slot.id ? (
+                                  <>
+                                    <Square className="h-3 w-3" />
+                                    Stop
+                                  </>
+                                ) : generatingSlotId === slot.id ? (
+                                  "Generating..."
+                                ) : (
+                                  <>
+                                    <Mic className="h-3 w-3" />
+                                    Record draft
+                                  </>
+                                )}
+                              </button>
                             )}
-                          >
-                            {formatTime(slot.hour)}
-                            {slot.bookedBy && (
-                              <span className="text-white/60 ml-1">
-                                · {slot.bookedBy.split(" ")[0]}
-                              </span>
-                            )}
-                          </button>
+                          </div>
                         ) : (
                           <div
                             key={slot.id}
@@ -319,6 +452,44 @@ export function AdminDashboard() {
                         )
                       )}
                   </div>
+
+                  {booked
+                    .filter((slot) => draftBySlotId[slot.id])
+                    .map((slot) => {
+                      const draft = draftBySlotId[slot.id];
+                      if (!draft) return null;
+                      return (
+                        <div key={`${slot.id}-draft`} className="mt-3 p-3 bg-[#f8fafc] border border-[#dbe3ee] rounded-lg">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-[11px] font-medium text-[#1a1a1a]">
+                              Draft: {slot.bookedBy || "Client"} ({formatTime(slot.hour)})
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => copyDraft(slot.id)}
+                              className="text-[11px] px-2 py-1 rounded border border-[#d9d5cf] hover:bg-white text-[#1a1a1a] flex items-center gap-1"
+                            >
+                              <Copy className="h-3 w-3" />
+                              Copy
+                            </button>
+                          </div>
+                          <p className="mt-1 text-[11px] text-[#475569]">
+                            <span className="font-medium">Subject:</span> {draft.subject}
+                          </p>
+                          <textarea
+                            value={draft.body}
+                            onChange={(e) =>
+                              setDraftBySlotId((prev) => ({
+                                ...prev,
+                                [slot.id]: { ...prev[slot.id], body: e.target.value },
+                              }))
+                            }
+                            rows={8}
+                            className="mt-2 w-full rounded-md border border-[#d9d5cf] bg-white p-2 text-[11px] text-[#1a1a1a]"
+                          />
+                        </div>
+                      );
+                    })}
 
                   {/* Action menu / edit form for selected slot in this day */}
                   {activeSlotId && activeSlot && activeSlot.date === buildDateStr(day) && (
