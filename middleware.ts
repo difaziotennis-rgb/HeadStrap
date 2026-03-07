@@ -2,35 +2,13 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 const OWNER_ACCESS_COOKIE = "rtc_owner_access_v1";
-const DEMO_ACCESS_COOKIE = "rtc_demo_access_v1";
-
-// 24-hour demo window.
-const DEMO_EXPIRES_AT = "2026-03-07T17:00:00.000Z";
-
-function isDemoWindowOpen(): boolean {
-  return Date.now() < new Date(DEMO_EXPIRES_AT).getTime();
-}
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Public demo entry URL:
-  // /demo (and /demo/*)
+  // Demo link is intentionally inactive.
   if (pathname === "/demo" || pathname.startsWith("/demo/")) {
-    if (!isDemoWindowOpen()) {
-      return NextResponse.redirect(new URL("/", request.url));
-    }
-    const rtcPath = pathname === "/demo" ? "/RTC" : pathname.replace(/^\/demo/, "/RTC");
-    const rewriteUrl = new URL(rtcPath, request.url);
-    const response = NextResponse.rewrite(rewriteUrl);
-    response.cookies.set(DEMO_ACCESS_COOKIE, "true", {
-      expires: new Date(DEMO_EXPIRES_AT),
-      httpOnly: true,
-      sameSite: "lax",
-      secure: true,
-      path: "/",
-    });
-    return response;
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   // Private owner entry: /rtc (lowercase).
@@ -51,9 +29,7 @@ export function middleware(request: NextRequest) {
   // Guard uppercase RTC route group.
   if (pathname === "/RTC" || pathname.startsWith("/RTC/")) {
     const ownerAccess = request.cookies.get(OWNER_ACCESS_COOKIE)?.value === "true";
-    const demoAccess = request.cookies.get(DEMO_ACCESS_COOKIE)?.value === "true";
-    const demoStillValid = isDemoWindowOpen();
-    if (ownerAccess || (demoAccess && demoStillValid)) {
+    if (ownerAccess) {
       return NextResponse.next();
     }
     return NextResponse.redirect(new URL("/", request.url));
