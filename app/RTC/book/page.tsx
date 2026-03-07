@@ -886,6 +886,9 @@ export default function RTCBookPage() {
             <p className="mt-2 text-[13px] text-[#6b665e]">
               One-hour bookings. Members can confirm in one tap; public bookings are confirmed after payment.
             </p>
+            <p className="mt-1 text-[13px] text-[#6b665e]">
+              Changes or cancellations inside 72 hours may be subject to club policy handling.
+            </p>
           </details>
         </div>
       </div>
