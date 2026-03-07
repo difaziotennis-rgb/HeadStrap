@@ -1,8 +1,12 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import OverviewEnhancements from "./OverviewEnhancements";
 import TodaySnapshots from "./TodaySnapshots";
 import { rtcSummerEvents } from "./rtc-data";
+import { MEMBER_SESSION_EVENT, MEMBER_SESSION_KEY, parseMemberSession } from "./member-session";
 
 const memberLinks = [
   {
@@ -42,6 +46,22 @@ function formatDateInput(date: Date): string {
 export default function RTCPage() {
   const today = new Date();
   const todayDateParam = formatDateInput(today);
+  const [memberSignedIn, setMemberSignedIn] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    function applySession() {
+      setMemberSignedIn(!!parseMemberSession(localStorage.getItem(MEMBER_SESSION_KEY)));
+    }
+    applySession();
+    window.addEventListener(MEMBER_SESSION_EVENT, applySession);
+    window.addEventListener("storage", applySession);
+    return () => {
+      window.removeEventListener(MEMBER_SESSION_EVENT, applySession);
+      window.removeEventListener("storage", applySession);
+    };
+  }, []);
+
   return (
     <main>
       <section className="mx-auto w-full max-w-6xl px-4 pb-6 pt-8 sm:px-6 sm:pt-10">
@@ -67,10 +87,10 @@ export default function RTCPage() {
 
             <div className="relative mt-7 flex flex-wrap items-center gap-2 text-[12px] font-medium">
               <Link
-                href="/RTC/member"
+                href={memberSignedIn ? "/RTC/book" : "/RTC/member"}
                 className="rounded-lg border border-white/50 bg-white/90 px-4 py-2 text-[#1a1a1a] hover:bg-white"
               >
-                Explore Membership
+                {memberSignedIn ? "Book Court" : "Explore Membership"}
               </Link>
               <Link href="/RTC/member/portal" className="rounded-lg border border-white/50 bg-white/90 px-4 py-2 text-[#1a1a1a] hover:bg-white">
                 Member Portal
@@ -87,22 +107,24 @@ export default function RTCPage() {
       <section className="mx-auto w-full max-w-6xl px-4 pb-10 sm:px-6 sm:pb-14">
         <OverviewEnhancements />
 
-        <details id="plan-day" className="mb-4 rounded-2xl border border-[#e8e5df] bg-white p-6 sm:p-8 scroll-mt-28">
-          <summary className="cursor-pointer list-none">
-            <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Plan Your Visit</p>
-            <h3 className="mt-1 text-[24px] font-semibold tracking-tight">Choose where to start.</h3>
-            <p className="mt-1 text-[13px] text-[#6b665e]">Tap to expand quick links for portal access, courts, lessons, clinics, and membership.</p>
-          </summary>
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
-            {memberLinks.map((item) => (
-              <Link key={item.title} href={item.href} className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-4 transition-colors hover:bg-white">
-                <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">{item.title}</p>
-                <p className="mt-1 text-[17px] font-semibold">{item.title === "Portal" ? "Open your booking portal" : item.title === "Court Booking" ? "Book a court in seconds" : item.title === "Private Lessons" ? "Train with expert coaches" : item.title === "Clinics" ? "Join group programs" : "Review benefits and pricing"}</p>
-                <p className="mt-1 text-[13px] text-[#6b665e]">{item.detail}</p>
-              </Link>
-            ))}
-          </div>
-        </details>
+        {!memberSignedIn && (
+          <details id="plan-day" className="mb-4 rounded-2xl border border-[#e8e5df] bg-white p-6 sm:p-8 scroll-mt-28">
+            <summary className="cursor-pointer list-none">
+              <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Plan Your Visit</p>
+              <h3 className="mt-1 text-[24px] font-semibold tracking-tight">Choose where to start.</h3>
+              <p className="mt-1 text-[13px] text-[#6b665e]">Tap to expand quick links for portal access, courts, lessons, clinics, and membership.</p>
+            </summary>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              {memberLinks.map((item) => (
+                <Link key={item.title} href={item.href} className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-4 transition-colors hover:bg-white">
+                  <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">{item.title}</p>
+                  <p className="mt-1 text-[17px] font-semibold">{item.title === "Portal" ? "Open your booking portal" : item.title === "Court Booking" ? "Book a court in seconds" : item.title === "Private Lessons" ? "Train with expert coaches" : item.title === "Clinics" ? "Join group programs" : "Review benefits and pricing"}</p>
+                  <p className="mt-1 text-[13px] text-[#6b665e]">{item.detail}</p>
+                </Link>
+              ))}
+            </div>
+          </details>
+        )}
 
         <div id="this-month" className="scroll-mt-28">
           <div className="rounded-2xl border border-[#e8e5df] bg-white p-6">
