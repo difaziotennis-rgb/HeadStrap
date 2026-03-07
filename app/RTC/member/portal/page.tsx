@@ -434,25 +434,6 @@ export default function RTCMemberPortalPage() {
           <a href="#portal-history" className="rounded-md border border-[#d9d5cf] px-2.5 py-1 hover:bg-[#faf9f7]">History</a>
         </div>
 
-        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-4">
-            <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Total Upcoming</p>
-            <p className="mt-1 text-[26px] font-semibold">{notSignedIn ? "--" : totals.upcomingCount}</p>
-          </div>
-          <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-4">
-            <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Upcoming Courts</p>
-            <p className="mt-1 text-[26px] font-semibold">{notSignedIn ? "--" : upcomingCourts.length}</p>
-          </div>
-          <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-4">
-            <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Outstanding Balance</p>
-            <p className="mt-1 text-[26px] font-semibold">{notSignedIn ? "--" : `$${totals.outstanding.toFixed(2)}`}</p>
-          </div>
-          <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-4">
-            <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Current Quarter</p>
-            <p className="mt-1 text-[20px] font-semibold">{currentQuarter ? quarterLabel(currentQuarter.key) : "--"}</p>
-          </div>
-        </div>
-
         <details id="portal-upcoming" className="mt-4 rounded-xl border border-[#ece8e2] p-4" open>
           <summary className="cursor-pointer text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">
             Upcoming Schedule
