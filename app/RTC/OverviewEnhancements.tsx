@@ -102,6 +102,10 @@ export default function OverviewEnhancements({ memberSignedIn }: { memberSignedI
       .map((event) => ({ event, at: nextEventDate(event.dateLabel)?.getTime() || Number.MAX_SAFE_INTEGER }))
       .sort((a, b) => a.at - b.at)[0]?.event;
   }, []);
+  const summerWhiteParty = useMemo(
+    () => rtcSummerEvents.find((event) => event.id === "summer-white-party"),
+    []
+  );
 
   const nextEventSpots = useMemo(() => {
     if (!nextEvent) return null;
@@ -120,6 +124,20 @@ export default function OverviewEnhancements({ memberSignedIn }: { memberSignedI
   }, [todayWeekday]);
 
   const featuredExperience = useMemo(() => {
+    if (summerWhiteParty) {
+      const whitePartySpots = events
+        .filter((event) => event.eventTitle === summerWhiteParty.title)
+        .reduce((sum, event) => sum + Math.max(1, event.guestCount || 0), 0);
+      const whitePartyOpenSpots = Math.max(summerWhiteParty.capacity - whitePartySpots, 0);
+      return {
+        title: summerWhiteParty.title,
+        blurb: `Featured this season: ${summerWhiteParty.title} with ${whitePartyOpenSpots} spots currently open.`,
+        href: `/RTC/events/${summerWhiteParty.id}`,
+        cta: "Open Event Details",
+        image:
+          "https://images.unsplash.com/photo-1755238798584-782309132c90?auto=format&fit=crop&w=1400&q=80",
+      };
+    }
     if (nextEvent) {
       return {
         title: nextEvent.title,
@@ -151,7 +169,7 @@ export default function OverviewEnhancements({ memberSignedIn }: { memberSignedI
       image:
         "https://images.unsplash.com/photo-1508609349937-5ec4ae374ebf?auto=format&fit=crop&w=1400&q=80",
     };
-  }, [featuredClinic, nextEvent, nextEventSpots]);
+  }, [events, featuredClinic, nextEvent, nextEventSpots, summerWhiteParty]);
 
   const signedIn = memberSignedIn;
 
