@@ -203,7 +203,7 @@ export const rtcSummerEvents = [
   },
   {
     id: "valley-rally-cup",
-    title: "1st Inaugural 'Valley Rally' Cup",
+    title: "1st Inaugural 'Valley Rally' Match",
     dateLabel: "August 1",
     timeLabel: "4:00 PM - 8:30 PM",
     category: "Club Match",
