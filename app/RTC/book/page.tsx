@@ -777,12 +777,7 @@ export default function RTCBookPage() {
           </div>
         </div>
 
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#ece8e2] bg-[#f9f8f6] px-3 py-2 text-[11px] text-[#7a756d]">
-          <p className="uppercase tracking-[0.1em]">Court Grid</p>
-          <p>Tap any open slot to book instantly.</p>
-        </div>
-
-        <div className="mt-3 overflow-x-auto rounded-3xl border border-[#ece8e2] bg-white shadow-[0_12px_28px_rgba(26,26,26,0.05)]">
+        <div className="mt-5 overflow-x-auto rounded-3xl border border-[#ece8e2] bg-white shadow-[0_12px_28px_rgba(26,26,26,0.05)]">
           <table className="min-w-[980px] w-full border-collapse">
             <thead>
               <tr className="bg-[#faf9f7]">
