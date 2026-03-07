@@ -2168,7 +2168,7 @@ export default function RTCAdminPage() {
               );
             })}
           </div>
-          <div className="mt-3 grid gap-2 lg:grid-cols-[minmax(0,1fr)_auto]">
+          <div className="mt-3 hidden gap-2 lg:grid lg:grid-cols-[minmax(0,1fr)_auto]">
             <div>
               <input
                 value={quickJumpQuery}
@@ -2216,30 +2216,83 @@ export default function RTCAdminPage() {
               </button>
             </div>
           </div>
+          <details className="mt-3 rounded-lg border border-[#e8e5df] bg-white p-3 lg:hidden">
+            <summary className="cursor-pointer text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">
+              Admin Tools (Search + Sync)
+            </summary>
+            <div className="mt-2">
+              <input
+                value={quickJumpQuery}
+                onChange={(e) => setQuickJumpQuery(e.target.value)}
+                placeholder="Quick jump: member, pro, clinic, event..."
+                className="w-full rounded-lg border border-[#e8e5df] bg-white px-3 py-2 text-[12px]"
+              />
+              {quickJumpResults.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {quickJumpResults.map((row) => (
+                    <button
+                      key={`${row.type}-${row.id}`}
+                      type="button"
+                      onClick={() => jumpToResult(row)}
+                      className="rounded-md border border-[#d9d5cf] bg-white px-3 py-1.5 text-[12px] hover:bg-[#fdfcfb]"
+                      title={row.hint}
+                    >
+                      {row.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <p className="text-[11px] text-[#8a8477]">
+                Live sync: {lastSyncedAt ? new Date(lastSyncedAt).toLocaleTimeString() : "Not synced yet"}
+              </p>
+              <button
+                type="button"
+                onClick={() => loadLiveData()}
+                className="rounded-md border border-[#d9d5cf] bg-white px-3 py-1.5 text-[12px] hover:bg-[#fdfcfb]"
+              >
+                Refresh now
+              </button>
+              <button
+                type="button"
+                onClick={() => setAutoRefreshEnabled((v) => !v)}
+                className={`rounded-md border px-3 py-1.5 text-[12px] ${
+                  autoRefreshEnabled
+                    ? "border-[#1a1a1a] bg-[#1a1a1a] text-white"
+                    : "border-[#d9d5cf] bg-white text-[#4a4a4a] hover:bg-[#fdfcfb]"
+                }`}
+              >
+                Auto-refresh: {autoRefreshEnabled ? "On" : "Off"}
+              </button>
+            </div>
+          </details>
         </div>
 
-        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-4">
-            <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Total Revenue</p>
-            <p className="mt-1 text-[22px] font-semibold">{formatCurrency(kpis.totalRevenue)}</p>
+        {(activeWorkspace === "overview" || activeWorkspace === "finance") && (
+          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-4">
+              <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Total Revenue</p>
+              <p className="mt-1 text-[22px] font-semibold">{formatCurrency(kpis.totalRevenue)}</p>
+            </div>
+            <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-4">
+              <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Outstanding</p>
+              <p className="mt-1 text-[22px] font-semibold">{formatCurrency(kpis.outstanding)}</p>
+            </div>
+            <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-4">
+              <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Contractor Payouts</p>
+              <p className="mt-1 text-[22px] font-semibold">{formatCurrency(kpis.contractorPayouts)}</p>
+            </div>
+            <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-4">
+              <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Net After Payouts</p>
+              <p className="mt-1 text-[22px] font-semibold">{formatCurrency(kpis.netAfterPayouts)}</p>
+            </div>
+            <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-4">
+              <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Active Members</p>
+              <p className="mt-1 text-[22px] font-semibold">{kpis.membersActive}</p>
+            </div>
           </div>
-          <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-4">
-            <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Outstanding</p>
-            <p className="mt-1 text-[22px] font-semibold">{formatCurrency(kpis.outstanding)}</p>
-          </div>
-          <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-4">
-            <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Contractor Payouts</p>
-            <p className="mt-1 text-[22px] font-semibold">{formatCurrency(kpis.contractorPayouts)}</p>
-          </div>
-          <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-4">
-            <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Net After Payouts</p>
-            <p className="mt-1 text-[22px] font-semibold">{formatCurrency(kpis.netAfterPayouts)}</p>
-          </div>
-          <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-4">
-            <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Active Members</p>
-            <p className="mt-1 text-[22px] font-semibold">{kpis.membersActive}</p>
-          </div>
-        </div>
+        )}
 
         {activeWorkspace === "overview" && (
           <details id="performance-overview" className="mt-5 rounded-xl border border-[#ece8e2] p-4">

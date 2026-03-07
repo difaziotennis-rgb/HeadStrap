@@ -1,8 +1,14 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import MemberAuth from "./MemberAuth";
 import { rtcNav } from "./rtc-data";
 
 export default function RTCLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const isAdminRoute = pathname === "/RTC/admin" || pathname.startsWith("/RTC/admin/");
+
   return (
     <div className="min-h-screen bg-[#f7f7f5] text-[#1a1a1a]">
       <header className="sticky top-0 z-40 bg-[#faf9f7]/95 backdrop-blur">
@@ -18,19 +24,21 @@ export default function RTCLayout({ children }: { children: React.ReactNode }) {
             </span>
           </div>
         </div>
-        <div className="mx-auto w-full max-w-6xl px-4 pb-3 sm:px-6">
-          <nav className="flex gap-1 overflow-x-auto rounded-2xl border border-[#e8e5df] bg-white/95 p-1.5 shadow-[0_10px_24px_rgba(26,26,26,0.08)]">
-            {rtcNav.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="whitespace-nowrap rounded-lg px-3 py-1.5 text-[12px] font-medium text-[#6f695f] transition-colors hover:bg-[#f7f5f1] hover:text-[#1a1a1a]"
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-        </div>
+        {!isAdminRoute && (
+          <div className="mx-auto w-full max-w-6xl px-4 pb-3 sm:px-6">
+            <nav className="flex gap-1 overflow-x-auto rounded-2xl border border-[#e8e5df] bg-white/95 p-1.5 shadow-[0_10px_24px_rgba(26,26,26,0.08)]">
+              {rtcNav.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="whitespace-nowrap rounded-lg px-3 py-1.5 text-[12px] font-medium text-[#6f695f] transition-colors hover:bg-[#f7f5f1] hover:text-[#1a1a1a]"
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </nav>
+          </div>
+        )}
       </header>
       <div>{children}</div>
       <footer className="border-t border-[#e8e5df] bg-[#f6f4f0]">
