@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { rtcSummerEvents } from "./rtc-data";
+import { rtcClinics, rtcSummerEvents } from "./rtc-data";
 import { MEMBER_SESSION_EVENT, MEMBER_SESSION_KEY, parseMemberSession } from "./member-session";
 
 const COURT_KEY = "rtc_court_bookings_v1";
@@ -42,33 +42,6 @@ type EventReservation = {
   memberNumber?: string;
   createdAt: string;
 };
-
-type AtmosphereNote = {
-  title: string;
-  detail: string;
-  image: string;
-};
-
-const atmosphereNotes: AtmosphereNote[] = [
-  {
-    title: "Morning calm before first serve",
-    detail: "Quiet courts, mountain air, and a clean start to the day in Rhinebeck.",
-    image:
-      "https://images.unsplash.com/photo-1508609349937-5ec4ae374ebf?auto=format&fit=crop&w=1400&q=80",
-  },
-  {
-    title: "Golden-hour socials",
-    detail: "Evening matches flow naturally into terrace conversations and family dinners.",
-    image:
-      "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=1400&q=80",
-  },
-  {
-    title: "Weekend family rhythm",
-    detail: "Juniors play, parents rally, and the club feels easy, warm, and connected.",
-    image:
-      "https://images.unsplash.com/photo-1517649763962-0c623066013b?auto=format&fit=crop&w=1400&q=80",
-  },
-];
 
 const MOCK_PULSE = {
   clinicSignups: 16,
@@ -213,7 +186,48 @@ export default function OverviewEnhancements() {
     events: memberEvents.length || (!hasLiveData && memberNumber ? MOCK_MEMBER_ACTIVITY.events : 0),
   };
 
-  const atmosphereCard = atmosphereNotes[new Date().getDay() % atmosphereNotes.length];
+  const todayWeekday = useMemo(
+    () => new Date().toLocaleDateString("en-US", { weekday: "long" }),
+    []
+  );
+  const featuredClinic = useMemo(() => {
+    return rtcClinics.find((clinic) => clinic.schedule.startsWith(todayWeekday));
+  }, [todayWeekday]);
+
+  const featuredExperience = useMemo(() => {
+    if (nextEvent) {
+      return {
+        title: nextEvent.title,
+        blurb: `Upcoming event spotlight: ${nextEvent.title}${
+          typeof nextEventSpots === "number" ? ` with ${nextEventSpots} spots currently open.` : "."
+        }`,
+        href: `/RTC/events/${nextEvent.id}`,
+        cta: "Open Event Details",
+        image:
+          "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=1400&q=80",
+      };
+    }
+    if (featuredClinic) {
+      return {
+        title: featuredClinic.name,
+        blurb: `Today's clinic highlight: ${featuredClinic.schedule}. Join the session lineup and reserve your spot.`,
+        href: "/RTC/clinics",
+        cta: "Open Clinic Schedule",
+        image:
+          "https://images.unsplash.com/photo-1517649763962-0c623066013b?auto=format&fit=crop&w=1400&q=80",
+      };
+    }
+    return {
+      title: "Club Programming",
+      blurb:
+        "From clinics to social events, each week is built to keep play competitive, social, and easy to join.",
+      href: "/RTC/clinics",
+      cta: "View Programs",
+      image:
+        "https://images.unsplash.com/photo-1508609349937-5ec4ae374ebf?auto=format&fit=crop&w=1400&q=80",
+    };
+  }, [featuredClinic, nextEvent, nextEventSpots]);
+
   const rebookHref =
     lastCourt
       ? `/RTC/book?date=${encodeURIComponent(lastCourt.date)}&courtId=${encodeURIComponent(
@@ -308,20 +322,20 @@ export default function OverviewEnhancements() {
 
         <div className="overflow-hidden rounded-2xl border border-[#e8e5df] bg-white">
           <img
-            src={atmosphereCard.image}
-            alt="Hudson Valley club atmosphere"
+            src={featuredExperience.image}
+            alt="Rhinebeck club programming highlight"
             className="h-36 w-full object-cover"
           />
           <div className="p-4">
-            <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Hudson Valley Atmosphere</p>
-            <p className="mt-1 text-[17px] font-semibold">{atmosphereCard.title}</p>
-            <p className="mt-1 text-[13px] text-[#6b665e]">{atmosphereCard.detail}</p>
-            {nextEvent && (
-              <p className="mt-3 text-[12px] text-[#6b665e]">
-                Next event: <span className="font-medium text-[#1a1a1a]">{nextEvent.title}</span>
-                {typeof nextEventSpots === "number" ? ` · ${nextEventSpots} spots left` : ""}
-              </p>
-            )}
+            <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Featured Experience</p>
+            <p className="mt-1 text-[17px] font-semibold">{featuredExperience.title}</p>
+            <p className="mt-1 text-[13px] text-[#6b665e]">{featuredExperience.blurb}</p>
+            <Link
+              href={featuredExperience.href}
+              className="mt-3 inline-block rounded-lg border border-[#d9d5cf] bg-[#faf9f7] px-3 py-1.5 text-[12px] font-medium hover:bg-white"
+            >
+              {featuredExperience.cta}
+            </Link>
           </div>
         </div>
       </div>
