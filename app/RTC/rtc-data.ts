@@ -132,19 +132,19 @@ export const rtcSummerEvents = [
   {
     id: "member-guest-weekend",
     title: "Member-Guest Tennis Weekend",
-    dateLabel: "July 18-20",
-    timeLabel: "Fri 5:30 PM - Sun 4:00 PM",
+    dateLabel: "May 23",
+    timeLabel: "Saturday · 8:30 AM - 5:30 PM",
     category: "Tournament",
     audience: "Members + Guests",
     capacity: 48,
     priceMember: "$295 / team",
     pricePublic: "By invite only",
     description:
-      "Three-day club signature weekend with doubles play, evening receptions, and Sunday championship finals.",
+      "Memorial Day weekend Saturday signature event with doubles play, social breaks, and same-day championship finals.",
     highlights: [
-      "Friday opening night courtside reception",
       "Saturday all-day match blocks with brunch and lunch service",
-      "Sunday finals and trophy social",
+      "Same-day finals and trophy presentation",
+      "Courtside social hour to close the event",
     ],
   },
   {
