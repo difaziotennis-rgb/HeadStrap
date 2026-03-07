@@ -90,7 +90,7 @@ export default function MemberAuth() {
         }}
         className="rounded-md border border-[#d9d5cf] px-2.5 py-1.5 text-[11px] font-medium hover:bg-white"
       >
-        Member Sign In
+        Sign In
       </button>
       {open && (
         <form

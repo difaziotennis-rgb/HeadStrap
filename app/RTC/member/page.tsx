@@ -2,6 +2,7 @@ import Link from "next/link";
 
 const membershipBenefits = [
   "Member court rates: indoor $62/hr and outdoor $44/hr (vs public pricing)",
+  "Advanced access windows for indoor court booking before public release",
   "Private Member Dashboard access for booking history, upcoming schedule, and account details",
   "Priority enrollment windows for clinics, camps, and high-demand events",
   "Member-only ladders, socials, and seasonal programming opportunities",

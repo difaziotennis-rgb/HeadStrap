@@ -71,12 +71,9 @@ export default function RTCPage() {
         <OverviewEnhancements memberSignedIn={memberSignedIn} />
 
         <div id="this-month" className="scroll-mt-28">
-          <details className="rounded-2xl border border-[#e8e5df] bg-white p-6">
-            <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-2">
+          <div className="rounded-2xl border border-[#e8e5df] bg-white p-6">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Upcoming Events at RTC</p>
-              <span className="text-[12px] font-medium text-[#6b665e]">Tap to Expand</span>
-            </summary>
-            <div className="mt-3">
               <Link href="/RTC/events" className="text-[12px] font-medium text-[#6b665e] hover:text-[#1a1a1a]">
                 View Full Calendar
               </Link>
@@ -105,7 +102,7 @@ export default function RTCPage() {
                 </Link>
               ))}
             </div>
-          </details>
+          </div>
         </div>
       </section>
     </main>
