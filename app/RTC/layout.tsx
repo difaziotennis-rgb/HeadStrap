@@ -5,7 +5,7 @@ import { rtcNav } from "./rtc-data";
 export default function RTCLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-[#f7f7f5] text-[#1a1a1a]">
-      <header className="sticky top-0 z-40 border-b border-[#e8e5df] bg-[#faf9f7]/95 backdrop-blur">
+      <header className="sticky top-0 z-40 bg-[#faf9f7]/95 backdrop-blur">
         <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-4 sm:px-6">
           <div>
             <p className="text-[10px] uppercase tracking-[0.25em] text-[#b0a99f]">DiFazio Tennis</p>
@@ -18,13 +18,13 @@ export default function RTCLayout({ children }: { children: React.ReactNode }) {
             </span>
           </div>
         </div>
-        <div className="border-t border-[#f0ede8]">
-          <nav className="mx-auto flex w-full max-w-6xl gap-1 overflow-x-auto px-4 py-2 sm:px-6">
+        <div className="mx-auto w-full max-w-6xl px-4 pb-3 sm:px-6">
+          <nav className="flex gap-1 overflow-x-auto rounded-2xl border border-[#e8e5df] bg-white/95 p-1.5 shadow-[0_10px_24px_rgba(26,26,26,0.08)]">
             {rtcNav.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className="whitespace-nowrap rounded-md px-3 py-1.5 text-[12px] font-medium text-[#7a756d] transition-colors hover:bg-white hover:text-[#1a1a1a]"
+                className="whitespace-nowrap rounded-lg px-3 py-1.5 text-[12px] font-medium text-[#6f695f] transition-colors hover:bg-[#f7f5f1] hover:text-[#1a1a1a]"
               >
                 {item.label}
               </Link>
@@ -32,7 +32,7 @@ export default function RTCLayout({ children }: { children: React.ReactNode }) {
           </nav>
         </div>
       </header>
-      <div className="pb-20 md:pb-0">{children}</div>
+      <div>{children}</div>
       <footer className="border-t border-[#e8e5df] bg-[#f6f4f0]">
         <div className="mx-auto grid w-full max-w-6xl gap-5 px-4 py-7 sm:grid-cols-2 sm:px-6 sm:py-8">
           <div>
@@ -79,34 +79,6 @@ export default function RTCLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </footer>
-      <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-[#e8e5df] bg-[#faf9f7]/98 px-3 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 shadow-[0_-10px_24px_rgba(26,26,26,0.08)] backdrop-blur md:hidden">
-        <div className="mx-auto grid w-full max-w-6xl grid-cols-4 gap-2">
-          <Link
-            href="/RTC/book"
-            className="rounded-lg border border-[#ddd8d0] bg-white px-2 py-2 text-center text-[11px] font-medium text-[#4a4a4a] hover:bg-[#fdfcfb]"
-          >
-            Book
-          </Link>
-          <Link
-            href="/RTC/clinics"
-            className="rounded-lg border border-[#ddd8d0] bg-white px-2 py-2 text-center text-[11px] font-medium text-[#4a4a4a] hover:bg-[#fdfcfb]"
-          >
-            Schedule
-          </Link>
-          <Link
-            href="/RTC/member"
-            className="rounded-lg border border-[#ddd8d0] bg-white px-2 py-2 text-center text-[11px] font-medium text-[#4a4a4a] hover:bg-[#fdfcfb]"
-          >
-            Membership
-          </Link>
-          <Link
-            href="/RTC/member/portal"
-            className="rounded-lg border border-[#ddd8d0] bg-white px-2 py-2 text-center text-[11px] font-medium text-[#4a4a4a] hover:bg-[#fdfcfb]"
-          >
-            Account
-          </Link>
-        </div>
-      </nav>
     </div>
   );
 }
