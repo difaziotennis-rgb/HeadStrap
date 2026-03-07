@@ -175,12 +175,15 @@ export default function OverviewEnhancements({ memberSignedIn }: { memberSignedI
               </div>
             </>
           ) : (
-            <>
-              <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Start Here</p>
-              <h3 className="mt-1 text-[20px] font-semibold tracking-tight sm:text-[24px]">Plan Your Visit</h3>
-              <p className="mt-2 text-[12px] text-[#6b665e] sm:text-[13px]">
-                A calm, social tennis setting in the Hudson Valley for daily play, progress, and shared moments.
-              </p>
+            <details className="group">
+              <summary className="cursor-pointer list-none">
+                <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Start Here</p>
+                <h3 className="mt-1 text-[20px] font-semibold tracking-tight sm:text-[24px]">Plan Your Visit</h3>
+                <p className="mt-2 text-[12px] text-[#6b665e] sm:text-[13px]">
+                  A calm, social tennis setting in the Hudson Valley for daily play, progress, and shared moments.
+                </p>
+                <p className="mt-2 text-[11px] font-medium text-[#8a8477] group-open:hidden">Tap to expand</p>
+              </summary>
               <div className="mt-3 grid gap-2 sm:grid-cols-2">
                 <Link href="/RTC/member" className="rounded-lg border border-[#d9d5cf] bg-[#faf9f7] px-3 py-2 text-[12px] font-medium hover:bg-white">
                   Explore Membership
@@ -195,7 +198,7 @@ export default function OverviewEnhancements({ memberSignedIn }: { memberSignedI
                   Clinics
                 </Link>
               </div>
-            </>
+            </details>
           )}
         </div>
 
