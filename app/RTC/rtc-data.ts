@@ -58,28 +58,28 @@ export const rtcClinics = [
   },
   {
     name: "Saturday Advanced",
-    schedule: "Saturday · 9:00 AM · 1 h 30 min session",
+    schedule: "Saturday · 9:00 AM · 3 hr session",
     level: "Advanced",
     memberPrice: "$75",
     publicPrice: "$90",
   },
   {
     name: "Saturday Intermediate",
-    schedule: "Saturday · 11:00 AM · 1 h 30 min session",
+    schedule: "Saturday · 9:00 AM · 3 hr session",
     level: "Intermediate",
     memberPrice: "$75",
     publicPrice: "$90",
   },
   {
     name: "Sunday Advanced Intermediate",
-    schedule: "Sunday · 9:00 AM · 1 h 30 min session",
+    schedule: "Sunday · 9:00 AM · 3 hr session",
     level: "Advanced Intermediate",
     memberPrice: "$75",
     publicPrice: "$90",
   },
   {
     name: "Sunday Advanced",
-    schedule: "Sunday · 11:00 AM · 2 hr session",
+    schedule: "Sunday · 9:00 AM · 3 hr session",
     level: "Advanced",
     memberPrice: "$95",
     publicPrice: "$110",
@@ -93,10 +93,10 @@ export const rtcClinicCourtBlocks: Record<
   "Monday Nights with Derek": { weekday: 1, startHour: 18, durationHours: 2 },
   "Wednesday Nights with Jay": { weekday: 3, startHour: 18, durationHours: 2 },
   "Friday Nights with Derek": { weekday: 5, startHour: 18, durationHours: 2 },
-  "Saturday Advanced": { weekday: 6, startHour: 9, durationHours: 2 },
-  "Saturday Intermediate": { weekday: 6, startHour: 11, durationHours: 2 },
-  "Sunday Advanced Intermediate": { weekday: 0, startHour: 9, durationHours: 2 },
-  "Sunday Advanced": { weekday: 0, startHour: 11, durationHours: 2 },
+  "Saturday Advanced": { weekday: 6, startHour: 9, durationHours: 3 },
+  "Saturday Intermediate": { weekday: 6, startHour: 9, durationHours: 3 },
+  "Sunday Advanced Intermediate": { weekday: 0, startHour: 9, durationHours: 3 },
+  "Sunday Advanced": { weekday: 0, startHour: 9, durationHours: 3 },
 };
 
 export const rtcSampleSlots = [

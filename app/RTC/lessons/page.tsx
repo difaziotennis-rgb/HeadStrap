@@ -35,8 +35,21 @@ type LessonRequest = {
   createdAt: string;
 };
 
+function sortLessonCoaches() {
+  const priority = ["Derek DiFazio", "Jay Behrke", "Robert Myerson"];
+  return [...rtcCoaches].sort((a, b) => {
+    const aIdx = priority.indexOf(a.name);
+    const bIdx = priority.indexOf(b.name);
+    if (aIdx === -1 && bIdx === -1) return a.name.localeCompare(b.name);
+    if (aIdx === -1) return 1;
+    if (bIdx === -1) return -1;
+    return aIdx - bIdx;
+  });
+}
+
 export default function RTCLessonsPage() {
-  const [coachName, setCoachName] = useState(rtcCoaches[0]?.name || "");
+  const lessonCoaches = useMemo(() => sortLessonCoaches(), []);
+  const [coachName, setCoachName] = useState(lessonCoaches[0]?.name || "");
   const [selectedSlot, setSelectedSlot] = useState(LESSON_SLOTS[0]);
   const [duration, setDuration] = useState("60");
   const [memberSession, setMemberSession] = useState<ReturnType<typeof parseMemberSession>>(null);
@@ -72,8 +85,8 @@ export default function RTCLessonsPage() {
   }, []);
 
   const selectedCoach = useMemo(
-    () => rtcCoaches.find((coach) => coach.name === coachName) ?? rtcCoaches[0],
-    [coachName]
+    () => lessonCoaches.find((coach) => coach.name === coachName) ?? lessonCoaches[0],
+    [coachName, lessonCoaches]
   );
 
   const effectiveRate = useMemo(() => {
@@ -131,7 +144,7 @@ export default function RTCLessonsPage() {
             <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-4">
               <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Choose Your Coach</p>
               <div className="mt-3 grid gap-2">
-                {rtcCoaches.map((coach) => {
+                {lessonCoaches.map((coach) => {
                   const active = coach.name === coachName;
                   return (
                     <button

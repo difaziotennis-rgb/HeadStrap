@@ -758,19 +758,7 @@ export default function RTCBookPage() {
           </div>
         </div>
 
-        <div className="mt-5 grid gap-2">
-          <details className="rounded-2xl border border-[#ece8e2] bg-[#faf9f7] p-4 shadow-[0_6px_18px_rgba(26,26,26,0.03)]">
-            <summary className="cursor-pointer text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Pricing details</summary>
-            <p className="mt-2 text-[14px]">Public: Indoor <strong>$74/hr</strong> · Outdoor <strong>$58/hr</strong></p>
-            <p className="mt-1 text-[14px]">Member: Indoor <strong>$62/hr</strong> · Outdoor <strong>$44/hr</strong></p>
-          </details>
-          <details className="rounded-2xl border border-[#ece8e2] bg-[#faf9f7] p-4 shadow-[0_6px_18px_rgba(26,26,26,0.03)]">
-            <summary className="cursor-pointer text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Booking notes</summary>
-            <p className="mt-2 text-[13px] text-[#6b665e]">One-hour bookings with payment required to confirm your slot.</p>
-          </details>
-        </div>
-
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#ece8e2] bg-[#f9f8f6] px-3 py-2 text-[11px] text-[#7a756d]">
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#ece8e2] bg-[#f9f8f6] px-3 py-2 text-[11px] text-[#7a756d]">
           <p className="uppercase tracking-[0.1em]">Court Grid</p>
           <p>Tap any open slot to book instantly.</p>
         </div>
@@ -857,6 +845,18 @@ export default function RTCBookPage() {
               ))}
             </tbody>
           </table>
+        </div>
+
+        <div className="mt-4 grid gap-2">
+          <details className="rounded-2xl border border-[#ece8e2] bg-[#faf9f7] p-4 shadow-[0_6px_18px_rgba(26,26,26,0.03)]">
+            <summary className="cursor-pointer text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Pricing details</summary>
+            <p className="mt-2 text-[14px]">Public: Indoor <strong>$74/hr</strong> · Outdoor <strong>$58/hr</strong></p>
+            <p className="mt-1 text-[14px]">Member: Indoor <strong>$62/hr</strong> · Outdoor <strong>$44/hr</strong></p>
+          </details>
+          <details className="rounded-2xl border border-[#ece8e2] bg-[#faf9f7] p-4 shadow-[0_6px_18px_rgba(26,26,26,0.03)]">
+            <summary className="cursor-pointer text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Booking notes</summary>
+            <p className="mt-2 text-[13px] text-[#6b665e]">One-hour bookings with payment required to confirm your slot.</p>
+          </details>
         </div>
       </div>
 
