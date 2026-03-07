@@ -795,13 +795,13 @@ export default function RTCBookPage() {
           <table className="w-full min-w-[860px] border-collapse sm:min-w-[980px]">
             <thead>
               <tr className="bg-[#faf9f7]">
-                <th className="sticky left-0 z-10 border-b border-r border-[#ece8e2] bg-[#faf9f7] px-3 py-2 text-left text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">
+                <th className="sticky left-0 top-0 z-30 border-b border-r border-[#ece8e2] bg-[#faf9f7] px-3 py-2 text-left text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">
                   Time
                 </th>
                 {courts.map((court) => (
                   <th
                     key={court.id}
-                    className="border-b border-[#ece8e2] px-3 py-2 text-left text-[11px] uppercase tracking-[0.12em] text-[#8a8477]"
+                    className="sticky top-0 z-20 border-b border-[#ece8e2] bg-[#faf9f7] px-3 py-2 text-left text-[11px] uppercase tracking-[0.12em] text-[#8a8477]"
                   >
                     {court.name}
                     <span className="ml-1 text-[10px] normal-case tracking-normal text-[#a39e95]">
