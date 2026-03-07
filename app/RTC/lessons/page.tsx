@@ -20,6 +20,7 @@ const LESSON_SLOTS = [
 ];
 
 const LESSON_STORAGE_KEY = "rtc_lesson_requests_v1";
+const DEREK_BOOKING_URL = "https://difaziotennis.com/book";
 
 type LessonRequest = {
   id: string;
@@ -146,6 +147,7 @@ export default function RTCLessonsPage() {
               <div className="mt-3 grid gap-2">
                 {lessonCoaches.map((coach) => {
                   const active = coach.name === coachName;
+                  const isDerek = coach.name === "Derek DiFazio";
                   return (
                     <button
                       key={coach.name}
@@ -160,7 +162,19 @@ export default function RTCLessonsPage() {
                       <div className="flex items-center justify-between gap-2">
                         <div>
                           <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">{coach.role}</p>
-                          <p className="mt-0.5 text-[16px] font-semibold">{coach.name}</p>
+                          <p className="mt-0.5 text-[16px] font-semibold">
+                            {isDerek ? (
+                              <a
+                                href={DEREK_BOOKING_URL}
+                                className="underline decoration-[#c7c1b8] underline-offset-4 hover:text-[#2d5016]"
+                                onClick={(event) => event.stopPropagation()}
+                              >
+                                {coach.name}
+                              </a>
+                            ) : (
+                              coach.name
+                            )}
+                          </p>
                         </div>
                         <p className="text-[12px] font-medium text-[#2d5016]">{coach.rate}</p>
                       </div>
