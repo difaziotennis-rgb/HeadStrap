@@ -157,30 +157,47 @@ export default function OverviewEnhancements({ memberSignedIn }: { memberSignedI
 
   return (
     <div className="mb-3 sm:mb-4">
-      <div className={`grid gap-3 sm:gap-4 ${signedIn ? "lg:grid-cols-1" : "lg:grid-cols-[1.2fr_1fr]"}`}>
-        {!signedIn && (
-          <div className="rounded-2xl border border-[#e8e5df] bg-white p-4 sm:p-6">
-            <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Start Here</p>
-            <h3 className="mt-1 text-[20px] font-semibold tracking-tight sm:text-[24px]">Plan Your Visit</h3>
-            <p className="mt-2 text-[12px] text-[#6b665e] sm:text-[13px]">
-              A calm, social tennis setting in the Hudson Valley for daily play, progress, and shared moments.
-            </p>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2">
-              <Link href="/RTC/member" className="rounded-lg border border-[#d9d5cf] bg-[#faf9f7] px-3 py-2 text-[12px] font-medium hover:bg-white">
-                Explore Membership
-              </Link>
-              <Link href="/RTC/book" className="rounded-lg border border-[#d9d5cf] bg-[#faf9f7] px-3 py-2 text-[12px] font-medium hover:bg-white">
-                Book Court
-              </Link>
-              <Link href="/RTC/lessons" className="rounded-lg border border-[#d9d5cf] bg-[#faf9f7] px-3 py-2 text-[12px] font-medium hover:bg-white">
-                Private Lessons
-              </Link>
-              <Link href="/RTC/clinics" className="rounded-lg border border-[#d9d5cf] bg-[#faf9f7] px-3 py-2 text-[12px] font-medium hover:bg-white">
-                Clinics
-              </Link>
-            </div>
-          </div>
-        )}
+      <div className="grid gap-3 sm:gap-4 lg:grid-cols-[1.2fr_1fr]">
+        <div className="rounded-2xl border border-[#e8e5df] bg-white p-4 sm:p-6">
+          {signedIn ? (
+            <>
+              <h3 className="text-[20px] font-semibold tracking-tight sm:text-[24px]">Welcome back, Derek</h3>
+              <p className="mt-2 text-[12px] text-[#6b665e] sm:text-[13px]">
+                Your account and booking tools are ready.
+              </p>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <Link href="/RTC/book" className="rounded-lg border border-[#d9d5cf] bg-[#faf9f7] px-3 py-2 text-[12px] font-medium hover:bg-white">
+                  Book Court
+                </Link>
+                <Link href="/RTC/member/portal" className="rounded-lg border border-[#d9d5cf] bg-[#faf9f7] px-3 py-2 text-[12px] font-medium hover:bg-white">
+                  Open Member Dashboard
+                </Link>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Start Here</p>
+              <h3 className="mt-1 text-[20px] font-semibold tracking-tight sm:text-[24px]">Plan Your Visit</h3>
+              <p className="mt-2 text-[12px] text-[#6b665e] sm:text-[13px]">
+                A calm, social tennis setting in the Hudson Valley for daily play, progress, and shared moments.
+              </p>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <Link href="/RTC/member" className="rounded-lg border border-[#d9d5cf] bg-[#faf9f7] px-3 py-2 text-[12px] font-medium hover:bg-white">
+                  Explore Membership
+                </Link>
+                <Link href="/RTC/book" className="rounded-lg border border-[#d9d5cf] bg-[#faf9f7] px-3 py-2 text-[12px] font-medium hover:bg-white">
+                  Book Court
+                </Link>
+                <Link href="/RTC/lessons" className="rounded-lg border border-[#d9d5cf] bg-[#faf9f7] px-3 py-2 text-[12px] font-medium hover:bg-white">
+                  Private Lessons
+                </Link>
+                <Link href="/RTC/clinics" className="rounded-lg border border-[#d9d5cf] bg-[#faf9f7] px-3 py-2 text-[12px] font-medium hover:bg-white">
+                  Clinics
+                </Link>
+              </div>
+            </>
+          )}
+        </div>
 
         <div className="overflow-hidden rounded-2xl border border-[#e8e5df] bg-white">
           <img
