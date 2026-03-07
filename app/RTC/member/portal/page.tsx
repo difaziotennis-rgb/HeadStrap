@@ -410,8 +410,8 @@ export default function RTCMemberPortalPage() {
       <div className="rounded-2xl border border-[#e8e5df] bg-white p-6 shadow-[0_10px_30px_rgba(26,26,26,0.04)] sm:p-8">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="text-[11px] uppercase tracking-[0.14em] text-[#8a8477]">Portal</p>
-            <h2 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">Member Control Center</h2>
+            <p className="text-[11px] uppercase tracking-[0.14em] text-[#8a8477]">Member Dashboard</p>
+            <h2 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">Member Dashboard</h2>
             <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-[#6b665e]">
               Manage bookings, billing, payment details, and quarterly statements from one clean member workspace.
             </p>

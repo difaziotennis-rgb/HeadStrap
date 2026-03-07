@@ -12,10 +12,10 @@ export default function RTCLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-[#f7f7f5] text-[#1a1a1a]">
       <header className="sticky top-0 z-40 bg-[#faf9f7]/95 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-4 sm:px-6">
+        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-3 sm:px-6 sm:py-4">
           <div>
             <p className="text-[10px] uppercase tracking-[0.25em] text-[#b0a99f]">DiFazio Tennis</p>
-            <h1 className="text-[16px] font-semibold tracking-tight">Rhinebeck Tennis Club</h1>
+            <h1 className="text-[15px] font-semibold tracking-tight sm:text-[16px]">Rhinebeck Tennis Club</h1>
           </div>
           <div className="flex items-center gap-2">
             <MemberAuth />
@@ -26,12 +26,12 @@ export default function RTCLayout({ children }: { children: React.ReactNode }) {
         </div>
         {!isAdminRoute && (
           <div className="mx-auto w-full max-w-6xl px-4 pb-3 sm:px-6">
-            <nav className="flex gap-1 overflow-x-auto rounded-2xl border border-[#e8e5df] bg-white/95 p-1.5 shadow-[0_10px_24px_rgba(26,26,26,0.08)]">
+            <nav className="flex gap-1 overflow-x-auto rounded-xl border border-[#e8e5df] bg-white/95 p-1 shadow-[0_8px_18px_rgba(26,26,26,0.06)] sm:rounded-2xl sm:p-1.5 sm:shadow-[0_10px_24px_rgba(26,26,26,0.08)]">
               {rtcNav.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="whitespace-nowrap rounded-lg px-3 py-1.5 text-[12px] font-medium text-[#6f695f] transition-colors hover:bg-[#f7f5f1] hover:text-[#1a1a1a]"
+                  className="whitespace-nowrap rounded-md px-2.5 py-1 text-[11px] font-medium text-[#6f695f] transition-colors hover:bg-[#f7f5f1] hover:text-[#1a1a1a] sm:rounded-lg sm:px-3 sm:py-1.5 sm:text-[12px]"
                 >
                   {item.label}
                 </Link>

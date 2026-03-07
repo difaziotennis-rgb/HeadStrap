@@ -41,6 +41,7 @@ const STORAGE_KEY = "rtc_court_bookings_v1";
 const PENDING_STRIPE_KEY = "rtc_pending_stripe_bookings_v1";
 const CLINIC_STORAGE_KEY = "rtc_clinic_bookings_v1";
 const MEMBER_PREFERENCES_KEY = "rtc_member_preferences_v1";
+const MEMBER_PAYMENT_KEY = "rtc_member_payment_profile_v1";
 const ADMIN_COURT_BLOCKS_KEY = "rtc_admin_court_blocks_v1";
 const BOOKING_FORM_KEY = "rtc_booking_form_v1";
 const EVENT_RESERVED_COURTS = ["indoor-1", "outdoor-1", "outdoor-2", "outdoor-3"];
@@ -74,6 +75,12 @@ type MemberPreferences = {
   preferredStartTime: string;
   preferredCoach: string;
   preferredSurface: "Indoor" | "Outdoor" | "No preference";
+};
+
+type MemberPaymentProfile = {
+  brand: "Visa" | "Mastercard" | "Amex";
+  last4: string;
+  autopay: boolean;
 };
 
 const courts: Court[] = [
@@ -222,8 +229,8 @@ export default function RTCBookPage() {
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
   const [isCreatingStripe, setIsCreatingStripe] = useState(false);
   const [lastBooked, setLastBooked] = useState<Booking | null>(null);
-  const [bookingStep, setBookingStep] = useState<2 | 3>(2);
   const [preferences, setPreferences] = useState<MemberPreferences | null>(null);
+  const [memberPayment, setMemberPayment] = useState<MemberPaymentProfile | null>(null);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState<Date>(() => {
     const now = new Date();
@@ -287,6 +294,12 @@ export default function RTCBookPage() {
         setPreferences(raw ? (JSON.parse(raw) as MemberPreferences) : null);
       } catch {
         setPreferences(null);
+      }
+      try {
+        const raw = localStorage.getItem(MEMBER_PAYMENT_KEY);
+        setMemberPayment(raw ? (JSON.parse(raw) as MemberPaymentProfile) : null);
+      } catch {
+        setMemberPayment(null);
       }
     }
     applySession();
@@ -508,7 +521,6 @@ export default function RTCBookPage() {
     setActiveCourt(court);
     setActiveHour(startHour);
     const hasMultiHourHint = duration > 1;
-    setBookingStep(2);
     setStatusMsg(hasMultiHourHint ? "Court booking is currently 1 hour at a time." : null);
     window.history.replaceState({}, "", "/RTC/book");
   }, [blockedSlots, bookings, selectedDate]);
@@ -528,7 +540,6 @@ export default function RTCBookPage() {
   function openBooking(court: Court, hour: number) {
     setActiveCourt(court);
     setActiveHour(hour);
-    setBookingStep(memberSession ? 3 : 2);
     setStatusMsg(null);
   }
 
@@ -536,7 +547,6 @@ export default function RTCBookPage() {
     setActiveCourt(null);
     setActiveHour(null);
     setStatusMsg(null);
-    setBookingStep(2);
   }
 
   function buildBookingDraft(paymentMethod: Booking["paymentMethod"]) {
@@ -582,15 +592,6 @@ export default function RTCBookPage() {
       createdAt,
     };
     return booking;
-  }
-
-  function proceedToPaymentStep() {
-    if (!memberSession && (!form.name.trim() || !form.email.trim())) {
-      setStatusMsg("Name and email are required.");
-      return;
-    }
-    setStatusMsg(null);
-    setBookingStep(3);
   }
 
   function buildVenmoUrl(booking: Booking): string {
@@ -658,6 +659,26 @@ export default function RTCBookPage() {
     }
   }
 
+  function handleMemberQuickConfirm() {
+    if (!memberSession) return;
+    const booking = buildBookingDraft("manual");
+    if (!booking) return;
+    const firstKey = bookingKey(booking.date, booking.courtId, booking.blockStartHour);
+    const next = { ...bookings };
+    next[firstKey] = {
+      ...booking,
+      paymentStatus: memberPayment?.autopay ? "paid" : "pending",
+      paymentMethod: "manual",
+    };
+    persist(next);
+    setLastBooked(next[firstKey]);
+    setStatusMsg(
+      memberPayment?.autopay
+        ? "Court confirmed. Card-on-file autopay was applied."
+        : "Court confirmed. Your member balance will be updated in the Member Dashboard."
+    );
+  }
+
   const monthLabel = useMemo(
     () => calendarMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" }),
     [calendarMonth]
@@ -683,20 +704,20 @@ export default function RTCBookPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-10">
-      <div className="overflow-hidden rounded-3xl border border-[#e8e5df] bg-gradient-to-b from-white to-[#fcfbf9] p-6 shadow-[0_18px_42px_rgba(26,26,26,0.06)] sm:p-8">
-        <div className="mb-4 overflow-hidden rounded-2xl border border-[#ece8e2]">
+    <main className="mx-auto w-full max-w-7xl px-3 py-6 sm:px-6 sm:py-10">
+      <div className="overflow-hidden rounded-2xl border border-[#e8e5df] bg-gradient-to-b from-white to-[#fcfbf9] p-4 shadow-[0_14px_32px_rgba(26,26,26,0.05)] sm:rounded-3xl sm:p-8 sm:shadow-[0_18px_42px_rgba(26,26,26,0.06)]">
+        <div className="mb-3 overflow-hidden rounded-xl border border-[#ece8e2] sm:mb-4 sm:rounded-2xl">
           <img
             src="https://images.unsplash.com/photo-1600614282844-a885427b0c15?auto=format&fit=crop&w=1600&q=80"
             alt="Aerial tennis court surrounded by trees"
-            className="h-32 w-full object-cover sm:h-40"
+            className="h-24 w-full object-cover sm:h-40"
           />
         </div>
-        <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="flex flex-wrap items-end justify-between gap-3 sm:gap-4">
           <div>
             <p className="text-[10px] uppercase tracking-[0.16em] text-[#8a8477]">Rhinebeck Tennis Club</p>
-            <h2 className="mt-1 text-2xl font-semibold tracking-tight sm:text-[30px]">Court Booking</h2>
-            <p className="mt-1 text-[14px] text-[#6b665e]">
+            <h2 className="mt-1 text-[24px] font-semibold tracking-tight sm:text-[30px]">Court Booking</h2>
+            <p className="mt-1 text-[13px] text-[#6b665e] sm:text-[14px]">
               Full-day schedule for all courts. Tap any open cell to reserve and pay.
             </p>
           </div>
@@ -711,7 +732,7 @@ export default function RTCBookPage() {
               className="flex w-full items-center gap-2 rounded-xl border border-[#e8e5df] bg-[#faf9f7] px-3 py-2 text-left shadow-[0_4px_12px_rgba(26,26,26,0.04)] transition-all hover:border-[#cfc9c0] hover:shadow-[0_6px_14px_rgba(26,26,26,0.06)] sm:w-auto"
             >
               <span aria-hidden className="text-[13px] text-[#8a8477]">📅</span>
-              <span className="text-[13px] font-medium text-[#1a1a1a] sm:min-w-[170px]">{formatPrettyDate(selectedDate)}</span>
+              <span className="text-[12px] font-medium text-[#1a1a1a] sm:min-w-[170px] sm:text-[13px]">{formatPrettyDate(selectedDate)}</span>
             </button>
             <button
               type="button"
@@ -777,8 +798,8 @@ export default function RTCBookPage() {
           </div>
         </div>
 
-        <div className="mt-5 overflow-x-auto rounded-3xl border border-[#ece8e2] bg-white shadow-[0_12px_28px_rgba(26,26,26,0.05)]">
-          <table className="min-w-[980px] w-full border-collapse">
+        <div className="mt-4 overflow-x-auto rounded-2xl border border-[#ece8e2] bg-white shadow-[0_10px_22px_rgba(26,26,26,0.05)] sm:mt-5 sm:rounded-3xl sm:shadow-[0_12px_28px_rgba(26,26,26,0.05)]">
+          <table className="w-full min-w-[860px] border-collapse sm:min-w-[980px]">
             <thead>
               <tr className="bg-[#faf9f7]">
                 <th className="sticky left-0 z-10 border-b border-r border-[#ece8e2] bg-[#faf9f7] px-3 py-2 text-left text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">
@@ -861,22 +882,24 @@ export default function RTCBookPage() {
           </table>
         </div>
 
-        <div className="mt-4 grid gap-2">
-          <details className="rounded-2xl border border-[#ece8e2] bg-[#faf9f7] p-4 shadow-[0_6px_18px_rgba(26,26,26,0.03)]">
+        <div className="mt-3 grid gap-2 sm:mt-4">
+          <details className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3.5 shadow-[0_6px_18px_rgba(26,26,26,0.03)] sm:rounded-2xl sm:p-4">
             <summary className="cursor-pointer text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Pricing details</summary>
-            <p className="mt-2 text-[14px]">Public: Indoor <strong>$74/hr</strong> · Outdoor <strong>$58/hr</strong></p>
-            <p className="mt-1 text-[14px]">Member: Indoor <strong>$62/hr</strong> · Outdoor <strong>$44/hr</strong></p>
+            <p className="mt-2 text-[13px] sm:text-[14px]">Public: Indoor <strong>$74/hr</strong> · Outdoor <strong>$58/hr</strong></p>
+            <p className="mt-1 text-[13px] sm:text-[14px]">Member: Indoor <strong>$62/hr</strong> · Outdoor <strong>$44/hr</strong></p>
           </details>
-          <details className="rounded-2xl border border-[#ece8e2] bg-[#faf9f7] p-4 shadow-[0_6px_18px_rgba(26,26,26,0.03)]">
+          <details className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3.5 shadow-[0_6px_18px_rgba(26,26,26,0.03)] sm:rounded-2xl sm:p-4">
             <summary className="cursor-pointer text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Booking notes</summary>
-            <p className="mt-2 text-[13px] text-[#6b665e]">One-hour bookings with payment required to confirm your slot.</p>
+            <p className="mt-2 text-[13px] text-[#6b665e]">
+              One-hour bookings. Members can confirm in one tap; public bookings are confirmed after payment.
+            </p>
           </details>
         </div>
       </div>
 
       {activeCourt && activeHour !== null && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
-          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-[#e8e5df] bg-white p-5 shadow-[0_28px_60px_rgba(15,15,15,0.35)] sm:p-6">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-[#e8e5df] bg-white p-4 shadow-[0_24px_54px_rgba(15,15,15,0.33)] sm:rounded-3xl sm:p-6 sm:shadow-[0_28px_60px_rgba(15,15,15,0.35)]">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Reserve Court</p>
@@ -895,62 +918,40 @@ export default function RTCBookPage() {
             </div>
 
             <div className="mt-4 grid gap-2">
-              <div className="grid grid-cols-2 gap-2 rounded-lg border border-[#ece8e2] bg-[#faf9f7] p-2 text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">
-                <div className={bookingStep >= 2 ? "font-semibold text-[#1a1a1a]" : ""}>1. Details</div>
-                <div className={bookingStep >= 3 ? "font-semibold text-[#1a1a1a]" : ""}>2. Pay</div>
-              </div>
               {memberSession && preferences && (
                 <p className="rounded-lg border border-[#dbead3] bg-[#f4faf1] px-3 py-2 text-[11px] text-[#2d5016]">
                   Member defaults loaded: {preferences.favoriteCourt}, {preferences.preferredStartTime},{" "}
                   {preferences.preferredSurface}.
                 </p>
               )}
-              {memberSession && bookingStep === 3 && (
+              {memberSession ? (
                 <p className="rounded-lg border border-[#dbead3] bg-[#f4faf1] px-3 py-2 text-[11px] text-[#2d5016]">
-                  Quick member mode enabled: details are prefilled, so you can go straight to payment.
+                  Quick member booking enabled. Select your court and confirm in one tap.
                 </p>
-              )}
-
-              {bookingStep === 2 && (
-                <div className="grid gap-2">
+              ) : (
+                <>
                   <p className="text-[11px] text-[#8a8477]">
-                    One-hour booking. Enter details and continue to payment.
+                    One-hour booking. Add details and confirm payment below.
                   </p>
-                  {!memberSession && (
-                    <>
-                      <input
-                        placeholder="Full name"
-                        value={form.name}
-                        onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                        className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
-                      />
-                      <input
-                        placeholder="Email"
-                        value={form.email}
-                        onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                        className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
-                      />
-                    </>
-                  )}
+                  <input
+                    placeholder="Full name"
+                    value={form.name}
+                    onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                    className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
+                  />
+                  <input
+                    placeholder="Email"
+                    value={form.email}
+                    onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                    className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
+                  />
                   <input
                     placeholder="Phone (optional)"
                     value={form.phone}
                     onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
                     className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
                   />
-                  {memberSession && (
-                    <p className="rounded-lg border border-[#dbead3] bg-[#f4faf1] px-3 py-2 text-[11px] text-[#2d5016]">
-                      Booking as Member #{memberSession.memberNumber}. Member details are prefilled.
-                    </p>
-                  )}
-                  <button
-                    type="button"
-                    onClick={proceedToPaymentStep}
-                    className="rounded-lg bg-[#1a1a1a] px-4 py-2 text-[12px] font-medium text-white hover:bg-[#2c2c2c]"
-                  >
-                    Continue to Payment
-                  </button>
-                </div>
+                </>
               )}
             </div>
 
@@ -958,53 +959,56 @@ export default function RTCBookPage() {
               Rate: <strong>${activeAmount}</strong> ({memberSession ? "member" : "public"})
             </div>
 
-            {bookingStep === 3 && (
-              <>
-                <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                  <button
-                    type="button"
-                    onClick={handleStripeCheckout}
-                    disabled={isCreatingStripe}
-                    className="rounded-xl bg-[#1a1a1a] px-4 py-2 text-[12px] font-medium text-white transition-colors hover:bg-[#2c2c2c] disabled:opacity-60 sm:col-span-2"
-                  >
-                    {isCreatingStripe ? "Opening Stripe..." : "Pay with Card (Stripe)"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const booking = buildBookingDraft("venmo");
-                      if (!booking) return;
-                      window.open(buildVenmoUrl(booking), "_blank");
-                      setStatusMsg("Venmo opened in a new tab. Booking is created only after confirmed payment.");
-                    }}
-                    className="rounded-xl border border-[#d9d5cf] px-4 py-2 text-[12px] font-medium transition-colors hover:bg-[#faf9f7]"
-                  >
-                    Pay with Venmo
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const booking = buildBookingDraft("paypal");
-                      if (!booking) return;
-                      window.open(buildPaypalUrl(booking), "_blank");
-                      setStatusMsg("PayPal opened in a new tab. Booking is created only after confirmed payment.");
-                    }}
-                    className="rounded-xl border border-[#d9d5cf] px-4 py-2 text-[12px] font-medium transition-colors hover:bg-[#faf9f7]"
-                  >
-                    Pay with PayPal
-                  </button>
-                </div>
-                <div className="mt-2 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setBookingStep(2)}
-                    className="rounded-lg border border-[#d9d5cf] px-3 py-1.5 text-[11px] font-medium hover:bg-[#faf9f7]"
-                  >
-                    Back
-                  </button>
-                  <p className="text-[11px] text-[#8a8477]">Payment is required to confirm a court booking.</p>
-                </div>
-              </>
+            {memberSession ? (
+              <div className="mt-4 grid gap-2">
+                <button
+                  type="button"
+                  onClick={handleMemberQuickConfirm}
+                  className="rounded-xl bg-[#1a1a1a] px-4 py-2 text-[12px] font-medium text-white transition-colors hover:bg-[#2c2c2c]"
+                >
+                  Confirm Court
+                </button>
+                <p className="text-[11px] text-[#8a8477]">
+                  {memberPayment?.autopay
+                    ? `Autopay is on${memberPayment.last4 ? ` (${memberPayment.brand} •••• ${memberPayment.last4})` : ""}.`
+                    : "Member booking confirms instantly and appears in your Member Dashboard."}
+                </p>
+              </div>
+            ) : (
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={handleStripeCheckout}
+                  disabled={isCreatingStripe}
+                  className="rounded-xl bg-[#1a1a1a] px-4 py-2 text-[12px] font-medium text-white transition-colors hover:bg-[#2c2c2c] disabled:opacity-60 sm:col-span-2"
+                >
+                  {isCreatingStripe ? "Opening Stripe..." : "Confirm & Pay with Card"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const booking = buildBookingDraft("venmo");
+                    if (!booking) return;
+                    window.open(buildVenmoUrl(booking), "_blank");
+                    setStatusMsg("Venmo opened in a new tab. Booking is created only after confirmed payment.");
+                  }}
+                  className="rounded-xl border border-[#d9d5cf] px-4 py-2 text-[12px] font-medium transition-colors hover:bg-[#faf9f7]"
+                >
+                  Pay with Venmo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const booking = buildBookingDraft("paypal");
+                    if (!booking) return;
+                    window.open(buildPaypalUrl(booking), "_blank");
+                    setStatusMsg("PayPal opened in a new tab. Booking is created only after confirmed payment.");
+                  }}
+                  className="rounded-xl border border-[#d9d5cf] px-4 py-2 text-[12px] font-medium transition-colors hover:bg-[#faf9f7]"
+                >
+                  Pay with PayPal
+                </button>
+              </div>
             )}
 
             {statusMsg && <p className="mt-3 text-[12px] text-[#2d5016]">{statusMsg}</p>}

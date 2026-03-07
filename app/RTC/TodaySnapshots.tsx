@@ -44,7 +44,7 @@ function bookingDateTime(date: string, hour: number): Date {
   return new Date(year, (month || 1) - 1, day || 1, hour, 0, 0, 0);
 }
 
-export default function TodaySnapshots({ todayDateParam }: { todayDateParam: string }) {
+export default function TodaySnapshots() {
   const [signedIn, setSignedIn] = useState(false);
   const [counts, setCounts] = useState<MemberCounts>({
     courts: 0,
@@ -120,23 +120,15 @@ export default function TodaySnapshots({ todayDateParam }: { todayDateParam: str
   }, []);
 
   return (
-    <div className="grid gap-3 sm:grid-cols-3">
-      <div className="rounded-xl border border-[#e8e5df] bg-white p-4 shadow-[0_5px_14px_rgba(26,26,26,0.03)]">
-        <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Today at RTC</p>
-        <p className="mt-1 text-[16px] font-semibold">Daily Snapshot</p>
-        <p className="mt-1 text-[13px] text-[#6b665e]">Courts open 7:00 AM-9:00 PM. Indoor + 5 outdoor courts live.</p>
-        <Link href={`/RTC/book?date=${todayDateParam}`} className="mt-3 inline-block rounded-lg border border-[#dfdbd4] bg-[#faf9f7] px-3 py-1.5 text-[12px] font-medium hover:bg-white">
-          Open Court Sheet
-        </Link>
-      </div>
+    <div className="grid gap-2.5 sm:grid-cols-2 sm:gap-3">
 
-      <div className="rounded-xl border border-[#e8e5df] bg-white p-4 shadow-[0_5px_14px_rgba(26,26,26,0.03)]">
+      <div className="rounded-xl border border-[#e8e5df] bg-white p-3.5 shadow-[0_5px_14px_rgba(26,26,26,0.03)] sm:p-4">
         <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Today&apos;s Programs</p>
-        <p className="mt-1 text-[16px] font-semibold">
+        <p className="mt-1 text-[15px] font-semibold sm:text-[16px]">
           {todayProgramRows.length > 0 ? `${todayProgramRows.length} session${todayProgramRows.length > 1 ? "s" : ""} scheduled` : "No clinics scheduled today"}
         </p>
         {todayProgramRows.length > 0 ? (
-          <div className="mt-1 space-y-1 text-[12px] text-[#6b665e]">
+          <div className="mt-1 space-y-1 text-[11px] text-[#6b665e] sm:text-[12px]">
             {todayProgramRows.slice(0, 2).map((row) => (
               <p key={row.name}>
                 {row.name}: {row.time}
@@ -145,38 +137,38 @@ export default function TodaySnapshots({ todayDateParam }: { todayDateParam: str
             ))}
           </div>
         ) : (
-          <p className="mt-1 text-[13px] text-[#6b665e]">Check lessons and events for other ways to play today.</p>
+          <p className="mt-1 text-[12px] text-[#6b665e] sm:text-[13px]">Check lessons and events for other ways to play today.</p>
         )}
-        <Link href="/RTC/clinics" className="mt-3 inline-block rounded-lg border border-[#dfdbd4] bg-[#faf9f7] px-3 py-1.5 text-[12px] font-medium hover:bg-white">
+        <Link href="/RTC/clinics" className="mt-2.5 inline-block rounded-lg border border-[#dfdbd4] bg-[#faf9f7] px-2.5 py-1.5 text-[11px] font-medium hover:bg-white sm:mt-3 sm:px-3 sm:text-[12px]">
           View Programs
         </Link>
       </div>
 
-      <div className="rounded-xl border border-[#e8e5df] bg-white p-4 shadow-[0_5px_14px_rgba(26,26,26,0.03)]">
+      <div className="rounded-xl border border-[#e8e5df] bg-white p-3.5 shadow-[0_5px_14px_rgba(26,26,26,0.03)] sm:p-4">
         <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">My Day</p>
         {signedIn ? (
           <>
-            <p className="mt-1 text-[16px] font-semibold">
+            <p className="mt-1 text-[15px] font-semibold sm:text-[16px]">
               {counts.courts + counts.lessons + counts.clinics + counts.events} active item
               {counts.courts + counts.lessons + counts.clinics + counts.events === 1 ? "" : "s"}
             </p>
-            <p className="mt-1 text-[13px] text-[#6b665e]">
+            <p className="mt-1 text-[12px] text-[#6b665e] sm:text-[13px]">
               Next court: {counts.nextCourtLabel || "No upcoming court yet"}.
             </p>
-            <p className="mt-1 text-[12px] text-[#8a8477]">
+            <p className="mt-1 text-[11px] text-[#8a8477] sm:text-[12px]">
               Lessons {counts.lessons} · Clinics {counts.clinics} · Events {counts.events}
             </p>
           </>
         ) : (
           <>
-            <p className="mt-1 text-[16px] font-semibold">Personal Snapshot Locked</p>
-            <p className="mt-1 text-[13px] text-[#6b665e]">
-              Sign in to the Portal to see your upcoming schedule, bookings, and daily activity details.
+            <p className="mt-1 text-[15px] font-semibold sm:text-[16px]">Personal Snapshot Locked</p>
+            <p className="mt-1 text-[12px] text-[#6b665e] sm:text-[13px]">
+              Sign in to the Member Dashboard to see your upcoming schedule, bookings, and daily activity details.
             </p>
           </>
         )}
-        <Link href="/RTC/member/portal" className="mt-3 inline-block rounded-lg border border-[#dfdbd4] bg-[#faf9f7] px-3 py-1.5 text-[12px] font-medium hover:bg-white">
-          Open Portal
+        <Link href="/RTC/member/portal" className="mt-2.5 inline-block rounded-lg border border-[#dfdbd4] bg-[#faf9f7] px-2.5 py-1.5 text-[11px] font-medium hover:bg-white sm:mt-3 sm:px-3 sm:text-[12px]">
+          Open Member Dashboard
         </Link>
       </div>
     </div>

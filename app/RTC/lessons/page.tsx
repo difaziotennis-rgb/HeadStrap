@@ -133,18 +133,18 @@ export default function RTCLessonsPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
-      <div className="rounded-2xl border border-[#e8e5df] bg-white p-6 sm:p-8">
-        <h2 className="text-2xl font-semibold tracking-tight">Private Lessons</h2>
-        <p className="mt-2 max-w-3xl text-[14px] text-[#6b665e]">
+    <main className="mx-auto w-full max-w-6xl px-3 py-6 sm:px-6 sm:py-10">
+      <div className="rounded-2xl border border-[#e8e5df] bg-white p-4 sm:p-8">
+        <h2 className="text-[24px] font-semibold tracking-tight sm:text-2xl">Private Lessons</h2>
+        <p className="mt-2 max-w-3xl text-[13px] text-[#6b665e] sm:text-[14px]">
           Select a coach, pick a time, and reserve your lesson.
         </p>
 
-        <div className="mt-5 grid gap-4 lg:grid-cols-[1.2fr_1fr]">
-          <div className="space-y-3">
-            <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-4">
+        <div className="mt-4 grid gap-3 sm:gap-4 lg:mt-5 lg:grid-cols-[1.2fr_1fr]">
+          <div className="space-y-2.5 sm:space-y-3">
+            <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3.5 sm:p-4">
               <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Choose Your Coach</p>
-              <div className="mt-3 grid gap-2">
+              <div className="mt-2.5 grid gap-2 sm:mt-3">
                 {lessonCoaches.map((coach) => {
                   const active = coach.name === coachName;
                   const isDerek = coach.name === "Derek DiFazio";
@@ -153,7 +153,7 @@ export default function RTCLessonsPage() {
                       key={coach.name}
                       type="button"
                       onClick={() => setCoachName(coach.name)}
-                      className={`rounded-lg border px-3 py-3 text-left transition-colors ${
+                      className={`rounded-lg border px-3 py-2.5 text-left transition-colors sm:py-3 ${
                         active
                           ? "border-[#1a1a1a] bg-white"
                           : "border-[#e2ddd3] bg-[#faf9f7] hover:bg-white"
@@ -162,7 +162,7 @@ export default function RTCLessonsPage() {
                       <div className="flex items-center justify-between gap-2">
                         <div>
                           <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">{coach.role}</p>
-                          <p className="mt-0.5 text-[16px] font-semibold">
+                          <p className="mt-0.5 text-[15px] font-semibold sm:text-[16px]">
                             {isDerek ? (
                               <a
                                 href={DEREK_BOOKING_URL}
@@ -178,22 +178,22 @@ export default function RTCLessonsPage() {
                         </div>
                         <p className="text-[12px] font-medium text-[#2d5016]">{coach.rate}</p>
                       </div>
-                      <p className="mt-2 text-[13px] leading-relaxed text-[#6b665e]">{coach.bio}</p>
+                      <p className="mt-2 text-[12px] leading-relaxed text-[#6b665e] sm:text-[13px]">{coach.bio}</p>
                     </button>
                   );
                 })}
               </div>
             </div>
 
-            <div className="rounded-xl border border-[#ece8e2] p-4">
+            <div className="rounded-xl border border-[#ece8e2] p-3.5 sm:p-4">
               <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Preferred Time</p>
-              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <div className="mt-2.5 grid grid-cols-2 gap-2 sm:mt-3 sm:grid-cols-4">
                 {LESSON_SLOTS.map((slot) => (
                   <button
                     key={slot}
                     type="button"
                     onClick={() => setSelectedSlot(slot)}
-                    className={`rounded-lg border px-3 py-2 text-[12px] font-medium transition-colors ${
+                    className={`rounded-lg border px-2.5 py-2 text-[11px] font-medium transition-colors sm:px-3 sm:text-[12px] ${
                       selectedSlot === slot
                         ? "border-[#1a1a1a] bg-[#1a1a1a] text-white"
                         : "border-[#d9d5cf] hover:bg-[#faf9f7]"
@@ -206,7 +206,7 @@ export default function RTCLessonsPage() {
             </div>
           </div>
 
-          <form onSubmit={submitLessonRequest} className="rounded-xl border border-[#ece8e2] p-4">
+          <form onSubmit={submitLessonRequest} className="rounded-xl border border-[#ece8e2] p-3.5 sm:p-4">
             <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Complete Booking Request</p>
             <div className="mt-3 grid gap-2">
               {!isMember && (
@@ -254,7 +254,7 @@ export default function RTCLessonsPage() {
               />
             </div>
 
-            <div className="mt-4 rounded-lg border border-[#ece8e2] bg-[#faf9f7] px-3 py-2 text-[13px]">
+            <div className="mt-3 rounded-lg border border-[#ece8e2] bg-[#faf9f7] px-3 py-2 text-[12px] sm:mt-4 sm:text-[13px]">
               <p>
                 <span className="text-[#7a756d]">Coach:</span> <strong>{selectedCoach?.name}</strong>
               </p>
@@ -269,7 +269,7 @@ export default function RTCLessonsPage() {
 
             <button
               type="submit"
-              className="mt-4 w-full rounded-lg bg-[#1a1a1a] px-4 py-2 text-[12px] font-medium text-white hover:bg-[#2c2c2c]"
+              className="mt-3 w-full rounded-lg bg-[#1a1a1a] px-4 py-2 text-[12px] font-medium text-white hover:bg-[#2c2c2c] sm:mt-4"
             >
               Reserve Lesson
             </button>
@@ -296,9 +296,9 @@ export default function RTCLessonsPage() {
         </div>
 
         {requests.length > 0 && (
-          <div className="mt-5 rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-4">
+          <div className="mt-4 rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3.5 sm:mt-5 sm:p-4">
             <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Upcoming Lesson Bookings</p>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <div className="mt-2.5 grid gap-2 sm:mt-3 sm:grid-cols-2">
               {requests.slice(0, 6).map((request) => (
                 <div key={request.id} className="rounded-lg border border-[#e8e5df] bg-white px-3 py-2 text-[12px]">
                   <p className="font-medium">{request.coachName}</p>

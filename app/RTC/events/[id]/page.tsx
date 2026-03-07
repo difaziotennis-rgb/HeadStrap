@@ -1,22 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { rtcSummerEvents } from "../../rtc-data";
+import { getRTCEventImage, rtcSummerEvents } from "../../rtc-data";
 
 type PageProps = {
   params: { id: string };
-};
-
-const eventImageById: Record<string, string> = {
-  "member-guest-weekend":
-    "https://images.unsplash.com/flagged/photo-1576972405668-2d020a01cbfa?auto=format&fit=crop&w=1800&q=80",
-  "summer-white-party":
-    "https://images.unsplash.com/photo-1755238798584-782309132c90?auto=format&fit=crop&w=1800&q=80",
-  "junior-family-day":
-    "https://images.unsplash.com/photo-1504030688812-2c4804e8d291?auto=format&fit=crop&w=1800&q=80",
-  "twilight-mixed-doubles":
-    "https://images.unsplash.com/photo-1542446608-e9525230faed?auto=format&fit=crop&w=1800&q=80",
-  "season-finale-garden-gala":
-    "https://images.unsplash.com/photo-1768594266719-ab1569870a1f?auto=format&fit=crop&w=1800&q=80",
 };
 
 function eventMood(category: string): string {
@@ -30,8 +17,7 @@ export default function RTCEventDetailPage({ params }: PageProps) {
   const { id } = params;
   const event = rtcSummerEvents.find((item) => item.id === id);
   if (!event) notFound();
-  const eventImage =
-    eventImageById[event.id] || "https://images.unsplash.com/photo-1662663560803-db03b7821eb9?auto=format&fit=crop&w=1800&q=80";
+  const eventImage = getRTCEventImage(event.id);
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10">

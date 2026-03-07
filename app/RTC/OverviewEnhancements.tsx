@@ -43,12 +43,6 @@ type EventReservation = {
   createdAt: string;
 };
 
-const MOCK_PULSE = {
-  clinicSignups: 16,
-  eventGuests: 34,
-  paidCourts: 22,
-};
-
 const MOCK_MEMBER_ACTIVITY = {
   lessons: 2,
   clinics: 1,
@@ -91,8 +85,9 @@ function formatPretty(date: Date): string {
   });
 }
 
-export default function OverviewEnhancements() {
+export default function OverviewEnhancements({ memberSignedIn }: { memberSignedIn: boolean }) {
   const [memberNumber, setMemberNumber] = useState<string | null>(null);
+  const [memberFirstName, setMemberFirstName] = useState<string>("");
   const [courtBookings, setCourtBookings] = useState<CourtBooking[]>([]);
   const [lessons, setLessons] = useState<LessonRequest[]>([]);
   const [clinics, setClinics] = useState<ClinicBooking[]>([]);
@@ -103,6 +98,7 @@ export default function OverviewEnhancements() {
     function load() {
       const session = parseMemberSession(localStorage.getItem(MEMBER_SESSION_KEY));
       setMemberNumber(session?.memberNumber || null);
+      setMemberFirstName((session?.memberName || "").trim().split(/\s+/)[0] || "");
 
       const rawCourt = safeParse<Record<string, CourtBooking>>(localStorage.getItem(COURT_KEY), {});
       const seen = new Set<string>();
@@ -156,15 +152,8 @@ export default function OverviewEnhancements() {
       )[0];
   }, [memberCourts]);
 
-  const socialPulse = useMemo(() => {
-    const clinicSignups = clinics.length;
-    const eventGuests = events.reduce((sum, event) => sum + Math.max(1, event.guestCount || 0), 0);
-    const paidCourts = courtBookings.filter((booking) => booking.paymentStatus === "paid").length;
-    return { clinicSignups, eventGuests, paidCourts };
-  }, [clinics, events, courtBookings]);
   const hasLiveData =
     courtBookings.length > 0 || lessons.length > 0 || clinics.length > 0 || events.length > 0;
-  const displayPulse = hasLiveData ? socialPulse : MOCK_PULSE;
 
   const nextEvent = useMemo(() => {
     return rtcSummerEvents
@@ -235,104 +224,97 @@ export default function OverviewEnhancements() {
         )}&startHour=${lastCourt.blockStartHour}&duration=${lastCourt.durationHours}`
       : "/RTC/book";
 
+  const totalActive = displayActivity.lessons + displayActivity.clinics + displayActivity.events + memberCourts.length;
+  const signedIn = memberSignedIn && !!memberNumber;
+
   return (
-    <div className="mb-4 space-y-4">
-      <div className="rounded-2xl border border-[#e8e5df] bg-white p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Club Pulse</p>
-          <p className="text-[11px] text-[#8a8477]">Live activity across the club</p>
-        </div>
-        <div className="mt-3 grid gap-2 sm:grid-cols-3">
-          <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] px-3 py-2 text-[12px]">
-            <span className="font-semibold text-[#1a1a1a]">{displayPulse.clinicSignups}</span> clinic signups
-            in the booking flow
-          </div>
-          <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] px-3 py-2 text-[12px]">
-            <span className="font-semibold text-[#1a1a1a]">{displayPulse.eventGuests}</span> guest RSVP seats
-            reserved
-          </div>
-          <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] px-3 py-2 text-[12px]">
-            <span className="font-semibold text-[#1a1a1a]">{displayPulse.paidCourts}</span> paid court
-            reservations recorded
-          </div>
-        </div>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
-        <div className="rounded-2xl border border-[#e8e5df] bg-white p-6">
-          <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Today at RTC</p>
-          <h3 className="mt-1 text-[24px] font-semibold tracking-tight">
-            {memberNumber ? "Welcome back, member." : "A smoother daily club flow."}
-          </h3>
-          <p className="mt-2 text-[13px] text-[#6b665e]">
-            {memberNumber
-              ? `Signed in as Member #${memberNumber}. Your bookings and account details are ready.`
-              : "Members get one-tap booking and account access. New visitors can still browse and book easily."}
-          </p>
-
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3">
-              <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Next Up</p>
-              {nextCourt ? (
-                <p className="mt-1 text-[13px] text-[#4a4a4a]">
-                  {nextCourt.courtName} on {formatPretty(toDate(nextCourt.date, nextCourt.blockStartHour))} at{" "}
-                  {toDate(nextCourt.date, nextCourt.blockStartHour).toLocaleTimeString([], {
-                    hour: "numeric",
-                    minute: "2-digit",
-                  })}
-                </p>
-              ) : (
-                <p className="mt-1 text-[13px] text-[#6b665e]">
-                  {memberNumber
-                    ? "No upcoming court on file yet. Your next booking appears here."
-                    : "No upcoming court on file yet."}
-                </p>
-              )}
-            </div>
-            <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3">
-              <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Your Activity</p>
-              <p className="mt-1 text-[13px] text-[#4a4a4a]">
-                {displayActivity.lessons} lessons, {displayActivity.clinics} clinics,{" "}
-                {displayActivity.events} event RSVPs
+    <div className="mb-3 sm:mb-4">
+      <div className={`grid gap-3 sm:gap-4 ${signedIn ? "lg:grid-cols-[1.3fr_1fr]" : "lg:grid-cols-[1.2fr_1fr]"}`}>
+        <div className="rounded-2xl border border-[#e8e5df] bg-white p-4 sm:p-6">
+          <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Start Here</p>
+          {signedIn ? (
+            <>
+              <h3 className="mt-1 text-[20px] font-semibold tracking-tight sm:text-[24px]">
+                Member Dashboard{memberFirstName ? ` for ${memberFirstName}` : ""}
+              </h3>
+              <p className="mt-2 text-[12px] text-[#6b665e] sm:text-[13px]">
+                {totalActive} active item{totalActive === 1 ? "" : "s"} across your courts, lessons, clinics, and events.
               </p>
-            </div>
-          </div>
-
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Link
-              href={rebookHref}
-              className="rounded-lg border border-[#d9d5cf] bg-[#faf9f7] px-3 py-2 text-[12px] font-medium hover:bg-white"
-            >
-              Rebook Last Court Slot
-            </Link>
-            <Link
-              href="/RTC/member/portal"
-              className="rounded-lg border border-[#d9d5cf] bg-[#faf9f7] px-3 py-2 text-[12px] font-medium hover:bg-white"
-            >
-              Open Portal
-            </Link>
-            <a
-              href="mailto:difaziotennis@gmail.com?subject=RTC%20Booking%20Support"
-              className="rounded-lg border border-[#d9d5cf] bg-[#faf9f7] px-3 py-2 text-[12px] font-medium hover:bg-white"
-            >
-              Concierge Support
-            </a>
-          </div>
+              <div className="mt-3 rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3">
+                <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">My Day</p>
+                <p className="mt-1 text-[12px] text-[#4a4a4a] sm:text-[13px]">
+                  Next court:{" "}
+                  {nextCourt
+                    ? `${nextCourt.courtName} on ${formatPretty(
+                        toDate(nextCourt.date, nextCourt.blockStartHour)
+                      )} at ${toDate(nextCourt.date, nextCourt.blockStartHour).toLocaleTimeString([], {
+                        hour: "numeric",
+                        minute: "2-digit",
+                      })}`
+                    : "No upcoming court yet."}
+                </p>
+                <p className="mt-1 text-[11px] text-[#8a8477]">
+                  Lessons {displayActivity.lessons} · Clinics {displayActivity.clinics} · Events {displayActivity.events}
+                </p>
+              </div>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <Link
+                  href="/RTC/book"
+                  className="rounded-lg border border-[#d9d5cf] bg-[#faf9f7] px-3 py-2 text-[12px] font-medium hover:bg-white"
+                >
+                  Book Court
+                </Link>
+                <Link
+                  href="/RTC/member/portal"
+                  className="rounded-lg border border-[#d9d5cf] bg-[#faf9f7] px-3 py-2 text-[12px] font-medium hover:bg-white"
+                >
+                  Open Member Dashboard
+                </Link>
+                <Link
+                  href={rebookHref}
+                  className="rounded-lg border border-[#d9d5cf] bg-[#faf9f7] px-3 py-2 text-[12px] font-medium hover:bg-white sm:col-span-2"
+                >
+                  Rebook Last Court Slot
+                </Link>
+              </div>
+            </>
+          ) : (
+            <>
+              <h3 className="mt-1 text-[20px] font-semibold tracking-tight sm:text-[24px]">Plan Your Visit</h3>
+              <p className="mt-2 text-[12px] text-[#6b665e] sm:text-[13px]">
+                A calm, social tennis setting in the Hudson Valley for daily play, progress, and shared moments.
+              </p>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <Link href="/RTC/member" className="rounded-lg border border-[#d9d5cf] bg-[#faf9f7] px-3 py-2 text-[12px] font-medium hover:bg-white">
+                  Explore Membership
+                </Link>
+                <Link href="/RTC/book" className="rounded-lg border border-[#d9d5cf] bg-[#faf9f7] px-3 py-2 text-[12px] font-medium hover:bg-white">
+                  Book Court
+                </Link>
+                <Link href="/RTC/lessons" className="rounded-lg border border-[#d9d5cf] bg-[#faf9f7] px-3 py-2 text-[12px] font-medium hover:bg-white">
+                  Private Lessons
+                </Link>
+                <Link href="/RTC/clinics" className="rounded-lg border border-[#d9d5cf] bg-[#faf9f7] px-3 py-2 text-[12px] font-medium hover:bg-white">
+                  Clinics
+                </Link>
+              </div>
+            </>
+          )}
         </div>
 
         <div className="overflow-hidden rounded-2xl border border-[#e8e5df] bg-white">
           <img
             src={featuredExperience.image}
             alt="Rhinebeck club programming highlight"
-            className="h-36 w-full object-cover"
+            className="h-32 w-full object-cover sm:h-36"
           />
-          <div className="p-4">
+          <div className="p-3.5 sm:p-4">
             <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Featured Experience</p>
-            <p className="mt-1 text-[17px] font-semibold">{featuredExperience.title}</p>
-            <p className="mt-1 text-[13px] text-[#6b665e]">{featuredExperience.blurb}</p>
+            <p className="mt-1 text-[15px] font-semibold sm:text-[17px]">{featuredExperience.title}</p>
+            <p className="mt-1 text-[12px] text-[#6b665e] sm:text-[13px]">{featuredExperience.blurb}</p>
             <Link
               href={featuredExperience.href}
-              className="mt-3 inline-block rounded-lg border border-[#d9d5cf] bg-[#faf9f7] px-3 py-1.5 text-[12px] font-medium hover:bg-white"
+              className="mt-2.5 inline-block rounded-lg border border-[#d9d5cf] bg-[#faf9f7] px-2.5 py-1.5 text-[11px] font-medium hover:bg-white sm:mt-3 sm:px-3 sm:text-[12px]"
             >
               {featuredExperience.cta}
             </Link>
