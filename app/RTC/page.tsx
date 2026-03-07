@@ -55,9 +55,11 @@ export default function RTCPage() {
               >
                 {memberSignedIn ? "Book Court" : "Explore Membership"}
               </Link>
-              <Link href="/RTC/member/portal" className="rounded-lg border border-white/50 bg-white/90 px-3 py-1.5 text-[11px] text-[#1a1a1a] hover:bg-white sm:px-4 sm:py-2 sm:text-[12px]">
-                Member Dashboard
-              </Link>
+              {memberSignedIn && (
+                <Link href="/RTC/member/portal" className="rounded-lg border border-white/50 bg-white/90 px-3 py-1.5 text-[11px] text-[#1a1a1a] hover:bg-white sm:px-4 sm:py-2 sm:text-[12px]">
+                  Member Dashboard
+                </Link>
+              )}
             </div>
           </div>
 
