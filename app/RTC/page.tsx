@@ -67,30 +67,18 @@ export default function RTCPage() {
 
             <div className="relative mt-7 flex flex-wrap items-center gap-2 text-[12px] font-medium">
               <Link
-                href="/RTC/book"
+                href="/RTC/member"
                 className="rounded-lg border border-white/50 bg-white/90 px-4 py-2 text-[#1a1a1a] hover:bg-white"
               >
-                Book Court
+                Explore Membership
               </Link>
-              <Link href="/RTC/events" className="rounded-lg border border-white/50 bg-white/90 px-4 py-2 text-[#1a1a1a] hover:bg-white">
-                Explore Events
+              <Link href="/RTC/member/portal" className="rounded-lg border border-white/50 bg-white/90 px-4 py-2 text-[#1a1a1a] hover:bg-white">
+                Member Portal
               </Link>
             </div>
           </div>
 
           <div className="grid gap-3 bg-[#faf9f7] p-5 sm:p-6">
-            <div className="rounded-xl border border-[#e8e5df] bg-white p-4 shadow-[0_5px_14px_rgba(26,26,26,0.03)]">
-              <p className="mt-1 text-[17px] font-semibold">Explore the club experience</p>
-              <p className="mt-1 text-[13px] text-[#6b665e]">See programs, upcoming events, and membership information.</p>
-              <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                <Link href="/RTC/clinics" className="rounded-lg border border-[#dfdbd4] bg-[#faf9f7] px-3 py-2 text-[12px] font-medium hover:bg-white">
-                  Programs
-                </Link>
-                <Link href="/RTC/member" className="rounded-lg border border-[#dfdbd4] bg-[#faf9f7] px-3 py-2 text-[12px] font-medium hover:bg-white">
-                  Membership
-                </Link>
-              </div>
-            </div>
             <TodaySnapshots todayDateParam={todayDateParam} />
           </div>
         </div>
