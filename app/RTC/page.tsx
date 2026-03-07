@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import OverviewEnhancements from "./OverviewEnhancements";
+import TodaySnapshots from "./TodaySnapshots";
 import { rtcSummerEvents } from "./rtc-data";
 
 const memberLinks = [
@@ -41,12 +42,6 @@ function formatDateInput(date: Date): string {
 export default function RTCPage() {
   const today = new Date();
   const todayDateParam = formatDateInput(today);
-  const todayLabel = today.toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
-
   return (
     <main>
       <section className="mx-auto w-full max-w-6xl px-4 pb-6 pt-8 sm:px-6 sm:pt-10">
@@ -96,23 +91,7 @@ export default function RTCPage() {
                 </Link>
               </div>
             </div>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <Link href={`/RTC/book?date=${todayDateParam}`} className="rounded-xl border border-[#e8e5df] bg-white p-4 shadow-[0_5px_14px_rgba(26,26,26,0.03)] transition-colors hover:bg-[#faf9f7]">
-                <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Today at RTC</p>
-                <p className="mt-1 text-[16px] font-semibold">Open court sheet</p>
-                <p className="mt-1 text-[13px] text-[#6b665e]">{todayLabel} availability and quick court booking.</p>
-              </Link>
-              <Link href="/RTC/clinics" className="rounded-xl border border-[#e8e5df] bg-white p-4 shadow-[0_5px_14px_rgba(26,26,26,0.03)] transition-colors hover:bg-[#faf9f7]">
-                <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Today’s Programs</p>
-                <p className="mt-1 text-[16px] font-semibold">See clinics and lessons</p>
-                <p className="mt-1 text-[13px] text-[#6b665e]">Quick jump into active sessions and open spots.</p>
-              </Link>
-              <Link href="/RTC/member/portal" className="rounded-xl border border-[#e8e5df] bg-white p-4 shadow-[0_5px_14px_rgba(26,26,26,0.03)] transition-colors hover:bg-[#faf9f7]">
-                <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Portal</p>
-                <p className="mt-1 text-[16px] font-semibold">View upcoming bookings</p>
-                <p className="mt-1 text-[13px] text-[#6b665e]">Courts, lessons, clinics, and event RSVP in one place.</p>
-              </Link>
-            </div>
+            <TodaySnapshots todayDateParam={todayDateParam} />
           </div>
         </div>
       </section>
