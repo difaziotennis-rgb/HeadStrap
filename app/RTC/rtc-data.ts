@@ -207,10 +207,10 @@ export const rtcSummerEvents = [
     dateLabel: "August 1",
     timeLabel: "4:00 PM - 8:30 PM",
     category: "Club Match",
-    audience: "Rhinebeck TC + Woodstock TC + Spectators",
+    audience: "Rhinebeck TC + Woodstock TC",
     capacity: 96,
-    priceMember: "$40 player entry · $18 spectator",
-    pricePublic: "$28 spectator",
+    priceMember: "$120 player entry (includes both team practices)",
+    pricePublic: "No spectator ticket pricing",
     description:
       "A head-to-head interclub showdown between Woodstock Tennis Club and Rhinebeck Tennis Club in a World TeamTennis-style format, with two team practices scheduled in advance for RTC players.",
     highlights: [
