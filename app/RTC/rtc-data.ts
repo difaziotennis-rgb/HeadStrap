@@ -120,6 +120,8 @@ export const rtcEventImageById: Record<string, string> = {
     "https://images.unsplash.com/photo-1542446608-e9525230faed?auto=format&fit=crop&w=1800&q=80",
   "season-finale-garden-gala":
     "https://images.unsplash.com/photo-1768594266719-ab1569870a1f?auto=format&fit=crop&w=1800&q=80",
+  "valley-rally-cup":
+    "https://images.unsplash.com/photo-1459865264687-595d652de67e?auto=format&fit=crop&w=1800&q=80",
 };
 
 export function getRTCEventImage(eventId: string): string {
@@ -197,6 +199,24 @@ export const rtcSummerEvents = [
       "Curated rotating partners",
       "Structured social scoring format",
       "Clubhouse dessert and espresso service",
+    ],
+  },
+  {
+    id: "valley-rally-cup",
+    title: "1st Inaugural 'Valley Rally' Cup",
+    dateLabel: "Date TBA",
+    timeLabel: "Start Time TBA",
+    category: "Club Match",
+    audience: "Rhinebeck TC + Woodstock TC",
+    capacity: 60,
+    priceMember: "Included for selected team players",
+    pricePublic: "Spectator details TBA",
+    description:
+      "A head-to-head club match between Woodstock Tennis Club and Rhinebeck Tennis Club in a World TeamTennis format.",
+    highlights: [
+      "5 sets: Men's Singles, Women's Singles, Men's Doubles, Women's Doubles, Mixed Doubles",
+      "Each set is first to 5 games with no-ad scoring",
+      "All games count toward cumulative team score across the full match",
     ],
   },
   {
