@@ -238,7 +238,6 @@ export default function RTCLessonsPage() {
                   className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
                 >
                   <option value="60">60 min</option>
-                  <option value="90">90 min</option>
                 </select>
               </div>
               {isMember && (
