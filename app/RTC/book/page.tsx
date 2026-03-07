@@ -237,9 +237,6 @@ export default function RTCBookPage() {
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
   const calendarRef = useRef<HTMLDivElement | null>(null);
-  const [isMobile, setIsMobile] = useState(false);
-  const [selectedMobileCourtId, setSelectedMobileCourtId] = useState(courts[0]?.id || "indoor-1");
-  const [mobileInspectHour, setMobileInspectHour] = useState<number | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -528,23 +525,6 @@ export default function RTCBookPage() {
     window.history.replaceState({}, "", "/RTC/book");
   }, [blockedSlots, bookings, selectedDate]);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const mq = window.matchMedia("(max-width: 639px)");
-    const apply = () => setIsMobile(mq.matches);
-    apply();
-    mq.addEventListener("change", apply);
-    return () => mq.removeEventListener("change", apply);
-  }, []);
-
-  useEffect(() => {
-    if (!preferences?.favoriteCourt) return;
-    const match = courts.find((court) =>
-      court.name.toLowerCase() === preferences.favoriteCourt.toLowerCase()
-    );
-    if (match) setSelectedMobileCourtId(match.id);
-  }, [preferences]);
-
   function persist(next: Record<string, Booking>) {
     setBookings(next);
     if (typeof window === "undefined") return;
@@ -568,20 +548,6 @@ export default function RTCBookPage() {
     setActiveHour(null);
     setStatusMsg(null);
   }
-
-  const selectedMobileCourt = useMemo(
-    () => courts.find((court) => court.id === selectedMobileCourtId) || courts[0],
-    [selectedMobileCourtId]
-  );
-
-  const mobileInspectData = useMemo(() => {
-    if (!selectedMobileCourt || mobileInspectHour === null) return null;
-    const key = bookingKey(selectedDate, selectedMobileCourt.id, mobileInspectHour);
-    const existing = bookings[key];
-    const blockedReason = blockedSlots[key];
-    const isBlockStart = !!existing && existing.blockStartHour === existing.hour;
-    return { key, existing, blockedReason, isBlockStart };
-  }, [blockedSlots, bookings, mobileInspectHour, selectedDate, selectedMobileCourt]);
 
   function buildBookingDraft(paymentMethod: Booking["paymentMethod"]) {
     if (!activeCourt || activeHour === null) return null;
@@ -825,72 +791,7 @@ export default function RTCBookPage() {
           </div>
         </div>
 
-        <div className="mt-4 sm:hidden">
-          <div className="mb-2 flex gap-2 overflow-x-auto pb-1">
-            {courts.map((court) => {
-              const active = selectedMobileCourt?.id === court.id;
-              return (
-                <button
-                  key={court.id}
-                  type="button"
-                  onClick={() => {
-                    setSelectedMobileCourtId(court.id);
-                    setMobileInspectHour(null);
-                  }}
-                  className={`whitespace-nowrap rounded-lg border px-3 py-1.5 text-[11px] font-medium ${
-                    active
-                      ? "border-[#1a1a1a] bg-[#1a1a1a] text-white"
-                      : "border-[#d9d5cf] bg-white text-[#6b665e]"
-                  }`}
-                >
-                  {court.name}
-                </button>
-              );
-            })}
-          </div>
-          {selectedMobileCourt && (
-            <div className="rounded-2xl border border-[#ece8e2] bg-white shadow-[0_10px_22px_rgba(26,26,26,0.05)]">
-              <div className="border-b border-[#ece8e2] bg-[#faf9f7] px-3 py-2">
-                <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">
-                  {selectedMobileCourt.name} Timeline
-                </p>
-              </div>
-              <div className="divide-y divide-[#f0ede8]">
-                {displayHours.map((hour) => {
-                  const key = bookingKey(selectedDate, selectedMobileCourt.id, hour);
-                  const existing = bookings[key];
-                  const blockedReason = blockedSlots[key];
-                  const status = existing ? "Booked" : blockedReason ? "Reserved" : "Available";
-                  return (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => setMobileInspectHour(hour)}
-                      className="flex w-full items-center justify-between px-3 py-2.5 text-left"
-                    >
-                      <div>
-                        <p className="text-[12px] font-medium text-[#1a1a1a]">{formatHour(hour)}</p>
-                      </div>
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                          status === "Available"
-                            ? "border border-[#dbead3] bg-[#f4faf1] text-[#2d5016]"
-                            : status === "Booked"
-                              ? "border border-[#ead2d2] bg-[#fff5f5] text-[#7f1d1d]"
-                              : "border border-[#ddd9d2] bg-[#f4f2ee] text-[#6b665e]"
-                        }`}
-                      >
-                        {status}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="mt-4 hidden overflow-x-auto rounded-2xl border border-[#ece8e2] bg-white shadow-[0_10px_22px_rgba(26,26,26,0.05)] sm:mt-5 sm:block sm:rounded-3xl sm:shadow-[0_12px_28px_rgba(26,26,26,0.05)]">
+        <div className="mt-4 overflow-x-auto rounded-2xl border border-[#ece8e2] bg-white shadow-[0_10px_22px_rgba(26,26,26,0.05)] sm:mt-5 sm:rounded-3xl sm:shadow-[0_12px_28px_rgba(26,26,26,0.05)]">
           <table className="w-full min-w-[860px] border-collapse sm:min-w-[980px]">
             <thead>
               <tr className="bg-[#faf9f7]">
@@ -1135,60 +1036,6 @@ export default function RTCBookPage() {
         </div>
       )}
 
-      {isMobile && mobileInspectHour !== null && selectedMobileCourt && mobileInspectData && (
-        <div className="fixed inset-0 z-40 bg-black/35 sm:hidden">
-          <button
-            type="button"
-            aria-label="Close slot details"
-            className="h-full w-full"
-            onClick={() => setMobileInspectHour(null)}
-          />
-          <div className="absolute inset-x-0 bottom-0 rounded-t-2xl border border-[#e8e5df] bg-white p-4 shadow-[0_-14px_30px_rgba(26,26,26,0.2)]">
-            <div className="mb-2 h-1 w-10 rounded-full bg-[#e8e5df]" />
-            <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">
-              {selectedMobileCourt.name}
-            </p>
-            <p className="mt-1 text-[16px] font-semibold">{formatHour(mobileInspectHour)}</p>
-            {mobileInspectData.existing ? (
-              <div className="mt-2 rounded-lg border border-[#ead2d2] bg-[#fff5f5] p-3 text-[12px]">
-                <p className="font-medium text-[#7f1d1d]">
-                  {mobileInspectData.isBlockStart ? "Booked" : "Booked (cont.)"}
-                </p>
-                {mobileInspectData.isBlockStart ? (
-                  memberSession ? (
-                    <p className="mt-1 text-[#7a756d]">{mobileInspectData.existing.clientName}</p>
-                  ) : (
-                    <p className="mt-1 text-[#8a8477]">Reserved court time</p>
-                  )
-                ) : (
-                  <p className="mt-1 text-[#8a8477]">Part of a multi-hour reservation</p>
-                )}
-              </div>
-            ) : mobileInspectData.blockedReason ? (
-              <div className="mt-2 rounded-lg border border-[#ddd9d2] bg-[#f4f2ee] p-3 text-[12px]">
-                <p className="font-medium text-[#6b665e]">Reserved</p>
-                <p className="mt-1 text-[#8a8477]">{mobileInspectData.blockedReason}</p>
-              </div>
-            ) : (
-              <div className="mt-2 rounded-lg border border-[#dbead3] bg-[#f4faf1] p-3 text-[12px] text-[#2d5016]">
-                Available now. Tap below to continue.
-              </div>
-            )}
-            {!mobileInspectData.existing && !mobileInspectData.blockedReason && (
-              <button
-                type="button"
-                onClick={() => {
-                  setMobileInspectHour(null);
-                  openBooking(selectedMobileCourt, mobileInspectHour);
-                }}
-                className="mt-3 w-full rounded-lg bg-[#1a1a1a] px-4 py-2 text-[12px] font-medium text-white"
-              >
-                Continue to Confirm
-              </button>
-            )}
-          </div>
-        </div>
-      )}
     </main>
   );
 }
