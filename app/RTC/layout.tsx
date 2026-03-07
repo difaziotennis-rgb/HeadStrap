@@ -32,7 +32,7 @@ export default function RTCLayout({ children }: { children: React.ReactNode }) {
           </nav>
         </div>
       </header>
-      {children}
+      <div className="pb-20 md:pb-0">{children}</div>
       <footer className="border-t border-[#e8e5df] bg-[#f6f4f0]">
         <div className="mx-auto grid w-full max-w-6xl gap-5 px-4 py-7 sm:grid-cols-2 sm:px-6 sm:py-8">
           <div>
@@ -79,6 +79,34 @@ export default function RTCLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </footer>
+      <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-[#e8e5df] bg-[#faf9f7]/98 px-3 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 shadow-[0_-10px_24px_rgba(26,26,26,0.08)] backdrop-blur md:hidden">
+        <div className="mx-auto grid w-full max-w-6xl grid-cols-4 gap-2">
+          <Link
+            href="/RTC/book"
+            className="rounded-lg border border-[#ddd8d0] bg-white px-2 py-2 text-center text-[11px] font-medium text-[#4a4a4a] hover:bg-[#fdfcfb]"
+          >
+            Book
+          </Link>
+          <Link
+            href="/RTC/clinics"
+            className="rounded-lg border border-[#ddd8d0] bg-white px-2 py-2 text-center text-[11px] font-medium text-[#4a4a4a] hover:bg-[#fdfcfb]"
+          >
+            Schedule
+          </Link>
+          <Link
+            href="/RTC/member"
+            className="rounded-lg border border-[#ddd8d0] bg-white px-2 py-2 text-center text-[11px] font-medium text-[#4a4a4a] hover:bg-[#fdfcfb]"
+          >
+            Membership
+          </Link>
+          <Link
+            href="/RTC/member/portal"
+            className="rounded-lg border border-[#ddd8d0] bg-white px-2 py-2 text-center text-[11px] font-medium text-[#4a4a4a] hover:bg-[#fdfcfb]"
+          >
+            Account
+          </Link>
+        </div>
+      </nav>
     </div>
   );
 }

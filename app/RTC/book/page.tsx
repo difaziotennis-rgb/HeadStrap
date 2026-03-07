@@ -42,6 +42,7 @@ const PENDING_STRIPE_KEY = "rtc_pending_stripe_bookings_v1";
 const CLINIC_STORAGE_KEY = "rtc_clinic_bookings_v1";
 const MEMBER_PREFERENCES_KEY = "rtc_member_preferences_v1";
 const ADMIN_COURT_BLOCKS_KEY = "rtc_admin_court_blocks_v1";
+const BOOKING_FORM_KEY = "rtc_booking_form_v1";
 const EVENT_RESERVED_COURTS = ["indoor-1", "outdoor-1", "outdoor-2", "outdoor-3"];
 
 type ClinicBooking = {
@@ -245,6 +246,28 @@ export default function RTCBookPage() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    try {
+      const raw = localStorage.getItem(BOOKING_FORM_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as Partial<typeof form>;
+      setForm((prev) => ({
+        ...prev,
+        name: typeof parsed.name === "string" ? parsed.name : prev.name,
+        email: typeof parsed.email === "string" ? parsed.email : prev.email,
+        phone: typeof parsed.phone === "string" ? parsed.phone : prev.phone,
+      }));
+    } catch {
+      // Ignore malformed booking form defaults.
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(BOOKING_FORM_KEY, JSON.stringify(form));
+  }, [form]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
     function applySession() {
       setMemberSession(parseMemberSession(localStorage.getItem(MEMBER_SESSION_KEY)));
       try {
@@ -441,6 +464,15 @@ export default function RTCBookPage() {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     const dateParam = params.get("date");
+    if (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
+      setSelectedDate(dateParam);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const dateParam = params.get("date");
     const courtId = params.get("courtId");
     const startHour = Number(params.get("startHour"));
     const duration = Number(params.get("duration"));
@@ -477,7 +509,7 @@ export default function RTCBookPage() {
   function openBooking(court: Court, hour: number) {
     setActiveCourt(court);
     setActiveHour(hour);
-    setBookingStep(2);
+    setBookingStep(memberSession ? 3 : 2);
     setStatusMsg(null);
   }
 
@@ -726,15 +758,16 @@ export default function RTCBookPage() {
           </div>
         </div>
 
-        <div className="mt-5 grid gap-3 md:grid-cols-2">
-          <div className="rounded-2xl border border-[#ece8e2] bg-[#faf9f7] p-4 shadow-[0_6px_18px_rgba(26,26,26,0.03)]">
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Public Pricing</p>
-            <p className="mt-2 text-[14px]">Indoor: <strong>$74/hr</strong> · Outdoor: <strong>$58/hr</strong></p>
-          </div>
-          <div className="rounded-2xl border border-[#ece8e2] bg-[#faf9f7] p-4 shadow-[0_6px_18px_rgba(26,26,26,0.03)]">
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Member Pricing</p>
-            <p className="mt-2 text-[14px]">Indoor: <strong>$62/hr</strong> · Outdoor: <strong>$44/hr</strong></p>
-          </div>
+        <div className="mt-5 grid gap-2">
+          <details className="rounded-2xl border border-[#ece8e2] bg-[#faf9f7] p-4 shadow-[0_6px_18px_rgba(26,26,26,0.03)]">
+            <summary className="cursor-pointer text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Pricing details</summary>
+            <p className="mt-2 text-[14px]">Public: Indoor <strong>$74/hr</strong> · Outdoor <strong>$58/hr</strong></p>
+            <p className="mt-1 text-[14px]">Member: Indoor <strong>$62/hr</strong> · Outdoor <strong>$44/hr</strong></p>
+          </details>
+          <details className="rounded-2xl border border-[#ece8e2] bg-[#faf9f7] p-4 shadow-[0_6px_18px_rgba(26,26,26,0.03)]">
+            <summary className="cursor-pointer text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Booking notes</summary>
+            <p className="mt-2 text-[13px] text-[#6b665e]">One-hour bookings with payment required to confirm your slot.</p>
+          </details>
         </div>
 
         <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#ece8e2] bg-[#f9f8f6] px-3 py-2 text-[11px] text-[#7a756d]">
@@ -856,6 +889,11 @@ export default function RTCBookPage() {
                 <p className="rounded-lg border border-[#dbead3] bg-[#f4faf1] px-3 py-2 text-[11px] text-[#2d5016]">
                   Member defaults loaded: {preferences.favoriteCourt}, {preferences.preferredStartTime},{" "}
                   {preferences.preferredSurface}.
+                </p>
+              )}
+              {memberSession && bookingStep === 3 && (
+                <p className="rounded-lg border border-[#dbead3] bg-[#f4faf1] px-3 py-2 text-[11px] text-[#2d5016]">
+                  Quick member mode enabled: details are prefilled, so you can go straight to payment.
                 </p>
               )}
 
