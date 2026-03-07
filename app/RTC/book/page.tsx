@@ -768,13 +768,6 @@ export default function RTCBookPage() {
               <span aria-hidden className="text-[13px] text-[#8a8477]">📅</span>
               <span className="text-[12px] font-medium text-[#1a1a1a] sm:min-w-[170px] sm:text-[13px]">{formatPrettyDate(selectedDate)}</span>
             </button>
-            <button
-              type="button"
-              onClick={() => setSelectedDate(formatDateInput(new Date()))}
-              className="rounded-xl border border-[#d9d5cf] px-3 py-2 text-[12px] font-medium text-[#6b665e] transition-colors hover:bg-[#faf9f7]"
-            >
-              Today
-            </button>
             {calendarOpen && (
               <div className="absolute left-0 top-[calc(100%+8px)] z-30 w-[min(20rem,calc(100vw-2rem))] rounded-xl border border-[#e8e5df] bg-white p-3 shadow-[0_14px_34px_rgba(26,26,26,0.14)] sm:left-auto sm:right-0">
                 <div className="mb-2 flex items-center justify-between">
