@@ -4,7 +4,7 @@ export const rtcNav = [
   { href: "/RTC/lessons", label: "Private Lessons" },
   { href: "/RTC/clinics", label: "Clinics" },
   { href: "/RTC/events", label: "Events" },
-  { href: "/RTC/member", label: "Member Hub" },
+  { href: "/RTC/member/portal", label: "Portal" },
 ];
 
 export const rtcCoaches = [

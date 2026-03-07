@@ -5,7 +5,7 @@ import { rtcSummerEvents } from "./rtc-data";
 
 const memberLinks = [
   {
-    title: "Member Portal",
+    title: "Portal",
     detail: "View and manage your upcoming bookings.",
     href: "/RTC/member/portal",
   },
@@ -23,6 +23,11 @@ const memberLinks = [
     title: "Clinics",
     detail: "Join weekly group sessions.",
     href: "/RTC/clinics",
+  },
+  {
+    title: "Membership",
+    detail: "Review benefits, pricing, and how it works.",
+    href: "/RTC/member",
   },
 ];
 
@@ -79,32 +84,16 @@ export default function RTCPage() {
           </div>
 
           <div className="grid gap-3 bg-[#faf9f7] p-5 sm:p-6">
-            <div className="grid gap-3 md:grid-cols-2">
-              <div className="rounded-xl border border-[#e8e5df] bg-white p-4 shadow-[0_5px_14px_rgba(26,26,26,0.03)]">
-                <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">I am a Member</p>
-                <p className="mt-1 text-[17px] font-semibold">Fast daily workflow</p>
-                <p className="mt-1 text-[13px] text-[#6b665e]">Open booking, view your schedule, and get on court quickly.</p>
-                <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  <Link href={`/RTC/book?date=${todayDateParam}`} className="rounded-lg border border-[#dfdbd4] bg-[#faf9f7] px-3 py-2 text-[12px] font-medium hover:bg-white">
-                    Book Today
-                  </Link>
-                  <Link href="/RTC/member/portal" className="rounded-lg border border-[#dfdbd4] bg-[#faf9f7] px-3 py-2 text-[12px] font-medium hover:bg-white">
-                    My Portal
-                  </Link>
-                </div>
-              </div>
-              <div className="rounded-xl border border-[#e8e5df] bg-white p-4 shadow-[0_5px_14px_rgba(26,26,26,0.03)]">
-                <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">I am New</p>
-                <p className="mt-1 text-[17px] font-semibold">Explore the club experience</p>
-                <p className="mt-1 text-[13px] text-[#6b665e]">See programs, upcoming events, and membership information.</p>
-                <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  <Link href="/RTC/clinics" className="rounded-lg border border-[#dfdbd4] bg-[#faf9f7] px-3 py-2 text-[12px] font-medium hover:bg-white">
-                    Programs
-                  </Link>
-                  <Link href="/RTC/member" className="rounded-lg border border-[#dfdbd4] bg-[#faf9f7] px-3 py-2 text-[12px] font-medium hover:bg-white">
-                    Membership
-                  </Link>
-                </div>
+            <div className="rounded-xl border border-[#e8e5df] bg-white p-4 shadow-[0_5px_14px_rgba(26,26,26,0.03)]">
+              <p className="mt-1 text-[17px] font-semibold">Explore the club experience</p>
+              <p className="mt-1 text-[13px] text-[#6b665e]">See programs, upcoming events, and membership information.</p>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <Link href="/RTC/clinics" className="rounded-lg border border-[#dfdbd4] bg-[#faf9f7] px-3 py-2 text-[12px] font-medium hover:bg-white">
+                  Programs
+                </Link>
+                <Link href="/RTC/member" className="rounded-lg border border-[#dfdbd4] bg-[#faf9f7] px-3 py-2 text-[12px] font-medium hover:bg-white">
+                  Membership
+                </Link>
               </div>
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
@@ -119,7 +108,7 @@ export default function RTCPage() {
                 <p className="mt-1 text-[13px] text-[#6b665e]">Quick jump into active sessions and open spots.</p>
               </Link>
               <Link href="/RTC/member/portal" className="rounded-xl border border-[#e8e5df] bg-white p-4 shadow-[0_5px_14px_rgba(26,26,26,0.03)] transition-colors hover:bg-[#faf9f7]">
-                <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">My Day</p>
+                <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Portal</p>
                 <p className="mt-1 text-[16px] font-semibold">View upcoming bookings</p>
                 <p className="mt-1 text-[13px] text-[#6b665e]">Courts, lessons, clinics, and event RSVP in one place.</p>
               </Link>
@@ -131,65 +120,24 @@ export default function RTCPage() {
       <section className="mx-auto w-full max-w-6xl px-4 pb-10 sm:px-6 sm:pb-14">
         <OverviewEnhancements />
 
-        <div id="member-central" className="mb-4 grid gap-4 lg:grid-cols-[1.25fr_1fr] scroll-mt-28">
-          <div className="rounded-2xl border border-[#e8e5df] bg-white p-6 sm:p-8">
-            <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Start Here</p>
-            <h3 className="mt-1 text-[24px] font-semibold tracking-tight">Use the club online</h3>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              {memberLinks.map((item) => (
-                <Link key={item.title} href={item.href} className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-4 transition-colors hover:bg-white">
-                  <p className="text-[15px] font-semibold">{item.title}</p>
-                  <p className="mt-1 text-[13px] text-[#6b665e]">{item.detail}</p>
-                </Link>
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-[#e8e5df] bg-white p-6">
-            <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Club Notes</p>
-            <div className="mt-3 space-y-2 text-[13px] text-[#4a4a4a]">
-              <details className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3">
-                <summary className="cursor-pointer font-medium">Indoor and outdoor play</summary>
-                <p className="mt-1 text-[#6b665e]">Court inventory updates in real time as bookings are made.</p>
-              </details>
-              <details className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3">
-                <summary className="cursor-pointer font-medium">Program calendar</summary>
-                <p className="mt-1 text-[#6b665e]">Clinics and events are reflected directly in court availability.</p>
-              </details>
-              <details className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3">
-                <summary className="cursor-pointer font-medium">Member-friendly workflow</summary>
-                <p className="mt-1 text-[#6b665e]">Sign in once and keep booking across courts, lessons, clinics, and events.</p>
-              </details>
-            </div>
-          </div>
-        </div>
-
         <details id="plan-day" className="mb-4 rounded-2xl border border-[#e8e5df] bg-white p-6 sm:p-8 scroll-mt-28">
           <summary className="cursor-pointer list-none">
             <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Plan Your Visit</p>
             <h3 className="mt-1 text-[24px] font-semibold tracking-tight">Choose where to start.</h3>
-            <p className="mt-1 text-[13px] text-[#6b665e]">Tap to expand quick links for courts, lessons, and clinics.</p>
+            <p className="mt-1 text-[13px] text-[#6b665e]">Tap to expand quick links for portal access, courts, lessons, clinics, and membership.</p>
           </summary>
-          <div className="mt-4 grid gap-3 md:grid-cols-3">
-            <Link href="/RTC/book" className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-4 transition-colors hover:bg-white">
-              <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Court Time</p>
-              <p className="mt-1 text-[17px] font-semibold">Book a court in seconds</p>
-              <p className="mt-1 text-[13px] text-[#6b665e]">Choose date, view the grid, and reserve instantly.</p>
-            </Link>
-            <Link href="/RTC/lessons" className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-4 transition-colors hover:bg-white">
-              <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Private Lessons</p>
-              <p className="mt-1 text-[17px] font-semibold">Train with expert coaches</p>
-              <p className="mt-1 text-[13px] text-[#6b665e]">Pick your coach, time, and focus.</p>
-            </Link>
-            <Link href="/RTC/clinics" className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-4 transition-colors hover:bg-white">
-              <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Clinics</p>
-              <p className="mt-1 text-[17px] font-semibold">Join group programs</p>
-              <p className="mt-1 text-[13px] text-[#6b665e]">Member/public rates with simple weekly booking.</p>
-            </Link>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            {memberLinks.map((item) => (
+              <Link key={item.title} href={item.href} className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-4 transition-colors hover:bg-white">
+                <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">{item.title}</p>
+                <p className="mt-1 text-[17px] font-semibold">{item.title === "Portal" ? "Open your booking portal" : item.title === "Court Booking" ? "Book a court in seconds" : item.title === "Private Lessons" ? "Train with expert coaches" : item.title === "Clinics" ? "Join group programs" : "Review benefits and pricing"}</p>
+                <p className="mt-1 text-[13px] text-[#6b665e]">{item.detail}</p>
+              </Link>
+            ))}
           </div>
         </details>
 
-        <div id="this-month" className="grid gap-4 lg:grid-cols-[1.2fr_1fr] scroll-mt-28">
+        <div id="this-month" className="scroll-mt-28">
           <div className="rounded-2xl border border-[#e8e5df] bg-white p-6">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Upcoming Events at RTC</p>
@@ -213,37 +161,6 @@ export default function RTCPage() {
               ))}
             </div>
           </div>
-
-          <div className="space-y-4">
-            <Link href="/RTC/member/portal" className="block rounded-2xl border border-[#e8e5df] bg-white p-6 hover:bg-[#faf9f7]">
-              <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Member Portal</p>
-              <h3 className="mt-1 text-[20px] font-semibold">Your upcoming schedule in one place</h3>
-              <p className="mt-2 text-[13px] text-[#6b665e]">
-                View upcoming courts, lessons, clinics, and event RSVPs, plus booking modifications when eligible.
-              </p>
-            </Link>
-
-            <div className="rounded-2xl border border-[#e8e5df] bg-white p-6">
-              <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Quick Access</p>
-              <div className="mt-3 grid gap-2">
-                <Link href="/RTC/book" className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] px-3 py-2 text-[13px] hover:bg-white">
-                  Open Court Booking
-                </Link>
-                <Link href="/RTC/lessons" className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] px-3 py-2 text-[13px] hover:bg-white">
-                  Book a Private Lesson
-                </Link>
-                <Link href="/RTC/clinics" className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] px-3 py-2 text-[13px] hover:bg-white">
-                  View Clinic Schedule
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-4 rounded-2xl border border-[#e8e5df] bg-white p-5">
-          <p className="text-[13px] text-[#6b665e]">
-            Rhinebeck Tennis Club online access includes court reservations, coaching, clinics, events, and a member-first portal.
-          </p>
         </div>
       </section>
     </main>

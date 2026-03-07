@@ -224,7 +224,7 @@ export default function RTCMemberPortalPage() {
       <div className="rounded-2xl border border-[#e8e5df] bg-white p-6 shadow-[0_10px_30px_rgba(26,26,26,0.04)] sm:p-8">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="text-[11px] uppercase tracking-[0.14em] text-[#8a8477]">Member Portal</p>
+            <p className="text-[11px] uppercase tracking-[0.14em] text-[#8a8477]">Portal</p>
             <h2 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">Your Upcoming Club Schedule</h2>
             <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-[#6b665e]">
               A private, concierge-style view of your upcoming courts, lessons, clinics, and event plans.

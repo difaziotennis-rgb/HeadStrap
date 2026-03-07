@@ -292,10 +292,10 @@ export default function OverviewEnhancements() {
               Rebook Last Court Slot
             </Link>
             <Link
-              href="/RTC/member"
+              href="/RTC/member/portal"
               className="rounded-lg border border-[#d9d5cf] bg-[#faf9f7] px-3 py-2 text-[12px] font-medium hover:bg-white"
             >
-              Open Account Center
+              Open Portal
             </Link>
             <a
               href="mailto:difaziotennis@gmail.com?subject=RTC%20Booking%20Support"
