@@ -10,6 +10,208 @@ import {
   type MemberSession,
 } from "./member-session";
 
+const COURT_KEY = "rtc_court_bookings_v1";
+const LESSON_KEY = "rtc_lesson_requests_v1";
+const CLINIC_KEY = "rtc_clinic_bookings_v1";
+const EVENT_KEY = "rtc_summer_event_reservations_v1";
+const PAYMENT_KEY = "rtc_member_payment_profile_v1";
+
+function safeParse<T>(raw: string | null, fallback: T): T {
+  if (!raw) return fallback;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+function dateKeyFromOffset(daysOffset: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + daysOffset);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function bookingKey(date: string, courtId: string, hour: number): string {
+  return `${date}|${courtId}|${hour}`;
+}
+
+function seedMemberMockData(session: MemberSession) {
+  if (typeof window === "undefined") return;
+  const memberNumber = session.memberNumber;
+  if (!memberNumber) return;
+
+  const existingCourts = safeParse<Record<string, any>>(localStorage.getItem(COURT_KEY), {});
+  const existingLessons = safeParse<any[]>(localStorage.getItem(LESSON_KEY), []);
+  const existingClinics = safeParse<any[]>(localStorage.getItem(CLINIC_KEY), []);
+  const existingEvents = safeParse<any[]>(localStorage.getItem(EVENT_KEY), []);
+
+  const hasMemberData =
+    Object.values(existingCourts).some((item: any) => item?.memberNumber === memberNumber) ||
+    existingLessons.some((item) => item?.memberNumber === memberNumber) ||
+    existingClinics.some((item) => item?.memberNumber === memberNumber) ||
+    existingEvents.some((item) => item?.memberNumber === memberNumber);
+
+  if (hasMemberData) return;
+
+  const name = session.memberName || `Member #${memberNumber}`;
+  const email = session.memberEmail || "member@rtc.local";
+  const nowIso = new Date().toISOString();
+
+  const nextDay = dateKeyFromOffset(1);
+  const threeDays = dateKeyFromOffset(3);
+  const sevenDays = dateKeyFromOffset(7);
+  const pastDay = dateKeyFromOffset(-2);
+
+  const demoBookings: Record<string, any> = {
+    [bookingKey(nextDay, "indoor-1", 18)]: {
+      id: `demo-court-${memberNumber}-1`,
+      date: nextDay,
+      hour: 18,
+      blockStartHour: 18,
+      durationHours: 1,
+      courtId: "indoor-1",
+      courtName: "Indoor Court",
+      type: "indoor",
+      clientName: name,
+      clientEmail: email,
+      clientPhone: "",
+      isMember: true,
+      memberNumber,
+      amount: 62,
+      totalAmount: 62,
+      discountApplied: 0,
+      paymentStatus: "paid",
+      paymentMethod: "manual",
+      createdAt: nowIso,
+    },
+    [bookingKey(threeDays, "outdoor-2", 9)]: {
+      id: `demo-court-${memberNumber}-2`,
+      date: threeDays,
+      hour: 9,
+      blockStartHour: 9,
+      durationHours: 1,
+      courtId: "outdoor-2",
+      courtName: "Court 2",
+      type: "outdoor",
+      clientName: name,
+      clientEmail: email,
+      clientPhone: "",
+      isMember: true,
+      memberNumber,
+      amount: 44,
+      totalAmount: 44,
+      discountApplied: 0,
+      paymentStatus: "pending",
+      paymentMethod: "manual",
+      createdAt: nowIso,
+    },
+    [bookingKey(pastDay, "outdoor-1", 10)]: {
+      id: `demo-court-${memberNumber}-3`,
+      date: pastDay,
+      hour: 10,
+      blockStartHour: 10,
+      durationHours: 1,
+      courtId: "outdoor-1",
+      courtName: "Court 1",
+      type: "outdoor",
+      clientName: name,
+      clientEmail: email,
+      clientPhone: "",
+      isMember: true,
+      memberNumber,
+      amount: 44,
+      totalAmount: 44,
+      discountApplied: 0,
+      paymentStatus: "paid",
+      paymentMethod: "manual",
+      createdAt: nowIso,
+    },
+  };
+
+  const demoLessons = [
+    {
+      id: `demo-lesson-${memberNumber}-1`,
+      coachName: "Derek DiFazio",
+      slot: "Thu 6:00 PM",
+      duration: "60",
+      clientName: name,
+      clientEmail: email,
+      clientPhone: "",
+      isMember: true,
+      memberNumber,
+      notes: "",
+      createdAt: nowIso,
+    },
+    {
+      id: `demo-lesson-${memberNumber}-2`,
+      coachName: "Jay Behrke",
+      slot: "Sat 9:00 AM",
+      duration: "60",
+      clientName: name,
+      clientEmail: email,
+      clientPhone: "",
+      isMember: true,
+      memberNumber,
+      notes: "",
+      createdAt: nowIso,
+    },
+  ];
+
+  const demoClinics = [
+    {
+      id: `demo-clinic-${memberNumber}-1`,
+      clinicNames: ["Wednesday Nights with Jay"],
+      sessionWindow: "this_week",
+      total: 75,
+      clientName: name,
+      memberNumber,
+      createdAt: nowIso,
+    },
+  ];
+
+  const demoEvents = [
+    {
+      id: `demo-event-${memberNumber}-1`,
+      eventTitle: "Summer White Party",
+      eventDateLabel: "July 27",
+      guestCount: 2,
+      total: 130,
+      attendeeName: name,
+      memberNumber,
+      createdAt: nowIso,
+    },
+    {
+      id: `demo-event-${memberNumber}-2`,
+      eventTitle: "1st Inaugural 'Valley Rally' Match",
+      eventDateLabel: "August 1",
+      guestCount: 1,
+      total: 120,
+      attendeeName: name,
+      memberNumber,
+      createdAt: nowIso,
+    },
+  ];
+
+  localStorage.setItem(COURT_KEY, JSON.stringify({ ...existingCourts, ...demoBookings }));
+  localStorage.setItem(LESSON_KEY, JSON.stringify([...demoLessons, ...existingLessons]));
+  localStorage.setItem(CLINIC_KEY, JSON.stringify([...demoClinics, ...existingClinics]));
+  localStorage.setItem(EVENT_KEY, JSON.stringify([...demoEvents, ...existingEvents]));
+  localStorage.setItem(
+    PAYMENT_KEY,
+    JSON.stringify({
+      brand: "Visa",
+      last4: "4242",
+      expMonth: "08",
+      expYear: "28",
+      billingZip: "12572",
+      autopay: true,
+    })
+  );
+}
+
 export default function MemberAuth() {
   const [session, setSession] = useState<MemberSession | null>(null);
   const [open, setOpen] = useState(false);
@@ -46,6 +248,7 @@ export default function MemberAuth() {
     };
     localStorage.setItem(MEMBER_SESSION_KEY, JSON.stringify(next));
     localStorage.setItem(MEMBER_MODE_KEY, "true");
+    seedMemberMockData(next);
     setSession(next);
     setMsg(null);
     setOpen(false);
