@@ -71,7 +71,9 @@ function seedMemberMockData(session: MemberSession) {
   const nextDay = dateKeyFromOffset(1);
   const threeDays = dateKeyFromOffset(3);
   const sevenDays = dateKeyFromOffset(7);
+  const tenDays = dateKeyFromOffset(10);
   const pastDay = dateKeyFromOffset(-2);
+  const pastWeek = dateKeyFromOffset(-7);
 
   const demoBookings: Record<string, any> = {
     [bookingKey(nextDay, "indoor-1", 18)]: {
@@ -137,6 +139,69 @@ function seedMemberMockData(session: MemberSession) {
       paymentMethod: "manual",
       createdAt: nowIso,
     },
+    [bookingKey(sevenDays, "outdoor-4", 8)]: {
+      id: `demo-court-${memberNumber}-4`,
+      date: sevenDays,
+      hour: 8,
+      blockStartHour: 8,
+      durationHours: 1,
+      courtId: "outdoor-4",
+      courtName: "Court 4",
+      type: "outdoor",
+      clientName: name,
+      clientEmail: email,
+      clientPhone: "",
+      isMember: true,
+      memberNumber,
+      amount: 44,
+      totalAmount: 44,
+      discountApplied: 0,
+      paymentStatus: "pending",
+      paymentMethod: "manual",
+      createdAt: nowIso,
+    },
+    [bookingKey(tenDays, "indoor-1", 19)]: {
+      id: `demo-court-${memberNumber}-5`,
+      date: tenDays,
+      hour: 19,
+      blockStartHour: 19,
+      durationHours: 1,
+      courtId: "indoor-1",
+      courtName: "Indoor Court",
+      type: "indoor",
+      clientName: name,
+      clientEmail: email,
+      clientPhone: "",
+      isMember: true,
+      memberNumber,
+      amount: 62,
+      totalAmount: 62,
+      discountApplied: 0,
+      paymentStatus: "pending",
+      paymentMethod: "manual",
+      createdAt: nowIso,
+    },
+    [bookingKey(pastWeek, "outdoor-3", 11)]: {
+      id: `demo-court-${memberNumber}-6`,
+      date: pastWeek,
+      hour: 11,
+      blockStartHour: 11,
+      durationHours: 1,
+      courtId: "outdoor-3",
+      courtName: "Court 3",
+      type: "outdoor",
+      clientName: name,
+      clientEmail: email,
+      clientPhone: "",
+      isMember: true,
+      memberNumber,
+      amount: 44,
+      totalAmount: 44,
+      discountApplied: 0,
+      paymentStatus: "paid",
+      paymentMethod: "manual",
+      createdAt: nowIso,
+    },
   };
 
   const demoLessons = [
@@ -166,6 +231,19 @@ function seedMemberMockData(session: MemberSession) {
       notes: "",
       createdAt: nowIso,
     },
+    {
+      id: `demo-lesson-${memberNumber}-3`,
+      coachName: "Robert Myerson",
+      slot: "Mon 8:00 AM",
+      duration: "60",
+      clientName: name,
+      clientEmail: email,
+      clientPhone: "",
+      isMember: true,
+      memberNumber,
+      notes: "Focus on return depth and first-strike patterns.",
+      createdAt: nowIso,
+    },
   ];
 
   const demoClinics = [
@@ -173,6 +251,15 @@ function seedMemberMockData(session: MemberSession) {
       id: `demo-clinic-${memberNumber}-1`,
       clinicNames: ["Wednesday Nights with Jay"],
       sessionWindow: "this_week",
+      total: 75,
+      clientName: name,
+      memberNumber,
+      createdAt: nowIso,
+    },
+    {
+      id: `demo-clinic-${memberNumber}-2`,
+      clinicNames: ["Saturday Intermediate"],
+      sessionWindow: "next_week",
       total: 75,
       clientName: name,
       memberNumber,
@@ -197,6 +284,16 @@ function seedMemberMockData(session: MemberSession) {
       eventDateLabel: "August 1",
       guestCount: 1,
       total: 120,
+      attendeeName: name,
+      memberNumber,
+      createdAt: nowIso,
+    },
+    {
+      id: `demo-event-${memberNumber}-3`,
+      eventTitle: "Member-Guest Tennis Weekend",
+      eventDateLabel: "May 23",
+      guestCount: 1,
+      total: 295,
       attendeeName: name,
       memberNumber,
       createdAt: nowIso,
