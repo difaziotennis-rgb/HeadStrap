@@ -38,6 +38,13 @@ function bookingKey(date: string, courtId: string, hour: number): string {
   return `${date}|${courtId}|${hour}`;
 }
 
+function upsertById<T extends { id: string }>(existing: T[], incoming: T[]): T[] {
+  const byId = new Map<string, T>();
+  for (const item of existing) byId.set(item.id, item);
+  for (const item of incoming) byId.set(item.id, item);
+  return Array.from(byId.values());
+}
+
 function seedMemberMockData(session: MemberSession) {
   if (typeof window === "undefined") return;
   const memberNumber = session.memberNumber;
@@ -54,7 +61,8 @@ function seedMemberMockData(session: MemberSession) {
     existingClinics.some((item) => item?.memberNumber === memberNumber) ||
     existingEvents.some((item) => item?.memberNumber === memberNumber);
 
-  if (hasMemberData) return;
+  const forceSeedForDemoMember = memberNumber === "000";
+  if (hasMemberData && !forceSeedForDemoMember) return;
 
   const name = session.memberName || `Member #${memberNumber}`;
   const email = session.memberEmail || "member@rtc.local";
@@ -196,9 +204,9 @@ function seedMemberMockData(session: MemberSession) {
   ];
 
   localStorage.setItem(COURT_KEY, JSON.stringify({ ...existingCourts, ...demoBookings }));
-  localStorage.setItem(LESSON_KEY, JSON.stringify([...demoLessons, ...existingLessons]));
-  localStorage.setItem(CLINIC_KEY, JSON.stringify([...demoClinics, ...existingClinics]));
-  localStorage.setItem(EVENT_KEY, JSON.stringify([...demoEvents, ...existingEvents]));
+  localStorage.setItem(LESSON_KEY, JSON.stringify(upsertById(existingLessons, demoLessons)));
+  localStorage.setItem(CLINIC_KEY, JSON.stringify(upsertById(existingClinics, demoClinics)));
+  localStorage.setItem(EVENT_KEY, JSON.stringify(upsertById(existingEvents, demoEvents)));
   localStorage.setItem(
     PAYMENT_KEY,
     JSON.stringify({
