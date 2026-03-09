@@ -1,8 +1,8 @@
 export const rtcNav = [
   { href: "/RTC", label: "Overview" },
   { href: "/RTC/book", label: "Court Booking" },
-  { href: "/RTC/lessons", label: "Private Lessons" },
   { href: "/RTC/clinics", label: "Clinics" },
+  { href: "/RTC/lessons", label: "Private Lessons" },
   { href: "/RTC/events", label: "Events" },
   { href: "/RTC/member/portal", label: "Dashboard" },
 ];
