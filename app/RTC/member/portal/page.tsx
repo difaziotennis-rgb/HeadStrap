@@ -292,6 +292,23 @@ export default function RTCMemberPortalPage() {
     return quarterSummary[0] || null;
   }, [quarterSummary]);
 
+  const billingRowsByQuarter = useMemo(() => {
+    const grouped = new Map<string, BillingRow[]>();
+    for (const row of billingRows) {
+      const key = quarterKey(row.at);
+      const existing = grouped.get(key) || [];
+      existing.push(row);
+      grouped.set(key, existing);
+    }
+    for (const [key, rows] of grouped.entries()) {
+      grouped.set(
+        key,
+        [...rows].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
+      );
+    }
+    return grouped;
+  }, [billingRows]);
+
   const totals = useMemo(() => {
     const outstanding = billingRows
       .filter((row) => row.status === "Pending")
@@ -682,12 +699,29 @@ export default function RTCMemberPortalPage() {
               )}
               <div className="space-y-2">
                 {quarterSummary.slice(1).map((quarter) => (
-                  <div key={quarter.key} className="rounded-lg border border-[#e8e5df] bg-white px-3 py-2 text-[12px]">
-                    <p className="font-medium">{quarterLabel(quarter.key)}</p>
-                    <p className="text-[#6b665e]">
-                      Billed ${quarter.billed.toFixed(2)} · Paid ${quarter.paid.toFixed(2)} · Pending ${quarter.pending.toFixed(2)}
-                    </p>
-                  </div>
+                  <details key={quarter.key} className="rounded-lg border border-[#e8e5df] bg-white px-3 py-2 text-[12px]">
+                    <summary className="cursor-pointer list-none">
+                      <p className="font-medium">{quarterLabel(quarter.key)}</p>
+                      <p className="text-[#6b665e]">
+                        Billed ${quarter.billed.toFixed(2)} · Paid ${quarter.paid.toFixed(2)} · Pending ${quarter.pending.toFixed(2)}
+                      </p>
+                      <p className="mt-1 text-[11px] text-[#8a8477]">Tap to open statement details</p>
+                    </summary>
+                    <div className="mt-2 space-y-2 border-t border-[#f0ede8] pt-2">
+                      {(billingRowsByQuarter.get(quarter.key) || []).map((row) => (
+                        <div key={row.id} className="rounded-md border border-[#ece8e2] bg-[#faf9f7] px-2.5 py-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="font-medium">{row.label}</p>
+                            <p className="font-semibold">${row.amount.toFixed(2)}</p>
+                          </div>
+                          <div className="flex items-center justify-between gap-2 text-[11px] text-[#8a8477]">
+                            <p>{formatDateTime(row.at)}</p>
+                            <p className={row.status === "Paid" ? "text-[#2d5016]" : "text-[#7f1d1d]"}>{row.status}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </details>
                 ))}
               </div>
             </div>
