@@ -146,6 +146,11 @@ function compareQuarterDesc(a: string, b: string): number {
   return bQuarter - aQuarter;
 }
 
+function csvEscape(value: string): string {
+  const escaped = value.replace(/"/g, '""');
+  return `"${escaped}"`;
+}
+
 export default function RTCMemberPortalPage() {
   const [session, setSession] = useState<ReturnType<typeof parseMemberSession>>(null);
   const [courtMap, setCourtMap] = useState<Record<string, CourtBooking>>({});
@@ -318,6 +323,32 @@ export default function RTCMemberPortalPage() {
       outstanding,
     };
   }, [upcomingCourts.length, scopedLessons.length, scopedClinics.length, scopedEvents.length, billingRows]);
+
+  function downloadQuarterStatement(quarterKeyValue: string) {
+    if (typeof window === "undefined") return;
+    const rows = billingRowsByQuarter.get(quarterKeyValue) || [];
+    if (rows.length === 0) return;
+    const header = ["Date", "Label", "Amount", "Status", "Source"];
+    const data = rows.map((row) => [
+      formatDateTime(row.at),
+      row.label,
+      row.amount.toFixed(2),
+      row.status,
+      row.source,
+    ]);
+    const csv = [header, ...data]
+      .map((line) => line.map((cell) => csvEscape(String(cell))).join(","))
+      .join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `rtc-statement-${quarterKeyValue}.csv`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+  }
 
   function canModifyBooking(booking: CourtBooking): boolean {
     const startsAt = toDateTime(booking.date, booking.blockStartHour).getTime();
@@ -688,14 +719,37 @@ export default function RTCMemberPortalPage() {
           ) : (
             <div className="mt-3 space-y-3">
               {currentQuarter && (
-                <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3">
-                  <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Current Quarter Snapshot</p>
-                  <p className="mt-1 text-[14px] font-semibold">{quarterLabel(currentQuarter.key)}</p>
-                  <p className="mt-1 text-[12px] text-[#6b665e]">
-                    Billed ${currentQuarter.billed.toFixed(2)} · Paid ${currentQuarter.paid.toFixed(2)} · Pending ${currentQuarter.pending.toFixed(2)}
-                  </p>
-                  <p className="text-[12px] text-[#8a8477]">{currentQuarter.lineItems} line items this quarter</p>
-                </div>
+                <details className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3" open>
+                  <summary className="cursor-pointer list-none">
+                    <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Current Quarter Snapshot</p>
+                    <p className="mt-1 text-[14px] font-semibold">{quarterLabel(currentQuarter.key)}</p>
+                    <p className="mt-1 text-[12px] text-[#6b665e]">
+                      Billed ${currentQuarter.billed.toFixed(2)} · Paid ${currentQuarter.paid.toFixed(2)} · Pending ${currentQuarter.pending.toFixed(2)}
+                    </p>
+                    <p className="text-[12px] text-[#8a8477]">{currentQuarter.lineItems} line items this quarter</p>
+                  </summary>
+                  <div className="mt-2 space-y-2 border-t border-[#e8e5df] pt-2">
+                    {(billingRowsByQuarter.get(currentQuarter.key) || []).map((row) => (
+                      <div key={row.id} className="rounded-md border border-[#ece8e2] bg-white px-2.5 py-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="font-medium">{row.label}</p>
+                          <p className="font-semibold">${row.amount.toFixed(2)}</p>
+                        </div>
+                        <div className="flex items-center justify-between gap-2 text-[11px] text-[#8a8477]">
+                          <p>{formatDateTime(row.at)}</p>
+                          <p className={row.status === "Paid" ? "text-[#2d5016]" : "text-[#7f1d1d]"}>{row.status}</p>
+                        </div>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => downloadQuarterStatement(currentQuarter.key)}
+                      className="rounded-md border border-[#d9d5cf] px-2.5 py-1 text-[11px] font-medium hover:bg-white"
+                    >
+                      Download Quarter CSV
+                    </button>
+                  </div>
+                </details>
               )}
               <div className="space-y-2">
                 {quarterSummary.slice(1).map((quarter) => (
@@ -720,6 +774,13 @@ export default function RTCMemberPortalPage() {
                           </div>
                         </div>
                       ))}
+                      <button
+                        type="button"
+                        onClick={() => downloadQuarterStatement(quarter.key)}
+                        className="rounded-md border border-[#d9d5cf] px-2.5 py-1 text-[11px] font-medium hover:bg-white"
+                      >
+                        Download Quarter CSV
+                      </button>
                     </div>
                   </details>
                 ))}
