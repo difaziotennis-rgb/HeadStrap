@@ -719,7 +719,7 @@ export default function RTCMemberPortalPage() {
           ) : (
             <div className="mt-3 space-y-3">
               {currentQuarter && (
-                <details className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3" open>
+                <details className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3">
                   <summary className="cursor-pointer list-none">
                     <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Current Quarter Snapshot</p>
                     <p className="mt-1 text-[14px] font-semibold">{quarterLabel(currentQuarter.key)}</p>
