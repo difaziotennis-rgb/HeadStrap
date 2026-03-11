@@ -38,6 +38,10 @@ function bookingKey(date: string, courtId: string, hour: number): string {
   return `${date}|${courtId}|${hour}`;
 }
 
+function isoFromDateKey(dateKey: string): string {
+  return `${dateKey}T12:00:00.000Z`;
+}
+
 function upsertById<T extends { id: string }>(existing: T[], incoming: T[]): T[] {
   const byId = new Map<string, T>();
   for (const item of existing) byId.set(item.id, item);
@@ -74,6 +78,8 @@ function seedMemberMockData(session: MemberSession) {
   const tenDays = dateKeyFromOffset(10);
   const pastDay = dateKeyFromOffset(-2);
   const pastWeek = dateKeyFromOffset(-7);
+  const pastQuarterDate = dateKeyFromOffset(-120);
+  const twoQuartersAgoDate = dateKeyFromOffset(-220);
 
   const demoBookings: Record<string, any> = {
     [bookingKey(nextDay, "indoor-1", 18)]: {
@@ -202,6 +208,48 @@ function seedMemberMockData(session: MemberSession) {
       paymentMethod: "manual",
       createdAt: nowIso,
     },
+    [bookingKey(pastQuarterDate, "indoor-1", 17)]: {
+      id: `demo-court-${memberNumber}-7`,
+      date: pastQuarterDate,
+      hour: 17,
+      blockStartHour: 17,
+      durationHours: 1,
+      courtId: "indoor-1",
+      courtName: "Indoor Court",
+      type: "indoor",
+      clientName: name,
+      clientEmail: email,
+      clientPhone: "",
+      isMember: true,
+      memberNumber,
+      amount: 62,
+      totalAmount: 62,
+      discountApplied: 0,
+      paymentStatus: "paid",
+      paymentMethod: "manual",
+      createdAt: isoFromDateKey(pastQuarterDate),
+    },
+    [bookingKey(twoQuartersAgoDate, "outdoor-5", 9)]: {
+      id: `demo-court-${memberNumber}-8`,
+      date: twoQuartersAgoDate,
+      hour: 9,
+      blockStartHour: 9,
+      durationHours: 1,
+      courtId: "outdoor-5",
+      courtName: "Court 5",
+      type: "outdoor",
+      clientName: name,
+      clientEmail: email,
+      clientPhone: "",
+      isMember: true,
+      memberNumber,
+      amount: 44,
+      totalAmount: 44,
+      discountApplied: 0,
+      paymentStatus: "paid",
+      paymentMethod: "manual",
+      createdAt: isoFromDateKey(twoQuartersAgoDate),
+    },
   };
 
   const demoLessons = [
@@ -265,6 +313,24 @@ function seedMemberMockData(session: MemberSession) {
       memberNumber,
       createdAt: nowIso,
     },
+    {
+      id: `demo-clinic-${memberNumber}-3`,
+      clinicNames: ["Friday Nights with Derek"],
+      sessionWindow: "this_week",
+      total: 75,
+      clientName: name,
+      memberNumber,
+      createdAt: isoFromDateKey(pastQuarterDate),
+    },
+    {
+      id: `demo-clinic-${memberNumber}-4`,
+      clinicNames: ["Sunday Advanced Intermediate"],
+      sessionWindow: "this_week",
+      total: 75,
+      clientName: name,
+      memberNumber,
+      createdAt: isoFromDateKey(twoQuartersAgoDate),
+    },
   ];
 
   const demoEvents = [
@@ -297,6 +363,26 @@ function seedMemberMockData(session: MemberSession) {
       attendeeName: name,
       memberNumber,
       createdAt: nowIso,
+    },
+    {
+      id: `demo-event-${memberNumber}-4`,
+      eventTitle: "Twilight Mixed Doubles Mixer",
+      eventDateLabel: "August 16",
+      guestCount: 2,
+      total: 90,
+      attendeeName: name,
+      memberNumber,
+      createdAt: isoFromDateKey(pastQuarterDate),
+    },
+    {
+      id: `demo-event-${memberNumber}-5`,
+      eventTitle: "Season Finale Garden Gala",
+      eventDateLabel: "September 7",
+      guestCount: 1,
+      total: 110,
+      attendeeName: name,
+      memberNumber,
+      createdAt: isoFromDateKey(twoQuartersAgoDate),
     },
   ];
 
