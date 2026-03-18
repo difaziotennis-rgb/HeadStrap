@@ -105,7 +105,7 @@ function buildMessage(studentName: string, parsed: ParsedLessonData, seed: strin
   }
 
   message += `${closing.line} ${closing.emoji}\n\n`;
-  message += `- Coach Derek`;
+  message += `- Coach Derek's AI assistant`;
   return message;
 }
 
@@ -132,6 +132,10 @@ Rules:
 - Keep each array item concise and specific.
 - Do not use one-word labels when details were provided.
 - Example: prefer "Proper grip on serve" over just "Serve".
+- Preserve technical specifics exactly when spoken (for example: topspin, slice, contact point, swing path, racquet face angle, footwork pattern, court positioning, target zones).
+- If a stroke is mentioned, include the stroke + the technical cue in the same item.
+- Example: if transcript says "topspin on the forehand stroke", output something like "Forehand topspin with a low-to-high swing path and brushing contact."
+- Avoid vague rewrites like "Forehand improvement" when detailed mechanics were given.
 - For next_lesson_date, extract exact timing text if mentioned; otherwise "not specified".
 - For personal_note, include only if coach said something personal/encouraging/fun; otherwise "not specified".
 
