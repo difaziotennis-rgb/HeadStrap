@@ -16,6 +16,10 @@ type ParsedLessonData = {
   future_goals: string[];
   next_lesson_date: string;
   personal_note?: string;
+  extra_sections?: {
+    title: string;
+    items: string[];
+  }[];
 };
 
 function parseLessonTimeToHour(lessonTime?: string): number | null {
@@ -204,6 +208,14 @@ function firstNameOnly(fullName: string): string {
   return trimmed.split(/\s+/)[0];
 }
 
+function toTitleCase(text: string): string {
+  return text
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
 function buildMessage(studentName: string, parsed: ParsedLessonData, seed: string): string {
   const closing = pickClosing(seed);
   const firstName = firstNameOnly(studentName);
@@ -247,6 +259,23 @@ function buildMessage(studentName: string, parsed: ParsedLessonData, seed: strin
     message += `• ${formatted}\n\n`;
   }
 
+  if (Array.isArray(parsed.extra_sections) && parsed.extra_sections.length > 0) {
+    for (const section of parsed.extra_sections) {
+      const title = (section?.title || "").trim();
+      const items = Array.isArray(section?.items)
+        ? section.items.map((item) => item.trim()).filter(Boolean)
+        : [];
+      if (!title || items.length === 0) continue;
+
+      message += `📌 ${toTitleCase(title)}:\n`;
+      for (const item of items) {
+        const formatted = item.charAt(0).toUpperCase() + item.slice(1);
+        message += `• ${formatted}\n`;
+      }
+      message += `\n`;
+    }
+  }
+
   message += `${closing.line} ${closing.emoji}\n\n`;
   message += `- Coach Derek's AI assistant`;
   return message;
@@ -265,7 +294,13 @@ Return ONLY valid JSON (no markdown, no code blocks, no explanations). The JSON 
   "physical_limitations": ["array", "of", "strings"],
   "future_goals": ["array", "of", "strings"],
   "next_lesson_date": "text description of next lesson time/date or 'not specified'",
-  "personal_note": "optional encouraging message / inside joke / custom note or 'not specified'"
+  "personal_note": "optional encouraging message / inside joke / custom note or 'not specified'",
+  "extra_sections": [
+    {
+      "title": "short section title",
+      "items": ["bullet text", "bullet text"]
+    }
+  ]
 }
 
 Rules:
@@ -281,6 +316,10 @@ Rules:
 - Avoid vague rewrites like "Forehand improvement" when detailed mechanics were given.
 - For next_lesson_date, extract exact timing text if mentioned; otherwise "not specified".
 - For personal_note, include only if coach said something personal/encouraging/fun; otherwise "not specified".
+- Use extra_sections when there are other meaningful notes not cleanly captured by the default sections.
+- Examples for extra_sections: "Practice Plan", "Match Strategy", "Equipment Notes", "Mindset Focus", "Homework".
+- Do not duplicate points already listed in other sections.
+- If there are no additional relevant notes, return "extra_sections": [].
 
 TRANSCRIPT:
 ${transcript}
@@ -322,6 +361,14 @@ ${transcript}
     if (!Array.isArray(parsed.key_areas_focused)) parsed.key_areas_focused = [];
     if (!Array.isArray(parsed.physical_limitations)) parsed.physical_limitations = [];
     if (!Array.isArray(parsed.future_goals)) parsed.future_goals = [];
+    if (!Array.isArray(parsed.extra_sections)) parsed.extra_sections = [];
+    parsed.extra_sections = parsed.extra_sections
+      .filter((section) => section && typeof section.title === "string" && Array.isArray(section.items))
+      .map((section) => ({
+        title: section.title.trim(),
+        items: section.items.map((item) => String(item).trim()).filter(Boolean),
+      }))
+      .filter((section) => section.title && section.items.length > 0);
     if (!parsed.next_lesson_date) parsed.next_lesson_date = "not specified";
     if (!parsed.personal_note) parsed.personal_note = "not specified";
     return parsed;
@@ -362,6 +409,7 @@ export async function POST(req: Request) {
         future_goals: [],
         next_lesson_date: "not specified",
         personal_note: "not specified",
+        extra_sections: [],
       };
     }
 
