@@ -65,10 +65,10 @@ function buildMessage(studentName: string, parsed: ParsedLessonData, seed: strin
   const closing = pickClosing(seed);
   const firstName = firstNameOnly(studentName);
   let message = `Hi ${firstName}! 👋\n\n`;
-  message += `Here's a quick update from today's lesson:\n\n`;
+  message += `Here is a quick lesson update from Coach Derek's AI assistant:\n\n`;
 
   if (parsed.key_areas_focused.length > 0) {
-    message += `🎯 Key Areas We Worked On:\n`;
+    message += `🎯 Key Areas Worked On with Coach Derek:\n`;
     for (const area of parsed.key_areas_focused) {
       const formatted = area.charAt(0).toUpperCase() + area.slice(1);
       message += `• ${formatted}\n`;
@@ -86,7 +86,7 @@ function buildMessage(studentName: string, parsed: ParsedLessonData, seed: strin
   }
 
   if (parsed.future_goals.length > 0) {
-    message += `🏆 Goals We're Working Towards:\n`;
+    message += `🏆 Goals Coach Derek Is Working Toward with You:\n`;
     for (const goal of parsed.future_goals) {
       const formatted = goal.charAt(0).toUpperCase() + goal.slice(1);
       message += `• ${formatted}\n`;

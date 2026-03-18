@@ -92,8 +92,22 @@ export function AdminDashboard() {
     setEditHour(0);
   }
 
-  function isTrialVoiceSlot(slot: TimeSlot): boolean {
-    return slot.booked && slot.date === buildDateStr(new Date());
+  function isCompletedLessonSlot(slot: TimeSlot): boolean {
+    if (!slot.booked) return false;
+
+    const now = new Date();
+    const lessonDate = new Date(`${slot.date}T00:00:00`);
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    // Any booked lesson on a past calendar date is completed.
+    if (lessonDate < today) return true;
+    if (lessonDate > today) return false;
+
+    // For today's lesson, consider it completed one hour after start.
+    const lessonStartMinutes = Math.round(slot.hour * 60);
+    const lessonEndMinutes = lessonStartMinutes + 60;
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    return nowMinutes >= lessonEndMinutes;
   }
 
   async function generateDraftForSlot(slot: TimeSlot, transcript: string) {
@@ -547,7 +561,7 @@ export function AdminDashboard() {
                             </div>
 
                             <div className="flex flex-wrap items-center gap-2">
-                            {isTrialVoiceSlot(activeSlot) && (
+                            {isCompletedLessonSlot(activeSlot) && (
                               <button
                                 onClick={() => handleVoiceRecord(activeSlot)}
                                 type="button"
