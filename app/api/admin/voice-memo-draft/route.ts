@@ -173,7 +173,7 @@ function buildMessage(studentName: string, parsed: ParsedLessonData, seed: strin
   const closing = pickClosing(seed);
   const firstName = firstNameOnly(studentName);
   let message = `Hi ${firstName}! 👋\n\n`;
-  message += `Here is a quick lesson update from Coach Derek's AI assistant:\n\n`;
+  message += `Here is a quick lesson update:\n\n`;
 
   if (parsed.key_areas_focused.length > 0) {
     message += `🎯 Key Areas Worked On with Coach Derek:\n`;
