@@ -148,19 +148,54 @@ function formatLessonDateForSubject(lessonDate?: string): string | null {
 }
 
 function pickClosing(seed: string): { line: string; emoji: string } {
-  const options = [
-    { line: "Keep up the great work!", emoji: "💪" },
-    { line: "Great effort today - keep building on these habits.", emoji: "🎾" },
-    { line: "Nice work today - stay consistent with this plan.", emoji: "👏" },
-    { line: "Excellent session today - keep practicing with intention.", emoji: "✅" },
-    { line: "Strong work today - keep trusting the process.", emoji: "🔥" },
+  const openers = [
+    "Great work today.",
+    "Excellent effort in this session.",
+    "Strong session today.",
+    "Nice progress today.",
+    "Solid work out there today.",
+    "Proud of the focus you showed today.",
+    "Really good effort today.",
+    "Great intensity in today's lesson.",
   ];
+  const focusLines = [
+    "Keep building on these habits.",
+    "Stay consistent with this plan.",
+    "Keep applying these details in your next hit.",
+    "Keep reinforcing this technique during practice.",
+    "Keep this momentum going this week.",
+    "Stay patient and trust these adjustments.",
+    "Keep repeating this with quality reps.",
+    "Bring this same focus into your next session.",
+  ];
+  const closingLines = [
+    "You are moving in the right direction.",
+    "Your progress is heading the right way.",
+    "This work is setting up your next step.",
+    "These improvements will keep compounding.",
+    "You are building a strong foundation.",
+    "This consistency will pay off.",
+    "You're earning real progress.",
+    "You're making meaningful gains.",
+  ];
+  const emojis = ["💪", "🎾", "👏", "✅", "🔥", "🙌", "🚀", "🎯"];
 
+  // Add a per-request nonce so clients do not repeatedly see the same closing.
+  const fullSeed = `${seed}-${Date.now()}-${Math.random()}`;
   let hash = 0;
-  for (let i = 0; i < seed.length; i += 1) {
-    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  for (let i = 0; i < fullSeed.length; i += 1) {
+    hash = (hash * 31 + fullSeed.charCodeAt(i)) >>> 0;
   }
-  return options[hash % options.length];
+
+  const opener = openers[hash % openers.length];
+  const focus = focusLines[(hash >>> 3) % focusLines.length];
+  const close = closingLines[(hash >>> 6) % closingLines.length];
+  const emoji = emojis[(hash >>> 9) % emojis.length];
+
+  return {
+    line: `${opener} ${focus} ${close}`,
+    emoji,
+  };
 }
 
 function firstNameOnly(fullName: string): string {
@@ -176,7 +211,7 @@ function buildMessage(studentName: string, parsed: ParsedLessonData, seed: strin
   message += `Here is a quick lesson update:\n\n`;
 
   if (parsed.key_areas_focused.length > 0) {
-    message += `🎯 Key Areas Worked On with Coach Derek:\n`;
+    message += `🎯 Key Areas Worked On:\n`;
     for (const area of parsed.key_areas_focused) {
       const formatted = area.charAt(0).toUpperCase() + area.slice(1);
       message += `• ${formatted}\n`;
