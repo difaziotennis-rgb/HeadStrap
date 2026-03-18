@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getBookingServerClient } from "@/lib/supabase/booking-server";
 
 type DraftRequest = {
   clientName?: string;
@@ -16,6 +17,113 @@ type ParsedLessonData = {
   next_lesson_date: string;
   personal_note?: string;
 };
+
+function parseLessonTimeToHour(lessonTime?: string): number | null {
+  const raw = (lessonTime || "").trim();
+  if (!raw) return null;
+
+  const match = raw.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!match) return null;
+
+  const hour12 = Number(match[1]);
+  const minute = Number(match[2]);
+  const period = match[3].toUpperCase();
+
+  if (
+    Number.isNaN(hour12) ||
+    Number.isNaN(minute) ||
+    hour12 < 1 ||
+    hour12 > 12 ||
+    minute < 0 ||
+    minute > 59
+  ) {
+    return null;
+  }
+
+  const baseHour = hour12 % 12;
+  const hour24 = period === "PM" ? baseHour + 12 : baseHour;
+  return hour24 + minute / 60;
+}
+
+function formatSlotAsNextLesson(dateStr: string, hour: number): string {
+  const date = new Date(`${dateStr}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return "not specified";
+
+  const whole = Math.floor(hour);
+  const mins = Math.round((hour - whole) * 60);
+  const h12 = whole === 0 ? 12 : whole > 12 ? whole - 12 : whole;
+  const ampm = whole >= 12 ? "PM" : "AM";
+  const timeText = `${h12}:${String(mins).padStart(2, "0")} ${ampm}`;
+
+  const dateText = date.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+
+  return `${dateText} at ${timeText}`;
+}
+
+async function lookupNextLessonDateFromSchedule(
+  clientName: string,
+  lessonDate?: string,
+  lessonTime?: string
+): Promise<string | null> {
+  const normalizedClient = clientName.trim();
+  if (!normalizedClient) return null;
+
+  const baseDate = (lessonDate || "").trim();
+  if (!baseDate) return null;
+
+  const currentHour = parseLessonTimeToHour(lessonTime);
+  const supabase = getBookingServerClient();
+
+  const queryFields = "date,hour,booked_by,booked";
+  const exactRes = await supabase
+    .from("time_slots")
+    .select(queryFields)
+    .eq("booked", true)
+    .eq("booked_by", normalizedClient)
+    .gte("date", baseDate)
+    .order("date", { ascending: true })
+    .order("hour", { ascending: true })
+    .limit(60);
+
+  let rows = exactRes.data ?? [];
+  if (exactRes.error) {
+    return null;
+  }
+
+  // Fallback to case-insensitive match for historical name casing differences.
+  if (rows.length === 0) {
+    const ilikeRes = await supabase
+      .from("time_slots")
+      .select(queryFields)
+      .eq("booked", true)
+      .ilike("booked_by", normalizedClient)
+      .gte("date", baseDate)
+      .order("date", { ascending: true })
+      .order("hour", { ascending: true })
+      .limit(60);
+    if (ilikeRes.error) return null;
+    rows = ilikeRes.data ?? [];
+  }
+
+  for (const row of rows) {
+    if (!row?.date || typeof row.hour !== "number") continue;
+
+    const isAfterDate = row.date > baseDate;
+    const isSameDateFutureHour =
+      row.date === baseDate &&
+      (currentHour === null ? true : row.hour > currentHour);
+
+    if (isAfterDate || isSameDateFutureHour) {
+      return formatSlotAsNextLesson(row.date, row.hour);
+    }
+  }
+
+  return null;
+}
 
 function formatLessonDateForSubject(lessonDate?: string): string | null {
   const raw = (lessonDate || "").trim();
@@ -193,6 +301,7 @@ export async function POST(req: Request) {
     const clientName = (body.clientName || "").trim() || "Student";
     const clientEmail = (body.clientEmail || "").trim();
     const lessonDate = (body.lessonDate || "").trim();
+    const lessonTime = (body.lessonTime || "").trim();
     const transcript = (body.transcript || "").trim();
 
     if (!transcript) {
@@ -219,6 +328,18 @@ export async function POST(req: Request) {
         next_lesson_date: "not specified",
         personal_note: "not specified",
       };
+    }
+
+    const parsedNextLesson = (parsedData.next_lesson_date || "").trim().toLowerCase();
+    if (!parsedNextLesson || parsedNextLesson === "not specified") {
+      const lookedUpNextLesson = await lookupNextLessonDateFromSchedule(
+        clientName,
+        lessonDate,
+        lessonTime
+      );
+      if (lookedUpNextLesson) {
+        parsedData.next_lesson_date = lookedUpNextLesson;
+      }
     }
 
     const lessonDateInSubject = formatLessonDateForSubject(lessonDate);
