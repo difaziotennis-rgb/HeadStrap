@@ -36,7 +36,7 @@ export default function ArtShopPage({
       </div>
 
       <div
-        className="sticky top-[5.25rem] z-30 -mx-5 mb-2 border-b border-mcm-cream-200/60 bg-[#f7f4ef]/93 px-5 py-3 backdrop-blur-md sm:mx-0 sm:px-0"
+        className="sticky top-0 z-10 -mx-5 mb-2 border-b border-mcm-cream-200/60 bg-[#f7f4ef]/95 px-5 py-3 backdrop-blur-sm sm:mx-0 sm:px-0"
         role="tablist"
         aria-label="Filter by category"
       >

@@ -9,12 +9,11 @@ const nav = [
 ] as const;
 
 /**
- * Server-only header (no client hooks) so /art never depends on hydration to render.
- * Sticky + backdrop; nav hovers use CSS only.
+ * Server-only header — scrolls with the page (not fixed/sticky).
  */
 export function ArtSiteHeader() {
   return (
-    <header className="sticky top-0 z-50 border-b border-mcm-cream-200/50 bg-[#fbf9f6]/92 py-6 shadow-[0_1px_0_rgba(44,49,57,0.04)] backdrop-blur-md">
+    <header className="border-b border-mcm-cream-200/50 bg-[#fbf9f6] py-7">
       <div className="mx-auto flex max-w-6xl flex-col gap-5 px-5 sm:flex-row sm:items-center sm:justify-between">
         <Link href="/art" className="group block">
           <p className="font-light tracking-tight text-mcm-charcoal-500 transition-colors group-hover:text-mcm-charcoal-700">
