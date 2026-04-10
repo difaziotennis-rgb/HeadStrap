@@ -4,7 +4,7 @@ import { ARTIST_STATEMENT_SECTIONS, EDUCATION_LIST } from "@/lib/art/site";
 
 export default function ArtAboutPage() {
   return (
-    <main className="mx-auto max-w-3xl px-5 py-14 sm:py-20">
+    <main className="mx-auto max-w-3xl scroll-mt-28 px-5 py-14 sm:py-20">
       <p className="text-[10px] font-normal uppercase tracking-[0.32em] text-mcm-brown-600/45">About</p>
       <h1 className="mt-4 text-3xl font-light tracking-tight text-mcm-charcoal-500 sm:text-4xl">Statement</h1>
 

@@ -47,6 +47,17 @@ html {
   scroll-behavior: smooth;
 }
 
+/* When the art microsite is mounted, in-page anchors clear the sticky header */
+html:has([data-art-site]) {
+  scroll-padding-top: 5.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
 @keyframes float {
   0%,
   100% {

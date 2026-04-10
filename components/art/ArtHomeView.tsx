@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
+import { ArtHeroParallax } from "@/components/art/ArtHeroParallax";
 import { formatUsd, getArtPieceBySlug } from "@/lib/art/catalog";
 import {
   AWARDS_AND_EXHIBITIONS,
@@ -23,15 +24,15 @@ const heroTitleShadow: CSSProperties = {
 
 function HeroFullBleedBackground() {
   return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden bg-[#f7f4ef]">
+    <ArtHeroParallax className="pointer-events-none absolute inset-0 overflow-hidden bg-[#f7f4ef]">
       <img
         src={HERO_FULLBLEED_IMAGE_SRC}
         alt=""
-        className="h-full w-full object-cover object-[center_42%] sm:object-center"
+        className="h-[118%] min-h-full w-full max-w-none object-cover object-[center_42%] sm:object-center"
         decoding="async"
         fetchPriority="high"
       />
-    </div>
+    </ArtHeroParallax>
   );
 }
 
@@ -41,7 +42,10 @@ export function ArtHomeView() {
   );
   return (
     <main className="overflow-x-hidden bg-[#f7f4ef]">
-      <section className="relative min-h-[min(88vh,820px)] overflow-hidden">
+      <section
+        id="top"
+        className="relative min-h-[min(88vh,820px)] scroll-mt-28 overflow-hidden"
+      >
         <HeroFullBleedBackground />
         <div className="relative z-10 mx-auto flex max-w-6xl flex-col px-5 pb-14 pt-12 sm:pb-16 sm:pt-14 md:min-h-[min(84vh,800px)] md:justify-center md:pb-20 md:pt-0">
           <div className="mx-auto w-full max-w-[38rem] text-center antialiased" style={heroShadow}>
@@ -62,7 +66,7 @@ export function ArtHomeView() {
             </p>
             <nav
               className="mt-9 flex flex-wrap items-center justify-center gap-x-8 gap-y-2 text-[14px] font-light tracking-wide text-white sm:text-[15px]"
-              aria-label="Section"
+              aria-label="Primary actions"
             >
               <Link
                 href="/art/shop"
@@ -77,11 +81,37 @@ export function ArtHomeView() {
                 Statement
               </Link>
             </nav>
+            <nav
+              className="mt-6 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[12px] font-light tracking-wide text-white/90 sm:text-[13px]"
+              aria-label="On this page"
+            >
+              <a href="#studio" className="border-b border-white/35 pb-px transition hover:border-white">
+                Studio
+              </a>
+              <span className="text-white/40" aria-hidden>
+                ·
+              </span>
+              <a href="#exhibitions" className="border-b border-white/35 pb-px transition hover:border-white">
+                Exhibitions
+              </a>
+              <span className="text-white/40" aria-hidden>
+                ·
+              </span>
+              <a href="#selected" className="border-b border-white/35 pb-px transition hover:border-white">
+                Selected work
+              </a>
+              <span className="text-white/40" aria-hidden>
+                ·
+              </span>
+              <a href="#contact" className="border-b border-white/35 pb-px transition hover:border-white">
+                Contact
+              </a>
+            </nav>
           </div>
         </div>
       </section>
 
-      <section className="border-t border-mcm-cream-200/40 bg-[#f7f4ef]">
+      <section id="intro" className="scroll-mt-28 border-t border-mcm-cream-200/40 bg-[#f7f4ef]">
         <div className="mx-auto max-w-3xl px-5 py-10 sm:py-12">
           <p className="font-light leading-[1.75] text-mcm-charcoal-700/88 sm:text-[1.0625rem] text-[1rem]">
             Most of these canvases will spend their longest life on a wall in an ordinary house—not a white cube. The
@@ -94,7 +124,7 @@ export function ArtHomeView() {
         </div>
       </section>
 
-      <section className="border-t border-mcm-cream-200/40 bg-[#f7f4ef]">
+      <section id="studio" className="scroll-mt-28 border-t border-mcm-cream-200/40 bg-[#f7f4ef]">
         <div className="mx-auto max-w-6xl px-5 py-10 sm:py-14">
           <div className="grid gap-10 lg:grid-cols-2 lg:items-start lg:gap-12">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
@@ -155,7 +185,7 @@ export function ArtHomeView() {
         </div>
       </section>
 
-      <section className="border-t border-mcm-cream-200/40 bg-[#faf8f4]">
+      <section id="exhibitions" className="scroll-mt-28 border-t border-mcm-cream-200/40 bg-[#faf8f4]">
         <div className="mx-auto max-w-6xl px-5 py-10 sm:py-14">
           <div className="max-w-md">
             <p className="text-[10px] font-normal uppercase tracking-[0.32em] text-mcm-brown-600/40">Exhibitions</p>
@@ -186,7 +216,7 @@ export function ArtHomeView() {
         </div>
       </section>
 
-      <section className="border-t border-mcm-cream-200/40 bg-[#f7f4ef]">
+      <section id="selected" className="scroll-mt-28 border-t border-mcm-cream-200/40 bg-[#f7f4ef]">
         <div className="mx-auto max-w-6xl px-5 py-10 sm:py-14">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
             <div>
@@ -200,9 +230,12 @@ export function ArtHomeView() {
               Full list
             </Link>
           </div>
-          <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <ul className="mt-8 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] sm:grid sm:grid-cols-2 sm:gap-4 sm:overflow-visible sm:pb-0 lg:grid-cols-3 [&::-webkit-scrollbar]:hidden">
             {featured.map((piece) => (
-              <li key={piece.slug}>
+              <li
+                key={piece.slug}
+                className="w-[min(100%,280px)] shrink-0 snap-start sm:w-auto sm:min-w-0 sm:snap-none sm:shrink"
+              >
                 <Link
                   href={`/art/shop/${piece.slug}`}
                   className="group flex flex-col overflow-hidden border border-mcm-cream-200/70 bg-white/80 transition hover:border-mcm-cream-300"
@@ -241,7 +274,7 @@ export function ArtHomeView() {
         </div>
       </section>
 
-      <section className="border-t border-mcm-cream-200/40 bg-[#faf8f4]">
+      <section id="contact" className="scroll-mt-28 border-t border-mcm-cream-200/40 bg-[#faf8f4]">
         <div className="mx-auto max-w-sm px-5 py-10 text-center sm:py-12">
           <p className="text-[14px] font-light leading-[1.87] text-mcm-brown-600/72">
             {ART_SITE.studioLine}

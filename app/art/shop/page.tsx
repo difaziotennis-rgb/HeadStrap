@@ -35,26 +35,32 @@ export default function ArtShopPage({
         </p>
       </div>
 
-      <div className="mt-10 flex flex-wrap gap-2" role="tablist" aria-label="Filter by category">
-        {CATEGORIES.map((c) => {
-          const active = c.id === cat;
-          const href = c.id === "all" ? "/art/shop" : `/art/shop?cat=${c.id}`;
-          return (
-            <Link
-              key={c.id}
-              href={href}
-              scroll={false}
-              className={`px-3 py-1.5 text-[13px] tracking-wide transition ${
-                active
-                  ? "border-b border-mcm-charcoal-500/60 text-mcm-charcoal-800"
-                  : "border-b border-transparent text-mcm-charcoal-600/70 hover:border-mcm-cream-300"
-              }`}
-              aria-current={active ? "page" : undefined}
-            >
-              {c.label}
-            </Link>
-          );
-        })}
+      <div
+        className="sticky top-[5.25rem] z-30 -mx-5 mb-2 border-b border-mcm-cream-200/60 bg-[#f7f4ef]/93 px-5 py-3 backdrop-blur-md sm:mx-0 sm:px-0"
+        role="tablist"
+        aria-label="Filter by category"
+      >
+        <div className="flex flex-wrap gap-2">
+          {CATEGORIES.map((c) => {
+            const active = c.id === cat;
+            const href = c.id === "all" ? "/art/shop" : `/art/shop?cat=${c.id}`;
+            return (
+              <Link
+                key={c.id}
+                href={href}
+                scroll={false}
+                className={`px-3 py-1.5 text-[13px] tracking-wide transition ${
+                  active
+                    ? "border-b border-mcm-charcoal-500/60 text-mcm-charcoal-800"
+                    : "border-b border-transparent text-mcm-charcoal-600/70 hover:border-mcm-cream-300"
+                }`}
+                aria-current={active ? "page" : undefined}
+              >
+                {c.label}
+              </Link>
+            );
+          })}
+        </div>
       </div>
 
       <ul className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
