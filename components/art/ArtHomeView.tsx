@@ -15,9 +15,7 @@ import {
 } from "@/lib/art/homepage-media";
 import { ART_SITE } from "@/lib/art/site";
 
-import { artHeroFont } from "@/app/art/fonts";
-
-/** Light shadow so copy stays legible on busy photos; hero uses Poppins + scrim (see below). */
+/** Light shadow so copy stays legible on busy photos (Cormorant from art layout + scrim). */
 const heroTitleShadow: CSSProperties = {
   textShadow: "0 1px 3px rgba(0,0,0,0.65), 0 2px 14px rgba(0,0,0,0.35)",
 };
@@ -48,9 +46,7 @@ export function ArtHomeView() {
       >
         <HeroFullBleedBackground />
         <div className="relative z-10 mx-auto flex max-w-6xl flex-col px-5 pb-14 pt-12 sm:pb-16 sm:pt-14 md:min-h-[min(84vh,800px)] md:justify-center md:pb-20 md:pt-0">
-          <div
-            className={`mx-auto w-full max-w-[42rem] text-center antialiased ${artHeroFont.className}`}
-          >
+          <div className="mx-auto w-full max-w-[42rem] text-center antialiased">
             {/* Scrim matches Squarespace readability: clear type without relying only on shadow. */}
             <div className="rounded-sm bg-black/32 px-6 py-8 shadow-[0_12px_40px_rgba(0,0,0,0.28)] backdrop-blur-[2px] sm:px-9 sm:py-10">
               <p className="text-[12px] font-medium uppercase tracking-[0.28em] text-white/95 sm:text-[13px]">
