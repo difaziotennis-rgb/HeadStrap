@@ -17,15 +17,17 @@ export const ART_SITE = {
   studioNote: "Studio and gallery visits by appointment.",
 } as const;
 
+/** Short list aligned with home page exhibition imagery copy (edifazioart.net). */
 export const EXHIBITIONS_HIGHLIGHTS: string[] = [
   "Second Place — National Biennial Art Competition and Exhibition 2025",
   "The Artists of Sea Pines Gallery Exhibit — Hilton Head, South Carolina",
   "Exhibit at The Montage, Palmetto Bluff",
-  "The Brick Art Studio — Stony Brook, New York",
   "Roots of the Low Country — The Montage, Palmetto Bluff",
+  "The Brick Art Studio — Stony Brook, New York",
   "Featured Artist — The Octagon and the Montage Library Exhibit",
   "Artwork in the Hilton Head Symphony Program",
   "The Art Center of Coastal Carolina",
+  "Gestures in Nature: The Allure of the Landscape — The Art Center of Coastal Carolina",
   "First Thursday Art Show — Sea Pines Center",
   "Solo exhibit and demonstration — The Art Center of Coastal Carolina",
 ];
@@ -50,7 +52,7 @@ export const ARTIST_STATEMENT_SECTIONS: { heading?: string; paragraphs: string[]
 ];
 
 export const EDUCATION_LIST: string[] = [
-  "Solo exhibition: Gestures in Nature — The Allure of the Landscape",
+  "Solo exhibition: Gestures in Nature — The Allure of the Landscape — The Art Center of Coastal Carolina",
   "Featured Artist, Hilton Head Art League Gallery, Shelter Cove, Hilton Head, SC — March 2024",
   "Solo exhibition, Montage Hotel and Resort, Palmetto Bluff, South Carolina — 2023",
   "Art teacher, Patchogue–Medford School District — 1985–2015, Patchogue, New York",
