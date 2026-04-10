@@ -45,7 +45,7 @@ export function ArtHomeView() {
         <HeroFullBleedBackground />
         <div className="relative z-10 mx-auto flex max-w-6xl flex-col px-5 pb-14 pt-12 sm:pb-16 sm:pt-14 md:min-h-[min(84vh,800px)] md:justify-center md:pb-20 md:pt-0">
           <div className="mx-auto w-full max-w-[38rem] text-center antialiased" style={heroShadow}>
-            <p className="text-[11px] font-normal uppercase tracking-[0.36em] text-white">
+            <p className="text-[11px] font-normal uppercase tracking-[0.36em] text-white sm:text-[12px]">
               {ART_SITE.siteTitle}
             </p>
             <h1
@@ -57,11 +57,11 @@ export function ArtHomeView() {
             <p className="mt-7 text-center text-[16px] font-light leading-[1.88] text-white sm:text-[17px]">
               Oil and acrylic; the Lowcountry—marsh, tide, garden, coast—recurs as subject. Studio: Hilton Head Island.
             </p>
-            <p className="mt-4 text-center text-[15px] font-light leading-[1.88] text-white">
+            <p className="mt-4 text-center text-[15px] font-light leading-[1.88] text-white sm:text-[16px]">
               Visits by arrangement.
             </p>
             <nav
-              className="mt-9 flex flex-wrap items-center justify-center gap-x-8 gap-y-2 text-[14px] font-light tracking-wide text-white"
+              className="mt-9 flex flex-wrap items-center justify-center gap-x-8 gap-y-2 text-[14px] font-light tracking-wide text-white sm:text-[15px]"
               aria-label="Section"
             >
               <Link
