@@ -1,13 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { motion, useMotionValueEvent, useReducedMotion, useScroll } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { ART_SITE } from "@/lib/art/site";
 
 import { ArtScrollProgress } from "./ArtScrollProgress";
-import { artEase } from "./motion/art-ease";
 
 const nav = [
   { href: "/art", label: "Home" },
@@ -16,13 +14,14 @@ const nav = [
 ] as const;
 
 export function ArtSiteHeader() {
-  const reduce = useReducedMotion() === true;
-  const { scrollY } = useScroll();
   const [scrolled, setScrolled] = useState(false);
 
-  useMotionValueEvent(scrollY, "change", (y) => {
-    setScrolled(y > 16);
-  });
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 16);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   return (
     <>
@@ -48,17 +47,9 @@ export function ArtSiteHeader() {
               <Link
                 key={item.href}
                 href={item.href}
-                className="group relative text-[13px] font-light tracking-wide text-mcm-charcoal-600/90 transition-colors hover:text-mcm-charcoal-500"
+                className="relative text-[13px] font-light tracking-wide text-mcm-charcoal-600/90 transition-colors after:absolute after:bottom-0 after:left-0 after:h-px after:w-0 after:bg-mcm-charcoal-500/45 after:transition-[width] after:duration-300 hover:text-mcm-charcoal-500 hover:after:w-full"
               >
                 {item.label}
-                {!reduce && (
-                  <motion.span
-                    className="absolute -bottom-0.5 left-0 right-0 h-px origin-left bg-mcm-charcoal-500/45"
-                    initial={{ scaleX: 0 }}
-                    whileHover={{ scaleX: 1 }}
-                    transition={{ duration: 0.28, ease: artEase }}
-                  />
-                )}
               </Link>
             ))}
           </nav>

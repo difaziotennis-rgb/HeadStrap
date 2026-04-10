@@ -1,28 +1,45 @@
 "use client";
 
-import { motion, useReducedMotion, useScroll, useSpring } from "framer-motion";
+import { useEffect, useState } from "react";
 
 /**
- * Thin reading-progress bar along the top of the viewport (art routes only).
- * Hidden when prefers-reduced-motion is set.
+ * Reading-progress bar — vanilla scroll + transform (no Framer).
+ * Avoids SSR/hydration mismatches from motion hooks.
  */
 export function ArtScrollProgress() {
-  const reduce = useReducedMotion();
-  const { scrollYProgress } = useScroll();
-  const scaleX = useSpring(scrollYProgress, {
-    stiffness: 120,
-    damping: 32,
-    restDelta: 0.001,
-  });
+  const [progress, setProgress] = useState(0);
 
-  if (reduce) return null;
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    if (mq.matches) return;
+
+    const update = () => {
+      const el = document.documentElement;
+      const scrollable = el.scrollHeight - window.innerHeight;
+      setProgress(scrollable > 0 ? Math.min(1, Math.max(0, window.scrollY / scrollable)) : 0);
+    };
+
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, []);
 
   return (
     <div
-      className="pointer-events-none fixed left-0 right-0 top-0 z-[100] h-[3px] bg-mcm-charcoal-500/15"
+      className="pointer-events-none fixed left-0 right-0 top-0 z-[100] h-[3px] bg-mcm-charcoal-500/15 [@media(prefers-reduced-motion:reduce)]:hidden"
       aria-hidden
     >
-      <motion.div className="h-full w-full origin-left bg-mcm-charcoal-500/45" style={{ scaleX }} />
+      <div
+        className="h-full w-full origin-left bg-mcm-charcoal-500/45 will-change-transform"
+        style={{
+          transform: `scaleX(${progress})`,
+          transformOrigin: "left center",
+        }}
+      />
     </div>
   );
 }
