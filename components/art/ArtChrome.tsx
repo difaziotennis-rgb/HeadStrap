@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { ART_SITE } from "@/lib/art/site";
 
+import { ArtFooterGate } from "./ArtFooterGate";
 import { ArtSiteHeader } from "./ArtSiteHeader";
 
 export function ArtChrome({ children }: { children: React.ReactNode }) {
@@ -9,6 +10,7 @@ export function ArtChrome({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-[#f7f4ef] text-mcm-charcoal-800">
       <ArtSiteHeader />
       {children}
+      <ArtFooterGate>
       <footer className="mt-24 border-t border-mcm-cream-200/40">
         <div className="mx-auto max-w-6xl px-5 py-14">
           <div className="grid gap-12 sm:grid-cols-2 sm:gap-16">
@@ -63,6 +65,7 @@ export function ArtChrome({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </footer>
+      </ArtFooterGate>
     </div>
   );
 }
