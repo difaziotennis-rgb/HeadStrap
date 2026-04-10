@@ -15,13 +15,11 @@ import {
 } from "@/lib/art/homepage-media";
 import { ART_SITE } from "@/lib/art/site";
 
-const heroShadow: CSSProperties = {
-  textShadow:
-    "0 1px 2px rgba(0,0,0,0.9), 0 2px 20px rgba(0,0,0,0.6), 0 0 1px rgba(0,0,0,0.95)",
-};
+import { artHeroFont } from "@/app/art/fonts";
+
+/** Light shadow so copy stays legible on busy photos; hero uses Poppins + scrim (see below). */
 const heroTitleShadow: CSSProperties = {
-  textShadow:
-    "0 2px 5px rgba(0,0,0,0.92), 0 4px 28px rgba(0,0,0,0.55), 0 0 2px rgba(0,0,0,1)",
+  textShadow: "0 1px 3px rgba(0,0,0,0.65), 0 2px 14px rgba(0,0,0,0.35)",
 };
 
 function HeroFullBleedBackground() {
@@ -50,39 +48,44 @@ export function ArtHomeView() {
       >
         <HeroFullBleedBackground />
         <div className="relative z-10 mx-auto flex max-w-6xl flex-col px-5 pb-14 pt-12 sm:pb-16 sm:pt-14 md:min-h-[min(84vh,800px)] md:justify-center md:pb-20 md:pt-0">
-          <div className="mx-auto w-full max-w-[38rem] text-center antialiased" style={heroShadow}>
-            <p className="text-[11px] font-normal uppercase tracking-[0.36em] text-white sm:text-[12px]">
-              {ART_SITE.siteTitle}
-            </p>
-            <h1
-              className="mt-6 text-balance text-center font-light leading-[1.22] tracking-tight text-white text-[2.125rem] sm:text-[2.75rem]"
-              style={heroTitleShadow}
-            >
-              {ART_SITE.tagline}
-            </h1>
-            <p className="mt-7 text-center text-[16px] font-light leading-[1.88] text-white sm:text-[17px]">
-              Oil and acrylic; the Lowcountry—marsh, tide, garden, coast—recurs as subject. Studio: Hilton Head Island.
-            </p>
-            <p className="mt-4 text-center text-[15px] font-light leading-[1.88] text-white sm:text-[16px]">
-              Visits by arrangement.
-            </p>
-            <nav
-              className="mt-9 flex flex-wrap items-center justify-center gap-x-8 gap-y-2 text-[14px] font-light tracking-wide text-white sm:text-[15px]"
-              aria-label="Primary actions"
-            >
-              <Link
-                href="/art/shop"
-                className="border-b border-white pb-px text-white transition hover:border-white hover:text-white"
+          <div
+            className={`mx-auto w-full max-w-[42rem] text-center antialiased ${artHeroFont.className}`}
+          >
+            {/* Scrim matches Squarespace readability: clear type without relying only on shadow. */}
+            <div className="rounded-sm bg-black/32 px-6 py-8 shadow-[0_12px_40px_rgba(0,0,0,0.28)] backdrop-blur-[2px] sm:px-9 sm:py-10">
+              <p className="text-[12px] font-medium uppercase tracking-[0.28em] text-white/95 sm:text-[13px]">
+                {ART_SITE.siteTitle}
+              </p>
+              <h1
+                className="mt-5 text-balance text-center font-light leading-[1.28] tracking-[-0.02em] text-white text-[1.85rem] sm:mt-6 sm:text-[2.35rem] md:text-[2.5rem]"
+                style={heroTitleShadow}
               >
-                Work
-              </Link>
-              <Link
-                href="/art/about"
-                className="border-b border-white pb-px text-white transition hover:border-white hover:text-white"
+                {ART_SITE.tagline}
+              </h1>
+              <p className="mt-6 text-center text-[16px] font-normal leading-[1.75] text-white/95 sm:mt-7 sm:text-[17px] md:text-[18px]">
+                Oil and acrylic; the Lowcountry—marsh, tide, garden, coast—recurs as subject. Studio: Hilton Head Island.
+              </p>
+              <p className="mt-3 text-center text-[15px] font-normal leading-[1.75] text-white/92 sm:mt-4 sm:text-[16px]">
+                Visits by arrangement.
+              </p>
+              <nav
+                className="mt-8 flex flex-wrap items-center justify-center gap-x-10 gap-y-2 text-[15px] font-medium tracking-[0.02em] text-white sm:mt-9 sm:text-[16px]"
+                aria-label="Primary actions"
               >
-                Statement
-              </Link>
-            </nav>
+                <Link
+                  href="/art/shop"
+                  className="border-b border-white/90 pb-0.5 text-white transition hover:border-white hover:text-white"
+                >
+                  Work
+                </Link>
+                <Link
+                  href="/art/about"
+                  className="border-b border-white/90 pb-0.5 text-white transition hover:border-white hover:text-white"
+                >
+                  Statement
+                </Link>
+              </nav>
+            </div>
           </div>
         </div>
       </section>
