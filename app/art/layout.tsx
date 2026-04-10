@@ -52,7 +52,7 @@ export default function ArtLayout({
   return (
     <div
       data-art-site
-      className={`${artSiteFont.className} text-[15px] font-light leading-[1.87] text-mcm-charcoal-800 antialiased`}
+      className={`${artSiteFont.className} text-[15px] font-light leading-[1.87] text-mcm-charcoal-900 antialiased`}
     >
       <ArtChrome>{children}</ArtChrome>
     </div>

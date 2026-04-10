@@ -15,16 +15,16 @@ export function ArtChrome({ children }: { children: React.ReactNode }) {
         <div className="mx-auto max-w-6xl px-5 py-14">
           <div className="grid gap-12 sm:grid-cols-2 sm:gap-16">
             <div>
-              <p className="text-base font-light text-mcm-charcoal-500">{ART_SITE.artistName}</p>
-              <p className="mt-3 max-w-xs text-[13px] leading-[1.7] text-mcm-brown-600/75">
+              <p className="text-base font-light text-mcm-charcoal-900">{ART_SITE.artistName}</p>
+              <p className="mt-3 max-w-xs text-[14px] leading-[1.7] text-mcm-charcoal-800">
                 {ART_SITE.studioLine}
                 <br />
                 {ART_SITE.studioCity}
                 <br />
-                <span className="text-mcm-brown-600/60">By appointment.</span>
+                <span className="text-mcm-charcoal-700">By appointment.</span>
               </p>
             </div>
-            <div className="text-[13px] leading-[1.85] text-mcm-brown-600/75">
+            <div className="text-[14px] leading-[1.85] text-mcm-charcoal-800">
               <p>
                 <a
                   href={ART_SITE.emailHref}

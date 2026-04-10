@@ -53,13 +53,18 @@ export function ArtHomeView() {
                 {ART_SITE.siteTitle}
               </p>
               <h1
-                className="mt-5 text-balance text-center font-light leading-[1.28] tracking-[-0.02em] text-white text-[1.85rem] sm:mt-6 sm:text-[2.35rem] md:text-[2.5rem]"
+                className="mt-5 text-balance text-center font-semibold leading-[1.28] tracking-[-0.02em] text-white text-[1.85rem] sm:mt-6 sm:text-[2.35rem] md:text-[2.5rem]"
                 style={heroTitleShadow}
               >
                 {ART_SITE.tagline}
               </h1>
               <p className="mt-6 text-center text-[16px] font-normal leading-[1.75] text-white/95 sm:mt-7 sm:text-[17px] md:text-[18px]">
                 Oil and acrylic; the Lowcountry—marsh, tide, garden, coast—recurs as subject. Studio: Hilton Head Island.
+              </p>
+              <p className="mt-4 text-center text-[15px] font-normal leading-[1.65] text-white sm:text-[16px]">
+                {ART_SITE.studioLine}
+                <br />
+                {ART_SITE.studioCity}
               </p>
               <p className="mt-3 text-center text-[15px] font-normal leading-[1.75] text-white sm:mt-4 sm:text-[16px]">
                 Visits by arrangement.
@@ -103,7 +108,7 @@ export function ArtHomeView() {
                     unoptimized
                   />
                 </div>
-                <figcaption className="border-t border-mcm-cream-100/90 px-3 py-2 text-[11px] font-light text-mcm-brown-600/55">
+                <figcaption className="border-t border-mcm-cream-100/90 px-3 py-2 text-[11px] font-light text-mcm-charcoal-700">
                   {STUDIO_SPOTLIGHT.caption}
                 </figcaption>
               </figure>
@@ -118,19 +123,19 @@ export function ArtHomeView() {
                     unoptimized
                   />
                 </div>
-                <figcaption className="border-t border-mcm-cream-100/90 px-3 py-2 text-[11px] font-light text-mcm-brown-600/55">
+                <figcaption className="border-t border-mcm-cream-100/90 px-3 py-2 text-[11px] font-light text-mcm-charcoal-700">
                   {STUDIO_SECOND.caption}
                 </figcaption>
               </figure>
             </div>
             <div>
-              <p className="text-[10px] font-normal uppercase tracking-[0.32em] text-mcm-brown-600/40">Ellen DiFazio</p>
+              <p className="text-[10px] font-normal uppercase tracking-[0.32em] text-mcm-charcoal-700">Ellen DiFazio</p>
               <h2 className="mt-3 font-light text-xl tracking-tight text-mcm-charcoal-500 sm:text-2xl">Studio</h2>
-              <p className="mt-5 text-[14px] font-light leading-[1.87] text-mcm-brown-600/72">
+              <p className="mt-5 text-[14px] font-light leading-[1.87] text-mcm-charcoal-800">
                 Long Island–born; taught in New York schools for three decades. Painting full-time from a studio on
                 Hilton Head—the same coast and marsh that surface in the work.
               </p>
-              <p className="mt-4 text-[13px] font-light text-mcm-brown-600/55">
+              <p className="mt-4 text-[13px] font-light text-mcm-charcoal-700">
                 <a
                   href={ART_SITE.emailHref}
                   className="border-b border-mcm-charcoal-500/15 pb-px transition hover:border-mcm-charcoal-500/35"
@@ -152,9 +157,9 @@ export function ArtHomeView() {
       <section id="exhibitions" className="scroll-mt-28 border-t border-mcm-cream-200/40 bg-[#faf8f4]">
         <div className="mx-auto max-w-6xl px-5 py-10 sm:py-14">
           <div className="max-w-md">
-            <p className="text-[10px] font-normal uppercase tracking-[0.32em] text-mcm-brown-600/40">Exhibitions</p>
+            <p className="text-[10px] font-normal uppercase tracking-[0.32em] text-mcm-charcoal-700">Exhibitions</p>
             <h2 className="mt-3 font-light text-xl tracking-tight text-mcm-charcoal-500 sm:text-2xl">Selected venues</h2>
-            <p className="mt-3 text-[14px] font-light leading-[1.87] text-mcm-brown-600/65">
+            <p className="mt-3 text-[14px] font-light leading-[1.87] text-mcm-charcoal-800">
               Awards, group and solo shows, print features.
             </p>
           </div>
@@ -171,7 +176,7 @@ export function ArtHomeView() {
                     unoptimized
                   />
                 </div>
-                <p className="border-t border-mcm-cream-100/80 px-3 py-2 text-left text-[11px] font-light leading-snug text-mcm-brown-600/68">
+                <p className="border-t border-mcm-cream-100/80 px-3 py-2 text-left text-[11px] font-light leading-snug text-mcm-charcoal-800">
                   {photo.caption}
                 </p>
               </li>
@@ -184,7 +189,7 @@ export function ArtHomeView() {
         <div className="mx-auto max-w-6xl px-5 py-10 sm:py-14">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
             <div>
-              <p className="text-[10px] font-normal uppercase tracking-[0.32em] text-mcm-brown-600/40">Inventory</p>
+              <p className="text-[10px] font-normal uppercase tracking-[0.32em] text-mcm-charcoal-700">Inventory</p>
               <h2 className="mt-2 font-light text-xl tracking-tight text-mcm-charcoal-500 sm:text-2xl">Selected</h2>
             </div>
             <Link
@@ -216,7 +221,7 @@ export function ArtHomeView() {
                     <span className="font-normal text-[15px] text-mcm-charcoal-500 group-hover:text-mcm-charcoal-700">
                       {piece.title}
                     </span>
-                    <span className="mt-1.5 text-[13px] font-light text-mcm-brown-600/65">
+                    <span className="mt-1.5 text-[13px] font-light text-mcm-charcoal-800">
                       <span className="capitalize">{piece.category}</span>
                       <span className="mx-1.5 text-mcm-cream-300">·</span>
                       {piece.availability === "available" ? formatUsd(piece.priceUsd) : "Sold"}
@@ -231,7 +236,7 @@ export function ArtHomeView() {
 
       <section id="contact" className="scroll-mt-28 border-t border-mcm-cream-200/40 bg-[#faf8f4]">
         <div className="mx-auto max-w-sm px-5 py-10 text-center sm:py-12">
-          <p className="text-[14px] font-light leading-[1.87] text-mcm-brown-600/72">
+          <p className="text-[14px] font-light leading-[1.87] text-mcm-charcoal-800">
             {ART_SITE.studioLine}
             <br />
             {ART_SITE.studioCity}

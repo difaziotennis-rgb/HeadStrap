@@ -9,6 +9,11 @@ export type PressItem = {
 
 export const PRESS_ITEMS: PressItem[] = [
   {
+    outlet: "Pluff Mud Gallery",
+    headline: "Member artist — Old Town, Bluffton, South Carolina",
+    year: "—",
+  },
+  {
     outlet: "National Biennial Art Competition",
     headline: "Second Place — 2025",
     year: "2025",

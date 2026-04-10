@@ -1,12 +1,16 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 
-import { getArtPieceBySlug } from "@/lib/art/catalog";
+import { getArtPieceBySlug, getPieceDescription } from "@/lib/art/catalog";
 
 type Body = {
   slug?: string;
   customerEmail?: string;
 };
+
+function isValidEmail(s: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
+}
 
 export async function POST(request: Request) {
   try {
@@ -14,6 +18,11 @@ export async function POST(request: Request) {
     const slug = String(body.slug || "").trim();
     if (!slug) {
       return NextResponse.json({ error: "Missing artwork." }, { status: 400 });
+    }
+
+    const customerEmail = String(body.customerEmail || "").trim();
+    if (!isValidEmail(customerEmail)) {
+      return NextResponse.json({ error: "A valid email is required for checkout." }, { status: 400 });
     }
 
     const piece = getArtPieceBySlug(slug);
@@ -41,6 +50,11 @@ export async function POST(request: Request) {
     const stripeProductImages =
       primaryImage && /\.(jpe?g|png|webp)$/i.test(primaryImage) ? [primaryImage] : undefined;
 
+    const longDesc = getPieceDescription(piece.slug);
+    const productDescription = longDesc
+      ? `${longDesc.slice(0, 450)}${longDesc.length > 450 ? "…" : ""} · ${piece.category}`
+      : `E. DiFazio Art — ${piece.category}`;
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: [
@@ -49,7 +63,7 @@ export async function POST(request: Request) {
             currency: "usd",
             product_data: {
               name: piece.title,
-              description: `E. DiFazio Art — ${piece.category}`,
+              description: productDescription,
               images: stripeProductImages,
             },
             unit_amount: Math.round(amountUsd * 100),
@@ -60,11 +74,12 @@ export async function POST(request: Request) {
       mode: "payment",
       success_url: `${baseUrl}/art/shop/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/art/shop/${encodeURIComponent(slug)}?cancelled=1`,
-      customer_email: body.customerEmail?.trim() || undefined,
+      customer_email: customerEmail,
       metadata: {
         art_slug: piece.slug,
         art_title: piece.title,
         source: "e-difazio-art",
+        buyer_email: customerEmail,
       },
       payment_intent_data: {
         metadata: {

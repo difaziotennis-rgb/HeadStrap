@@ -1,9 +1,24 @@
 import type { BodyOfWorkSlug } from "./bodies-of-work";
-import { getBodyOfWorkSlugForPieceSlug } from "./bodies-of-work";
 import type { ArtCategory, ArtPiece } from "./types";
+import pieceDescriptions from "./piece-descriptions.json";
 import pieces from "./pieces.json";
 
 export const artPieces = pieces as ArtPiece[];
+
+const descriptions = pieceDescriptions as Record<string, string>;
+
+export function getBodyOfWorkSlugForPieceSlug(slug: string): Exclude<BodyOfWorkSlug, "all"> {
+  const piece = artPieces.find((p) => p.slug === slug);
+  if (!piece) return "marsh-tide";
+  if (piece.category === "photography") return "photography";
+  if (piece.category === "ceramics") return "ceramics";
+  return "marsh-tide";
+}
+
+export function getPieceDescription(slug: string): string | undefined {
+  const d = descriptions[slug];
+  return d && d.trim() ? d.trim() : undefined;
+}
 
 export function getArtPieceBySlug(slug: string): ArtPiece | undefined {
   return artPieces.find((p) => p.slug === slug);

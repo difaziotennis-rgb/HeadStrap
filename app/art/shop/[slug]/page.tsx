@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { ArtCheckoutButton } from "@/components/art/ArtCheckoutButton";
-import { artPieces, formatUsd, getArtPieceBySlug } from "@/lib/art/catalog";
+import { artPieces, formatUsd, getArtPieceBySlug, getPieceDescription } from "@/lib/art/catalog";
 import { inquireAboutPieceMailto, inquireStudioMailto } from "@/lib/art/inquire";
 
 type Props = {
@@ -18,9 +18,12 @@ export function generateStaticParams() {
 export function generateMetadata({ params }: Props) {
   const piece = getArtPieceBySlug(params.slug);
   if (!piece) return { title: "Artwork" };
+  const desc = getPieceDescription(piece.slug);
   return {
     title: piece.title,
-    description: `${piece.title} — ${formatUsd(piece.priceUsd)} · E. DiFazio Art`,
+    description:
+      desc?.slice(0, 155) ||
+      `${piece.title} — ${formatUsd(piece.priceUsd)} · E. DiFazio Art`,
     openGraph: {
       title: piece.title,
       description: `${formatUsd(piece.priceUsd)} · ${piece.category}`,
@@ -32,6 +35,7 @@ export default function ArtPiecePage({ params, searchParams }: Props) {
   const piece = getArtPieceBySlug(params.slug);
   if (!piece) notFound();
 
+  const description = getPieceDescription(piece.slug);
   const available = piece.availability === "available";
   const cancelled =
     typeof searchParams.cancelled === "string"
@@ -81,30 +85,30 @@ export default function ArtPiecePage({ params, searchParams }: Props) {
           </div>
 
           <div>
-            <p className="text-[11px] font-normal uppercase tracking-[0.28em] text-mcm-brown-600/75">
+            <p className="text-[11px] font-normal uppercase tracking-[0.28em] text-mcm-charcoal-700">
               {piece.category}
             </p>
-            <h1 className="mt-2 text-3xl font-light tracking-tight text-mcm-charcoal-500 sm:text-4xl">
+            <h1 className="mt-2 text-3xl font-light tracking-tight text-mcm-charcoal-800 sm:text-4xl">
               {piece.title}
             </h1>
-            <p className="mt-4 text-2xl font-light text-mcm-charcoal-600">
-              {available ? formatUsd(piece.priceUsd) : <span className="text-mcm-brown-600/80">Sold — {formatUsd(piece.priceUsd)}</span>}
+            {description ? (
+              <p className="mt-5 text-[15px] leading-[1.85] text-mcm-charcoal-800">{description}</p>
+            ) : null}
+            <p className="mt-4 text-2xl font-light text-mcm-charcoal-800">
+              {available ? formatUsd(piece.priceUsd) : <span className="text-mcm-charcoal-700">Sold — {formatUsd(piece.priceUsd)}</span>}
             </p>
 
             {available ? (
               <div className="mt-10 space-y-6">
                 <div className="border border-mcm-cream-200/70 bg-white/70 p-6">
-                  <p className="text-[10px] font-normal uppercase tracking-[0.28em] text-mcm-brown-600/50">Purchase</p>
+                  <p className="text-[10px] font-normal uppercase tracking-[0.28em] text-mcm-charcoal-700">Purchase</p>
                   <div className="mt-4">
                     <ArtCheckoutButton slug={piece.slug} priceUsd={piece.priceUsd} />
                   </div>
-                  <p className="mt-4 text-[12px] leading-relaxed text-mcm-brown-600/65">
-                    Secure checkout. Taxes and shipping may be confirmed by email after purchase.
-                  </p>
                 </div>
                 <div className="border border-mcm-cream-200/50 bg-[#faf8f4]/60 p-6">
-                  <p className="text-[10px] font-normal uppercase tracking-[0.28em] text-mcm-brown-600/50">Inquire</p>
-                  <p className="mt-3 text-[13px] leading-relaxed text-mcm-brown-600/75">
+                  <p className="text-[10px] font-normal uppercase tracking-[0.28em] text-mcm-charcoal-700">Inquire</p>
+                  <p className="mt-3 text-[14px] leading-relaxed text-mcm-charcoal-800">
                     Questions about framing, pickup, or shipping? Want to discuss a commission?
                   </p>
                   <a
@@ -124,8 +128,8 @@ export default function ArtPiecePage({ params, searchParams }: Props) {
               </div>
             ) : (
               <div className="mt-10 border border-mcm-cream-200/50 bg-[#faf8f4]/60 p-6">
-                <p className="text-[10px] font-normal uppercase tracking-[0.28em] text-mcm-brown-600/50">Sold</p>
-                <p className="mt-3 text-[13px] leading-relaxed text-mcm-brown-600/75">
+                <p className="text-[10px] font-normal uppercase tracking-[0.28em] text-mcm-charcoal-700">Sold</p>
+                <p className="mt-3 text-[14px] leading-relaxed text-mcm-charcoal-800">
                   This piece is sold. Ask about similar work or a studio visit.
                 </p>
                 <a
