@@ -81,32 +81,6 @@ export function ArtHomeView() {
                 Statement
               </Link>
             </nav>
-            <nav
-              className="mt-6 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[12px] font-light tracking-wide text-white/90 sm:text-[13px]"
-              aria-label="On this page"
-            >
-              <a href="#studio" className="border-b border-white/35 pb-px transition hover:border-white">
-                Studio
-              </a>
-              <span className="text-white/40" aria-hidden>
-                ·
-              </span>
-              <a href="#exhibitions" className="border-b border-white/35 pb-px transition hover:border-white">
-                Exhibitions
-              </a>
-              <span className="text-white/40" aria-hidden>
-                ·
-              </span>
-              <a href="#selected" className="border-b border-white/35 pb-px transition hover:border-white">
-                Selected work
-              </a>
-              <span className="text-white/40" aria-hidden>
-                ·
-              </span>
-              <a href="#contact" className="border-b border-white/35 pb-px transition hover:border-white">
-                Contact
-              </a>
-            </nav>
           </div>
         </div>
       </section>
