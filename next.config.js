@@ -18,6 +18,11 @@ const nextConfig = {
         hostname: 'i.ytimg.com',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'images.squarespace-cdn.com',
+        pathname: '/**',
+      },
     ],
   },
   // Rewrite /strapped SPA routes to serve the static index.html

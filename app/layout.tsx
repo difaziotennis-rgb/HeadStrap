@@ -5,24 +5,24 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "DiFazio Tennis",
-  description: "DiFazio Tennis",
-  keywords: ["tennis lessons", "private tennis", "Rhinebeck Tennis Club", "Hudson Valley tennis", "tennis coaching", "DiFazio Tennis"],
-  authors: [{ name: "DiFazio Tennis" }],
+  title: "Website Removed",
+  description: "This website has been removed.",
+  keywords: ["website removed"],
+  authors: [{ name: "Site Owner" }],
   openGraph: {
-    title: "DiFazio Tennis",
-    description: "DiFazio Tennis",
+    title: "Website Removed",
+    description: "This website has been removed.",
     type: "website",
     locale: "en_US",
   },
   twitter: {
     card: "summary",
-    title: "DiFazio Tennis",
-    description: "DiFazio Tennis",
+    title: "Website Removed",
+    description: "This website has been removed.",
   },
   robots: {
-    index: true,
-    follow: true,
+    index: false,
+    follow: false,
   },
 };
 
