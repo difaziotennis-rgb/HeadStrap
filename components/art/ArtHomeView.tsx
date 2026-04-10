@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { ArtHeroParallax } from "@/components/art/ArtHeroParallax";
+import { ArtPressStrip } from "@/components/art/ArtPressStrip";
 import { formatUsd, getArtPieceBySlug } from "@/lib/art/catalog";
 import {
   AWARDS_AND_EXHIBITIONS,
@@ -85,18 +86,7 @@ export function ArtHomeView() {
         </div>
       </section>
 
-      <section id="intro" className="scroll-mt-28 border-t border-mcm-cream-200/40 bg-[#f7f4ef]">
-        <div className="mx-auto max-w-3xl px-5 py-10 sm:py-12">
-          <p className="font-light leading-[1.75] text-mcm-charcoal-700/88 sm:text-[1.0625rem] text-[1rem]">
-            Most of these canvases will spend their longest life on a wall in an ordinary house—not a white cube. The
-            aim is modest: that a painting can settle quietly into a room over time and become easy to live
-            beside—familiar, unobtrusive, part of the day.
-          </p>
-          <p className="mt-5 text-[14px] font-light leading-[1.87] text-mcm-brown-600/68">
-            Oil and acrylic on canvas, photography, ceramics—priced as listed.
-          </p>
-        </div>
-      </section>
+      <ArtPressStrip />
 
       <section id="studio" className="scroll-mt-28 border-t border-mcm-cream-200/40 bg-[#f7f4ef]">
         <div className="mx-auto max-w-6xl px-5 py-10 sm:py-14">

@@ -2,6 +2,10 @@
 
 export const ART_SITE = {
   artistName: "Ellen DiFazio",
+  /** Canonical site URL for emails and CV (no trailing slash). */
+  publicBaseUrl:
+    (typeof process !== "undefined" && process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/$/, "")) ||
+    "https://difaziotennis.com",
   siteTitle: "E. DiFazio Art",
   tagline: "Art washes away the dust of everyday life",
   email: "Ellendifazio@yahoo.com",

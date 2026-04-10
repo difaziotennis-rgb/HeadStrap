@@ -8,6 +8,16 @@ export default function ArtAboutPage() {
       <p className="text-[10px] font-normal uppercase tracking-[0.32em] text-mcm-brown-600/45">About</p>
       <h1 className="mt-4 text-3xl font-light tracking-tight text-mcm-charcoal-500 sm:text-4xl">Statement</h1>
 
+      <p className="mt-8 text-[14px] leading-relaxed text-mcm-brown-600/75">
+        <a
+          href="/api/art/cv"
+          className="border-b border-mcm-charcoal-500/20 pb-px text-mcm-charcoal-600/90 transition hover:border-mcm-charcoal-500/40"
+        >
+          Download CV (PDF)
+        </a>
+        <span className="text-mcm-brown-600/45"> — exhibitions, education, and selected recognition.</span>
+      </p>
+
       <div className="mt-12 space-y-14">
         {ARTIST_STATEMENT_SECTIONS.map((section) => (
           <section key={section.heading || "intro"}>

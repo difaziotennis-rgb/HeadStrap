@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 
 import { ArtCheckoutButton } from "@/components/art/ArtCheckoutButton";
 import { artPieces, formatUsd, getArtPieceBySlug } from "@/lib/art/catalog";
-import { ART_SITE } from "@/lib/art/site";
+import { inquireAboutPieceMailto, inquireStudioMailto } from "@/lib/art/inquire";
 
 type Props = {
   params: { slug: string };
@@ -92,20 +92,49 @@ export default function ArtPiecePage({ params, searchParams }: Props) {
             </p>
 
             {available ? (
-              <div className="mt-10 border border-mcm-cream-200/70 bg-white/70 p-6">
-                <ArtCheckoutButton slug={piece.slug} priceUsd={piece.priceUsd} />
+              <div className="mt-10 space-y-6">
+                <div className="border border-mcm-cream-200/70 bg-white/70 p-6">
+                  <p className="text-[10px] font-normal uppercase tracking-[0.28em] text-mcm-brown-600/50">Purchase</p>
+                  <div className="mt-4">
+                    <ArtCheckoutButton slug={piece.slug} priceUsd={piece.priceUsd} />
+                  </div>
+                  <p className="mt-4 text-[12px] leading-relaxed text-mcm-brown-600/65">
+                    Secure checkout. Taxes and shipping may be confirmed by email after purchase.
+                  </p>
+                </div>
+                <div className="border border-mcm-cream-200/50 bg-[#faf8f4]/60 p-6">
+                  <p className="text-[10px] font-normal uppercase tracking-[0.28em] text-mcm-brown-600/50">Inquire</p>
+                  <p className="mt-3 text-[13px] leading-relaxed text-mcm-brown-600/75">
+                    Questions about framing, pickup, or shipping? Want to discuss a commission?
+                  </p>
+                  <a
+                    href={inquireAboutPieceMailto(piece.title, piece.slug)}
+                    className="mt-4 inline-block text-[13px] border-b border-mcm-charcoal-500/25 pb-px text-mcm-charcoal-600/90 transition hover:border-mcm-charcoal-500/45"
+                  >
+                    Email about this work
+                  </a>
+                  <span className="mx-2 text-mcm-cream-300">·</span>
+                  <a
+                    href={inquireStudioMailto()}
+                    className="inline-block text-[13px] border-b border-mcm-charcoal-500/25 pb-px text-mcm-charcoal-600/90 transition hover:border-mcm-charcoal-500/45"
+                  >
+                    General studio inquiry
+                  </a>
+                </div>
               </div>
             ) : (
-              <p className="mt-8 text-[13px] leading-relaxed text-mcm-brown-600/75">
-                Sold. Inquiries:{" "}
+              <div className="mt-10 border border-mcm-cream-200/50 bg-[#faf8f4]/60 p-6">
+                <p className="text-[10px] font-normal uppercase tracking-[0.28em] text-mcm-brown-600/50">Sold</p>
+                <p className="mt-3 text-[13px] leading-relaxed text-mcm-brown-600/75">
+                  This piece is sold. Ask about similar work or a studio visit.
+                </p>
                 <a
-                  href={ART_SITE.emailHref}
-                  className="border-b border-mcm-charcoal-500/15 pb-px transition hover:border-mcm-charcoal-500/35"
+                  href={inquireAboutPieceMailto(piece.title, piece.slug)}
+                  className="mt-4 inline-block text-[13px] border-b border-mcm-charcoal-500/25 pb-px text-mcm-charcoal-600/90 transition hover:border-mcm-charcoal-500/45"
                 >
-                  {ART_SITE.email}
+                  Inquire
                 </a>
-                .
-              </p>
+              </div>
             )}
           </div>
         </div>
