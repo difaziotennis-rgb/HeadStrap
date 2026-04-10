@@ -1,11 +1,6 @@
-"use client";
-
 import Link from "next/link";
-import { useEffect, useState } from "react";
 
 import { ART_SITE } from "@/lib/art/site";
-
-import { ArtScrollProgress } from "./ArtScrollProgress";
 
 const nav = [
   { href: "/art", label: "Home" },
@@ -13,48 +8,34 @@ const nav = [
   { href: "/art/about", label: "About" },
 ] as const;
 
+/**
+ * Server-only header (no client hooks) so /art never depends on hydration to render.
+ * Sticky + backdrop; nav hovers use CSS only.
+ */
 export function ArtSiteHeader() {
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 16);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
   return (
-    <>
-      <ArtScrollProgress />
-      <header
-        className={`sticky top-0 z-50 border-b border-mcm-cream-200/50 backdrop-blur-md transition-[padding,background-color,box-shadow] duration-300 ease-out ${
-          scrolled
-            ? "bg-[#fbf9f6]/96 py-4 shadow-[0_6px_28px_rgba(44,49,57,0.07)]"
-            : "bg-[#fbf9f6]/80 py-7"
-        }`}
-      >
-        <div className="mx-auto flex max-w-6xl flex-col gap-5 px-5 sm:flex-row sm:items-center sm:justify-between">
-          <Link href="/art" className="group block">
-            <p className="font-light tracking-tight text-mcm-charcoal-500 transition-colors group-hover:text-mcm-charcoal-700">
-              {ART_SITE.siteTitle}
-            </p>
-            <p className="mt-1 text-[10px] font-normal uppercase tracking-[0.32em] text-mcm-brown-600/55">
-              Hilton Head Island
-            </p>
-          </Link>
-          <nav className="flex flex-wrap items-center gap-6 sm:gap-8" aria-label="Primary">
-            {nav.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="relative text-[13px] font-light tracking-wide text-mcm-charcoal-600/90 transition-colors after:absolute after:bottom-0 after:left-0 after:h-px after:w-0 after:bg-mcm-charcoal-500/45 after:transition-[width] after:duration-300 hover:text-mcm-charcoal-500 hover:after:w-full"
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-        </div>
-      </header>
-    </>
+    <header className="sticky top-0 z-50 border-b border-mcm-cream-200/50 bg-[#fbf9f6]/92 py-6 shadow-[0_1px_0_rgba(44,49,57,0.04)] backdrop-blur-md">
+      <div className="mx-auto flex max-w-6xl flex-col gap-5 px-5 sm:flex-row sm:items-center sm:justify-between">
+        <Link href="/art" className="group block">
+          <p className="font-light tracking-tight text-mcm-charcoal-500 transition-colors group-hover:text-mcm-charcoal-700">
+            {ART_SITE.siteTitle}
+          </p>
+          <p className="mt-1 text-[10px] font-normal uppercase tracking-[0.32em] text-mcm-brown-600/55">
+            Hilton Head Island
+          </p>
+        </Link>
+        <nav className="flex flex-wrap items-center gap-6 sm:gap-8" aria-label="Primary">
+          {nav.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="relative text-[13px] font-light tracking-wide text-mcm-charcoal-600/90 transition-colors after:absolute after:bottom-0 after:left-0 after:h-px after:w-0 after:bg-mcm-charcoal-500/45 after:transition-[width] after:duration-300 hover:text-mcm-charcoal-500 hover:after:w-full"
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+      </div>
+    </header>
   );
 }

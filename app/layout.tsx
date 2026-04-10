@@ -5,24 +5,24 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Website Removed",
-  description: "This website has been removed.",
-  keywords: ["website removed"],
-  authors: [{ name: "Site Owner" }],
+  title: "E. DiFazio Art",
+  description: "Art washes away the dust of everyday life — Ellen DiFazio, Hilton Head Island.",
+  keywords: ["Ellen DiFazio", "Hilton Head art", "Lowcountry paintings"],
+  authors: [{ name: "Ellen DiFazio" }],
   openGraph: {
-    title: "Website Removed",
-    description: "This website has been removed.",
+    title: "E. DiFazio Art",
+    description: "Art washes away the dust of everyday life",
     type: "website",
     locale: "en_US",
   },
   twitter: {
-    card: "summary",
-    title: "Website Removed",
-    description: "This website has been removed.",
+    card: "summary_large_image",
+    title: "E. DiFazio Art",
+    description: "Art washes away the dust of everyday life",
   },
   robots: {
-    index: false,
-    follow: false,
+    index: true,
+    follow: true,
   },
 };
 
