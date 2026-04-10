@@ -65,7 +65,7 @@ export function ArtHomeView() {
               <p className="mt-6 text-center text-[16px] font-normal leading-[1.75] text-white/95 sm:mt-7 sm:text-[17px] md:text-[18px]">
                 Oil and acrylic; the Lowcountry—marsh, tide, garden, coast—recurs as subject. Studio: Hilton Head Island.
               </p>
-              <p className="mt-3 text-center text-[15px] font-normal leading-[1.75] text-white/92 sm:mt-4 sm:text-[16px]">
+              <p className="mt-3 text-center text-[15px] font-normal leading-[1.75] text-white sm:mt-4 sm:text-[16px]">
                 Visits by arrangement.
               </p>
               <nav
