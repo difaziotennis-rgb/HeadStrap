@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { ArtHeroParallax } from "@/components/art/ArtHeroParallax";
+import { ArtPieceCardImage } from "@/components/art/ArtPieceCardImage";
 import { ArtPressStrip } from "@/components/art/ArtPressStrip";
 import { formatUsd, getArtPieceBySlug } from "@/lib/art/catalog";
 import {
@@ -204,19 +205,10 @@ export function ArtHomeView() {
                   href={`/art/shop/${piece.slug}`}
                   className="group flex flex-col overflow-hidden border border-mcm-cream-200/70 bg-white/80 transition hover:border-mcm-cream-300"
                 >
-                  <div className="relative aspect-[4/5] w-full overflow-hidden bg-mcm-cream-100/80">
-                    {piece.images[0] ? (
-                      <Image
-                        src={piece.images[0]}
-                        alt={piece.title}
-                        fill
-                        className="object-cover transition duration-500 group-hover:scale-[1.03]"
-                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                        unoptimized
-                      />
-                    ) : null}
+                  <div className="relative">
+                    <ArtPieceCardImage piece={piece} />
                     {piece.availability === "sold" && (
-                      <span className="absolute left-2 top-2 border border-white/30 bg-mcm-charcoal-500/80 px-2 py-0.5 text-[9px] font-medium uppercase tracking-[0.14em] text-white">
+                      <span className="pointer-events-none absolute left-2 top-2 z-[2] border border-white/30 bg-mcm-charcoal-500/80 px-2 py-0.5 text-[9px] font-medium uppercase tracking-[0.14em] text-white">
                         Sold
                       </span>
                     )}

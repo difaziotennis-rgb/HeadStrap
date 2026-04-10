@@ -1,12 +1,11 @@
-import Image from "next/image";
 import Link from "next/link";
 
+import { ArtPieceCardImage } from "@/components/art/ArtPieceCardImage";
 import { getBodyOfWorkMeta, getBodyOfWorkSlugForPieceSlug } from "@/lib/art/bodies-of-work";
 import type { ArtPiece } from "@/lib/art/types";
 import { formatUsd } from "@/lib/art/catalog";
 
 export function PieceCard({ piece }: { piece: ArtPiece }) {
-  const img = piece.images[0];
   const sold = piece.availability === "sold";
 
   return (
@@ -14,21 +13,10 @@ export function PieceCard({ piece }: { piece: ArtPiece }) {
       href={`/art/shop/${piece.slug}`}
       className="group flex flex-col overflow-hidden border border-mcm-cream-200/70 bg-white/80 transition hover:border-mcm-cream-300"
     >
-      <div className="relative aspect-[4/5] w-full overflow-hidden bg-mcm-cream-100">
-        {img ? (
-          <Image
-            src={img}
-            alt={piece.title}
-            fill
-            className="object-cover transition duration-300"
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-            unoptimized
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center text-sm text-mcm-brown-600/50">No image</div>
-        )}
+      <div className="relative">
+        <ArtPieceCardImage piece={piece} />
         {sold && (
-          <span className="absolute left-2 top-2 border border-white/40 bg-mcm-charcoal-500/85 px-2 py-0.5 text-[9px] font-medium uppercase tracking-[0.14em] text-white">
+          <span className="pointer-events-none absolute left-2 top-2 z-[2] border border-white/40 bg-mcm-charcoal-500/85 px-2 py-0.5 text-[9px] font-medium uppercase tracking-[0.14em] text-white">
             Sold
           </span>
         )}
