@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     }
 
     const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000").replace(/\/$/, "");
-    const stripe = new Stripe(stripeSecretKey, { apiVersion: "2026-02-25.clover" });
+    const stripe = new Stripe(stripeSecretKey, { apiVersion: "2025-12-15.clover" });
 
     const primaryImage = piece.images[0];
     const stripeProductImages =

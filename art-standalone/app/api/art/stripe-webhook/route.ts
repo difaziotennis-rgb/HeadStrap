@@ -5,7 +5,7 @@ import { notifyArtSaleEmail } from "@/lib/art/notify-art-sale";
 
 export const runtime = "nodejs";
 
-const API_VERSION = "2026-02-25.clover" as const;
+const API_VERSION = "2025-12-15.clover" as const;
 
 export async function POST(request: Request) {
   const secret = process.env.STRIPE_WEBHOOK_SECRET_ART?.trim() || process.env.STRIPE_WEBHOOK_SECRET?.trim();
