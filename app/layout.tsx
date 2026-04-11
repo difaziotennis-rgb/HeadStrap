@@ -5,20 +5,26 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "E. DiFazio Art",
-  description: "Art washes away the dust of everyday life — Ellen DiFazio, Hilton Head Island.",
-  keywords: ["Ellen DiFazio", "Hilton Head art", "Lowcountry paintings"],
-  authors: [{ name: "Ellen DiFazio" }],
+  title: "DiFazio Tennis",
+  description: "Book tennis lessons with Coach Derek DiFazio — Rhinebeck, NY.",
+  keywords: [
+    "DiFazio Tennis",
+    "tennis lessons",
+    "Rhinebeck",
+    "Hudson Valley",
+    "Coach Derek DiFazio",
+  ],
+  authors: [{ name: "Derek DiFazio" }],
   openGraph: {
-    title: "E. DiFazio Art",
-    description: "Art washes away the dust of everyday life",
+    title: "DiFazio Tennis",
+    description: "Book tennis lessons — Rhinebeck, NY",
     type: "website",
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "E. DiFazio Art",
-    description: "Art washes away the dust of everyday life",
+    title: "DiFazio Tennis",
+    description: "Book tennis lessons — Rhinebeck, NY",
   },
   robots: {
     index: true,

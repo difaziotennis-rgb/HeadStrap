@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-/** Primary public site is the art microsite — avoids an empty-looking home stub in dev. */
+/** Primary public entry is lesson booking; art lives at /art. */
 export default function Home() {
-  redirect("/art");
+  redirect("/book");
 }
