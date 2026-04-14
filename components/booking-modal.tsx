@@ -77,19 +77,28 @@ export function BookingModal({ slot, isOpen, onClose, onBookingComplete }: Booki
     }
   };
 
+  /** Strip autofill/invisible chars that break browser type="email" validation */
+  function normalizeInput(s: string): string {
+    return s.trim().replace(/[\u200B-\u200D\uFEFF]/g, "");
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
+    const email = normalizeInput(formData.email);
+    const name = normalizeInput(formData.name);
+    const phone = normalizeInput(formData.phone);
+
     // Email is required for booking confirmation
-    if (!formData.email.trim()) {
+    if (!email) {
       setError("Please provide your email address for booking confirmation.");
       return;
     }
-    
-    // Validate email format
+
+    // Validate email format (same rules as before; avoids cryptic native "pattern" errors)
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email.trim())) {
+    if (!emailRegex.test(email)) {
       setError("Please provide a valid email address.");
       return;
     }
@@ -99,9 +108,9 @@ export function BookingModal({ slot, isOpen, onClose, onBookingComplete }: Booki
     try {
       // Create booking request
       const bookingId = `booking-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      const clientName = formData.name.trim() || "Guest";
-      const clientEmail = formData.email.trim();
-      const clientPhone = formData.phone.trim() || "";
+      const clientName = name || "Guest";
+      const clientEmail = email;
+      const clientPhone = phone || "";
       
       const booking: Booking = {
         id: bookingId,
@@ -282,7 +291,7 @@ export function BookingModal({ slot, isOpen, onClose, onBookingComplete }: Booki
         <div className="mx-6 h-px bg-[#e8e5df]" />
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="px-6 pt-4 pb-6">
+        <form noValidate onSubmit={handleSubmit} className="px-6 pt-4 pb-6">
           <div className="space-y-3">
             <div>
               <label htmlFor="name" className="block text-[10px] tracking-[0.12em] uppercase text-[#a39e95] mb-1.5">
@@ -305,7 +314,11 @@ export function BookingModal({ slot, isOpen, onClose, onBookingComplete }: Booki
                 Email Address <span className="text-[#1a1a1a]">*</span>
               </label>
               <input
-                type="email"
+                type="text"
+                inputMode="email"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 id="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
