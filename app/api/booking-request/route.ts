@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { Booking } from "@/lib/types";
 import { getBookingServerClient } from "@/lib/supabase/booking-server";
 import { sendEmail } from "@/lib/send-email";
+import { adminRequestEmail } from "@/lib/email-templates";
 
 type BookingRequestBody = {
   booking?: Booking;
@@ -27,6 +28,10 @@ function formatTime(hour: number): string {
   const mins = Math.round((hour - whole) * 60);
   const h12 = whole === 0 ? 12 : whole > 12 ? whole - 12 : whole;
   return `${h12}:${String(mins).padStart(2, "0")} ${hour >= 12 ? "PM" : "AM"}`;
+}
+
+function encodeBookingToken(booking: Booking): string {
+  return Buffer.from(JSON.stringify(booking)).toString("base64url");
 }
 
 export async function POST(req: Request) {
@@ -82,7 +87,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Failed to save booking request." }, { status: 500 });
     }
 
-    // Best-effort admin notification (request still succeeds if email is not configured).
+    // Admin notification in the original branded format with confirm/decline links.
     const date = new Date(`${booking.date}T12:00:00`).toLocaleDateString("en-US", {
       weekday: "long",
       month: "long",
@@ -90,30 +95,27 @@ export async function POST(req: Request) {
       year: "numeric",
     });
     const time = formatTime(booking.hour);
-    await sendEmail({
+    const token = encodeBookingToken(booking);
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://difaziotennis.com";
+    const confirmUrl = `${baseUrl}/confirm-booking?token=${encodeURIComponent(token)}`;
+    const declineUrl = `${baseUrl}/decline-booking?token=${encodeURIComponent(token)}`;
+    const email = adminRequestEmail(booking, confirmUrl, declineUrl);
+
+    const emailResult = await sendEmail({
       to: "difaziotennis@gmail.com",
-      subject: `New Lesson Request: ${booking.clientName || "Guest"} - ${date} at ${time}`,
-      html: `
-        <p>New lesson request received.</p>
-        <p><strong>Client:</strong> ${booking.clientName || "Guest"}</p>
-        <p><strong>Email:</strong> ${booking.clientEmail}</p>
-        <p><strong>Phone:</strong> ${booking.clientPhone || "Not provided"}</p>
-        <p><strong>Date:</strong> ${date}</p>
-        <p><strong>Time:</strong> ${time}</p>
-        <p><strong>Amount:</strong> $${booking.amount}</p>
-      `,
-      text: [
-        "New lesson request received.",
-        `Client: ${booking.clientName || "Guest"}`,
-        `Email: ${booking.clientEmail}`,
-        `Phone: ${booking.clientPhone || "Not provided"}`,
-        `Date: ${date}`,
-        `Time: ${time}`,
-        `Amount: $${booking.amount}`,
-      ].join("\n"),
+      subject: email.subject,
+      html: email.html,
+      text: email.text,
     });
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({
+      ok: true,
+      emailSent: emailResult.success,
+      emailError: emailResult.error || null,
+      message: emailResult.success
+        ? `Booking request submitted for ${date} at ${time}`
+        : "Booking request saved, but admin email failed to send",
+    });
   } catch (error) {
     return NextResponse.json(
       { error: "Failed to submit booking request.", details: String(error) },
