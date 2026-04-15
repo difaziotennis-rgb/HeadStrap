@@ -135,8 +135,13 @@ export function BookingModal({ slot, isOpen, onClose, onBookingComplete }: Booki
         },
         body: JSON.stringify({ booking }),
       });
-
-      const data = await response.json();
+      const raw = await response.text();
+      let data: any = {};
+      try {
+        data = raw ? JSON.parse(raw) : {};
+      } catch {
+        data = {};
+      }
 
       if (!response.ok) {
         throw new Error(data.error || "Failed to submit booking request");
