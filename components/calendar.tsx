@@ -220,6 +220,12 @@ export function Calendar({ onDateSelect, onTimeSlotSelect, selectedDate }: Calen
         })}
       </div>
 
+      {loaded && !daysInMonth.some((day) => !isPastDate(day) && dayHasAvailability(day)) && (
+        <p className="text-[13px] text-[#7a756d] text-center py-6 border-t border-[#e8e5df] mt-2">
+          No lessons are open this month — check back soon or reach out to Coach Derek.
+        </p>
+      )}
+
       {selectedDateState && !isPastDate(selectedDateState) && (() => {
         const slots = visibleSlotsForDate(selectedDateState);
         return (
