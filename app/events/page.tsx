@@ -27,8 +27,6 @@ function priceForTier(tier: RegTier): number {
 type SignupForm = {
   name: string;
   email: string;
-  phone: string;
-  memberNumber: string;
   registrantType: RegTier;
   partnerType: RegTier;
   partnerName: string;
@@ -39,8 +37,6 @@ type SignupForm = {
 const emptyForm: SignupForm = {
   name: "",
   email: "",
-  phone: "",
-  memberNumber: "",
   registrantType: "member",
   partnerType: "member",
   partnerName: "",
@@ -92,8 +88,6 @@ export default function EventsPage() {
       `Player 1: ${form.name.trim()}`,
       `  Rate: ${youLabel}`,
       `Email: ${form.email.trim()}`,
-      `Phone: ${form.phone.trim() || "—"}`,
-      `RTC member #: ${form.memberNumber.trim() || "—"}`,
       "",
       `Player 2 (partner): ${partner}`,
       `  Rate: ${partnerLabel}`,
@@ -491,28 +485,6 @@ export default function EventsPage() {
                     onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
                     className="mt-1 w-full rounded-lg border border-[#e8e5df] px-3 py-2.5 text-[14px] outline-none focus:border-[#1a1a1a] focus:ring-1 focus:ring-[#1a1a1a]"
                     autoComplete="email"
-                  />
-                </label>
-                <label className="block">
-                  <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#8a8477]">
-                    Phone
-                  </span>
-                  <input
-                    type="tel"
-                    value={form.phone}
-                    onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-[#e8e5df] px-3 py-2.5 text-[14px] outline-none focus:border-[#1a1a1a] focus:ring-1 focus:ring-[#1a1a1a]"
-                    autoComplete="tel"
-                  />
-                </label>
-                <label className="block">
-                  <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#8a8477]">
-                    Member # <span className="font-normal normal-case text-[#a39e95]">(optional)</span>
-                  </span>
-                  <input
-                    value={form.memberNumber}
-                    onChange={(e) => setForm((f) => ({ ...f, memberNumber: e.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-[#e8e5df] px-3 py-2.5 text-[14px] outline-none focus:border-[#1a1a1a] focus:ring-1 focus:ring-[#1a1a1a]"
                   />
                 </label>
                 <div className="border-t border-[#f0ede8] pt-4 mt-2">
