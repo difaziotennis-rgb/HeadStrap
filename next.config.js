@@ -25,7 +25,6 @@ const nextConfig = {
       },
     ],
   },
-  // Rewrite /strapped SPA routes to serve the static index.html
   async rewrites() {
     return {
       beforeFiles: [
@@ -37,23 +36,6 @@ const nextConfig = {
         {
           source: '/rtc/:path*',
           destination: '/RTC/:path*',
-        },
-        // Proxy API calls to the LogicVault backend (configure LOGICVAULT_API_URL in Vercel env)
-        {
-          source: '/strapped/api/:path*',
-          destination: `${process.env.LOGICVAULT_API_URL || 'https://logicvault-api-production.up.railway.app'}/api/:path*`,
-        },
-      ],
-      afterFiles: [
-        // Serve the SPA for all /strapped/* routes (non-asset paths)
-        {
-          source: '/strapped/:path((?!assets/).*)',
-          destination: '/strapped/index.html',
-        },
-        // Serve /strapped itself
-        {
-          source: '/strapped',
-          destination: '/strapped/index.html',
         },
       ],
     }
@@ -81,7 +63,6 @@ const nextConfig = {
         './ClubManagement/**/*',
         './art-portfolio/**/*',
         './clover/**/*',
-        './legal-clean-room/**/*',
       ],
     },
   },
@@ -110,7 +91,6 @@ const nextConfig = {
             /ClubManagement/,
             /art-portfolio/,
             /clover/,
-            /legal-clean-room/,
           ],
         }
       }
