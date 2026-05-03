@@ -216,7 +216,7 @@ export default function EventsPage() {
       </section>
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
-        <div className="mb-10 text-center max-w-xl mx-auto">
+        <div className="mb-12 text-center max-w-xl mx-auto">
           <h2 className="text-xl sm:text-2xl font-light text-[#1a1a1a] tracking-tight">
             Upscale, inclusive, clay-court energy
           </h2>
@@ -224,25 +224,6 @@ export default function EventsPage() {
             Fair rotations, drill bonuses for the leaderboard, and room for every level—without losing
             the club-night polish.
           </p>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-12">
-          <div className="rounded-2xl bg-gradient-to-br from-[#c45c3e] to-[#8b3d2d] p-5 text-white shadow-lg shadow-[#8b3d2d]/20">
-            <p className="text-[10px] uppercase tracking-[0.15em] text-white/80">Surface</p>
-            <p className="mt-2 text-[15px] font-medium leading-snug">Har-Tru clay spotlight</p>
-          </div>
-          <div className="rounded-2xl bg-gradient-to-br from-[#1e3a5f] to-[#152a45] p-5 text-white shadow-lg shadow-[#1e3a5f]/25">
-            <p className="text-[10px] uppercase tracking-[0.15em] text-white/75">Dress</p>
-            <p className="mt-2 text-[15px] font-medium leading-snug">Whites optional · RTC polish</p>
-          </div>
-          <div className="rounded-2xl bg-[#f4e4bc]/40 border border-[#d4bc6a]/50 p-5 text-[#3d3429] col-span-2 sm:col-span-1">
-            <p className="text-[10px] uppercase tracking-[0.15em] text-[#7a6f5f]">Palette</p>
-            <p className="mt-2 text-[15px] font-medium leading-snug">Terracotta · navy · champagne</p>
-          </div>
-          <div className="rounded-2xl bg-white border border-[#e8e5df] p-5 text-[#1a1a1a] shadow-sm col-span-2 sm:col-span-1">
-            <p className="text-[10px] uppercase tracking-[0.15em] text-[#8a8477]">Spirit</p>
-            <p className="mt-2 text-[15px] font-medium leading-snug">Round robin · every court counts</p>
-          </div>
         </div>
 
         <div className="grid lg:grid-cols-12 gap-10 lg:gap-12 items-start">
