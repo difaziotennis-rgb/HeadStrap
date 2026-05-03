@@ -187,7 +187,7 @@ export default function EventsPage() {
       </section>
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
-        <div className="mb-10 text-center max-w-xl mx-auto">
+        <div className="mb-12 text-center max-w-xl mx-auto">
           <h2 className="text-xl sm:text-2xl font-light text-[#1a1a1a] tracking-tight">
             Upscale, inclusive, clay-court energy
           </h2>
@@ -195,21 +195,6 @@ export default function EventsPage() {
             Fair rotations, drill bonuses for the leaderboard, and room for every level—without losing
             the club-night polish.
           </p>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-12">
-          <div className="rounded-2xl bg-gradient-to-br from-[#c45c3e] to-[#8b3d2d] p-5 text-white shadow-lg shadow-[#8b3d2d]/15">
-            <p className="text-[10px] uppercase tracking-[0.15em] text-white/80">Surface</p>
-            <p className="mt-2 text-[15px] font-medium leading-snug">Har-Tru clay · outdoor focus</p>
-          </div>
-          <div className="rounded-2xl bg-gradient-to-br from-[#1e3a5f] to-[#152a45] p-5 text-white shadow-lg shadow-[#1e3a5f]/20">
-            <p className="text-[10px] uppercase tracking-[0.15em] text-white/75">Play</p>
-            <p className="mt-2 text-[15px] font-medium leading-snug">Round robin · timed rounds · points</p>
-          </div>
-          <div className="rounded-2xl border border-[#e8e5df] bg-white p-5 text-[#1a1a1a] shadow-sm">
-            <p className="text-[10px] uppercase tracking-[0.15em] text-[#8a8477]">Prizes</p>
-            <p className="mt-2 text-[15px] font-medium leading-snug">Top totals · best outfit</p>
-          </div>
         </div>
 
         <div className="grid lg:grid-cols-12 gap-10 lg:gap-12 items-start">
