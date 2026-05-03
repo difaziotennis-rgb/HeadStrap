@@ -216,16 +216,6 @@ export default function EventsPage() {
       </section>
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
-        <div className="mb-12 text-center max-w-xl mx-auto">
-          <h2 className="text-xl sm:text-2xl font-light text-[#1a1a1a] tracking-tight">
-            Upscale, inclusive, clay-court energy
-          </h2>
-          <p className="mt-3 text-[14px] text-[#5c574f] leading-relaxed">
-            Fair rotations, drill bonuses for the leaderboard, and room for every level—without losing
-            the club-night polish.
-          </p>
-        </div>
-
         <div className="grid lg:grid-cols-12 gap-10 lg:gap-12 items-start">
           <div className="lg:col-span-7 space-y-8">
             <section>
