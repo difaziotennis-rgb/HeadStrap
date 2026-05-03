@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   ArrowLeft,
   Calendar,
@@ -18,11 +18,19 @@ import {
 const MEMBER_PRICE = 75;
 const GUEST_PRICE = 95;
 
+type RegTier = "member" | "guest";
+
+function priceForTier(tier: RegTier): number {
+  return tier === "member" ? MEMBER_PRICE : GUEST_PRICE;
+}
+
 type SignupForm = {
   name: string;
   email: string;
   phone: string;
   memberNumber: string;
+  registrantType: RegTier;
+  partnerType: RegTier;
   partnerName: string;
   partnerEmail: string;
   notes: string;
@@ -33,6 +41,8 @@ const emptyForm: SignupForm = {
   email: "",
   phone: "",
   memberNumber: "",
+  registrantType: "member",
+  partnerType: "member",
   partnerName: "",
   partnerEmail: "",
   notes: "",
@@ -43,6 +53,11 @@ export default function EventsPage() {
   const [signupOpen, setSignupOpen] = useState(false);
   const [form, setForm] = useState<SignupForm>(emptyForm);
   const [formError, setFormError] = useState("");
+
+  const registrationPairTotal = useMemo(
+    () => priceForTier(form.registrantType) + priceForTier(form.partnerType),
+    [form.registrantType, form.partnerType]
+  );
 
   const openSignup = useCallback(() => {
     setForm(emptyForm);
@@ -67,22 +82,31 @@ export default function EventsPage() {
       return;
     }
     setFormError("");
+    const pairTotal = priceForTier(form.registrantType) + priceForTier(form.partnerType);
+    const youLabel = form.registrantType === "member" ? `RTC member ($${MEMBER_PRICE})` : `Guest ($${GUEST_PRICE})`;
+    const partnerLabel = form.partnerType === "member" ? `RTC member ($${MEMBER_PRICE})` : `Guest ($${GUEST_PRICE})`;
     const body = [
-      "French Open Clay Court Mixer — MEMBER SIGN-UP",
+      "French Open Clay Court Mixer — EVENT REGISTRATION",
+      "Sun June 7, 2026 · 3:00 PM · Rhinebeck Tennis Club",
       "",
-      `Registering member: ${form.name.trim()}`,
+      `Player 1: ${form.name.trim()}`,
+      `  Rate: ${youLabel}`,
       `Email: ${form.email.trim()}`,
       `Phone: ${form.phone.trim() || "—"}`,
       `RTC member #: ${form.memberNumber.trim() || "—"}`,
       "",
-      `Partner (required): ${partner}`,
+      `Player 2 (partner): ${partner}`,
+      `  Rate: ${partnerLabel}`,
       `Partner email: ${form.partnerEmail.trim() || "—"}`,
+      "",
+      `Quoted pair total (estimate): $${pairTotal}`,
+      `  ($${priceForTier(form.registrantType)} + $${priceForTier(form.partnerType)} per selected rates)`,
       "",
       `Notes: ${form.notes.trim() || "—"}`,
       "",
-      `Pricing note: $${MEMBER_PRICE}/person members · $${GUEST_PRICE}/person guests (confirm at checkout).`,
+      "Please confirm receipt and payment instructions.",
     ].join("\n");
-    const subject = `RTC French Open Mixer sign-up: ${form.name.trim()} & ${partner}`;
+    const subject = `RTC French Open Mixer registration: ${form.name.trim()} & ${partner}`;
     window.location.href = `mailto:difaziotennis@gmail.com?subject=${encodeURIComponent(
       subject
     )}&body=${encodeURIComponent(body)}`;
@@ -173,10 +197,15 @@ export default function EventsPage() {
             <button
               type="button"
               onClick={openSignup}
-              className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-[13px] font-semibold text-[#1e3a5f] shadow-lg hover:bg-[#f5f3ef] transition-colors"
+              className="inline-flex flex-col items-start gap-0.5 rounded-xl bg-white px-5 py-3 text-left shadow-lg hover:bg-[#f5f3ef] transition-colors sm:flex-row sm:items-center sm:gap-2"
             >
-              Member sign-up
-              <ChevronRight className="h-4 w-4" aria-hidden />
+              <span className="text-[13px] font-semibold text-[#1e3a5f] inline-flex items-center gap-2">
+                Register
+                <ChevronRight className="h-4 w-4 shrink-0" aria-hidden />
+              </span>
+              <span className="text-[11px] font-normal text-[#4a5f78] sm:pl-1">
+                ${MEMBER_PRICE} members · ${GUEST_PRICE} guests
+              </span>
             </button>
             <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-[12px] backdrop-blur-sm border border-white/15 self-center">
               <MapPin className="h-4 w-4 text-[#f4e4bc]" aria-hidden />
@@ -272,17 +301,17 @@ export default function EventsPage() {
 
           <aside className="lg:col-span-5 space-y-5">
             <div className="rounded-2xl border border-[#d4bc6a]/50 bg-[#fffdf8] p-6">
-              <p className="text-[11px] uppercase tracking-[0.18em] text-[#8a7529]">Pricing · per person</p>
+              <p className="text-[11px] uppercase tracking-[0.18em] text-[#8a7529]">Registration · per person</p>
               <p className="mt-2 text-[28px] font-light text-[#1a1a1a] tracking-tight">
                 ${MEMBER_PRICE}{" "}
-                <span className="text-[15px] font-normal text-[#6b665e]">members</span>
+                <span className="text-[15px] font-normal text-[#6b665e]">RTC members</span>
               </p>
               <p className="text-[15px] text-[#5c574f] mt-1">
                 ${GUEST_PRICE} guests / non-members
               </p>
               <p className="mt-3 text-[12px] text-[#8a8477] leading-relaxed">
-                Suggested for a ~3-hour hosted social with drills, match play, refreshments, and prizes at
-                a private club—confirm final details when you sign up.
+                Mixed doubles pairs register together. Choose member vs guest rate for each player in the
+                form; we&apos;ll follow up with payment and confirmation.
               </p>
             </div>
 
@@ -343,13 +372,18 @@ export default function EventsPage() {
             <button
               type="button"
               onClick={openSignup}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#1a1a1a] px-5 py-3.5 text-[13px] font-medium text-white hover:bg-[#2d2d2d] transition-colors shadow-lg shadow-black/10"
+              className="flex w-full flex-col items-center justify-center gap-1 rounded-xl bg-[#1a1a1a] px-5 py-3.5 text-[13px] font-medium text-white hover:bg-[#2d2d2d] transition-colors shadow-lg shadow-black/10 sm:flex-row sm:gap-2"
             >
-              Member sign-up (partner required)
-              <ChevronRight className="h-4 w-4" aria-hidden />
+              <span className="inline-flex items-center gap-2">
+                Register
+                <ChevronRight className="h-4 w-4 shrink-0" aria-hidden />
+              </span>
+              <span className="text-[11px] font-normal text-white/75">
+                ${MEMBER_PRICE} / ${GUEST_PRICE} · partner required
+              </span>
             </button>
             <p className="text-center text-[11px] text-[#a39e95]">
-              Opens email to confirm · list your partner in the form
+              Opens email with your registration and quoted pair total
             </p>
           </aside>
         </div>
@@ -390,12 +424,77 @@ export default function EventsPage() {
             <form onSubmit={handleSignupSubmit} className="p-6 sm:p-8">
               <p className="text-[10px] uppercase tracking-[0.2em] text-[#8a8477]">Rhinebeck Tennis Club</p>
               <h2 id="signup-title" className="mt-2 text-xl font-medium text-[#1a1a1a] tracking-tight">
-                Member sign-up
+                Event registration
               </h2>
               <p className="mt-2 text-[13px] text-[#6b665e] leading-relaxed">
-                Mixed doubles teams register together: add yourself and your partner (required). You’ll
-                send the details by email.
+                French Open Clay Court Mixer — Sun June 7, 2026, 3:00 PM. Register your mixed-doubles pair
+                below. Fees:{" "}
+                <strong className="text-[#1a1a1a] font-medium">
+                  ${MEMBER_PRICE} per RTC member
+                </strong>
+                ,{" "}
+                <strong className="text-[#1a1a1a] font-medium">${GUEST_PRICE} per guest</strong> (each
+                person). Submit opens your email to complete the request.
               </p>
+
+              <div className="mt-5 rounded-xl border border-[#e8e5df] bg-[#faf8f5] p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#8a8477]">
+                  Rates for this pair
+                </p>
+                <fieldset className="mt-3">
+                  <legend className="text-[12px] font-medium text-[#1a1a1a]">You are registering as</legend>
+                  <div className="mt-2 flex flex-wrap gap-4">
+                    <label className="flex cursor-pointer items-center gap-2 text-[13px] text-[#4a4540]">
+                      <input
+                        type="radio"
+                        name="registrant-tier"
+                        checked={form.registrantType === "member"}
+                        onChange={() => setForm((f) => ({ ...f, registrantType: "member" }))}
+                        className="accent-[#1e3a5f]"
+                      />
+                      RTC member (${MEMBER_PRICE})
+                    </label>
+                    <label className="flex cursor-pointer items-center gap-2 text-[13px] text-[#4a4540]">
+                      <input
+                        type="radio"
+                        name="registrant-tier"
+                        checked={form.registrantType === "guest"}
+                        onChange={() => setForm((f) => ({ ...f, registrantType: "guest" }))}
+                        className="accent-[#1e3a5f]"
+                      />
+                      Guest (${GUEST_PRICE})
+                    </label>
+                  </div>
+                </fieldset>
+                <fieldset className="mt-4">
+                  <legend className="text-[12px] font-medium text-[#1a1a1a]">Your partner is</legend>
+                  <div className="mt-2 flex flex-wrap gap-4">
+                    <label className="flex cursor-pointer items-center gap-2 text-[13px] text-[#4a4540]">
+                      <input
+                        type="radio"
+                        name="partner-tier"
+                        checked={form.partnerType === "member"}
+                        onChange={() => setForm((f) => ({ ...f, partnerType: "member" }))}
+                        className="accent-[#1e3a5f]"
+                      />
+                      RTC member (${MEMBER_PRICE})
+                    </label>
+                    <label className="flex cursor-pointer items-center gap-2 text-[13px] text-[#4a4540]">
+                      <input
+                        type="radio"
+                        name="partner-tier"
+                        checked={form.partnerType === "guest"}
+                        onChange={() => setForm((f) => ({ ...f, partnerType: "guest" }))}
+                        className="accent-[#1e3a5f]"
+                      />
+                      Guest (${GUEST_PRICE})
+                    </label>
+                  </div>
+                </fieldset>
+                <p className="mt-4 border-t border-[#e8e5df] pt-3 text-[14px] font-medium text-[#1a1a1a]">
+                  Pair total (estimate): ${registrationPairTotal}
+                </p>
+              </div>
 
               <div className="mt-6 space-y-3">
                 <label className="block">
@@ -495,10 +594,12 @@ export default function EventsPage() {
                 type="submit"
                 className="mt-6 w-full rounded-xl bg-[#1e3a5f] px-4 py-3 text-[13px] font-semibold text-white hover:bg-[#152a45] transition-colors"
               >
-                Send sign-up email
+                Submit registration
               </button>
               <p className="mt-3 text-[11px] text-center text-[#a39e95]">
-                Opens your email app to <strong className="font-medium text-[#6b665e]">difaziotennis@gmail.com</strong>
+                Opens your email to{" "}
+                <strong className="font-medium text-[#6b665e]">difaziotennis@gmail.com</strong> with fees
+                above
               </p>
             </form>
           </div>
