@@ -50,13 +50,13 @@ export default function EventsPage() {
         </div>
       </header>
 
-      {/* Hero — clay / Paris evening vibe without relying on trademark-heavy graphics */}
+      {/* Hero — red clay court (Unsplash: clay lines / Paris-adjacent mood) */}
       <section className="relative overflow-hidden border-b border-[#c4a574]/30">
         <div
-          className="absolute inset-0 bg-cover bg-center"
+          className="absolute inset-0 bg-cover bg-[center_40%] sm:bg-center"
           style={{
             backgroundImage:
-              "linear-gradient(105deg, rgba(30, 58, 95, 0.88) 0%, rgba(139, 69, 49, 0.78) 45%, rgba(26, 26, 26, 0.85) 100%), url(https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?auto=format&fit=crop&w=2000&q=80)",
+              "linear-gradient(105deg, rgba(30, 58, 95, 0.72) 0%, rgba(139, 55, 38, 0.45) 42%, rgba(26, 22, 20, 0.78) 100%), url(https://images.unsplash.com/photo-1750858287150-26d1e7f8b54f?auto=format&fit=crop&w=2000&q=80)",
           }}
           aria-hidden
         />
@@ -237,6 +237,13 @@ export default function EventsPage() {
                     unfussy.
                   </span>
                 </li>
+                <li className="flex gap-3">
+                  <Trophy className="h-4 w-4 shrink-0 mt-0.5 text-[#f4e4bc]" aria-hidden />
+                  <span>
+                    <strong className="text-white font-medium">Prizes</strong> for the highest{" "}
+                    cumulative point totals—drills and round robin combined toward one leaderboard.
+                  </span>
+                </li>
               </ul>
             </div>
 
@@ -247,7 +254,10 @@ export default function EventsPage() {
               <p className="mt-3 text-[13px] text-[#5c574f] leading-relaxed">
                 Athletic clothing and court sneakers with acceptable tread for Har-Tru. Tennis whites or
                 cream accents fit the Roland-inspired mood but are not required—priority is movement and
-                respect for the courts. Bring water; towels provided at front desk.
+                respect for the courts. We&apos;ll present an award for{" "}
+                <strong className="text-[#1a1a1a] font-medium">best outfit</strong>—so feel free to lean
+                into clay-court chic, Parisian neutrals, or a playful nod to the French Open without
+                sacrificing playability. Bring water; towels provided at front desk.
               </p>
             </div>
 
