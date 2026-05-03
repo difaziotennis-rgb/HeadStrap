@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useCallback, useState } from "react";
 import {
   ArrowLeft,
   Calendar,
@@ -11,10 +12,84 @@ import {
   Sparkles,
   Trophy,
   Users,
+  X,
 } from "lucide-react";
+
+const MEMBER_PRICE = 75;
+const GUEST_PRICE = 95;
+
+type SignupForm = {
+  name: string;
+  email: string;
+  phone: string;
+  memberNumber: string;
+  partnerName: string;
+  partnerEmail: string;
+  notes: string;
+};
+
+const emptyForm: SignupForm = {
+  name: "",
+  email: "",
+  phone: "",
+  memberNumber: "",
+  partnerName: "",
+  partnerEmail: "",
+  notes: "",
+};
 
 /** Single featured event — French Open–style mixed doubles mixer at RTC */
 export default function EventsPage() {
+  const [signupOpen, setSignupOpen] = useState(false);
+  const [form, setForm] = useState<SignupForm>(emptyForm);
+  const [formError, setFormError] = useState("");
+
+  const openSignup = useCallback(() => {
+    setForm(emptyForm);
+    setFormError("");
+    setSignupOpen(true);
+  }, []);
+
+  const closeSignup = useCallback(() => {
+    setSignupOpen(false);
+    setFormError("");
+  }, []);
+
+  const handleSignupSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const partner = form.partnerName.trim();
+    if (!partner) {
+      setFormError("Please enter your partner’s name — mixed doubles sign-ups require a partner.");
+      return;
+    }
+    if (!form.name.trim() || !form.email.trim()) {
+      setFormError("Please add your name and email.");
+      return;
+    }
+    setFormError("");
+    const body = [
+      "French Open Clay Court Mixer — MEMBER SIGN-UP",
+      "",
+      `Registering member: ${form.name.trim()}`,
+      `Email: ${form.email.trim()}`,
+      `Phone: ${form.phone.trim() || "—"}`,
+      `RTC member #: ${form.memberNumber.trim() || "—"}`,
+      "",
+      `Partner (required): ${partner}`,
+      `Partner email: ${form.partnerEmail.trim() || "—"}`,
+      "",
+      `Notes: ${form.notes.trim() || "—"}`,
+      "",
+      `Pricing note: $${MEMBER_PRICE}/person members · $${GUEST_PRICE}/person guests (confirm at checkout).`,
+    ].join("\n");
+    const subject = `RTC French Open Mixer sign-up: ${form.name.trim()} & ${partner}`;
+    window.location.href = `mailto:difaziotennis@gmail.com?subject=${encodeURIComponent(
+      subject
+    )}&body=${encodeURIComponent(body)}`;
+    setSignupOpen(false);
+    setForm(emptyForm);
+  };
+
   return (
     <div className="min-h-screen bg-[#faf8f5]">
       <header className="border-b border-[#e8e5df]/80 bg-[#faf9f7]/95 backdrop-blur-sm sticky top-0 z-40">
@@ -50,7 +125,6 @@ export default function EventsPage() {
         </div>
       </header>
 
-      {/* Hero — red clay court (Unsplash: clay lines / Paris-adjacent mood) */}
       <section className="relative overflow-hidden border-b border-[#c4a574]/30">
         <div
           className="absolute inset-0 bg-cover bg-[center_40%] sm:bg-center"
@@ -82,125 +156,102 @@ export default function EventsPage() {
             <span className="block font-medium mt-1 text-[#f4e4bc]">Clay Court Mixer</span>
           </h1>
           <p className="mt-6 text-[15px] sm:text-[16px] text-white/90 max-w-2xl leading-relaxed font-light">
-            An afternoon into evening of mixed doubles, rotating partners, skill games, and Parisian
-            flair—timed to begin at{" "}
-            <strong className="font-medium text-white">3:00 PM</strong>, alongside Roland Garros
-            men&apos;s final day. Structured so everyone scores points and nobody sits out too long.
-            Competitive enough for tournament players; welcoming enough for your first social hit.
+            Mixed doubles, skill stations, and a round-robin points chase on clay—starting{" "}
+            <strong className="font-medium text-white">3:00 PM</strong> on Roland Garros men&apos;s final
+            Sunday. Inclusive social energy, RTC-level hosting.
           </p>
-          <div className="mt-8 flex flex-wrap gap-3">
+          <div className="mt-6 flex flex-wrap items-center gap-3">
             <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-[12px] backdrop-blur-sm border border-white/20">
               <Calendar className="h-4 w-4 text-[#f4e4bc]" aria-hidden />
-              Sunday · June 7, 2026 · 3:00 PM start
+              Sun · June 7, 2026 · 3:00 PM
             </span>
-            <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-[12px] backdrop-blur-sm border border-white/15">
+            <span className="text-[12px] text-white/85">
+              ${MEMBER_PRICE} members · ${GUEST_PRICE} guests · per person
+            </span>
+          </div>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={openSignup}
+              className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-[13px] font-semibold text-[#1e3a5f] shadow-lg hover:bg-[#f5f3ef] transition-colors"
+            >
+              Member sign-up
+              <ChevronRight className="h-4 w-4" aria-hidden />
+            </button>
+            <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-[12px] backdrop-blur-sm border border-white/15 self-center">
               <MapPin className="h-4 w-4 text-[#f4e4bc]" aria-hidden />
-              Rhinebeck Tennis Club — clay & indoor
+              RTC — clay & indoor
             </span>
           </div>
         </div>
       </section>
 
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
-        <div className="mb-12 text-center max-w-2xl mx-auto">
-          <p className="text-[11px] tracking-[0.2em] uppercase text-[#9a8f7d] mb-3">
-            Atmosphere
-          </p>
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
+        <div className="mb-10 text-center max-w-xl mx-auto">
           <h2 className="text-xl sm:text-2xl font-light text-[#1a1a1a] tracking-tight">
-            Fun and inclusive, with a club-caliber finish
+            Upscale, inclusive, clay-court energy
           </h2>
-          <p className="mt-4 text-[14px] sm:text-[15px] text-[#5c574f] leading-relaxed">
-            Expect linen-adjacent casual, soft clay underfoot, music low in the background between
-            points, and a host team keeping rotations fair. We celebrate great shots—not just
-            wins—so newer pairs still climb the leaderboard through drill bonuses and sportsmanship
-            points.
+          <p className="mt-3 text-[14px] text-[#5c574f] leading-relaxed">
+            Fair rotations, drill bonuses for the leaderboard, and room for every level—without losing
+            the club-night polish.
           </p>
         </div>
 
-        {/* Visual strip — brand tokens */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-14">
-          <div className="rounded-2xl bg-gradient-to-br from-[#c45c3e] to-[#8b3d2d] p-5 text-white shadow-lg shadow-[#8b3d2d]/20">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-12">
+          <div className="rounded-2xl bg-gradient-to-br from-[#c45c3e] to-[#8b3d2d] p-5 text-white shadow-lg shadow-[#8b3d2d]/15">
             <p className="text-[10px] uppercase tracking-[0.15em] text-white/80">Surface</p>
-            <p className="mt-2 text-[15px] font-medium leading-snug">Har-Tru clay spotlight</p>
+            <p className="mt-2 text-[15px] font-medium leading-snug">Har-Tru clay · outdoor focus</p>
           </div>
-          <div className="rounded-2xl bg-gradient-to-br from-[#1e3a5f] to-[#152a45] p-5 text-white shadow-lg shadow-[#1e3a5f]/25">
-            <p className="text-[10px] uppercase tracking-[0.15em] text-white/75">Dress</p>
-            <p className="mt-2 text-[15px] font-medium leading-snug">Whites optional · RTC polish</p>
+          <div className="rounded-2xl bg-gradient-to-br from-[#1e3a5f] to-[#152a45] p-5 text-white shadow-lg shadow-[#1e3a5f]/20">
+            <p className="text-[10px] uppercase tracking-[0.15em] text-white/75">Play</p>
+            <p className="mt-2 text-[15px] font-medium leading-snug">Round robin · timed rounds · points</p>
           </div>
-          <div className="rounded-2xl bg-[#f4e4bc]/40 border border-[#d4bc6a]/50 p-5 text-[#3d3429] col-span-2 sm:col-span-1">
-            <p className="text-[10px] uppercase tracking-[0.15em] text-[#7a6f5f]">Palette</p>
-            <p className="mt-2 text-[15px] font-medium leading-snug">Terracotta · navy · champagne</p>
-          </div>
-          <div className="rounded-2xl bg-white border border-[#e8e5df] p-5 text-[#1a1a1a] shadow-sm col-span-2 sm:col-span-1">
-            <p className="text-[10px] uppercase tracking-[0.15em] text-[#8a8477]">Spirit</p>
-            <p className="mt-2 text-[15px] font-medium leading-snug">Round robin · every court counts</p>
+          <div className="rounded-2xl border border-[#e8e5df] bg-white p-5 text-[#1a1a1a] shadow-sm">
+            <p className="text-[10px] uppercase tracking-[0.15em] text-[#8a8477]">Prizes</p>
+            <p className="mt-2 text-[15px] font-medium leading-snug">Top totals · best outfit</p>
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-12 gap-10 lg:gap-14 items-start">
-          {/* Format */}
-          <div className="lg:col-span-7 space-y-10">
+        <div className="grid lg:grid-cols-12 gap-10 lg:gap-12 items-start">
+          <div className="lg:col-span-7 space-y-8">
             <section>
               <h3 className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.12em] text-[#8a8477]">
                 <Trophy className="h-4 w-4 text-[#c9a227]" aria-hidden />
                 Format & scoring
               </h3>
-              <div className="mt-5 space-y-4 text-[14px] text-[#4a4540] leading-relaxed">
+              <div className="mt-4 space-y-3 text-[14px] text-[#4a4540] leading-relaxed">
                 <p>
-                  <strong className="text-[#1a1a1a] font-medium">Mixed doubles</strong> throughout—each
-                  side is one women&apos;s and one men&apos;s lineup per conventional pairing. Teams move
-                  through a <strong className="text-[#1a1a1a] font-medium">round robin</strong> so you
-                  face every other pairing over timed rounds (no endless waits between matches).
+                  <strong className="text-[#1a1a1a] font-medium">Mixed doubles</strong> in timed rounds:
+                  you rotate through opponents efficiently—games and tiebreak margin feed one{" "}
+                  <strong className="text-[#1a1a1a] font-medium">points leaderboard</strong>. Optional
+                  partner swaps mid-event keep it social.
                 </p>
                 <p>
-                  <strong className="text-[#1a1a1a] font-medium">Points chase:</strong> every game won on
-                  court earns team points. Short sets or tiebreak-to-seven rotations keep pace brisk.
-                  Optional <strong className="text-[#1a1a1a] font-medium">partner swaps</strong> mid-event
-                  keep social energy high while preserving mixed doubles integrity for each game window.
-                </p>
-                <p>
-                  <strong className="text-[#1a1a1a] font-medium">Skills ladder (pre-main draw):</strong>{" "}
-                  guided stations—volley consistency, drop-shot touch targets, serve placement—for bonus
-                  points added to your team&apos;s tournament total. Laughs encouraged; coaching cues
-                  minimal so flow stays moving.
+                  <strong className="text-[#1a1a1a] font-medium">Skills stations</strong> first—volleys,
+                  touch targets, serve spots—for bonus points toward the same total. Then main draw play,
+                  super tiebreak finale for the top two, and a courtside social.
                 </p>
               </div>
             </section>
 
-            <section className="rounded-2xl border border-[#e8e5df] bg-white p-6 sm:p-8 shadow-[0_8px_30px_rgba(26,26,26,0.04)]">
+            <section className="rounded-2xl border border-[#e8e5df] bg-white p-6 sm:p-7 shadow-sm">
               <h3 className="text-[17px] font-medium text-[#1a1a1a] tracking-tight">
                 Event flow
               </h3>
-              <ol className="mt-6 space-y-5">
+              <ol className="mt-5 space-y-4">
                 {[
-                  {
-                    t: "Arrival & court assignment (3:00 PM)",
-                    d: "Check-in, printed draw card, optional clay-court shoe brush station.",
-                  },
-                  {
-                    t: "Skills rally — bonus points",
-                    d: "25 minutes rotating through drill stations; points banked to your team.",
-                  },
-                  {
-                    t: "Round robin — main draw",
-                    d: "Timed rounds on multiple courts; cumulative games + tiebreak margin as tiebreaker.",
-                  },
-                  {
-                    t: "Super tiebreak finale",
-                    d: "Top two teams by points meet for a spirited first-to-10 (win by 2) showcase.",
-                  },
-                  {
-                    t: "Courtside social",
-                    d: "Light refreshments, leaderboard reveal, photo on the baseline ribbon.",
-                  },
+                  { t: "3:00 PM — Check-in & draw", d: "Court assignment, shoe brush station." },
+                  { t: "Skills rally", d: "Bonus-point stations, ~25 min." },
+                  { t: "Round robin", d: "Timed matches; cumulative points." },
+                  { t: "Finale & social", d: "Super tiebreak showcase, prizes, bites." },
                 ].map((item, i) => (
-                  <li key={item.t} className="flex gap-4">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#faf8f5] border border-[#e8e5df] text-[12px] font-semibold text-[#7a756d]">
+                  <li key={item.t} className="flex gap-3">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#faf8f5] border border-[#e8e5df] text-[11px] font-semibold text-[#7a756d]">
                       {i + 1}
                     </span>
                     <div>
                       <p className="font-medium text-[#1a1a1a] text-[14px]">{item.t}</p>
-                      <p className="mt-1 text-[13px] text-[#6b665e] leading-relaxed">{item.d}</p>
+                      <p className="mt-0.5 text-[13px] text-[#6b665e]">{item.d}</p>
                     </div>
                   </li>
                 ))}
@@ -208,41 +259,39 @@ export default function EventsPage() {
             </section>
           </div>
 
-          {/* Sidebar */}
-          <aside className="lg:col-span-5 space-y-6">
+          <aside className="lg:col-span-5 space-y-5">
+            <div className="rounded-2xl border border-[#d4bc6a]/50 bg-[#fffdf8] p-6">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-[#8a7529]">Pricing · per person</p>
+              <p className="mt-2 text-[28px] font-light text-[#1a1a1a] tracking-tight">
+                ${MEMBER_PRICE}{" "}
+                <span className="text-[15px] font-normal text-[#6b665e]">members</span>
+              </p>
+              <p className="text-[15px] text-[#5c574f] mt-1">
+                ${GUEST_PRICE} guests / non-members
+              </p>
+              <p className="mt-3 text-[12px] text-[#8a8477] leading-relaxed">
+                Suggested for a ~3-hour hosted social with drills, match play, refreshments, and prizes at
+                a private club—confirm final details when you sign up.
+              </p>
+            </div>
+
             <div className="rounded-2xl bg-[#1e3a5f] text-white p-6 sm:p-7 shadow-xl shadow-[#1e3a5f]/20">
               <div className="flex items-center gap-2 text-[#f4e4bc]">
                 <Sparkles className="h-4 w-4" aria-hidden />
                 <span className="text-[11px] uppercase tracking-[0.2em]">Quick facts</span>
               </div>
-              <ul className="mt-5 space-y-4 text-[13px] text-white/90">
+              <ul className="mt-4 space-y-3 text-[13px] text-white/90">
                 <li className="flex gap-3">
                   <Users className="h-4 w-4 shrink-0 mt-0.5 text-[#f4e4bc]" aria-hidden />
-                  <span>
-                    Field capped for pace — mixed doubles squads balanced by USTA-style self-rating or
-                    host pairing help.
-                  </span>
+                  <span>Capped field · balanced pairings with host help as needed.</span>
                 </li>
                 <li className="flex gap-3">
                   <Clock className="h-4 w-4 shrink-0 mt-0.5 text-[#f4e4bc]" aria-hidden />
-                  <span>
-                    Starts at 3:00 PM (men&apos;s final window)—plan ~3 hours including social; courts
-                    flip quickly—please arrive warmed up.
-                  </span>
+                  <span>~3 hours from 3:00 PM · arrive warmed up.</span>
                 </li>
                 <li className="flex gap-3">
                   <GlassWater className="h-4 w-4 shrink-0 mt-0.5 text-[#f4e4bc]" aria-hidden />
-                  <span>
-                    Sparkling & still water stations; seasonal mocktails & light bites — elevated but
-                    unfussy.
-                  </span>
-                </li>
-                <li className="flex gap-3">
-                  <Trophy className="h-4 w-4 shrink-0 mt-0.5 text-[#f4e4bc]" aria-hidden />
-                  <span>
-                    <strong className="text-white font-medium">Prizes</strong> for the highest{" "}
-                    cumulative point totals—drills and round robin combined toward one leaderboard.
-                  </span>
+                  <span>Mocktails, bites, water stations · leaderboard prizes & best outfit award.</span>
                 </li>
               </ul>
             </div>
@@ -252,42 +301,40 @@ export default function EventsPage() {
                 What to wear & bring
               </h4>
               <p className="mt-3 text-[13px] text-[#5c574f] leading-relaxed">
-                Athletic clothing and court sneakers with acceptable tread for Har-Tru. Tennis whites or
-                cream accents fit the Roland-inspired mood but are not required—priority is movement and
-                respect for the courts. We&apos;ll present an award for{" "}
-                <strong className="text-[#1a1a1a] font-medium">best outfit</strong>—so feel free to lean
-                into clay-court chic, Parisian neutrals, or a playful nod to the French Open without
-                sacrificing playability. Bring water; towels provided at front desk.
+                Athletic wear and court sneakers (Har-Tru–friendly tread). Whites optional.{" "}
+                <strong className="text-[#1a1a1a] font-medium">Best outfit</strong> wins an award—have fun
+                with clay-court chic. Towels at desk; bring water if you like.
               </p>
             </div>
 
             <div className="rounded-2xl border border-[#d4bc6a]/40 bg-[#fffdf8] p-6">
               <h4 className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[#8a7529]">
-                Rhinebeck Tennis Club
+                Location
               </h4>
               <p className="mt-3 text-[13px] text-[#5c574f] leading-relaxed flex gap-2">
                 <MapPin className="h-4 w-4 shrink-0 text-[#c9a227]" aria-hidden />
                 <span>
                   <strong className="text-[#1a1a1a]">2 Salisbury Court</strong>, Rhinebeck, NY 12572 —
-                  outdoor clay highlighted for this event; indoor ClayTech available if weather shifts.
+                  outdoor clay; indoor ClayTech backup.
                 </span>
               </p>
             </div>
 
-            <a
-              href="mailto:difaziotennis@gmail.com?subject=French%20Open%20Clay%20Court%20Mixer%20%E2%80%94%20registration"
-              className="flex items-center justify-center gap-2 w-full rounded-xl bg-[#1a1a1a] px-5 py-3.5 text-[13px] font-medium text-white hover:bg-[#2d2d2d] transition-colors shadow-lg shadow-black/10"
+            <button
+              type="button"
+              onClick={openSignup}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#1a1a1a] px-5 py-3.5 text-[13px] font-medium text-white hover:bg-[#2d2d2d] transition-colors shadow-lg shadow-black/10"
             >
-              Request an invitation
+              Member sign-up (partner required)
               <ChevronRight className="h-4 w-4" aria-hidden />
-            </a>
+            </button>
             <p className="text-center text-[11px] text-[#a39e95]">
-              Include name · partner preference if any · estimated playing level
+              Opens email to confirm · list your partner in the form
             </p>
           </aside>
         </div>
 
-        <div className="mt-14 pt-10 border-t border-[#e8e5df] text-center">
+        <div className="mt-12 pt-8 border-t border-[#e8e5df] text-center">
           <Link
             href="/book"
             className="inline-flex items-center gap-1.5 text-[12px] text-[#8a8477] hover:text-[#1a1a1a] transition-colors"
@@ -297,6 +344,146 @@ export default function EventsPage() {
           </Link>
         </div>
       </main>
+
+      {signupOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="signup-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) closeSignup();
+          }}
+        >
+          <div
+            className="relative w-full max-w-md rounded-2xl border border-[#e8e5df] bg-white shadow-2xl max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={closeSignup}
+              className="absolute right-3 top-3 rounded-lg p-2 text-[#8a8477] hover:bg-[#faf8f5] hover:text-[#1a1a1a]"
+              aria-label="Close"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <form onSubmit={handleSignupSubmit} className="p-6 sm:p-8">
+              <p className="text-[10px] uppercase tracking-[0.2em] text-[#8a8477]">Rhinebeck Tennis Club</p>
+              <h2 id="signup-title" className="mt-2 text-xl font-medium text-[#1a1a1a] tracking-tight">
+                Member sign-up
+              </h2>
+              <p className="mt-2 text-[13px] text-[#6b665e] leading-relaxed">
+                Mixed doubles teams register together: add yourself and your partner (required). You’ll
+                send the details by email.
+              </p>
+
+              <div className="mt-6 space-y-3">
+                <label className="block">
+                  <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#8a8477]">
+                    Your name *
+                  </span>
+                  <input
+                    required
+                    value={form.name}
+                    onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                    className="mt-1 w-full rounded-lg border border-[#e8e5df] px-3 py-2.5 text-[14px] text-[#1a1a1a] outline-none focus:border-[#1a1a1a] focus:ring-1 focus:ring-[#1a1a1a]"
+                    autoComplete="name"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#8a8477]">
+                    Your email *
+                  </span>
+                  <input
+                    required
+                    type="email"
+                    value={form.email}
+                    onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                    className="mt-1 w-full rounded-lg border border-[#e8e5df] px-3 py-2.5 text-[14px] outline-none focus:border-[#1a1a1a] focus:ring-1 focus:ring-[#1a1a1a]"
+                    autoComplete="email"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#8a8477]">
+                    Phone
+                  </span>
+                  <input
+                    type="tel"
+                    value={form.phone}
+                    onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                    className="mt-1 w-full rounded-lg border border-[#e8e5df] px-3 py-2.5 text-[14px] outline-none focus:border-[#1a1a1a] focus:ring-1 focus:ring-[#1a1a1a]"
+                    autoComplete="tel"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#8a8477]">
+                    Member # <span className="font-normal normal-case text-[#a39e95]">(optional)</span>
+                  </span>
+                  <input
+                    value={form.memberNumber}
+                    onChange={(e) => setForm((f) => ({ ...f, memberNumber: e.target.value }))}
+                    className="mt-1 w-full rounded-lg border border-[#e8e5df] px-3 py-2.5 text-[14px] outline-none focus:border-[#1a1a1a] focus:ring-1 focus:ring-[#1a1a1a]"
+                  />
+                </label>
+                <div className="border-t border-[#f0ede8] pt-4 mt-2">
+                  <label className="block">
+                    <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#1e3a5f]">
+                      Partner full name *
+                    </span>
+                    <input
+                      value={form.partnerName}
+                      onChange={(e) => setForm((f) => ({ ...f, partnerName: e.target.value }))}
+                      className="mt-1 w-full rounded-lg border border-[#e8e5df] px-3 py-2.5 text-[14px] outline-none focus:border-[#1e3a5f] focus:ring-1 focus:ring-[#1e3a5f]"
+                      placeholder="Required for mixed doubles registration"
+                      autoComplete="off"
+                    />
+                  </label>
+                  <label className="block mt-3">
+                    <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#8a8477]">
+                      Partner email <span className="font-normal normal-case text-[#a39e95]">(optional)</span>
+                    </span>
+                    <input
+                      type="email"
+                      value={form.partnerEmail}
+                      onChange={(e) => setForm((f) => ({ ...f, partnerEmail: e.target.value }))}
+                      className="mt-1 w-full rounded-lg border border-[#e8e5df] px-3 py-2.5 text-[14px] outline-none focus:border-[#1a1a1a] focus:ring-1 focus:ring-[#1a1a1a]"
+                      autoComplete="off"
+                    />
+                  </label>
+                </div>
+                <label className="block">
+                  <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#8a8477]">
+                    Notes
+                  </span>
+                  <textarea
+                    value={form.notes}
+                    onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+                    rows={2}
+                    placeholder="Dietary restrictions, playing level, etc."
+                    className="mt-1 w-full resize-none rounded-lg border border-[#e8e5df] px-3 py-2.5 text-[14px] outline-none focus:border-[#1a1a1a] focus:ring-1 focus:ring-[#1a1a1a]"
+                  />
+                </label>
+              </div>
+
+              {formError && (
+                <p className="mt-4 text-[13px] text-[#991b1b] bg-[#fef2f2] border border-[#fecaca] rounded-lg px-3 py-2">
+                  {formError}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                className="mt-6 w-full rounded-xl bg-[#1e3a5f] px-4 py-3 text-[13px] font-semibold text-white hover:bg-[#152a45] transition-colors"
+              >
+                Send sign-up email
+              </button>
+              <p className="mt-3 text-[11px] text-center text-[#a39e95]">
+                Opens your email app to <strong className="font-medium text-[#6b665e]">difaziotennis@gmail.com</strong>
+              </p>
+            </form>
+          </div>
+        </div>
+      )}
 
       <footer className="border-t border-[#e8e5df] mt-8 bg-[#faf9f7]">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 text-center">
