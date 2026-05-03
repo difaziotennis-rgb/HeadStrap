@@ -291,7 +291,16 @@ export default function EventsPage() {
                 </li>
                 <li className="flex gap-3">
                   <GlassWater className="h-4 w-4 shrink-0 mt-0.5 text-[#f4e4bc]" aria-hidden />
-                  <span>Mocktails, bites, water stations · leaderboard prizes & best outfit award.</span>
+                  <span>Mocktails, bites, and water stations.</span>
+                </li>
+                <li className="flex gap-3">
+                  <Trophy className="h-4 w-4 shrink-0 mt-0.5 text-[#f4e4bc]" aria-hidden />
+                  <span>
+                    <strong className="font-medium text-white">Prizes</strong> for top cumulative point
+                    totals on the leaderboard. Separate{" "}
+                    <strong className="font-medium text-white">best outfit</strong> award—have fun with
+                    Roland-inspired style.
+                  </span>
                 </li>
               </ul>
             </div>
