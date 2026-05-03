@@ -297,7 +297,7 @@ export default function EventsPage() {
               <p className="mt-3 text-[13px] text-[#5c574f] leading-relaxed">
                 Athletic wear and court sneakers (Har-Tru–friendly tread). Whites optional.{" "}
                 <strong className="text-[#1a1a1a] font-medium">Best outfit</strong> wins an award—have fun
-                with clay-court chic. Towels at desk; bring water if you like.
+                with clay-court chic. Bring water if you like.
               </p>
             </div>
 
