@@ -176,7 +176,7 @@ export default function EventsPage() {
           <p className="mt-6 text-[15px] sm:text-[16px] text-white/90 max-w-2xl leading-relaxed font-light">
             Mixed doubles, skill stations, and a round-robin points chase on clay—starting{" "}
             <strong className="font-medium text-white">3:00 PM</strong> on Roland Garros men&apos;s final
-            Sunday. Inclusive social energy, RTC-level hosting.
+            Sunday.
           </p>
           <div className="mt-6 flex flex-wrap items-center gap-3">
             <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-[12px] backdrop-blur-sm border border-white/20">
