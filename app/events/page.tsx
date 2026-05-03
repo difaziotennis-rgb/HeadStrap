@@ -245,7 +245,10 @@ export default function EventsPage() {
               </h3>
               <ol className="mt-5 space-y-4">
                 {[
-                  { t: "3:00 PM — Check-in & draw", d: "Court assignment, shoe brush station." },
+                  {
+                    t: "Arrival and warm-up time",
+                    d: "Check-in, printed draw card, optional clay-court shoe brush station.",
+                  },
                   { t: "Skills rally", d: "Bonus-point stations, ~25 min." },
                   { t: "Round robin", d: "Timed matches; cumulative points." },
                   {
