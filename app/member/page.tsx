@@ -203,7 +203,7 @@ export default function MemberPage() {
                 className="flex items-center gap-1.5 text-[#8a8477] hover:text-[#1a1a1a] text-[12px] font-medium transition-colors"
               >
                 <Calendar className="h-3.5 w-3.5" />
-                Book
+                Booking
               </Link>
               <button
                 onClick={handleLogout}

@@ -141,6 +141,9 @@ export default function PaymentSettingsPage() {
       console.error("[loadClients] Failed to fetch ladder players:", e);
     }
 
+    // Always include manually managed VIP contacts in the client list.
+    addClient("Marcel Hinds", "mhindsmd@hotmail.com", "646-591-1060");
+
     // Convert to sorted array, filtering out hidden clients
     const list = Array.from(clientMap.entries())
       .filter(([key]) => !hiddenClients.has(key))

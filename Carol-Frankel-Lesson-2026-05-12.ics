@@ -1,0 +1,17 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//DiFazio Tennis//Lesson Booking//EN
+CALSCALE:GREGORIAN
+BEGIN:VEVENT
+UID:carol-frankel-20260512-0900@difaziotennis.com
+DTSTAMP:20260505T175331Z
+DTSTART;TZID=America/New_York:20260512T090000
+DTEND;TZID=America/New_York:20260512T100000
+SUMMARY:Lesson - Carol Frankel
+LOCATION:Rhinebeck Tennis Club\, 2 Salisbury Court\, Rhinebeck\, NY 12572
+DESCRIPTION:Student: Carol Frankel
+Email: carolynnfrankel@yahoo.com
+Phone: (845) 453-3791
+Status: Confirmed
+END:VEVENT
+END:VCALENDAR

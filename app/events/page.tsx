@@ -124,7 +124,7 @@ export default function EventsPage() {
                 href="/book"
                 className="text-[#8a8477] hover:text-[#1a1a1a] text-[12px] font-medium transition-colors"
               >
-                Book
+                Booking
               </Link>
               <Link
                 href="/bio"

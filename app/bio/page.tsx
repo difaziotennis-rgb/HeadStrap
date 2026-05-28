@@ -32,7 +32,7 @@ export default function BioPage() {
                 href="/book"
                 className="text-white/60 hover:text-white text-[12px] font-medium transition-colors"
               >
-                Book
+                Booking
               </Link>
             </div>
           </div>
