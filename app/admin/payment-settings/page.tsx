@@ -144,6 +144,8 @@ export default function PaymentSettingsPage() {
     // Always include manually managed VIP contacts in the client list.
     addClient("Marcel Hinds", "mhindsmd@hotmail.com", "646-591-1060");
     addClient("Noah Glass", "nnglass@gmail.com", "");
+    addClient("Mary Higgins", "mary@maryjoan.com", "");
+    addClient("Greg Freidus", "gregfreidus@gmail.com", "");
 
     // Convert to sorted array, filtering out hidden clients
     const list = Array.from(clientMap.entries())
