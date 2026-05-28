@@ -34,12 +34,6 @@ export default function BioPage() {
               >
                 Book
               </Link>
-              <Link
-                href="/ladder"
-                className="text-white/60 hover:text-white text-[12px] font-medium transition-colors"
-              >
-                Ladder
-              </Link>
             </div>
           </div>
         </div>

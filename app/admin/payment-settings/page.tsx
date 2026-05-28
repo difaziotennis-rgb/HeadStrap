@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Save, CalendarDays, LogOut, Trophy, Users, Copy, Check, CreditCard, Pencil, Trash2, X as XIcon } from "lucide-react";
+import { Save, CalendarDays, LogOut, Users, Copy, Check, CreditCard, Pencil, Trash2, X as XIcon } from "lucide-react";
 import { PAYMENT_CONFIG, getLessonRate } from "@/lib/payment-config";
 import { readAllSlots, readAllRecurring, readAllBookings } from "@/lib/booking-data";
 import { Member } from "@/lib/types";
@@ -340,13 +340,6 @@ export default function PaymentSettingsPage() {
               >
                 <CalendarDays className="h-3.5 w-3.5" />
                 Calendar
-              </Link>
-              <Link
-                href="/ladder"
-                className="flex items-center gap-1.5 text-[#8a8477] hover:text-[#1a1a1a] text-[12px] font-medium transition-colors"
-              >
-                <Trophy className="h-3.5 w-3.5" />
-                Ladder
               </Link>
               <button
                 onClick={handleLogout}
