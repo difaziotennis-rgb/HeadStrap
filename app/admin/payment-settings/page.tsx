@@ -146,6 +146,7 @@ export default function PaymentSettingsPage() {
     addClient("Noah Glass", "nnglass@gmail.com", "");
     addClient("Mary Higgins", "mary@maryjoan.com", "");
     addClient("Greg Freidus", "gregfreidus@gmail.com", "");
+    addClient("Mark Tercek", "tercekmark@gmail.com", "");
 
     // Convert to sorted array, filtering out hidden clients
     const list = Array.from(clientMap.entries())
