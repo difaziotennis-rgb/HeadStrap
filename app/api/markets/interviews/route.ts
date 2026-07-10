@@ -93,10 +93,11 @@ async function searchYouTube(query: string): Promise<InterviewVideo[]> {
       hay.includes('fireside') ||
       hay.includes('keynote') ||
       hay.includes('q&a') ||
-      hay.includes('with ') ||
       hay.includes('ep.') ||
-      hay.includes('episode')
-    if (!looksUseful && !query.toLowerCase().includes('interview')) continue
+      hay.includes('episode') ||
+      hay.includes(' sits down') ||
+      hay.includes('talks with')
+    if (!looksUseful) continue
 
     videos.push({
       id,

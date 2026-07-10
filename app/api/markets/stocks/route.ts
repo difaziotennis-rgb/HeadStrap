@@ -229,12 +229,18 @@ export async function GET() {
         let preMarket: ReturnType<typeof extractSessionPrint> = null
         let postMarket: ReturnType<typeof extractSessionPrint> = null
         let marketState = meta.marketState || 'CLOSED'
+        let sessionPreviousClose = previousClose
         if (intradayResponse.ok) {
           const intradayJson = await intradayResponse.json()
+          const intraMeta = intradayJson?.chart?.result?.[0]?.meta || {}
+          sessionPreviousClose =
+            intraMeta.previousClose ||
+            intraMeta.chartPreviousClose ||
+            previousClose
           intradayData = buildIntraday(intradayJson, currentPrice, latestVolume)
-          preMarket = extractSessionPrint(intradayJson, previousClose, 'pre')
-          postMarket = extractSessionPrint(intradayJson, previousClose, 'post')
-          const period = intradayJson?.chart?.result?.[0]?.meta?.currentTradingPeriod
+          preMarket = extractSessionPrint(intradayJson, sessionPreviousClose, 'pre')
+          postMarket = extractSessionPrint(intradayJson, sessionPreviousClose, 'post')
+          const period = intraMeta.currentTradingPeriod
           const nowSec = Math.floor(Date.now() / 1000)
           if (period?.pre && nowSec >= period.pre.start && nowSec < period.pre.end) {
             marketState = 'PRE'
@@ -255,9 +261,15 @@ export async function GET() {
         const displayPrice =
           marketState === 'PRE' && preMarket ? preMarket.price : currentPrice
         const displayChange =
-          marketState === 'PRE' && preMarket ? preMarket.change : change
+          marketState === 'PRE' && preMarket
+            ? preMarket.change
+            : displayPrice - sessionPreviousClose
         const displayChangePercent =
-          marketState === 'PRE' && preMarket ? preMarket.changePercent : changePercent
+          marketState === 'PRE' && preMarket
+            ? preMarket.changePercent
+            : sessionPreviousClose
+              ? ((displayPrice - sessionPreviousClose) / sessionPreviousClose) * 100
+              : changePercent
 
         stocks.push({
           symbol: display,
@@ -266,7 +278,7 @@ export async function GET() {
           theme,
           name: meta.longName || meta.shortName || display,
           price: displayPrice,
-          previousClose,
+          previousClose: sessionPreviousClose,
           change: displayChange,
           changePercent: displayChangePercent,
           volume: latestVolume,
