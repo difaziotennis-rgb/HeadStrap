@@ -1,242 +1,226 @@
 import { NextResponse } from 'next/server'
 
-// Top traded stocks, biggest companies, and significant movers
-const STOCK_SYMBOLS = [
-  // Top traded / Biggest companies
-  'AAPL',   // Apple
-  'MSFT',   // Microsoft
-  'NVDA',   // NVIDIA
-  'TSLA',   // Tesla
-  'QQQ',    // QQQ (always include)
-  'MSTR',   // MicroStrategy (always include)
-  'SMCI',   // Super Micro Computer - AI server company, significant mover with newsworthy story
+/** Display ticker → Yahoo Finance symbol */
+const WATCHLIST: { display: string; yahoo: string }[] = [
+  { display: 'NVDA', yahoo: 'NVDA' },
+  { display: 'CLSK', yahoo: 'CLSK' },
+  { display: 'TSLA', yahoo: 'TSLA' },
+  { display: 'LMND', yahoo: 'LMND' },
+  { display: 'MSTR', yahoo: 'MSTR' },
+  { display: 'BTC', yahoo: 'BTC-USD' },
+  { display: 'ETH', yahoo: 'ETH-USD' },
+  { display: 'BMNR', yahoo: 'BMNR' },
+  { display: 'MU', yahoo: 'MU' },
+  { display: 'PLTR', yahoo: 'PLTR' },
+  { display: 'GLD', yahoo: 'GLD' },
+  { display: 'COPX', yahoo: 'COPX' },
+  { display: 'QQQ', yahoo: 'QQQ' },
+  { display: 'AAPL', yahoo: 'AAPL' },
+  { display: 'AMZN', yahoo: 'AMZN' },
+  { display: 'SPCX', yahoo: 'SPCX' },
+  { display: 'BOT', yahoo: 'BOT' },
 ]
+
+const YAHOO_HEADERS = {
+  'User-Agent':
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  Accept: 'application/json',
+  'Accept-Language': 'en-US,en;q=0.9',
+}
+
+function todayKeyET(): string {
+  const now = new Date()
+  const todayET = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }))
+  return todayET.toISOString().split('T')[0]
+}
+
+function buildIntraday(
+  intradayJson: any,
+  currentPrice: number,
+  latestVolume: number
+): Array<{
+  timestamp: number
+  price: number
+  volume: number
+  high: number | null
+  low: number | null
+}> {
+  const intradayChartData = intradayJson.chart?.result?.[0]
+  if (!intradayChartData) return []
+
+  const intradayQuotes = intradayChartData.indicators?.quote?.[0]
+  const intradayTimestamps: number[] = intradayChartData.timestamp || []
+  const intradayCloses: Array<number | null> = intradayQuotes?.close || []
+  const intradayHighs: Array<number | null> = intradayQuotes?.high || []
+  const intradayLows: Array<number | null> = intradayQuotes?.low || []
+  const intradayVolumes: Array<number | null> = intradayQuotes?.volume || []
+
+  let lastValidClose: number | null = null
+  const processedData: any[] = []
+  const todayKey = todayKeyET()
+
+  intradayTimestamps.forEach((timestamp: number, index: number) => {
+    const closePrice = intradayCloses[index]
+    let price: number | null = null
+    if (closePrice !== null && closePrice !== undefined && !isNaN(closePrice)) {
+      price = closePrice
+      lastValidClose = closePrice
+    } else if (lastValidClose !== null) {
+      price = lastValidClose
+    } else {
+      return
+    }
+
+    const date = new Date(timestamp * 1000)
+    const dateET = new Date(date.toLocaleString('en-US', { timeZone: 'America/New_York' }))
+    const dayKey = dateET.toISOString().split('T')[0]
+
+    processedData.push({
+      timestamp,
+      price,
+      volume: intradayVolumes[index] || 0,
+      high: intradayHighs[index] || null,
+      low: intradayLows[index] || null,
+      dayKey,
+    })
+  })
+
+  const dataByDay = new Map<string, any[]>()
+  processedData.forEach((dataPoint) => {
+    if (!dataByDay.has(dataPoint.dayKey)) dataByDay.set(dataPoint.dayKey, [])
+    dataByDay.get(dataPoint.dayKey)!.push(dataPoint)
+  })
+
+  let lastTradingDay: string | null = null
+  if (dataByDay.has(todayKey) && dataByDay.get(todayKey)!.length > 0) {
+    lastTradingDay = todayKey
+  } else {
+    const sortedDays = Array.from(dataByDay.keys()).sort().reverse()
+    let maxDataPoints = 0
+    for (const [dayKey, dayData] of dataByDay.entries()) {
+      if (dayData.length > maxDataPoints) {
+        maxDataPoints = dayData.length
+        lastTradingDay = dayKey
+      }
+    }
+    if (!lastTradingDay || maxDataPoints < 20) {
+      lastTradingDay = sortedDays[0] || sortedDays[1] || null
+    }
+  }
+
+  let intradayData =
+    lastTradingDay && dataByDay.has(lastTradingDay)
+      ? dataByDay
+          .get(lastTradingDay)!
+          .sort((a: any, b: any) => a.timestamp - b.timestamp)
+          .map(({ dayKey, ...rest }: any) => rest)
+      : processedData
+          .map(({ dayKey, ...rest }: any) => rest)
+          .sort((a: any, b: any) => a.timestamp - b.timestamp)
+
+  if (intradayData.length > 0 && currentPrice) {
+    const lastPoint = intradayData[intradayData.length - 1]
+    const priceDiff = Math.abs(lastPoint.price - currentPrice)
+    const nowTimestamp = Math.floor(Date.now() / 1000)
+    if (nowTimestamp - lastPoint.timestamp > 300 || priceDiff / currentPrice > 0.001) {
+      intradayData.push({
+        timestamp: nowTimestamp,
+        price: currentPrice,
+        volume: latestVolume || 0,
+        high: currentPrice,
+        low: currentPrice,
+      })
+    }
+  }
+
+  return intradayData
+}
 
 export async function GET() {
   try {
-    // Fetch stocks with a small delay to avoid rate limiting
     const stocks = []
-    for (let i = 0; i < STOCK_SYMBOLS.length; i++) {
-      const symbol = STOCK_SYMBOLS[i]
+
+    for (let i = 0; i < WATCHLIST.length; i++) {
+      const { display, yahoo } = WATCHLIST[i]
       try {
-        // Add delay between requests (except first one)
         if (i > 0) {
-          await new Promise(resolve => setTimeout(resolve, 100))
+          await new Promise((resolve) => setTimeout(resolve, 80))
         }
-        
-        // Fetch daily data for main display
-        const dailyUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=2d`
-        
-        // Fetch intraday data for last trading day (including pre-market and after-hours)
-        // Use 2 days range to ensure we get the last complete trading day
-        const intradayUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=5m&range=2d&includePrePost=true`
-        
-        // Fetch both daily and intraday data
+
+        const dailyUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahoo)}?interval=1d&range=2d`
+        const intradayUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahoo)}?interval=5m&range=2d&includePrePost=true`
+
         const [dailyResponse, intradayResponse] = await Promise.all([
-          fetch(dailyUrl, {
-            headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-              'Accept': 'application/json',
-              'Accept-Language': 'en-US,en;q=0.9',
-            },
-            next: { revalidate: 60 }
-          }),
-          fetch(intradayUrl, {
-            headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-              'Accept': 'application/json',
-              'Accept-Language': 'en-US,en;q=0.9',
-            },
-            next: { revalidate: 60 }
-          })
+          fetch(dailyUrl, { headers: YAHOO_HEADERS, next: { revalidate: 60 } }),
+          fetch(intradayUrl, { headers: YAHOO_HEADERS, next: { revalidate: 60 } }),
         ])
 
         if (!dailyResponse.ok) {
-          console.error(`Failed to fetch daily data for ${symbol}: ${dailyResponse.status}`)
+          console.error(`Failed to fetch daily data for ${display}: ${dailyResponse.status}`)
           continue
         }
 
         const dailyData = await dailyResponse.json()
         const dailyChartData = dailyData.chart?.result?.[0]
-        
-        if (!dailyChartData) {
-          console.error(`No daily chart data for ${symbol}`)
-          continue
-        }
+        if (!dailyChartData) continue
 
         const meta = dailyChartData.meta
         const dailyQuotes = dailyChartData.indicators?.quote?.[0]
         const dailyPrices = dailyQuotes?.close || []
-        const currentPrice = meta.regularMarketPrice || meta.previousClose || dailyPrices[dailyPrices.length - 1]
-        const previousClose = meta.previousClose || dailyPrices[dailyPrices.length - 2] || currentPrice
-        
-        if (!currentPrice || isNaN(currentPrice)) {
-          console.error(`No valid price data for ${symbol}`, { currentPrice, previousClose })
-          continue
-        }
-        
-        // Calculate change
+        const currentPrice =
+          meta.regularMarketPrice || meta.previousClose || dailyPrices[dailyPrices.length - 1]
+        const previousClose =
+          meta.chartPreviousClose ||
+          meta.previousClose ||
+          dailyPrices[dailyPrices.length - 2] ||
+          currentPrice
+
+        if (!currentPrice || isNaN(currentPrice)) continue
+
         const change = currentPrice - previousClose
-        const changePercent = previousClose ? ((change / previousClose) * 100) : 0
-        
-        // Get latest volume
-        const latestVolume = meta.regularMarketVolume || dailyQuotes?.volume?.[dailyQuotes.volume.length - 1] || 0
-        
-        // Fetch intraday data for last trading day (including pre-market and after-hours)
+        const changePercent = previousClose ? (change / previousClose) * 100 : 0
+        const latestVolume =
+          meta.regularMarketVolume || dailyQuotes?.volume?.[dailyQuotes.volume.length - 1] || 0
+
         let intradayData: any[] = []
         if (intradayResponse.ok) {
           const intradayJson = await intradayResponse.json()
-          const intradayChartData = intradayJson.chart?.result?.[0]
-          
-          if (intradayChartData) {
-            const intradayQuotes = intradayChartData.indicators?.quote?.[0]
-            const intradayTimestamps = intradayChartData.timestamp || []
-            const intradayCloses = intradayQuotes?.close || []
-            const intradayHighs = intradayQuotes?.high || []
-            const intradayLows = intradayQuotes?.low || []
-            const intradayVolumes = intradayQuotes?.volume || []
-            
-            // Use ONLY close prices for accuracy - this matches Yahoo Finance charts
-            // Forward-fill null close prices with the last valid close price
-            let lastValidClose: number | null = null
-            const processedData: any[] = []
-            
-            // Get today's date in ET timezone (Yahoo Finance uses ET)
-            const now = new Date()
-            const todayET = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"}))
-            const todayKey = todayET.toISOString().split('T')[0] // YYYY-MM-DD in ET
-            
-            intradayTimestamps.forEach((timestamp: number, index: number) => {
-              const closePrice = intradayCloses[index]
-              
-              // Use close price if available, otherwise forward-fill with last valid close
-              let price: number | null = null
-              if (closePrice !== null && closePrice !== undefined && !isNaN(closePrice)) {
-                price = closePrice
-                lastValidClose = closePrice
-              } else if (lastValidClose !== null) {
-                // Forward-fill with last valid close price
-                price = lastValidClose
-              } else {
-                // Skip if no valid price available yet
-                return
-              }
-              
-              // Convert timestamp to ET timezone for accurate day grouping
-              const date = new Date(timestamp * 1000)
-              const dateET = new Date(date.toLocaleString("en-US", {timeZone: "America/New_York"}))
-              const dayKey = dateET.toISOString().split('T')[0] // YYYY-MM-DD in ET
-              
-              processedData.push({
-                timestamp,
-                price: price,
-                volume: intradayVolumes[index] || 0,
-                high: intradayHighs[index] || null,
-                low: intradayLows[index] || null,
-                dayKey,
-                hour: dateET.getHours(),
-                minute: dateET.getMinutes(),
-              })
-            })
-            
-            // Group data points by day (in ET timezone)
-            const dataByDay = new Map<string, any[]>()
-            
-            processedData.forEach((dataPoint) => {
-              const dayKey = dataPoint.dayKey
-              if (!dataByDay.has(dayKey)) {
-                dataByDay.set(dayKey, [])
-              }
-              dataByDay.get(dayKey)!.push(dataPoint)
-            })
-            
-            // Always prioritize today's data (in ET timezone), even if incomplete
-            let lastTradingDay = null
-            
-            // Always use today's data if it exists, regardless of how many data points
-            if (dataByDay.has(todayKey) && dataByDay.get(todayKey)!.length > 0) {
-              lastTradingDay = todayKey
-            } else {
-              // If no today data, find the day with the most data points (yesterday)
-              const sortedDays = Array.from(dataByDay.keys()).sort().reverse()
-              let maxDataPoints = 0
-              for (const [dayKey, dayData] of dataByDay.entries()) {
-                if (dayData.length > maxDataPoints) {
-                  maxDataPoints = dayData.length
-                  lastTradingDay = dayKey
-                }
-              }
-              
-              // Fallback to most recent day
-              if (!lastTradingDay || maxDataPoints < 20) {
-                lastTradingDay = sortedDays[0] || sortedDays[1]
-              }
-            }
-            
-            if (lastTradingDay && dataByDay.has(lastTradingDay)) {
-              // Get all data points for today, sorted by timestamp
-              intradayData = dataByDay.get(lastTradingDay)!
-                .sort((a: any, b: any) => a.timestamp - b.timestamp)
-                .map(({ hour, minute, dayKey, ...rest }: any) => rest) // Remove helper fields
-            } else {
-              // Fallback: use all available processed data, sorted by timestamp
-              intradayData = processedData
-                .map(({ hour, minute, dayKey, ...rest }: any) => rest) // Remove helper fields
-                .sort((a: any, b: any) => a.timestamp - b.timestamp)
-            }
-            
-            // Ensure we have the current price at the end if it's different
-            if (intradayData.length > 0 && currentPrice) {
-              const lastPoint = intradayData[intradayData.length - 1]
-              const priceDiff = Math.abs(lastPoint.price - currentPrice)
-              
-              // If the last point is more than 5 minutes old or price differs, add current price
-              const nowTimestamp = Math.floor(Date.now() / 1000)
-              if (nowTimestamp - lastPoint.timestamp > 300 || priceDiff / currentPrice > 0.001) {
-                intradayData.push({
-                  timestamp: nowTimestamp,
-                  price: currentPrice,
-                  volume: latestVolume || 0,
-                  high: currentPrice,
-                  low: currentPrice
-                })
-              }
-            }
-          }
+          intradayData = buildIntraday(intradayJson, currentPrice, latestVolume)
         }
-          
-          stocks.push({
-            symbol,
-            name: meta.longName || meta.shortName || symbol,
-            price: currentPrice,
-            previousClose,
-            change,
-            changePercent,
-            volume: latestVolume,
-            marketState: meta.marketState || 'CLOSED',
-            currency: meta.currency || 'USD',
-            timestamp: meta.regularMarketTime || Date.now() / 1000,
-            intradayData, // Include intraday hourly data for today's chart
-          })
+
+        stocks.push({
+          symbol: display,
+          yahooSymbol: yahoo,
+          name: meta.longName || meta.shortName || display,
+          price: currentPrice,
+          previousClose,
+          change,
+          changePercent,
+          volume: latestVolume,
+          dayHigh: meta.regularMarketDayHigh ?? null,
+          dayLow: meta.regularMarketDayLow ?? null,
+          marketState: meta.marketState || 'CLOSED',
+          currency: meta.currency || 'USD',
+          timestamp: meta.regularMarketTime || Date.now() / 1000,
+          intradayData,
+        })
       } catch (error: any) {
-        console.error(`Error fetching ${symbol}:`, error.message)
-        continue
+        console.error(`Error fetching ${display}:`, error.message)
       }
     }
 
     if (stocks.length === 0) {
-      console.error('No stocks fetched successfully')
       return NextResponse.json(
-        { error: 'Failed to fetch stock data', stocks: [] },
+        { error: 'Failed to fetch stock data', stocks: [], asOf: new Date().toISOString() },
         { status: 500 }
       )
     }
 
-    return NextResponse.json({ stocks })
+    return NextResponse.json({ stocks, asOf: new Date().toISOString() })
   } catch (error: any) {
     console.error('Error fetching stocks:', error)
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch stock data', stocks: [] },
+      { error: error.message || 'Failed to fetch stock data', stocks: [], asOf: new Date().toISOString() },
       { status: 500 }
     )
   }

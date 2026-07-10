@@ -26,9 +26,9 @@ export async function GET() {
       return NextResponse.json({ tweets: [] })
     }
 
-    // Search for trending tweets about business, tech, or stocks from past 24 hours
-    // Focus on high engagement (likes, retweets)
-    const query = '(business OR tech OR stocks OR finance OR investing OR startup OR AI OR crypto) -is:retweet lang:en'
+    // Watchlist + market chatter; high engagement first
+    const query =
+      '(NVDA OR TSLA OR MSTR OR Bitcoin OR ETH OR PLTR OR SPCX OR Micron OR QQQ OR "stock market" OR Fed) -is:retweet lang:en'
     const url = `https://api.twitter.com/2/tweets/search/recent?query=${encodeURIComponent(query)}&max_results=50&tweet.fields=created_at,public_metrics,author_id,text&expansions=author_id&user.fields=username,name,profile_image_url&sort_order=relevancy`
     
     const response = await fetch(url, {
