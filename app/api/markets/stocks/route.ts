@@ -1,37 +1,39 @@
 import { NextResponse } from 'next/server'
-
-/** Display ticker → Yahoo Finance symbol */
-const WATCHLIST: { display: string; yahoo: string }[] = [
-  { display: 'NVDA', yahoo: 'NVDA' },
-  { display: 'CLSK', yahoo: 'CLSK' },
-  { display: 'TSLA', yahoo: 'TSLA' },
-  { display: 'LMND', yahoo: 'LMND' },
-  { display: 'MSTR', yahoo: 'MSTR' },
-  { display: 'BTC', yahoo: 'BTC-USD' },
-  { display: 'ETH', yahoo: 'ETH-USD' },
-  { display: 'BMNR', yahoo: 'BMNR' },
-  { display: 'MU', yahoo: 'MU' },
-  { display: 'PLTR', yahoo: 'PLTR' },
-  { display: 'GLD', yahoo: 'GLD' },
-  { display: 'COPX', yahoo: 'COPX' },
-  { display: 'QQQ', yahoo: 'QQQ' },
-  { display: 'AAPL', yahoo: 'AAPL' },
-  { display: 'AMZN', yahoo: 'AMZN' },
-  { display: 'SPCX', yahoo: 'SPCX' },
-  { display: 'BOT', yahoo: 'BOT' },
-]
-
-const YAHOO_HEADERS = {
-  'User-Agent':
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  Accept: 'application/json',
-  'Accept-Language': 'en-US,en;q=0.9',
-}
+import {
+  computeSwingMetrics,
+  relativeStrength,
+  type OhlcBar,
+} from '@/lib/markets/indicators'
+import { MARKET_WATCHLIST, YAHOO_HEADERS } from '@/lib/markets/watchlist'
 
 function todayKeyET(): string {
   const now = new Date()
   const todayET = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }))
   return todayET.toISOString().split('T')[0]
+}
+
+function parseDailyBars(chartJson: any): OhlcBar[] {
+  const result = chartJson?.chart?.result?.[0]
+  if (!result) return []
+  const ts: number[] = result.timestamp || []
+  const q = result.indicators?.quote?.[0] || {}
+  const bars: OhlcBar[] = []
+  for (let i = 0; i < ts.length; i++) {
+    const open = q.open?.[i]
+    const high = q.high?.[i]
+    const low = q.low?.[i]
+    const close = q.close?.[i]
+    if ([open, high, low, close].some((v) => v == null || Number.isNaN(v))) continue
+    bars.push({
+      timestamp: ts[i],
+      open,
+      high,
+      low,
+      close,
+      volume: q.volume?.[i] || 0,
+    })
+  }
+  return bars
 }
 
 function buildIntraday(
@@ -136,51 +138,54 @@ function buildIntraday(
   return intradayData
 }
 
+function downsampleDaily(bars: OhlcBar[], maxPoints = 90): OhlcBar[] {
+  if (bars.length <= maxPoints) return bars
+  const step = Math.ceil(bars.length / maxPoints)
+  const out: OhlcBar[] = []
+  for (let i = 0; i < bars.length; i += step) out.push(bars[i])
+  const last = bars[bars.length - 1]
+  if (out[out.length - 1]?.timestamp !== last.timestamp) out.push(last)
+  return out
+}
+
 export async function GET() {
   try {
-    const stocks = []
+    const stocks: any[] = []
 
-    for (let i = 0; i < WATCHLIST.length; i++) {
-      const { display, yahoo } = WATCHLIST[i]
+    for (let i = 0; i < MARKET_WATCHLIST.length; i++) {
+      const { display, yahoo, kind, theme } = MARKET_WATCHLIST[i]
       try {
-        if (i > 0) {
-          await new Promise((resolve) => setTimeout(resolve, 80))
-        }
+        if (i > 0) await new Promise((r) => setTimeout(r, 70))
 
-        const dailyUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahoo)}?interval=1d&range=2d`
+        const dailyUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahoo)}?interval=1d&range=1y`
         const intradayUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahoo)}?interval=5m&range=2d&includePrePost=true`
 
         const [dailyResponse, intradayResponse] = await Promise.all([
-          fetch(dailyUrl, { headers: YAHOO_HEADERS, next: { revalidate: 60 } }),
+          fetch(dailyUrl, { headers: YAHOO_HEADERS, next: { revalidate: 120 } }),
           fetch(intradayUrl, { headers: YAHOO_HEADERS, next: { revalidate: 60 } }),
         ])
 
-        if (!dailyResponse.ok) {
-          console.error(`Failed to fetch daily data for ${display}: ${dailyResponse.status}`)
-          continue
-        }
+        if (!dailyResponse.ok) continue
+        const dailyJson = await dailyResponse.json()
+        const dailyChart = dailyJson.chart?.result?.[0]
+        if (!dailyChart) continue
 
-        const dailyData = await dailyResponse.json()
-        const dailyChartData = dailyData.chart?.result?.[0]
-        if (!dailyChartData) continue
+        const meta = dailyChart.meta
+        const dailyBars = parseDailyBars(dailyJson)
+        if (!dailyBars.length) continue
 
-        const meta = dailyChartData.meta
-        const dailyQuotes = dailyChartData.indicators?.quote?.[0]
-        const dailyPrices = dailyQuotes?.close || []
         const currentPrice =
-          meta.regularMarketPrice || meta.previousClose || dailyPrices[dailyPrices.length - 1]
+          meta.regularMarketPrice || dailyBars[dailyBars.length - 1].close
         const previousClose =
           meta.chartPreviousClose ||
           meta.previousClose ||
-          dailyPrices[dailyPrices.length - 2] ||
+          dailyBars[dailyBars.length - 2]?.close ||
           currentPrice
-
-        if (!currentPrice || isNaN(currentPrice)) continue
 
         const change = currentPrice - previousClose
         const changePercent = previousClose ? (change / previousClose) * 100 : 0
         const latestVolume =
-          meta.regularMarketVolume || dailyQuotes?.volume?.[dailyQuotes.volume.length - 1] || 0
+          meta.regularMarketVolume || dailyBars[dailyBars.length - 1].volume || 0
 
         let intradayData: any[] = []
         if (intradayResponse.ok) {
@@ -188,9 +193,17 @@ export async function GET() {
           intradayData = buildIntraday(intradayJson, currentPrice, latestVolume)
         }
 
+        const swing = computeSwingMetrics(
+          dailyBars,
+          meta.fiftyTwoWeekHigh,
+          meta.fiftyTwoWeekLow
+        )
+
         stocks.push({
           symbol: display,
           yahooSymbol: yahoo,
+          kind,
+          theme,
           name: meta.longName || meta.shortName || display,
           price: currentPrice,
           previousClose,
@@ -199,28 +212,53 @@ export async function GET() {
           volume: latestVolume,
           dayHigh: meta.regularMarketDayHigh ?? null,
           dayLow: meta.regularMarketDayLow ?? null,
+          fiftyTwoWeekHigh: meta.fiftyTwoWeekHigh ?? null,
+          fiftyTwoWeekLow: meta.fiftyTwoWeekLow ?? null,
           marketState: meta.marketState || 'CLOSED',
           currency: meta.currency || 'USD',
           timestamp: meta.regularMarketTime || Date.now() / 1000,
           intradayData,
+          dailyData: downsampleDaily(dailyBars, 100).map((b) => ({
+            timestamp: b.timestamp,
+            price: b.close,
+            volume: b.volume,
+            high: b.high,
+            low: b.low,
+          })),
+          swing,
         })
       } catch (error: any) {
         console.error(`Error fetching ${display}:`, error.message)
       }
     }
 
-    if (stocks.length === 0) {
+    const qqq = stocks.find((s) => s.symbol === 'QQQ')
+    const enriched = stocks.map((s) => {
+      const rs21 = relativeStrength(s.swing?.ret21d ?? null, qqq?.swing?.ret21d ?? null)
+      const rs63 = relativeStrength(s.swing?.ret63d ?? null, qqq?.swing?.ret63d ?? null)
+      return {
+        ...s,
+        rs21vsQqq: rs21,
+        rs63vsQqq: rs63,
+      }
+    })
+
+    if (!enriched.length) {
       return NextResponse.json(
         { error: 'Failed to fetch stock data', stocks: [], asOf: new Date().toISOString() },
         { status: 500 }
       )
     }
 
-    return NextResponse.json({ stocks, asOf: new Date().toISOString() })
+    return NextResponse.json({ stocks: enriched, asOf: new Date().toISOString() })
   } catch (error: any) {
     console.error('Error fetching stocks:', error)
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch stock data', stocks: [], asOf: new Date().toISOString() },
+      {
+        error: error.message || 'Failed to fetch stock data',
+        stocks: [],
+        asOf: new Date().toISOString(),
+      },
       { status: 500 }
     )
   }
