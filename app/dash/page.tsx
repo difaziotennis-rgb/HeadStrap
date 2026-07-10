@@ -723,7 +723,7 @@ export default function DashPage() {
                   <div>
                     <h3 className="text-sm font-medium text-zinc-200">Founder / CEO / analyst interviews</h3>
                     <p className="text-xs text-zinc-500">
-                      Latest YouTube podcasts & interviews (Gavin Baker, Jensen, Saylor, Karp, etc.)
+                      Past few days only — YouTube podcasts & interviews (Gavin Baker, Jensen, Saylor, Karp, etc.)
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
@@ -745,7 +745,9 @@ export default function DashPage() {
                 </div>
 
                 {filteredInterviews.length === 0 ? (
-                  <p className="text-sm text-zinc-500">No interviews loaded yet. Hit Refresh.</p>
+                  <p className="text-sm text-zinc-500">
+                    No interviews from the past few days right now. Check back later or hit Refresh.
+                  </p>
                 ) : (
                   <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                     {filteredInterviews.map((v) => (

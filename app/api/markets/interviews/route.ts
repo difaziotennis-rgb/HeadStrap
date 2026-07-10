@@ -52,6 +52,43 @@ function parsePublishedRank(label: string | undefined): number {
   return 0
 }
 
+/** Approximate age in days from YouTube relative labels like "3 hours ago". */
+function approximateAgeDays(label: string | undefined): number | null {
+  if (!label) return null
+  const lower = label.toLowerCase().trim()
+  if (lower === 'streamed' || lower.includes('live')) return 0
+  const numMatch = lower.match(/(\d+(\.\d+)?)/)
+  const num = numMatch ? parseFloat(numMatch[1]) : NaN
+  if (lower.includes('second') || lower.includes('minute') || lower.includes('hour')) {
+    return 0
+  }
+  if (lower.includes('day')) {
+    if (Number.isNaN(num)) return 1
+    return num
+  }
+  if (lower.includes('week')) {
+    if (Number.isNaN(num)) return 7
+    return num * 7
+  }
+  if (lower.includes('month')) {
+    if (Number.isNaN(num)) return 30
+    return num * 30
+  }
+  if (lower.includes('year')) {
+    if (Number.isNaN(num)) return 365
+    return num * 365
+  }
+  // Unknown label — exclude from "recent" feed
+  return null
+}
+
+const MAX_AGE_DAYS = 4
+
+function isRecent(label: string | undefined): boolean {
+  const age = approximateAgeDays(label)
+  return age != null && age <= MAX_AGE_DAYS
+}
+
 async function searchYouTube(query: string): Promise<InterviewVideo[]> {
   const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}&sp=CAI%253D`
   const response = await fetch(url, {
@@ -60,7 +97,7 @@ async function searchYouTube(query: string): Promise<InterviewVideo[]> {
         'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       'Accept-Language': 'en-US,en;q=0.9',
     },
-    next: { revalidate: 1800 },
+    next: { revalidate: 900 },
   })
   if (!response.ok) return []
   const html = await response.text()
@@ -98,6 +135,7 @@ async function searchYouTube(query: string): Promise<InterviewVideo[]> {
       hay.includes(' sits down') ||
       hay.includes('talks with')
     if (!looksUseful) continue
+    if (!isRecent(publishedLabel)) continue
 
     videos.push({
       id,
@@ -121,7 +159,7 @@ export async function GET() {
     for (const search of SEARCHES) {
       try {
         const videos = await searchYouTube(search.query)
-        for (const video of videos.slice(0, 6)) {
+        for (const video of videos.slice(0, 8)) {
           if (seen.has(video.id)) continue
           seen.add(video.id)
           collected.push({ ...video, related: search.related })
@@ -136,15 +174,17 @@ export async function GET() {
     )
 
     return NextResponse.json({
-      videos: collected.slice(0, 28),
+      videos: collected.slice(0, 24),
       asOf: new Date().toISOString(),
-      note: 'Congregated from YouTube search for founder/CEO/analyst interviews and podcasts. Freshness labels are YouTube relative times.',
+      maxAgeDays: MAX_AGE_DAYS,
+      note: `Only interviews/podcasts from roughly the past ${MAX_AGE_DAYS} days (YouTube relative timestamps).`,
     })
   } catch (error: any) {
     console.error('interviews error', error)
     return NextResponse.json({
       videos: [],
       asOf: new Date().toISOString(),
+      maxAgeDays: MAX_AGE_DAYS,
       error: error.message || 'Failed to load interviews',
     })
   }
