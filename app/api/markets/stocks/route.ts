@@ -138,6 +138,44 @@ function buildIntraday(
   return intradayData
 }
 
+function extractSessionPrint(
+  intradayJson: any,
+  previousClose: number,
+  session: 'pre' | 'post'
+): {
+  price: number
+  change: number
+  changePercent: number
+  asOf: number
+} | null {
+  const result = intradayJson?.chart?.result?.[0]
+  if (!result) return null
+  const window = result.meta?.currentTradingPeriod?.[session]
+  if (!window?.start || !window?.end) return null
+
+  const timestamps: number[] = result.timestamp || []
+  const closes: Array<number | null> = result.indicators?.quote?.[0]?.close || []
+  let last: { price: number; asOf: number } | null = null
+
+  for (let i = 0; i < timestamps.length; i++) {
+    const t = timestamps[i]
+    const c = closes[i]
+    if (c == null || Number.isNaN(c)) continue
+    if (t >= window.start && t < window.end) {
+      last = { price: c, asOf: t }
+    }
+  }
+
+  if (!last || !previousClose) return null
+  const change = last.price - previousClose
+  return {
+    price: last.price,
+    change,
+    changePercent: (change / previousClose) * 100,
+    asOf: last.asOf,
+  }
+}
+
 function downsampleDaily(bars: OhlcBar[], maxPoints = 90): OhlcBar[] {
   if (bars.length <= maxPoints) return bars
   const step = Math.ceil(bars.length / maxPoints)
@@ -188,9 +226,23 @@ export async function GET() {
           meta.regularMarketVolume || dailyBars[dailyBars.length - 1].volume || 0
 
         let intradayData: any[] = []
+        let preMarket: ReturnType<typeof extractSessionPrint> = null
+        let postMarket: ReturnType<typeof extractSessionPrint> = null
+        let marketState = meta.marketState || 'CLOSED'
         if (intradayResponse.ok) {
           const intradayJson = await intradayResponse.json()
           intradayData = buildIntraday(intradayJson, currentPrice, latestVolume)
+          preMarket = extractSessionPrint(intradayJson, previousClose, 'pre')
+          postMarket = extractSessionPrint(intradayJson, previousClose, 'post')
+          const period = intradayJson?.chart?.result?.[0]?.meta?.currentTradingPeriod
+          const nowSec = Math.floor(Date.now() / 1000)
+          if (period?.pre && nowSec >= period.pre.start && nowSec < period.pre.end) {
+            marketState = 'PRE'
+          } else if (period?.regular && nowSec >= period.regular.start && nowSec < period.regular.end) {
+            marketState = 'REGULAR'
+          } else if (period?.post && nowSec >= period.post.start && nowSec < period.post.end) {
+            marketState = 'POST'
+          }
         }
 
         const swing = computeSwingMetrics(
@@ -199,24 +251,34 @@ export async function GET() {
           meta.fiftyTwoWeekLow
         )
 
+        // During premarket, surface the live pre print as the headline price.
+        const displayPrice =
+          marketState === 'PRE' && preMarket ? preMarket.price : currentPrice
+        const displayChange =
+          marketState === 'PRE' && preMarket ? preMarket.change : change
+        const displayChangePercent =
+          marketState === 'PRE' && preMarket ? preMarket.changePercent : changePercent
+
         stocks.push({
           symbol: display,
           yahooSymbol: yahoo,
           kind,
           theme,
           name: meta.longName || meta.shortName || display,
-          price: currentPrice,
+          price: displayPrice,
           previousClose,
-          change,
-          changePercent,
+          change: displayChange,
+          changePercent: displayChangePercent,
           volume: latestVolume,
           dayHigh: meta.regularMarketDayHigh ?? null,
           dayLow: meta.regularMarketDayLow ?? null,
           fiftyTwoWeekHigh: meta.fiftyTwoWeekHigh ?? null,
           fiftyTwoWeekLow: meta.fiftyTwoWeekLow ?? null,
-          marketState: meta.marketState || 'CLOSED',
+          marketState,
           currency: meta.currency || 'USD',
           timestamp: meta.regularMarketTime || Date.now() / 1000,
+          preMarket,
+          postMarket,
           intradayData,
           dailyData: downsampleDaily(dailyBars, 100).map((b) => ({
             timestamp: b.timestamp,

@@ -17,33 +17,38 @@ type Swing = {
   ret21d: number | null
   ret63d: number | null
   dist52wHighPct: number | null
-  dist52wLowPct: number | null
   volVsAvg20: number | null
   aboveSma20: boolean | null
   aboveSma50: boolean | null
   aboveSma200: boolean | null
   trend: 'bullish' | 'bearish' | 'mixed' | 'unknown'
-  stretch: 'extended_up' | 'extended_down' | 'neutral' | 'unknown'
+}
+
+type SessionPrint = {
+  price: number
+  change: number
+  changePercent: number
+  asOf: number
 }
 
 type Stock = {
   symbol: string
   name: string
   theme: WatchTheme
-  kind: string
   price: number
+  previousClose: number
   change: number
   changePercent: number
   dayHigh: number | null
   dayLow: number | null
-  fiftyTwoWeekHigh: number | null
-  fiftyTwoWeekLow: number | null
   currency: string
+  marketState: string
+  preMarket: SessionPrint | null
+  postMarket: SessionPrint | null
   intradayData: Point[]
   dailyData: Point[]
   swing: Swing
   rs21vsQqq: number | null
-  rs63vsQqq: number | null
 }
 
 type NewsArticle = {
@@ -66,7 +71,6 @@ type Tweet = {
 type Earnings = {
   date: string
   symbol: string
-  name: string
   time: string
   epsForecast: string | null
   daysUntil: number
@@ -75,21 +79,29 @@ type Earnings = {
 type MacroEvent = {
   date: string
   title: string
-  kind: string
   note: string
   daysUntil: number
 }
 
-type Tab = 'catalysts' | 'ideas' | 'news' | 'social' | 'playbook'
+type Interview = {
+  id: string
+  title: string
+  channel: string
+  publishedLabel: string
+  url: string
+  thumbnail: string
+  related: string[]
+}
+
+type Tab = 'interviews' | 'catalysts' | 'news' | 'social' | 'playbook'
 type Timeframe = '1D' | '3M'
 
 function money(n: number, currency = 'USD') {
-  const digits = Math.abs(n) >= 1000 ? 2 : 2
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency,
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(n)
 }
 
@@ -134,8 +146,8 @@ function chartLabel(ts: number, timeframe: Timeframe) {
 
 function Sparkline({ points, up }: { points: Point[]; up: boolean }) {
   if (!points?.length) return <span className="text-zinc-600">—</span>
-  const width = 88
-  const height = 28
+  const width = 96
+  const height = 30
   const prices = points.map((p) => p.price)
   const min = Math.min(...prices)
   const max = Math.max(...prices)
@@ -148,24 +160,13 @@ function Sparkline({ points, up }: { points: Point[]; up: boolean }) {
     })
     .join(' ')
   return (
-    <svg width={width} height={height}>
-      <polyline
-        fill="none"
-        stroke={up ? '#34d399' : '#f87171'}
-        strokeWidth="1.6"
-        points={coords}
-      />
+    <svg width={width} height={height} aria-hidden>
+      <polyline fill="none" stroke={up ? '#34d399' : '#f87171'} strokeWidth="1.6" points={coords} />
     </svg>
   )
 }
 
-function PriceChart({
-  stock,
-  timeframe,
-}: {
-  stock: Stock
-  timeframe: Timeframe
-}) {
+function PriceChart({ stock, timeframe }: { stock: Stock; timeframe: Timeframe }) {
   const points = timeframe === '1D' ? stock.intradayData || [] : stock.dailyData || []
   if (points.length < 2) {
     return (
@@ -186,11 +187,10 @@ function PriceChart({
   const plotH = height - pad.top - pad.bottom
   const up = (timeframe === '1D' ? stock.changePercent : stock.swing.ret63d || 0) >= 0
 
-  const xy = (i: number, price: number) => {
-    const x = pad.left + (i / Math.max(points.length - 1, 1)) * plotW
-    const y = pad.top + (1 - (price - min) / range) * plotH
-    return { x, y }
-  }
+  const xy = (i: number, price: number) => ({
+    x: pad.left + (i / Math.max(points.length - 1, 1)) * plotW,
+    y: pad.top + (1 - (price - min) / range) * plotH,
+  })
 
   const path = points
     .map((p, i) => {
@@ -199,14 +199,14 @@ function PriceChart({
     })
     .join(' ')
 
-  const overlays: { label: string; value: number | null; color: string }[] = []
-  if (timeframe === '3M') {
-    overlays.push(
-      { label: '20', value: stock.swing.sma20, color: '#38bdf8' },
-      { label: '50', value: stock.swing.sma50, color: '#a78bfa' },
-      { label: '200', value: stock.swing.sma200, color: '#fbbf24' }
-    )
-  }
+  const overlays =
+    timeframe === '3M'
+      ? [
+          { label: '20', value: stock.swing.sma20, color: '#38bdf8' },
+          { label: '50', value: stock.swing.sma50, color: '#a78bfa' },
+          { label: '200', value: stock.swing.sma200, color: '#fbbf24' },
+        ]
+      : []
 
   const yTicks = [min, min + range / 2, max]
   const xIdx = [0, Math.floor(points.length / 2), points.length - 1]
@@ -237,7 +237,6 @@ function PriceChart({
               stroke={o.color}
               strokeDasharray="4 4"
               strokeWidth="1"
-              opacity="0.85"
             />
             <text x={width - pad.right} y={y - 4} textAnchor="end" fill={o.color} fontSize="10">
               SMA{o.label}
@@ -258,57 +257,6 @@ function PriceChart({
   )
 }
 
-function setupScore(s: Stock): { score: number; bias: 'long' | 'short' | 'wait'; reasons: string[] } {
-  const reasons: string[] = []
-  let longPts = 0
-  let shortPts = 0
-
-  if (s.swing.trend === 'bullish') {
-    longPts += 2
-    reasons.push('Stacked SMAs / uptrend')
-  } else if (s.swing.trend === 'bearish') {
-    shortPts += 2
-    reasons.push('Stacked SMAs / downtrend')
-  } else {
-    reasons.push('Mixed trend — wait for reclaim or failed break')
-  }
-
-  if ((s.rs21vsQqq || 0) > 3) {
-    longPts += 2
-    reasons.push('Outperforming QQQ over ~1m')
-  } else if ((s.rs21vsQqq || 0) < -3) {
-    shortPts += 2
-    reasons.push('Underperforming QQQ over ~1m')
-  }
-
-  if (s.swing.stretch === 'extended_down' && s.swing.trend !== 'bearish') {
-    longPts += 1
-    reasons.push('RSI washed out — mean-reversion long candidate')
-  }
-  if (s.swing.stretch === 'extended_up' && s.swing.trend !== 'bullish') {
-    shortPts += 1
-    reasons.push('RSI hot — fade / wait for pullback')
-  }
-
-  if ((s.swing.volVsAvg20 || 0) > 1.5) {
-    reasons.push('Volume expansion — respect the move')
-    if (s.changePercent > 0) longPts += 1
-    if (s.changePercent < 0) shortPts += 1
-  }
-
-  if ((s.swing.dist52wHighPct || 0) > -5 && s.swing.trend === 'bullish') {
-    longPts += 1
-    reasons.push('Near 52w highs with trend — breakout continuation zone')
-  }
-
-  const score = Math.max(longPts, shortPts)
-  let bias: 'long' | 'short' | 'wait' = 'wait'
-  if (longPts >= shortPts + 2 && longPts >= 3) bias = 'long'
-  else if (shortPts >= longPts + 2 && shortPts >= 3) bias = 'short'
-
-  return { score, bias, reasons: reasons.slice(0, 4) }
-}
-
 function optionsBands(stock: Stock) {
   const atr = stock.swing.atr14
   if (!atr) return null
@@ -316,8 +264,6 @@ function optionsBands(stock: Stock) {
   const month = expectedMove(atr, 21)
   const p = stock.price
   return {
-    week,
-    month,
     weekPct: (week / p) * 100,
     monthPct: (month / p) * 100,
     weekUp: p + week,
@@ -335,11 +281,13 @@ export default function DashPage() {
   const [tweets, setTweets] = useState<Tweet[]>([])
   const [earnings, setEarnings] = useState<Earnings[]>([])
   const [macro, setMacro] = useState<MacroEvent[]>([])
+  const [interviews, setInterviews] = useState<Interview[]>([])
   const [notes, setNotes] = useState<string[]>([])
   const [selected, setSelected] = useState('NVDA')
   const [group, setGroup] = useState('All')
   const [timeframe, setTimeframe] = useState<Timeframe>('3M')
-  const [tab, setTab] = useState<Tab>('catalysts')
+  const [tab, setTab] = useState<Tab>('interviews')
+  const [interviewFilter, setInterviewFilter] = useState('All')
   const [asOf, setAsOf] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -348,16 +296,18 @@ export default function DashPage() {
   const load = useCallback(async (manual = false) => {
     if (manual) setRefreshing(true)
     try {
-      const [stocksRes, newsRes, tweetsRes, catRes] = await Promise.all([
+      const [stocksRes, newsRes, tweetsRes, catRes, intRes] = await Promise.all([
         fetch('/api/markets/stocks'),
         fetch('/api/markets/news'),
         fetch('/api/markets/tweets'),
         fetch('/api/markets/catalysts'),
+        fetch('/api/markets/interviews'),
       ])
       const stocksJson = await stocksRes.json()
       const newsJson = await newsRes.json()
       const tweetsJson = await tweetsRes.json()
       const catJson = await catRes.json()
+      const intJson = await intRes.json()
 
       if (!stocksRes.ok || !stocksJson.stocks?.length) {
         throw new Error(stocksJson.error || 'Could not load quotes')
@@ -369,6 +319,7 @@ export default function DashPage() {
       setEarnings(catJson.earnings || [])
       setMacro(catJson.macro || [])
       setNotes(catJson.notes || [])
+      setInterviews(intJson.videos || [])
       setAsOf(stocksJson.asOf || new Date().toISOString())
       setError(null)
       setSelected((prev) =>
@@ -396,30 +347,22 @@ export default function DashPage() {
     [stocks, theme]
   )
 
+  useEffect(() => {
+    if (!visible.length) return
+    if (!visible.some((s) => s.symbol === selected)) {
+      setSelected(visible[0].symbol)
+    }
+  }, [visible, selected])
+
   const selectedStock = useMemo(
-    () => stocks.find((s) => s.symbol === selected) || visible[0] || stocks[0],
+    () => visible.find((s) => s.symbol === selected) || visible[0] || stocks[0],
     [stocks, selected, visible]
   )
 
   const qqq = stocks.find((s) => s.symbol === 'QQQ')
   const btc = stocks.find((s) => s.symbol === 'BTC')
   const gld = stocks.find((s) => s.symbol === 'GLD')
-
-  const riskScore = useMemo(() => {
-    // Simple risk-on score from QQQ + BTC vs GLD
-    const q = qqq?.changePercent || 0
-    const b = btc?.changePercent || 0
-    const g = gld?.changePercent || 0
-    return q * 0.45 + b * 0.35 - g * 0.2
-  }, [qqq, btc, gld])
-
-  const ideas = useMemo(() => {
-    return stocks
-      .map((s) => ({ stock: s, setup: setupScore(s) }))
-      .filter((x) => x.setup.bias !== 'wait')
-      .sort((a, b) => b.setup.score - a.setup.score)
-      .slice(0, 6)
-  }, [stocks])
+  const riskScore = (qqq?.changePercent || 0) * 0.45 + (btc?.changePercent || 0) * 0.35 - (gld?.changePercent || 0) * 0.2
 
   const earningsBySymbol = useMemo(() => {
     const map = new Map<string, Earnings>()
@@ -429,15 +372,31 @@ export default function DashPage() {
     return map
   }, [earnings])
 
-  const nextCatalyst = macro[0] || null
-  const nextEarn = earnings[0] || null
-  const setup = selectedStock ? setupScore(selectedStock) : null
+  const interviewTags = useMemo(() => {
+    const tags = new Set<string>()
+    interviews.forEach((v) => v.related.forEach((t) => tags.add(t)))
+    return ['All', ...Array.from(tags).sort()]
+  }, [interviews])
+
+  const filteredInterviews = useMemo(() => {
+    if (interviewFilter === 'All') return interviews
+    return interviews.filter((v) => v.related.includes(interviewFilter))
+  }, [interviews, interviewFilter])
+
   const bands = selectedStock ? optionsBands(selectedStock) : null
+  const sessionLabel =
+    selectedStock?.marketState === 'PRE'
+      ? 'Premarket'
+      : selectedStock?.marketState === 'POST'
+        ? 'After-hours'
+        : selectedStock?.marketState === 'REGULAR'
+          ? 'Regular'
+          : 'Last'
 
   if (loading) {
     return (
       <main className="min-h-screen bg-zinc-950 px-6 py-16 text-zinc-100">
-        <p className="text-sm text-zinc-400">Loading swing desk…</p>
+        <p className="text-sm text-zinc-400">Loading markets…</p>
       </main>
     )
   }
@@ -445,15 +404,12 @@ export default function DashPage() {
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
       <div className="mx-auto max-w-[1400px] px-4 py-5 sm:px-6 lg:px-8">
-        <header className="mb-5 flex flex-col gap-4 border-b border-zinc-800 pb-4 lg:flex-row lg:items-end lg:justify-between">
+        <header className="mb-4 flex flex-col gap-3 border-b border-zinc-800 pb-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-[11px] uppercase tracking-[0.22em] text-emerald-400/80">
-              DiFazio · Swing desk
-            </p>
-            <h1 className="mt-1 text-3xl font-semibold tracking-tight text-white">Markets</h1>
-            <p className="mt-1 max-w-2xl text-sm text-zinc-400">
-              Weekly / monthly options context: trend, relative strength, ATR expected-move bands,
-              earnings, and macro. Auto-refresh ~90s.
+            <p className="text-[11px] uppercase tracking-[0.22em] text-emerald-400/80">DiFazio · Markets</p>
+            <h1 className="mt-1 text-3xl font-semibold tracking-tight text-white">Dash</h1>
+            <p className="mt-1 text-sm text-zinc-400">
+              Board-first watchlist with premarket, charts, catalysts, and founder/analyst interviews.
               {asOf
                 ? ` Updated ${new Date(asOf).toLocaleTimeString('en-US', {
                     timeZone: 'America/New_York',
@@ -479,8 +435,7 @@ export default function DashPage() {
           </div>
         )}
 
-        {/* Regime strip */}
-        <section className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+        <section className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
           {[
             { label: 'Risk tone', value: pct(riskScore), sub: riskScore >= 0 ? 'Risk-on lean' : 'Risk-off lean', t: riskScore },
             { label: 'QQQ', value: qqq ? money(qqq.price) : '—', sub: pct(qqq?.changePercent), t: qqq?.changePercent },
@@ -488,14 +443,14 @@ export default function DashPage() {
             { label: 'GLD', value: gld ? money(gld.price) : '—', sub: pct(gld?.changePercent), t: gld?.changePercent },
             {
               label: 'Next macro',
-              value: nextCatalyst ? `${nextCatalyst.daysUntil}d` : '—',
-              sub: nextCatalyst?.title || '—',
+              value: macro[0] ? `${macro[0].daysUntil}d` : '—',
+              sub: macro[0]?.title || '—',
               t: 0,
             },
             {
               label: 'Next earnings',
-              value: nextEarn ? `${nextEarn.symbol} ${nextEarn.daysUntil}d` : '—',
-              sub: nextEarn ? nextEarn.date : '—',
+              value: earnings[0] ? `${earnings[0].symbol} ${earnings[0].daysUntil}d` : '—',
+              sub: earnings[0]?.date || '—',
               t: 0,
             },
           ].map((card) => (
@@ -507,7 +462,7 @@ export default function DashPage() {
           ))}
         </section>
 
-        <div className="mb-4 flex flex-wrap gap-2">
+        <div className="mb-3 flex flex-wrap gap-2">
           {THEME_GROUPS.map((g) => (
             <button
               key={g.label}
@@ -516,7 +471,7 @@ export default function DashPage() {
               className={`rounded-full px-3 py-1 text-xs font-medium ${
                 group === g.label
                   ? 'bg-zinc-100 text-zinc-950'
-                  : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800'
+                  : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'
               }`}
             >
               {g.label}
@@ -524,8 +479,84 @@ export default function DashPage() {
           ))}
         </div>
 
-        {/* Chart + setup */}
-        <div className="grid gap-5 xl:grid-cols-[1.55fr_1fr]">
+        {/* Board first */}
+        <section className="overflow-x-auto rounded-xl border border-zinc-800">
+          <table className="min-w-full text-left text-sm">
+            <thead className="bg-zinc-900 text-[11px] uppercase tracking-wide text-zinc-500">
+              <tr>
+                <th className="px-3 py-3 font-medium">Ticker</th>
+                <th className="px-3 py-3 font-medium text-right">Last</th>
+                <th className="px-3 py-3 font-medium text-right">Day</th>
+                <th className="px-3 py-3 font-medium text-right">Premarket</th>
+                <th className="px-3 py-3 font-medium text-right">1m</th>
+                <th className="px-3 py-3 font-medium text-right">RS</th>
+                <th className="px-3 py-3 font-medium text-right">RSI</th>
+                <th className="px-3 py-3 font-medium">Trend</th>
+                <th className="px-3 py-3 font-medium">Earn</th>
+                <th className="hidden px-3 py-3 font-medium md:table-cell">Session</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visible.map((s) => {
+                const active = selectedStock?.symbol === s.symbol
+                const earn = earningsBySymbol.get(s.symbol)
+                const pre = s.preMarket
+                return (
+                  <tr
+                    key={s.symbol}
+                    onClick={() => setSelected(s.symbol)}
+                    className={`cursor-pointer border-t border-zinc-800/80 hover:bg-zinc-900/80 ${
+                      active ? 'bg-zinc-900' : ''
+                    }`}
+                  >
+                    <td className="px-3 py-2.5 font-semibold text-white">
+                      {s.symbol}
+                      {s.marketState === 'PRE' && (
+                        <span className="ml-2 text-[10px] font-medium uppercase text-amber-300">Pre</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2.5 text-right tabular-nums">{money(s.price, s.currency)}</td>
+                    <td className={`px-3 py-2.5 text-right tabular-nums ${tone(s.changePercent)}`}>
+                      {pct(s.changePercent)}
+                    </td>
+                    <td className={`px-3 py-2.5 text-right tabular-nums ${tone(pre?.changePercent)}`}>
+                      {pre ? (
+                        <span title={money(pre.price, s.currency)}>
+                          {pct(pre.changePercent)}
+                        </span>
+                      ) : (
+                        '—'
+                      )}
+                    </td>
+                    <td className={`px-3 py-2.5 text-right tabular-nums ${tone(s.swing.ret21d)}`}>
+                      {pct(s.swing.ret21d)}
+                    </td>
+                    <td className={`px-3 py-2.5 text-right tabular-nums ${tone(s.rs21vsQqq)}`}>
+                      {pct(s.rs21vsQqq)}
+                    </td>
+                    <td className="px-3 py-2.5 text-right tabular-nums text-zinc-300">
+                      {num(s.swing.rsi14, 0)}
+                    </td>
+                    <td className="px-3 py-2.5 capitalize text-zinc-400">{s.swing.trend}</td>
+                    <td className="px-3 py-2.5 text-zinc-400">
+                      {earn ? (
+                        <span className={earn.daysUntil <= 14 ? 'text-amber-300' : ''}>{earn.daysUntil}d</span>
+                      ) : (
+                        '—'
+                      )}
+                    </td>
+                    <td className="hidden px-3 py-2.5 md:table-cell">
+                      <Sparkline points={s.intradayData || []} up={s.changePercent >= 0} />
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </section>
+
+        {/* Selected chart */}
+        <div className="mt-5 grid gap-5 xl:grid-cols-[1.55fr_1fr]">
           <section className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-4 sm:p-5">
             {selectedStock && (
               <>
@@ -533,6 +564,9 @@ export default function DashPage() {
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="text-2xl font-semibold text-white">{selectedStock.symbol}</h2>
+                      <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-[11px] font-medium text-zinc-300">
+                        {sessionLabel}
+                      </span>
                       <span
                         className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
                           selectedStock.swing.trend === 'bullish'
@@ -544,11 +578,6 @@ export default function DashPage() {
                       >
                         {selectedStock.swing.trend}
                       </span>
-                      {earningsBySymbol.get(selectedStock.symbol) && (
-                        <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-300">
-                          Earn {earningsBySymbol.get(selectedStock.symbol)!.daysUntil}d
-                        </span>
-                      )}
                     </div>
                     <p className="text-sm text-zinc-400">{selectedStock.name}</p>
                   </div>
@@ -557,8 +586,10 @@ export default function DashPage() {
                       {money(selectedStock.price, selectedStock.currency)}
                     </p>
                     <p className={`text-sm font-medium ${tone(selectedStock.changePercent)}`}>
-                      {pct(selectedStock.changePercent, 2)} today · {pct(selectedStock.swing.ret21d)} 1m ·{' '}
-                      {pct(selectedStock.swing.ret63d)} 3m
+                      {pct(selectedStock.changePercent, 2)} vs prior close
+                      {selectedStock.preMarket
+                        ? ` · pre ${pct(selectedStock.preMarket.changePercent, 2)}`
+                        : ''}
                     </p>
                   </div>
                 </div>
@@ -584,25 +615,25 @@ export default function DashPage() {
 
                 <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-zinc-400 sm:grid-cols-4">
                   <div>
-                    RSI14{' '}
+                    Premarket{' '}
+                    <span className={`font-medium ${tone(selectedStock.preMarket?.changePercent)}`}>
+                      {selectedStock.preMarket
+                        ? `${money(selectedStock.preMarket.price)} (${pct(selectedStock.preMarket.changePercent)})`
+                        : '—'}
+                    </span>
+                  </div>
+                  <div>
+                    RSI{' '}
                     <span className="font-medium text-zinc-200">{num(selectedStock.swing.rsi14)}</span>
                   </div>
                   <div>
                     ATR%{' '}
-                    <span className="font-medium text-zinc-200">
-                      {num(selectedStock.swing.atrPct)}%
-                    </span>
+                    <span className="font-medium text-zinc-200">{num(selectedStock.swing.atrPct)}%</span>
                   </div>
                   <div>
-                    RS 1m vs QQQ{' '}
+                    RS vs QQQ{' '}
                     <span className={`font-medium ${tone(selectedStock.rs21vsQqq)}`}>
                       {pct(selectedStock.rs21vsQqq)}
-                    </span>
-                  </div>
-                  <div>
-                    vs 52w hi{' '}
-                    <span className="font-medium text-zinc-200">
-                      {pct(selectedStock.swing.dist52wHighPct)}
                     </span>
                   </div>
                 </div>
@@ -610,78 +641,36 @@ export default function DashPage() {
             )}
           </section>
 
-          <section className="space-y-4">
-            <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
-              <h3 className="text-sm font-medium text-zinc-300">Options swing map</h3>
-              <p className="mt-1 text-xs text-zinc-500">
-                ATR×√days expected-move proxy for ~1 week / ~1 month. Use for strike selection and
-                invalidation — not a substitute for IV rank.
-              </p>
-              {bands && selectedStock ? (
-                <div className="mt-4 space-y-3 text-sm">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="rounded-md bg-zinc-950/70 p-3">
-                      <p className="text-[11px] uppercase text-zinc-500">~1 week (±1 ATR√5)</p>
-                      <p className="mt-1 font-medium text-zinc-100">
-                        {money(bands.weekDown)} – {money(bands.weekUp)}
-                      </p>
-                      <p className="text-xs text-zinc-500">{pct(bands.weekPct)} band</p>
-                    </div>
-                    <div className="rounded-md bg-zinc-950/70 p-3">
-                      <p className="text-[11px] uppercase text-zinc-500">~1 month (±1 ATR√21)</p>
-                      <p className="mt-1 font-medium text-zinc-100">
-                        {money(bands.monthDown)} – {money(bands.monthUp)}
-                      </p>
-                      <p className="text-xs text-zinc-500">{pct(bands.monthPct)} band</p>
-                    </div>
+          <section className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
+            <h3 className="text-sm font-medium text-zinc-300">Options map</h3>
+            <p className="mt-1 text-xs text-zinc-500">
+              ATR×√days expected-move proxy for strike zones. Not implied vol.
+            </p>
+            {bands && selectedStock ? (
+              <div className="mt-4 space-y-3 text-sm">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-md bg-zinc-950/70 p-3">
+                    <p className="text-[11px] uppercase text-zinc-500">~1 week</p>
+                    <p className="mt-1 font-medium text-zinc-100">
+                      {money(bands.weekDown)} – {money(bands.weekUp)}
+                    </p>
+                    <p className="text-xs text-zinc-500">{pct(bands.weekPct)} band</p>
                   </div>
-                  <div className="rounded-md border border-zinc-800 p-3 text-xs text-zinc-400">
-                    <p>
-                      <span className="text-zinc-200">Bull call zone:</span> look above{' '}
-                      {money(bands.callStart)} (≈0.5 week EM) if trend/RS aligned.
+                  <div className="rounded-md bg-zinc-950/70 p-3">
+                    <p className="text-[11px] uppercase text-zinc-500">~1 month</p>
+                    <p className="mt-1 font-medium text-zinc-100">
+                      {money(bands.monthDown)} – {money(bands.monthUp)}
                     </p>
-                    <p className="mt-1">
-                      <span className="text-zinc-200">Bear put zone:</span> look below{' '}
-                      {money(bands.putStart)} if weak RS + broken SMAs.
-                    </p>
-                    <p className="mt-1">
-                      Prefer DTE ≥ 21–45 for swings so theta is slower; avoid short-dated into
-                      unknown catalysts unless defined-risk.
-                    </p>
+                    <p className="text-xs text-zinc-500">{pct(bands.monthPct)} band</p>
                   </div>
                 </div>
-              ) : (
-                <p className="mt-3 text-sm text-zinc-500">ATR unavailable for this symbol.</p>
-              )}
-            </div>
-
-            <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
-              <div className="flex items-center justify-between gap-2">
-                <h3 className="text-sm font-medium text-zinc-300">Setup read</h3>
-                {setup && (
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                      setup.bias === 'long'
-                        ? 'bg-emerald-500/15 text-emerald-300'
-                        : setup.bias === 'short'
-                          ? 'bg-red-500/15 text-red-300'
-                          : 'bg-zinc-800 text-zinc-400'
-                    }`}
-                  >
-                    {setup.bias.toUpperCase()} · score {setup.score}
-                  </span>
-                )}
-              </div>
-              <ul className="mt-3 space-y-2 text-sm text-zinc-400">
-                {(setup?.reasons || ['Insufficient structure']).map((r) => (
-                  <li key={r} className="flex gap-2">
-                    <span className="text-zinc-600">•</span>
-                    <span>{r}</span>
-                  </li>
-                ))}
-              </ul>
-              {selectedStock && (
-                <div className="mt-4 grid grid-cols-3 gap-2 text-center text-xs">
+                <div className="rounded-md border border-zinc-800 p-3 text-xs text-zinc-400">
+                  <p>
+                    Call zone above {money(bands.callStart)} · put zone below {money(bands.putStart)}
+                  </p>
+                  <p className="mt-1">Prefer 21–45 DTE for swings. Respect earnings / FOMC inside 7 days.</p>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-center text-xs">
                   {[
                     ['20', selectedStock.swing.aboveSma20],
                     ['50', selectedStock.swing.aboveSma50],
@@ -695,89 +684,20 @@ export default function DashPage() {
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
+              </div>
+            ) : (
+              <p className="mt-3 text-sm text-zinc-500">ATR unavailable.</p>
+            )}
           </section>
         </div>
 
-        {/* Board */}
-        <section className="mt-5 overflow-x-auto rounded-xl border border-zinc-800">
-          <table className="min-w-full text-left text-sm">
-            <thead className="bg-zinc-900 text-[11px] uppercase tracking-wide text-zinc-500">
-              <tr>
-                <th className="px-3 py-3 font-medium">Ticker</th>
-                <th className="px-3 py-3 font-medium text-right">Last</th>
-                <th className="px-3 py-3 font-medium text-right">Day</th>
-                <th className="px-3 py-3 font-medium text-right">1m</th>
-                <th className="px-3 py-3 font-medium text-right">RS1m</th>
-                <th className="px-3 py-3 font-medium text-right">RSI</th>
-                <th className="px-3 py-3 font-medium text-right">ATR%</th>
-                <th className="px-3 py-3 font-medium">Trend</th>
-                <th className="px-3 py-3 font-medium">Earn</th>
-                <th className="hidden px-3 py-3 font-medium lg:table-cell">3M</th>
-              </tr>
-            </thead>
-            <tbody>
-              {visible.map((s) => {
-                const active = selectedStock?.symbol === s.symbol
-                const earn = earningsBySymbol.get(s.symbol)
-                return (
-                  <tr
-                    key={s.symbol}
-                    onClick={() => setSelected(s.symbol)}
-                    className={`cursor-pointer border-t border-zinc-800/80 hover:bg-zinc-900/80 ${
-                      active ? 'bg-zinc-900' : ''
-                    }`}
-                  >
-                    <td className="px-3 py-2.5 font-semibold text-white">{s.symbol}</td>
-                    <td className="px-3 py-2.5 text-right tabular-nums">
-                      {money(s.price, s.currency)}
-                    </td>
-                    <td className={`px-3 py-2.5 text-right tabular-nums ${tone(s.changePercent)}`}>
-                      {pct(s.changePercent)}
-                    </td>
-                    <td className={`px-3 py-2.5 text-right tabular-nums ${tone(s.swing.ret21d)}`}>
-                      {pct(s.swing.ret21d)}
-                    </td>
-                    <td className={`px-3 py-2.5 text-right tabular-nums ${tone(s.rs21vsQqq)}`}>
-                      {pct(s.rs21vsQqq)}
-                    </td>
-                    <td className="px-3 py-2.5 text-right tabular-nums text-zinc-300">
-                      {num(s.swing.rsi14, 0)}
-                    </td>
-                    <td className="px-3 py-2.5 text-right tabular-nums text-zinc-300">
-                      {num(s.swing.atrPct)}
-                    </td>
-                    <td className="px-3 py-2.5 capitalize text-zinc-400">{s.swing.trend}</td>
-                    <td className="px-3 py-2.5 text-zinc-400">
-                      {earn ? (
-                        <span className={earn.daysUntil <= 14 ? 'text-amber-300' : ''}>
-                          {earn.daysUntil}d
-                        </span>
-                      ) : (
-                        '—'
-                      )}
-                    </td>
-                    <td className="hidden px-3 py-2.5 lg:table-cell">
-                      <Sparkline
-                        points={s.dailyData || []}
-                        up={(s.swing.ret63d || 0) >= 0}
-                      />
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </section>
-
-        {/* Bottom workspace */}
+        {/* Tabs */}
         <section className="mt-5 rounded-xl border border-zinc-800 bg-zinc-900/40">
           <div className="flex flex-wrap gap-1 border-b border-zinc-800 p-2">
             {(
               [
+                ['interviews', 'Interviews'],
                 ['catalysts', 'Catalysts'],
-                ['ideas', 'Trade ideas'],
                 ['news', 'News'],
                 ['social', 'Social'],
                 ['playbook', 'Playbook'],
@@ -797,37 +717,95 @@ export default function DashPage() {
           </div>
 
           <div className="p-4 sm:p-5">
+            {tab === 'interviews' && (
+              <div>
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-medium text-zinc-200">Founder / CEO / analyst interviews</h3>
+                    <p className="text-xs text-zinc-500">
+                      Latest YouTube podcasts & interviews (Gavin Baker, Jensen, Saylor, Karp, etc.)
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {interviewTags.map((tag) => (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => setInterviewFilter(tag)}
+                        className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
+                          interviewFilter === tag
+                            ? 'bg-zinc-100 text-zinc-950'
+                            : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800'
+                        }`}
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {filteredInterviews.length === 0 ? (
+                  <p className="text-sm text-zinc-500">No interviews loaded yet. Hit Refresh.</p>
+                ) : (
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    {filteredInterviews.map((v) => (
+                      <a
+                        key={v.id}
+                        href={v.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="group overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950/50 hover:border-zinc-600"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={v.thumbnail}
+                          alt=""
+                          className="aspect-video w-full object-cover opacity-90 transition group-hover:opacity-100"
+                        />
+                        <div className="p-3">
+                          <p className="line-clamp-2 text-sm font-medium text-zinc-100 group-hover:text-emerald-300">
+                            {v.title}
+                          </p>
+                          <p className="mt-1 text-xs text-zinc-500">
+                            {v.channel}
+                            {v.publishedLabel ? ` · ${v.publishedLabel}` : ''}
+                          </p>
+                          {v.related?.length > 0 && (
+                            <p className="mt-1 text-[11px] text-zinc-600">{v.related.join(' · ')}</p>
+                          )}
+                        </div>
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             {tab === 'catalysts' && (
               <div className="grid gap-6 lg:grid-cols-2">
                 <div>
                   <h3 className="mb-3 text-sm font-medium text-zinc-200">Watchlist earnings</h3>
                   <ul className="space-y-2">
-                    {earnings.length === 0 && (
-                      <li className="text-sm text-zinc-500">No upcoming prints found in scan window.</li>
-                    )}
                     {earnings.map((e) => (
-                      <li
-                        key={`${e.symbol}-${e.date}`}
-                        className="flex cursor-pointer items-start justify-between gap-3 rounded-md border border-zinc-800/80 px-3 py-2 hover:bg-zinc-950/50"
-                        onClick={() => setSelected(e.symbol)}
-                      >
-                        <div>
-                          <p className="text-sm font-medium text-white">
-                            {e.symbol}{' '}
-                            <span className="font-normal text-zinc-500">{e.date}</span>
-                          </p>
-                          <p className="text-xs text-zinc-500">
-                            {e.time}
-                            {e.epsForecast ? ` · cons. ${e.epsForecast}` : ''}
-                          </p>
-                        </div>
-                        <span
-                          className={`text-xs font-medium ${
-                            e.daysUntil <= 7 ? 'text-amber-300' : 'text-zinc-400'
-                          }`}
+                      <li key={`${e.symbol}-${e.date}`}>
+                        <button
+                          type="button"
+                          onClick={() => setSelected(e.symbol)}
+                          className="flex w-full items-start justify-between gap-3 rounded-md border border-zinc-800/80 px-3 py-2 text-left hover:bg-zinc-950/50"
                         >
-                          {e.daysUntil}d
-                        </span>
+                          <div>
+                            <p className="text-sm font-medium text-white">
+                              {e.symbol} <span className="font-normal text-zinc-500">{e.date}</span>
+                            </p>
+                            <p className="text-xs text-zinc-500">
+                              {e.time}
+                              {e.epsForecast ? ` · cons. ${e.epsForecast}` : ''}
+                            </p>
+                          </div>
+                          <span className={`text-xs font-medium ${e.daysUntil <= 7 ? 'text-amber-300' : 'text-zinc-400'}`}>
+                            {e.daysUntil}d
+                          </span>
+                        </button>
                       </li>
                     ))}
                   </ul>
@@ -847,54 +825,12 @@ export default function DashPage() {
                       </li>
                     ))}
                   </ul>
-                  {notes.length > 0 && (
-                    <div className="mt-4 space-y-1 text-xs text-zinc-500">
-                      {notes.map((n) => (
-                        <p key={n}>{n}</p>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {tab === 'ideas' && (
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                {ideas.length === 0 && (
-                  <p className="text-sm text-zinc-500">
-                    No high-conviction long/short scores right now — mixed tape. Favor observation
-                    or defined-risk calendars.
-                  </p>
-                )}
-                {ideas.map(({ stock: s, setup: idea }) => (
-                  <button
-                    key={s.symbol}
-                    type="button"
-                    onClick={() => setSelected(s.symbol)}
-                    className="rounded-lg border border-zinc-800 bg-zinc-950/40 p-4 text-left hover:border-zinc-600"
-                  >
-                    <div className="flex items-center justify-between">
-                      <p className="text-lg font-semibold text-white">{s.symbol}</p>
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                          idea.bias === 'long'
-                            ? 'bg-emerald-500/15 text-emerald-300'
-                            : 'bg-red-500/15 text-red-300'
-                        }`}
-                      >
-                        {idea.bias}
-                      </span>
-                    </div>
-                    <p className={`mt-1 text-sm ${tone(s.swing.ret21d)}`}>
-                      1m {pct(s.swing.ret21d)} · RS {pct(s.rs21vsQqq)}
+                  {notes.map((n) => (
+                    <p key={n} className="mt-3 text-xs text-zinc-500">
+                      {n}
                     </p>
-                    <ul className="mt-3 space-y-1 text-xs text-zinc-500">
-                      {idea.reasons.slice(0, 3).map((r) => (
-                        <li key={r}>• {r}</li>
-                      ))}
-                    </ul>
-                  </button>
-                ))}
+                  ))}
+                </div>
               </div>
             )}
 
@@ -922,23 +858,15 @@ export default function DashPage() {
             {tab === 'social' && (
               <ul className="space-y-3">
                 {tweets.length === 0 && (
-                  <li className="text-sm text-zinc-500">
-                    Social feed empty (API plan limits). Use news + flow buzz on the board.
-                  </li>
+                  <li className="text-sm text-zinc-500">Social feed empty right now (API limits).</li>
                 )}
                 {tweets.map((t) => (
                   <li key={t.id} className="border-t border-zinc-800 pt-3 first:border-0 first:pt-0">
-                    <a
-                      href={t.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-sm text-zinc-200 hover:text-emerald-300"
-                    >
+                    <a href={t.url} target="_blank" rel="noreferrer" className="text-sm text-zinc-200 hover:text-emerald-300">
                       {t.text}
                     </a>
                     <p className="mt-1 text-xs text-zinc-500">
                       @{t.authorHandle} · {relativeTime(t.timestamp)}
-                      {typeof t.likes === 'number' ? ` · ${t.likes} likes` : ''}
                     </p>
                   </li>
                 ))}
@@ -950,24 +878,20 @@ export default function DashPage() {
                 <div>
                   <h3 className="text-sm font-medium text-zinc-200">Weekly / monthly options checklist</h3>
                   <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-zinc-400">
-                    <li>Bias from higher timeframe first (3M trend + SMA stack), not the 5m chart.</li>
-                    <li>Require relative strength confirmation vs QQQ for directional premium buys.</li>
-                    <li>Size with ATR: risk ≈ 0.5–1.0 week expected move; avoid lottery short-dated.</li>
-                    <li>Check earnings / FOMC / CPI / OPEX — if inside 7 days, prefer defined risk or wait.</li>
-                    <li>If RSI extended against your bias, wait for pullback/reclaim instead of chasing.</li>
-                    <li>Write the invalidation level before entry (SMA50 loss, failed breakout, etc.).</li>
-                    <li>Roll or take profits into strength; don&apos;t let winners become lottery tickets.</li>
+                    <li>Bias from 3M trend + SMA stack first, not the 5m chart.</li>
+                    <li>Confirm relative strength vs QQQ before buying directional premium.</li>
+                    <li>Size with ATR bands; prefer 21–45 DTE.</li>
+                    <li>If earnings/FOMC/CPI is inside 7 days, define risk or wait.</li>
+                    <li>Write invalidation before entry.</li>
                   </ol>
                 </div>
                 <div>
-                  <h3 className="text-sm font-medium text-zinc-200">Alpha habits for this book</h3>
+                  <h3 className="text-sm font-medium text-zinc-200">Book notes</h3>
                   <ul className="mt-3 space-y-2 text-sm text-zinc-400">
-                    <li>• Treat MSTR/CLSK/BMNR as BTC beta — check BTC regime before equity entries.</li>
-                    <li>• NVDA/MU/PLTR often move as an AI complex; pair-trade or stagger entries.</li>
-                    <li>• SPCX/TSLA share narrative flow — correlation spikes on Musk headlines.</li>
-                    <li>• GLD/COPX are hedge tells: rising together with soft QQQ = defensive tape.</li>
-                    <li>• After OPEX, look for fresh swings once dealer pinning fades (Mon–Tue).</li>
-                    <li>• Journal: thesis, DTE, max loss, catalyst, and why you&apos;d exit early.</li>
+                    <li>• MSTR/CLSK/BMNR = BTC beta — check BTC before equity entries.</li>
+                    <li>• NVDA/MU/PLTR often move as one AI complex.</li>
+                    <li>• SPCX/TSLA narrative correlation spikes on Musk headlines.</li>
+                    <li>• Use Interviews tab for catalyst context before sizing swings.</li>
                   </ul>
                 </div>
               </div>
@@ -976,7 +900,7 @@ export default function DashPage() {
         </section>
 
         <p className="mt-6 text-center text-xs text-zinc-600">
-          Not investment advice. Quotes via Yahoo Finance · earnings via Nasdaq calendar ·{' '}
+          Not investment advice ·{' '}
           <span className="text-zinc-400">difaziotennis.com/dash</span>
         </p>
       </div>
