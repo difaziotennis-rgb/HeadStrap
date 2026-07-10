@@ -91,6 +91,7 @@ type Interview = {
   url: string
   thumbnail: string
   related: string[]
+  voice?: string
 }
 
 type Tab = 'interviews' | 'catalysts' | 'news' | 'social' | 'playbook'
@@ -374,13 +375,18 @@ export default function DashPage() {
 
   const interviewTags = useMemo(() => {
     const tags = new Set<string>()
-    interviews.forEach((v) => v.related.forEach((t) => tags.add(t)))
+    interviews.forEach((v) => {
+      v.related.forEach((t) => tags.add(t))
+      if (v.voice) tags.add(v.voice)
+    })
     return ['All', ...Array.from(tags).sort()]
   }, [interviews])
 
   const filteredInterviews = useMemo(() => {
     if (interviewFilter === 'All') return interviews
-    return interviews.filter((v) => v.related.includes(interviewFilter))
+    return interviews.filter(
+      (v) => v.related.includes(interviewFilter) || v.voice === interviewFilter
+    )
   }, [interviews, interviewFilter])
 
   const bands = selectedStock ? optionsBands(selectedStock) : null
@@ -721,9 +727,9 @@ export default function DashPage() {
               <div>
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <h3 className="text-sm font-medium text-zinc-200">Founder / CEO / analyst interviews</h3>
+                    <h3 className="text-sm font-medium text-zinc-200">Interviews & market clips</h3>
                     <p className="text-xs text-zinc-500">
-                      Past few days only — YouTube podcasts & interviews (Gavin Baker, Jensen, Saylor, Karp, etc.)
+                      Past few days — Saylor, Tom Lee, Gavin Baker, Cathie Wood, Dan Ives, founders/CEOs, and show clips
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
@@ -769,6 +775,7 @@ export default function DashPage() {
                             {v.title}
                           </p>
                           <p className="mt-1 text-xs text-zinc-500">
+                            {v.voice ? `${v.voice} · ` : ''}
                             {v.channel}
                             {v.publishedLabel ? ` · ${v.publishedLabel}` : ''}
                           </p>
