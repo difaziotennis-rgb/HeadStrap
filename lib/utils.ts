@@ -19,16 +19,24 @@ export function formatTime(hour: number): string {
 
 /**
  * Returns the available hour slots for a given day of the week.
- * - Monday (1) & Friday (5): 9 AM–6 PM + 7:30 PM (no 7 PM)
+ * - Monday (1): 9 AM–6 PM + 7:30 PM (no 7 PM)
+ * - Friday (5): 8 AM–6 PM + 7:30 PM (no 7 PM)
  * - Wednesday (3): 8 AM–8 PM (on the hour)
  * - All other days: 8 AM–8 PM
  * Returns all regular time slots for the given day.
  */
 export function getHoursForDay(dayOfWeek: number): number[] {
-  if (dayOfWeek === 1 || dayOfWeek === 5) {
-    // Monday & Friday: 9–18, then 19.5 (7:30 PM)
+  if (dayOfWeek === 1) {
+    // Monday: 9–18, then 19.5 (7:30 PM)
     const hours: number[] = [];
     for (let h = 9; h <= 18; h++) hours.push(h);
+    hours.push(19.5);
+    return hours;
+  }
+  if (dayOfWeek === 5) {
+    // Friday: 8–18, then 19.5 (7:30 PM)
+    const hours: number[] = [];
+    for (let h = 8; h <= 18; h++) hours.push(h);
     hours.push(19.5);
     return hours;
   }
