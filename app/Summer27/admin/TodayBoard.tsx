@@ -414,13 +414,13 @@ export default function TodayBoard({
       .filter((b) => b.date === selectedDate)
       .reduce<Record<string, { clinicId: string; name: string; time: number; rows: S27ClinicBooking[] }>>(
         (acc, b) => {
-          const def = catalog.clinics.find((c) => c.id === b.clinicId);
+          const def = clinicDefFor(catalog, b.clinicId, b.clinicName);
           const key = b.clinicId || b.clinicName;
           if (!acc[key]) {
             acc[key] = {
               clinicId: b.clinicId,
               name: b.clinicName,
-              time: def?.startHour ?? 8,
+              time: clinicStartHour(catalog, b.clinicId, b.clinicName),
               rows: [],
             };
           }
