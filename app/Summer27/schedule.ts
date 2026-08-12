@@ -111,11 +111,21 @@ export function saveCatalog(catalog: S27Catalog) {
 }
 
 export function getLiveClinics(): ClinicDef[] {
-  return getCatalog().clinics;
+  try {
+    const clinics = getCatalog().clinics;
+    return Array.isArray(clinics) && clinics.length ? clinics : s27Clinics;
+  } catch {
+    return s27Clinics;
+  }
 }
 
 export function getLiveEvents(): EventDef[] {
-  return getCatalog().events;
+  try {
+    const events = getCatalog().events;
+    return Array.isArray(events) && events.length ? events : s27Events;
+  } catch {
+    return s27Events;
+  }
 }
 
 export function getLiveCourtRates() {

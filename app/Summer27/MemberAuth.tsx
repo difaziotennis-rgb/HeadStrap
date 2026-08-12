@@ -19,8 +19,12 @@ export default function MemberAuth() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    ensureDerekMember();
-    setSession(parseS27Session(localStorage.getItem(S27_MEMBER_SESSION_KEY)));
+    try {
+      ensureDerekMember();
+      setSession(parseS27Session(localStorage.getItem(S27_MEMBER_SESSION_KEY)));
+    } catch {
+      setSession(null);
+    }
   }, []);
 
   function signOut() {
@@ -33,11 +37,16 @@ export default function MemberAuth() {
   function signIn(e: React.FormEvent) {
     e.preventDefault();
     const members = loadList<S27MemberAccount>(KEYS.members);
-    const match = members.find(
-      (m) =>
-        (m.email.toLowerCase() === email.trim().toLowerCase() || m.memberNumber === email.trim()) &&
-        m.password === password
-    );
+    const key = email.trim().toLowerCase().replace(/^#/, "");
+    const pass = password.trim();
+    const match = members.find((m) => {
+      if (!m || typeof m.email !== "string") return false;
+      const idMatch =
+        m.email.toLowerCase() === key ||
+        String(m.memberNumber) === key ||
+        String(m.name || "").trim().toLowerCase() === key;
+      return idMatch && String(m.password || "") === pass;
+    });
     if (!match) {
       setMsg("No match. Check email / member # and password, or join first.");
       return;

@@ -10,10 +10,10 @@ import {
   clinicTimeLabel,
   formatDateInput,
   parseDateInput,
+  s27Clinics,
   type ClinicDef,
 } from "../summer27-data";
 import { getLiveClinics } from "../schedule";
-import { seedMockBookings } from "../mock-bookings";
 import {
   KEYS,
   loadList,
@@ -21,8 +21,9 @@ import {
   type S27ClinicBooking,
 } from "../storage";
 
-function nextDatesForClinic(clinic: ClinicDef, count = 6): string[] {
+function nextDatesForClinic(clinic: ClinicDef | undefined, count = 6): string[] {
   const dates: string[] = [];
+  if (!clinic || !Array.isArray(clinic.days)) return dates;
   const start = new Date();
   start.setHours(0, 0, 0, 0);
   for (let i = 0; i < 60 && dates.length < count; i++) {
@@ -45,8 +46,8 @@ function Summer27ClinicsInner() {
   const session = useS27Session();
   const searchParams = useSearchParams();
   const [bookings, setBookings] = useState<S27ClinicBooking[]>([]);
-  const clinics = getLiveClinics();
-  const [selectedId, setSelectedId] = useState(clinics.find((c) => c.kind === "adult")?.id || clinics[0].id);
+  const [clinics, setClinics] = useState<ClinicDef[]>(s27Clinics.filter((c) => c.kind === "adult"));
+  const [selectedId, setSelectedId] = useState(s27Clinics.find((c) => c.kind === "adult")?.id || "");
   const [date, setDate] = useState("");
   const [guestName, setGuestName] = useState("");
   const [guestEmail, setGuestEmail] = useState("");
@@ -57,10 +58,18 @@ function Summer27ClinicsInner() {
   const dates = useMemo(() => nextDatesForClinic(clinic), [clinic]);
   const isMember = !!session;
   const savedCard = canOneClick(session);
-  const price = isMember ? clinic.memberPrice : clinic.guestPrice;
+  const price = clinic ? (isMember ? clinic.memberPrice : clinic.guestPrice) : 0;
 
   useEffect(() => {
-    seedMockBookings();
+    try {
+      const live = getLiveClinics().filter((c) => c.kind === "adult");
+      if (live.length) {
+        setClinics(live);
+        setSelectedId((id) => (live.some((c) => c.id === id) ? id : live[0].id));
+      }
+    } catch {
+      // keep defaults
+    }
     setBookings(loadList<S27ClinicBooking>(KEYS.clinics));
   }, []);
 
@@ -83,12 +92,14 @@ function Summer27ClinicsInner() {
 
   const roster = useMemo(
     () =>
-      bookings.filter(
-        (b) => b.clinicId === clinic.id && b.date === date && b.paymentStatus === "paid"
-      ),
-    [bookings, clinic.id, date]
+      !clinic
+        ? []
+        : bookings.filter(
+            (b) => b.clinicId === clinic.id && b.date === date && b.paymentStatus === "paid"
+          ),
+    [bookings, clinic, date]
   );
-  const seatsLeft = Math.max(0, clinic.capacity - roster.length);
+  const seatsLeft = clinic ? Math.max(0, clinic.capacity - roster.length) : 0;
   const alreadyIn =
     !!session && roster.some((b) => b.memberNumber === session.memberNumber || b.clientEmail === session.memberEmail);
 
@@ -109,6 +120,7 @@ function Summer27ClinicsInner() {
       return;
     }
 
+    if (!clinic) return;
     const id = `clinic-${Date.now()}`;
     const booking: S27ClinicBooking = {
       id,
@@ -152,6 +164,8 @@ function Summer27ClinicsInner() {
     }
     setMsg(checkout.error || "Checkout failed.");
   }
+
+  if (!clinic) return null;
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">

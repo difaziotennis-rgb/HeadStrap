@@ -372,8 +372,13 @@ export function seedMockBookings() {
     saveList(KEYS.lessons, keepReal(loadList<S27LessonBooking>(KEYS.lessons), seedLessons()));
     saveList(KEYS.events, keepReal(loadList<S27EventBooking>(KEYS.events), seedEvents()));
     saveList(KEYS.stringing, keepReal(loadList<S27StringingOrder>(KEYS.stringing), seedStringing()));
-    localStorage.setItem(MOCK_FLAG, "1");
   } catch (err) {
     console.error("Summer27 mock seed failed", err);
+  } finally {
+    try {
+      localStorage.setItem(MOCK_FLAG, "1");
+    } catch {
+      // ignore
+    }
   }
 }

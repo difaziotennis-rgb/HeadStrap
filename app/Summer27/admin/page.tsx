@@ -96,8 +96,16 @@ export default function Summer27DirectorPage() {
   const [catalog, setCatalog] = useState<S27Catalog>(defaultCatalog());
 
   function reload() {
-    seedMockBookings();
-    ensureDerekMember();
+    try {
+      seedMockBookings();
+    } catch {
+      // mock seed should never block the desk
+    }
+    try {
+      ensureDerekMember();
+    } catch {
+      // keep going
+    }
     setMembers(loadList<S27MemberAccount>(KEYS.members));
     setCourts(uniqueCourts(loadRecord<S27CourtBooking>(KEYS.courts)));
     setClinics(loadList<S27ClinicBooking>(KEYS.clinics));

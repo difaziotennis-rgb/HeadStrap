@@ -120,7 +120,7 @@ export function safeParse<T>(raw: string | null, fallback: T): T {
 export function loadList<T>(key: string): T[] {
   if (typeof window === "undefined") return [];
   const parsed = safeParse<unknown>(localStorage.getItem(key), []);
-  return Array.isArray(parsed) ? (parsed as T[]) : [];
+  return Array.isArray(parsed) ? parsed.filter((item) => item != null) as T[] : [];
 }
 
 export function saveList<T>(key: string, value: T[]) {
@@ -134,23 +134,34 @@ export function saveList<T>(key: string, value: T[]) {
 
 export function loadRecord<T>(key: string): Record<string, T> {
   if (typeof window === "undefined") return {};
-  return safeParse<Record<string, T>>(localStorage.getItem(key), {});
+  const parsed = safeParse<unknown>(localStorage.getItem(key), {});
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+  return parsed as Record<string, T>;
 }
 
 export function saveRecord<T>(key: string, value: Record<string, T>) {
   if (typeof window === "undefined") return;
-  localStorage.setItem(key, JSON.stringify(value));
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // private mode / quota
+  }
 }
 
 export function uniqueCourts(map: Record<string, S27CourtBooking>): S27CourtBooking[] {
-  return Object.values(map).filter((b, i, arr) => arr.findIndex((x) => x.id === b.id) === i);
+  const values = Object.values(map || {}).filter(
+    (b): b is S27CourtBooking => !!b && typeof b.id === "string"
+  );
+  return values.filter((b, i, arr) => arr.findIndex((x) => x.id === b.id) === i);
 }
 
 export function persistCourts(list: S27CourtBooking[]) {
   const rec: Record<string, S27CourtBooking> = {};
   for (const booking of list) {
-    for (let i = 0; i < booking.durationHours; i++) {
-      rec[courtBookingKey(booking.date, booking.courtId, booking.hour + i)] = booking;
+    if (!booking?.id || !booking.date || !booking.courtId) continue;
+    const hours = Number(booking.durationHours) || 1;
+    for (let i = 0; i < hours; i++) {
+      rec[courtBookingKey(booking.date, booking.courtId, Number(booking.hour) + i)] = booking;
     }
   }
   saveRecord(KEYS.courts, rec);
@@ -179,45 +190,53 @@ export function ensureDerekMember(): S27MemberAccount {
   };
   if (typeof window === "undefined") return account;
 
-  const members = loadList<S27MemberAccount>(KEYS.members);
-  const existing = members.find(
-    (m) =>
-      m.memberNumber === DEREK_MEMBER.memberNumber ||
-      m.email.toLowerCase() === DEREK_MEMBER.email.toLowerCase() ||
-      m.name.trim().toLowerCase() === "derek difazio"
-  );
-  const derek: S27MemberAccount = existing
-    ? {
-        ...existing,
-        name: DEREK_MEMBER.name,
-        email: DEREK_MEMBER.email,
-        phone: existing.phone || DEREK_MEMBER.phone,
-        password: DEREK_MEMBER.password,
-      }
-    : account;
-  saveList(
-    KEYS.members,
-    existing
-      ? members.map((m) => (m.memberNumber === existing.memberNumber ? derek : m))
-      : [derek, ...members]
-  );
+  try {
+    const members = loadList<S27MemberAccount>(KEYS.members).filter(
+      (m) => m && typeof m.email === "string" && typeof m.memberNumber === "string"
+    );
+    const existing = members.find(
+      (m) =>
+        m.memberNumber === DEREK_MEMBER.memberNumber ||
+        m.email.toLowerCase() === DEREK_MEMBER.email.toLowerCase() ||
+        String(m.name || "").trim().toLowerCase() === "derek difazio"
+    );
+    const derek: S27MemberAccount = existing
+      ? {
+          ...existing,
+          name: DEREK_MEMBER.name,
+          email: DEREK_MEMBER.email,
+          phone: existing.phone || DEREK_MEMBER.phone,
+          password: DEREK_MEMBER.password,
+        }
+      : account;
+    saveList(
+      KEYS.members,
+      existing
+        ? members.map((m) => (m.memberNumber === existing.memberNumber ? derek : m))
+        : [derek, ...members]
+    );
 
-  const payments = loadList<S27PaymentProfile>(KEYS.payment);
-  if (!payments.some((p) => p.memberNumber === derek.memberNumber)) {
-    saveList(KEYS.payment, [
-      ...payments,
-      {
-        memberNumber: derek.memberNumber,
-        brand: "Visa",
-        last4: "4242",
-        expMonth: "12",
-        expYear: "28",
-        billingZip: "12572",
-        oneClick: true,
-      },
-    ]);
+    const payments = loadList<S27PaymentProfile>(KEYS.payment).filter(
+      (p) => p && typeof p.memberNumber === "string"
+    );
+    if (!payments.some((p) => p.memberNumber === derek.memberNumber)) {
+      saveList(KEYS.payment, [
+        ...payments,
+        {
+          memberNumber: derek.memberNumber,
+          brand: "Visa",
+          last4: "4242",
+          expMonth: "12",
+          expYear: "28",
+          billingZip: "12572",
+          oneClick: true,
+        },
+      ]);
+    }
+    return derek;
+  } catch {
+    return account;
   }
-  return derek;
 }
 
 export function nextMemberNumber(existing: S27MemberAccount[]): string {
