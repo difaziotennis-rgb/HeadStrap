@@ -410,10 +410,10 @@ function seedStringing(): S27StringingOrder[] {
   const rackets = [
     ["Wilson Blade 98", "Polyester", "52", 32],
     ["Babolat Pure Drive", "Multifilament", "55", 28],
-    ["Head Gravity Tour", "Hybrid (poly + multi)", "50", 38],
+    ["Head Gravity Tour", "Hybrid (poly + multi)", "50", 34],
     ["Yonex Ezone 100", "Synthetic gut", "54", 18],
     ["Prince Phantom", "Polyester", "48", 32],
-    ["Wilson Pro Staff", "Hybrid (poly + multi)", "53", 38],
+    ["Wilson Pro Staff", "Hybrid (poly + multi)", "53", 34],
     ["Head Radical MP", "Polyester", "51", 32],
     ["Babolat Pure Aero", "Multifilament", "56", 28],
   ] as const;
