@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   BOOKING_HOURS,
   COURTS,
@@ -272,9 +272,13 @@ function LessonsBlock({
   const [status, setStatus] = useState<"paid" | "pending">("paid");
   const pro = pros.find((p) => p.id === proId) || pros[0];
   const list = lessons
-    .filter((b) => inRangeDate(b.date, range, b.paymentStatus === "pending"))
+    .filter((b) => inRangeDate(b.date, range, b.paymentStatus === "pending" || b.requestStatus === "requested"))
     .slice()
-    .sort((a, b) => `${a.date}${a.hour}`.localeCompare(`${b.date}${b.hour}`));
+    .sort((a, b) => {
+      const req = Number(b.requestStatus === "requested") - Number(a.requestStatus === "requested");
+      if (req) return req;
+      return `${a.date}${a.hour}`.localeCompare(`${b.date}${b.hour}`);
+    });
 
   function add(e: React.FormEvent) {
     e.preventDefault();
@@ -299,6 +303,7 @@ function LessonsBlock({
         amount: duration === "90" ? Math.round(hourly * 1.5) : hourly,
         paymentStatus: status,
         paymentMethod: "manual",
+        requestStatus: "accepted",
         createdAt: new Date().toISOString(),
       },
     ]);
@@ -330,14 +335,41 @@ function LessonsBlock({
       </form>
       <SimpleList
         empty="No lessons in this view."
-        rows={list.map((b) => ({
-          id: b.id,
-          title: `${lessonProLabel(b)} · ${formatPrettyDate(b.date)} ${formatHour(b.hour)}`,
-          detail: `${b.clientName} · ${b.duration} min${b.focus ? ` · ${b.focus}` : ""} · $${b.amount}`,
-          status: b.paymentStatus,
-          onPaid: () => onLessons(lessons.map((x) => (x.id === b.id ? { ...x, paymentStatus: x.paymentStatus === "paid" ? "pending" : "paid" } : x))),
-          onDelete: () => onLessons(lessons.filter((x) => x.id !== b.id)),
-        }))}
+        rows={list.map((b) => {
+          const requested = b.requestStatus === "requested";
+          return {
+            id: b.id,
+            title: `${lessonProLabel(b)} · ${formatPrettyDate(b.date)} ${formatHour(b.hour)}`,
+            detail: `${b.clientName} · ${b.duration} min${b.focus ? ` · ${b.focus}` : ""} · $${b.amount}${
+              requested ? " · REQUEST" : b.requestStatus === "accepted" ? " · accepted" : ""
+            }`,
+            status: b.paymentStatus,
+            actions: requested ? (
+              <>
+                <button
+                  type="button"
+                  className="text-[12px] font-medium text-[#3d5c34]"
+                  onClick={() =>
+                    onLessons(lessons.map((x) => (x.id === b.id ? { ...x, requestStatus: "accepted" as const } : x)))
+                  }
+                >
+                  Accept
+                </button>
+                <button
+                  type="button"
+                  className="text-[12px] font-medium text-[#991b1b]"
+                  onClick={() =>
+                    onLessons(lessons.map((x) => (x.id === b.id ? { ...x, requestStatus: "declined" as const } : x)))
+                  }
+                >
+                  Decline
+                </button>
+              </>
+            ) : null,
+            onPaid: () => onLessons(lessons.map((x) => (x.id === b.id ? { ...x, paymentStatus: x.paymentStatus === "paid" ? "pending" : "paid" } : x))),
+            onDelete: () => onLessons(lessons.filter((x) => x.id !== b.id)),
+          };
+        })}
       />
     </>
   );
@@ -588,7 +620,15 @@ function SimpleList({
   rows,
 }: {
   empty: string;
-  rows: Array<{ id: string; title: string; detail: string; status: "paid" | "pending"; onPaid: () => void; onDelete: () => void }>;
+  rows: Array<{
+    id: string;
+    title: string;
+    detail: string;
+    status: "paid" | "pending";
+    actions?: ReactNode;
+    onPaid: () => void;
+    onDelete: () => void;
+  }>;
 }) {
   if (rows.length === 0) {
     return <p className="rounded-2xl border border-[#e8e5df] bg-white p-4 text-[13px] text-[#8a8477]">{empty}</p>;
@@ -602,6 +642,7 @@ function SimpleList({
             <p className="text-[12px] text-[#6b665e]">{row.detail}</p>
           </div>
           <div className="flex items-center gap-2">
+            {row.actions}
             <PaidPill status={row.status} onToggle={row.onPaid} />
             <button type="button" onClick={row.onDelete} className="text-[12px] text-[#991b1b]">
               Delete

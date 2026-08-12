@@ -29,6 +29,8 @@ type Props = {
   onToggleCourt: (id: string) => void;
   onToggleClinic: (id: string) => void;
   onToggleLesson: (id: string) => void;
+  onAcceptLessonRequest: (id: string) => void;
+  onDeclineLessonRequest: (id: string) => void;
   onToggleEvent: (id: string) => void;
   onToggleStringing: (id: string) => void;
   onMarkStringingReady: (id: string) => void;
@@ -72,6 +74,8 @@ export default function TodayBoard({
   onToggleCourt,
   onToggleClinic,
   onToggleLesson,
+  onAcceptLessonRequest,
+  onDeclineLessonRequest,
   onToggleEvent,
   onToggleStringing,
   onMarkStringingReady,
@@ -92,7 +96,7 @@ export default function TodayBoard({
       onToggle: () => onToggleCourt(b.id),
     }));
   const lessonItems: GlanceItem[] = lessons
-    .filter((b) => b.date === today)
+    .filter((b) => b.date === today && b.requestStatus !== "declined" && b.requestStatus !== "requested")
     .map((b) => ({
       id: b.id,
       time: b.hour,
@@ -104,6 +108,12 @@ export default function TodayBoard({
       memberNumber: memberNumberFor(members, b.memberNumber, b.clientEmail),
       onToggle: () => onToggleLesson(b.id),
     }));
+  const lessonRequests = lessons
+    .filter((b) => b.requestStatus === "requested")
+    .slice()
+    .sort((a, b) =>
+      `${a.date}${String(a.hour).padStart(2, "0")}`.localeCompare(`${b.date}${String(b.hour).padStart(2, "0")}`)
+    );
   const holdItems: GlanceItem[] = blocks
     .filter((b) => b.date === today)
     .map((b) => ({
@@ -156,7 +166,9 @@ export default function TodayBoard({
   const pendingRows = [
     ...courts.filter((b) => b.date === today && b.paymentStatus === "pending").map((b) => ({ id: b.id, name: b.clientName, label: b.courtName, amount: b.amount, onToggle: () => onToggleCourt(b.id) })),
     ...clinics.filter((b) => b.date === today && b.paymentStatus === "pending").map((b) => ({ id: b.id, name: b.clientName, label: b.clinicName, amount: b.amount, onToggle: () => onToggleClinic(b.id) })),
-    ...lessons.filter((b) => b.date === today && b.paymentStatus === "pending").map((b) => ({ id: b.id, name: b.clientName, label: lessonProLabel(b), amount: b.amount, onToggle: () => onToggleLesson(b.id) })),
+    ...lessons
+      .filter((b) => b.date === today && b.paymentStatus === "pending" && b.requestStatus !== "requested" && b.requestStatus !== "declined")
+      .map((b) => ({ id: b.id, name: b.clientName, label: lessonProLabel(b), amount: b.amount, onToggle: () => onToggleLesson(b.id) })),
     ...events.filter((b) => b.eventDate === today && b.paymentStatus === "pending").map((b) => ({ id: b.id, name: b.attendeeName, label: b.eventTitle, amount: b.amount, onToggle: () => onToggleEvent(b.id) })),
     ...stringing.filter((b) => b.pickupDate === today && b.paymentStatus === "pending").map((b) => ({ id: b.id, name: b.clientName, label: "Stringing", amount: b.amount, onToggle: () => onToggleStringing(b.id) })),
   ];
@@ -165,6 +177,43 @@ export default function TodayBoard({
   return (
     <div className="mt-4 space-y-4">
       <p className="text-[15px] font-medium text-[#1a1a1a]">{formatPrettyDate(today)}</p>
+
+      {lessonRequests.length > 0 && (
+        <section className="rounded-2xl border border-[#d7e0ef] bg-[#f4f7fb] p-4">
+          <p className="text-[12px] font-medium uppercase tracking-[0.12em] text-[#3d5273]">
+            Lesson requests · {lessonRequests.length}
+          </p>
+          <ul className="mt-2 space-y-2">
+            {lessonRequests.map((b) => (
+              <li key={b.id} className="flex flex-wrap items-start justify-between gap-2 text-[15px]">
+                <div className="min-w-0">
+                  <p className="font-medium leading-tight">{b.clientName}</p>
+                  <p className="text-[13px] text-[#6b665e]">
+                    {lessonProLabel(b)} · {formatPrettyDate(b.date)} {formatHour(b.hour)} · {b.duration} min
+                    {b.focus ? ` · ${b.focus}` : ""}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => onAcceptLessonRequest(b.id)}
+                    className="text-[13px] font-medium text-[#3d5c34]"
+                  >
+                    Accept
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onDeclineLessonRequest(b.id)}
+                    className="text-[13px] font-medium text-[#991b1b]"
+                  >
+                    Decline
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {pendingRows.length > 0 && (
         <section className="rounded-2xl border border-[#ead9c2] bg-[#fbf6ee] p-4">

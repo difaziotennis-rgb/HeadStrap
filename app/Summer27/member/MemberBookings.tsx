@@ -106,17 +106,21 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
           booking: b,
         };
       }),
-      ...lessons.map((b) => ({
-        id: b.id,
-        kind: "lesson" as const,
-        date: b.date,
-        hour: b.hour,
-        label: `${lessonProLabel(b)} · ${formatPrettyDate(b.date)} ${formatHour(b.hour)}`,
-        detail: `${b.duration} min${b.focus ? ` · ${b.focus}` : ""}`,
-        amount: b.amount,
-        status: b.paymentStatus,
-        booking: b,
-      })),
+      ...lessons
+        .filter((b) => b.requestStatus !== "declined")
+        .map((b) => ({
+          id: b.id,
+          kind: "lesson" as const,
+          date: b.date,
+          hour: b.hour,
+          label: `${lessonProLabel(b)} · ${formatPrettyDate(b.date)} ${formatHour(b.hour)}`,
+          detail: `${b.duration} min${b.focus ? ` · ${b.focus}` : ""}${
+            b.requestStatus === "requested" ? " · Awaiting reply" : b.requestStatus === "accepted" ? " · Confirmed" : ""
+          }`,
+          amount: b.amount,
+          status: b.paymentStatus,
+          booking: b,
+        })),
       ...events.map((b) => {
         const def = liveEvents.find((e) => e.id === b.eventId);
         return {
@@ -209,7 +213,9 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
   }
 
   function cancelBooking(row: (typeof rows)[number]) {
-    if (!canChangeBooking(row.date, row.hour)) {
+    const lessonRequest =
+      row.kind === "lesson" && (row.booking as S27LessonBooking).requestStatus === "requested";
+    if (!lessonRequest && !canChangeBooking(row.date, row.hour)) {
       setMsg(`Cancellations must be made at least ${CANCEL_WINDOW_HOURS} hours before start.`);
       return;
     }
@@ -397,7 +403,9 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
   }
 
   function renderBooking(row: (typeof rows)[number], canEdit: boolean) {
-        const open = canEdit && canChangeBooking(row.date, row.hour);
+        const lessonRequest =
+          row.kind === "lesson" && (row.booking as S27LessonBooking).requestStatus === "requested";
+        const open = canEdit && (lessonRequest || canChangeBooking(row.date, row.hour));
         const clinicDef = row.kind === "clinic" ? liveClinics.find((c) => c.id === (row.booking as S27ClinicBooking).clinicId) : null;
         return (
           <div key={row.id} className="rounded-lg border border-[#ece8e2] bg-[#faf9f7] p-3">
@@ -408,17 +416,28 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
                 </p>
                 <p className="text-[13px] font-medium">{row.label}</p>
                 <p className="text-[12px] text-[#6b665e]">
-                  ${row.amount} · {row.status === "paid" ? "Paid" : "Pending"}
+                  ${row.amount} ·{" "}
+                  {lessonRequest
+                    ? "Requested"
+                    : row.kind === "lesson" && (row.booking as S27LessonBooking).requestStatus === "accepted"
+                      ? row.status === "paid"
+                        ? "Confirmed · Paid"
+                        : "Confirmed"
+                      : row.status === "paid"
+                        ? "Paid"
+                        : "Pending"}
                   {row.detail ? ` · ${row.detail}` : ""}
                 </p>
               </div>
               {open ? (
                 <div className="flex gap-2">
-                  <button type="button" onClick={() => startEdit(row)} className="text-[12px] text-[#6b665e] underline-offset-2 hover:underline">
-                    Change
-                  </button>
+                  {!lessonRequest && (
+                    <button type="button" onClick={() => startEdit(row)} className="text-[12px] text-[#6b665e] underline-offset-2 hover:underline">
+                      Change
+                    </button>
+                  )}
                   <button type="button" onClick={() => cancelBooking(row)} className="text-[12px] text-[#991b1b]">
-                    Cancel
+                    {lessonRequest ? "Withdraw" : "Cancel"}
                   </button>
                 </div>
               ) : null}

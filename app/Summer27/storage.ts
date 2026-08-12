@@ -78,6 +78,8 @@ export type S27LessonBooking = {
   amount: number;
   paymentStatus: "pending" | "paid";
   paymentMethod: "stripe" | "saved-card" | "manual" | "paypal" | "venmo";
+  /** Member preferred-time requests (Derek) before the director confirms. */
+  requestStatus?: "requested" | "accepted" | "declined";
   createdAt: string;
 };
 

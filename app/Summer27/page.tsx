@@ -69,7 +69,7 @@ export default function Summer27Home() {
           <div className="grid gap-2 bg-[#faf9f7] p-3 sm:grid-cols-3 sm:gap-3 sm:p-6">
             {[
               { label: "Courts", value: "$50 / hour", note: "Members · $60 guests", href: "/Summer27/book" },
-              { label: "Lessons", value: "Choose a pro", note: "Rates by professional", href: "/Summer27/lessons" },
+              { label: "Lessons", value: "Request with Derek", note: "Preferred times · by invitation", href: "/Summer27/lessons" },
               { label: "Stringing", value: "$50 labor", note: "Plus cost of string", href: "/Summer27/stringing" },
             ].map((item) => (
               <Link key={item.label} href={item.href} className="rounded-xl border border-[#e8e5df] bg-white p-4 hover:bg-[#faf9f7]">

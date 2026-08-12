@@ -309,6 +309,12 @@ export default function Summer27DirectorPage() {
           onToggleLesson={(id) =>
             saveLessons(lessons.map((x) => (x.id === id ? { ...x, paymentStatus: x.paymentStatus === "paid" ? "pending" : "paid" } : x)))
           }
+          onAcceptLessonRequest={(id) =>
+            saveLessons(lessons.map((x) => (x.id === id ? { ...x, requestStatus: "accepted" as const } : x)))
+          }
+          onDeclineLessonRequest={(id) =>
+            saveLessons(lessons.map((x) => (x.id === id ? { ...x, requestStatus: "declined" as const } : x)))
+          }
           onToggleEvent={(id) =>
             saveEvents(events.map((x) => (x.id === id ? { ...x, paymentStatus: x.paymentStatus === "paid" ? "pending" : "paid" } : x)))
           }

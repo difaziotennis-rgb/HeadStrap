@@ -93,7 +93,9 @@ export default function Summer27ProBioPage() {
             <p className="mt-1 text-[14px] font-medium text-[#1a1a1a]">{courtName}</p>
           </div>
           <div className="rounded-2xl border border-[#e8e5df] bg-[#faf9f7] p-4 sm:col-span-2">
-            <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Hours</p>
+            <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">
+              {pro.lessonMode === "request" ? "Booking" : "Hours"}
+            </p>
             <p className="mt-1 text-[14px] font-medium text-[#1a1a1a]">{proScheduleLabel(pro)}</p>
           </div>
         </section>
@@ -103,7 +105,9 @@ export default function Summer27ProBioPage() {
             href={`/Summer27/lessons?pro=${encodeURIComponent(pro.id)}`}
             className="rounded-full bg-[#1a1a1a] px-5 py-2.5 text-[13px] font-medium text-white"
           >
-            Book a lesson · ${lessonRateForPro(pro, true)}/hr
+            {pro.lessonMode === "request"
+              ? `Request a lesson · $${lessonRateForPro(pro, true)}/hr`
+              : `Book a lesson · $${lessonRateForPro(pro, true)}/hr`}
           </Link>
           <Link
             href="/Summer27/lessons"

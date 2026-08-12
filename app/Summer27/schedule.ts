@@ -129,6 +129,7 @@ function usablePros(pros: unknown, fallback: ProDef[]): ProDef[] {
         bio: p.bio || def?.bio || "",
         focus: p.focus || def?.focus || "",
         title: p.title || def?.title || "Teaching Professional",
+        lessonMode: p.lessonMode || def?.lessonMode,
       } as ProDef;
     });
   // Ensure new default pros appear even if an older saved catalog omitted them.

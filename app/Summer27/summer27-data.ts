@@ -59,6 +59,11 @@ export type ProDef = {
   guestRate: number;
   /** Optional headshot under /public. */
   image?: string;
+  /**
+   * `request` = members submit preferred times (no open calendar).
+   * Default `schedule` uses teaching windows.
+   */
+  lessonMode?: "request" | "schedule";
 };
 
 export function lessonRateForPro(
@@ -83,6 +88,7 @@ export const s27Pros: ProDef[] = [
     courtId: "court-1",
     memberRate: 200,
     guestRate: 215,
+    lessonMode: "request",
     days: [1, 2, 3, 4, 5],
     windows: [
       { start: 8, end: 12 },
@@ -420,6 +426,7 @@ export function proHoursOnDate(pro: ProDef, dateStr: string): number[] {
 }
 
 export function proScheduleLabel(pro: ProDef): string {
+  if (pro.lessonMode === "request") return "By request";
   const times = (pro.windows || [])
     .map((w) => `${formatHour(Number(w.start) || 0)}–${formatHour(Number(w.end) || 0)}`)
     .join(" & ");
@@ -428,6 +435,10 @@ export function proScheduleLabel(pro: ProDef): string {
 
 export function lessonProLabel(booking: { proName?: string }) {
   return booking.proName || "Derek DiFazio";
+}
+
+export function proUsesLessonRequests(pro: Pick<ProDef, "lessonMode"> | null | undefined) {
+  return pro?.lessonMode === "request";
 }
 
 export type SlotBlockReason =

@@ -27,7 +27,7 @@ import {
   type S27StringingOrder,
 } from "./storage";
 
-const MOCK_FLAG = "s27_mock_bookings_v3";
+const MOCK_FLAG = "s27_mock_bookings_v4";
 
 type Person = {
   name: string;
@@ -259,6 +259,7 @@ function seedLessons(): S27LessonBooking[] {
           amount: Math.round(lessonRateForPro(derek, !!who.memberNumber) * hoursCount),
           paymentStatus: paid(offset + hi),
           paymentMethod: method(offset + hi),
+          requestStatus: "accepted",
           createdAt: new Date().toISOString(),
         });
       });
@@ -305,6 +306,30 @@ function seedLessons(): S27LessonBooking[] {
         createdAt: new Date().toISOString(),
       });
     }
+  }
+  // A few open requests for the director desk.
+  for (let i = 0; i < 3; i++) {
+    const who = personAt(40 + i);
+    const d = dayOffset(3 + i * 2);
+    out.push({
+      id: `mock-lesson-req-${i + 1}`,
+      date: formatDateInput(d),
+      hour: [9, 10, 15][i],
+      duration: i === 1 ? "90" : "60",
+      clientName: who.name,
+      clientEmail: who.email,
+      clientPhone: who.phone,
+      memberNumber: who.memberNumber,
+      proId: derek.id,
+      proName: derek.name,
+      courtId: derek.courtId,
+      focus: FOCUS[i % FOCUS.length],
+      amount: Math.round(lessonRateForPro(derek, true) * (i === 1 ? 1.5 : 1)),
+      paymentStatus: "pending",
+      paymentMethod: "manual",
+      requestStatus: "requested",
+      createdAt: new Date().toISOString(),
+    });
   }
   return out;
 }
