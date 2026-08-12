@@ -36,11 +36,13 @@ import MemberFile from "./MemberFile";
 import BookDesk from "./BookDesk";
 import Ledger from "./Ledger";
 import ProgramSettings from "./ProgramSettings";
+import StringingShop from "./StringingShop";
 
-type Tab = "today" | "members" | "book" | "ledger" | "program";
+type Tab = "today" | "shop" | "members" | "book" | "ledger" | "program";
 
 const TABS: { id: Tab; label: string; hint: string }[] = [
   { id: "today", label: "Week", hint: "Calendar" },
+  { id: "shop", label: "Shop", hint: "Stringing" },
   { id: "members", label: "Members", hint: "Full file" },
   { id: "book", label: "Book", hint: "Add / edit" },
   { id: "ledger", label: "Ledger", hint: "Night" },
@@ -242,7 +244,6 @@ export default function Summer27DirectorPage() {
           stringing={stringing}
           blocks={blocks}
           catalog={catalog}
-          notifyingId={notifyingStringId}
           onOpenMember={(memberNumber) => {
             setSelectedMember(memberNumber);
             setTab("members");
@@ -268,12 +269,22 @@ export default function Summer27DirectorPage() {
           onToggleStringing={(id) =>
             saveStringing(stringing.map((x) => (x.id === id ? { ...x, paymentStatus: x.paymentStatus === "paid" ? "pending" : "paid" } : x)))
           }
-          onMarkStringingReady={markStringingReady}
-          onMarkStringingPickedUp={markStringingPickedUp}
         />
       )}
 
-      {tab !== "today" && (
+      {tab === "shop" && (
+        <StringingShop
+          stringing={stringing}
+          notifyingId={notifyingStringId}
+          onTogglePaid={(id) =>
+            saveStringing(stringing.map((x) => (x.id === id ? { ...x, paymentStatus: x.paymentStatus === "paid" ? "pending" : "paid" } : x)))
+          }
+          onMarkReady={markStringingReady}
+          onMarkPickedUp={markStringingPickedUp}
+        />
+      )}
+
+      {tab !== "today" && tab !== "shop" && (
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Stat label="Today" value={String(todayCount)} />
           <Stat label="Unpaid today" value={String(unpaidToday)} />
