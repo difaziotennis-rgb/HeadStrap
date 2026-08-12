@@ -22,12 +22,13 @@ import {
   type S27CourtBooking,
   type S27EventBooking,
   type S27LessonBooking,
+  type S27LfgPost,
   type S27MemberAccount,
   type S27PaymentProfile,
   type S27StringingOrder,
 } from "./storage";
 
-const MOCK_FLAG = "s27_mock_bookings_v5";
+const MOCK_FLAG = "s27_mock_bookings_v6";
 
 type Person = {
   name: string;
@@ -131,8 +132,20 @@ function seedMembers() {
   ensureDerekMember();
   const existing = loadList<S27MemberAccount>(KEYS.members);
   const byNumber = new Map(existing.map((m) => [m.memberNumber, m]));
-  for (const person of MEMBERS) {
-    if (!person.memberNumber || byNumber.has(person.memberNumber)) continue;
+  for (const [i, person] of MEMBERS.entries()) {
+    if (!person.memberNumber) continue;
+    const prev = byNumber.get(person.memberNumber);
+    if (prev) {
+      byNumber.set(person.memberNumber, {
+        ...prev,
+        directoryVisible: prev.directoryVisible ?? i % 5 !== 0,
+        preferredContact: prev.preferredContact ?? (i % 3 === 0 ? "email" : i % 3 === 1 ? "phone" : "either"),
+        directoryNote:
+          prev.directoryNote ??
+          (i % 4 === 0 ? "3.5 · mornings" : i % 4 === 1 ? "Doubles preferred" : i % 4 === 2 ? "Hit anytime" : undefined),
+      });
+      continue;
+    }
     byNumber.set(person.memberNumber, {
       memberNumber: person.memberNumber,
       name: person.name,
@@ -140,6 +153,19 @@ function seedMembers() {
       phone: person.phone,
       password: "tennis",
       createdAt: "2026-05-01T12:00:00.000Z",
+      directoryVisible: i % 5 !== 0,
+      preferredContact: i % 3 === 0 ? "email" : i % 3 === 1 ? "phone" : "either",
+      directoryNote: i % 4 === 0 ? "3.5 · mornings" : i % 4 === 1 ? "Doubles preferred" : i % 4 === 2 ? "Hit anytime" : undefined,
+    });
+  }
+  // Derek listed in directory for demos
+  const derek = byNumber.get(DEREK_MEMBER.memberNumber);
+  if (derek) {
+    byNumber.set(DEREK_MEMBER.memberNumber, {
+      ...derek,
+      directoryVisible: true,
+      preferredContact: "either",
+      directoryNote: "Club pro · always around",
     });
   }
   saveList(KEYS.members, [...byNumber.values()]);
@@ -148,7 +174,7 @@ function seedMembers() {
   const have = new Set(payments.map((p) => p.memberNumber));
   const extra: S27PaymentProfile[] = [];
   for (const [i, person] of MEMBERS.entries()) {
-    if (!person.memberNumber || have.has(person.memberNumber) || i % 4 === 3) continue;
+    if (!person.memberNumber || have.has(person.memberNumber)) continue;
     extra.push({
       memberNumber: person.memberNumber,
       brand: i % 3 === 0 ? "Amex" : i % 2 === 0 ? "Mastercard" : "Visa",
@@ -160,6 +186,44 @@ function seedMembers() {
     });
   }
   if (extra.length) saveList(KEYS.payment, [...payments, ...extra]);
+}
+
+function seedLfg(): S27LfgPost[] {
+  const a = MEMBERS[0];
+  const b = MEMBERS[1];
+  const c = MEMBERS[2];
+  if (!a.memberNumber || !b.memberNumber || !c.memberNumber) return [];
+  return [
+    {
+      id: "mock-lfg-1",
+      date: formatDateInput(dayOffset(1)),
+      hour: 10,
+      format: "singles",
+      levelNote: "3.5+ · solid hitting",
+      courtPref: "either",
+      hostMemberNumber: a.memberNumber,
+      hostName: a.name,
+      players: [
+        { memberNumber: a.memberNumber, name: a.name },
+        { memberNumber: b.memberNumber, name: b.name },
+      ],
+      status: "open",
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: "mock-lfg-2",
+      date: formatDateInput(dayOffset(2)),
+      hour: 17,
+      format: "doubles",
+      levelNote: "Friendly doubles",
+      courtPref: "court-2",
+      hostMemberNumber: c.memberNumber,
+      hostName: c.name,
+      players: [{ memberNumber: c.memberNumber, name: c.name }],
+      status: "open",
+      createdAt: new Date().toISOString(),
+    },
+  ];
 }
 
 function seedCourts(): S27CourtBooking[] {
@@ -465,6 +529,7 @@ export function seedMockBookings() {
     const stringOrders = keepReal(loadList<S27StringingOrder>(KEYS.stringing), seedStringing());
     saveList(KEYS.stringing, stringOrders);
     for (const order of stringOrders) rememberStringing(order.memberNumber, order);
+    saveList(KEYS.lfg, keepReal(loadList<S27LfgPost>(KEYS.lfg), seedLfg()));
   } catch (err) {
     console.error("Summer27 mock seed failed", err);
   } finally {

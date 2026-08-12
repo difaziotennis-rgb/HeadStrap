@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useS27Session } from "../../use-s27-session";
 import { getPaymentProfile } from "../../payments";
 import {
@@ -15,6 +16,7 @@ import {
   findMemberAccount,
   loadList,
   loadRecord,
+  memberOnCourt,
   saveList,
   uniqueCourts,
   updateMemberAccount,
@@ -30,6 +32,7 @@ import {
 } from "../../storage";
 
 type Tab = "bookings" | "settings" | "family" | "card";
+type ContactPref = NonNullable<S27MemberAccount["preferredContact"]>;
 
 function uidChild() {
   return `child-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
@@ -41,8 +44,22 @@ function writeSession(next: S27MemberSession) {
 }
 
 export default function Summer27PortalPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-[13px] text-[#7a756d]">Loading account…</div>}>
+      <PortalInner />
+    </Suspense>
+  );
+}
+
+function PortalInner() {
   const session = useS27Session();
-  const [tab, setTab] = useState<Tab>("bookings");
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const [tab, setTab] = useState<Tab>(() =>
+    tabParam === "settings" || tabParam === "family" || tabParam === "card" || tabParam === "bookings"
+      ? tabParam
+      : "bookings"
+  );
   const [courts, setCourts] = useState<S27CourtBooking[]>([]);
   const [clinics, setClinics] = useState<S27ClinicBooking[]>([]);
   const [lessons, setLessons] = useState<S27LessonBooking[]>([]);
@@ -56,14 +73,23 @@ export default function Summer27PortalPage() {
   const [msg, setMsg] = useState<string | null>(null);
 
   const [profile, setProfile] = useState({ name: "", email: "", phone: "", password: "", confirm: "" });
+  const [directoryVisible, setDirectoryVisible] = useState(false);
+  const [preferredContact, setPreferredContact] = useState<ContactPref>("none");
+  const [directoryNote, setDirectoryNote] = useState("");
   const [children, setChildren] = useState<S27MemberChild[]>([]);
   const [childDraft, setChildDraft] = useState({ name: "", birthYear: "", notes: "" });
+
+  useEffect(() => {
+    if (tabParam === "settings" || tabParam === "family" || tabParam === "card" || tabParam === "bookings") {
+      setTab(tabParam);
+    }
+  }, [tabParam]);
 
   const reload = useCallback(() => {
     if (!session) return;
     setCourts(
-      uniqueCourts(loadRecord<S27CourtBooking>(KEYS.courts)).filter(
-        (b) => b.memberNumber === session.memberNumber || b.clientEmail === session.memberEmail
+      uniqueCourts(loadRecord<S27CourtBooking>(KEYS.courts)).filter((b) =>
+        memberOnCourt(b, session.memberNumber, session.memberEmail)
       )
     );
     setClinics(
@@ -101,6 +127,9 @@ export default function Summer27PortalPage() {
         confirm: "",
       });
       setChildren(Array.isArray(account.children) ? account.children : []);
+      setDirectoryVisible(!!account.directoryVisible);
+      setPreferredContact(account.preferredContact || "none");
+      setDirectoryNote(account.directoryNote || "");
     } else {
       setProfile({
         name: session.memberName,
@@ -155,7 +184,14 @@ export default function Summer27PortalPage() {
       return;
     }
 
-    const patch: Parameters<typeof updateMemberAccount>[1] = { name, email, phone };
+    const patch: Parameters<typeof updateMemberAccount>[1] = {
+      name,
+      email,
+      phone,
+      directoryVisible,
+      preferredContact: directoryVisible ? preferredContact : "none",
+      directoryNote: directoryVisible ? directoryNote.trim() || undefined : undefined,
+    };
     if (profile.password) patch.password = profile.password;
     const updated = updateMemberAccount(session.memberNumber, patch);
     if (!updated) {
@@ -350,6 +386,51 @@ export default function Summer27PortalPage() {
                 autoComplete="new-password"
               />
             </label>
+
+            <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-4 sm:col-span-2">
+              <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Club directory</p>
+              <p className="mt-1 text-[12px] text-[#6b665e]">
+                Opt in so other members can find you and, if you choose, see how to reach you.
+              </p>
+              <label className="mt-3 flex items-center gap-2 text-[13px] text-[#4a4a4a]">
+                <input
+                  type="checkbox"
+                  checked={directoryVisible}
+                  onChange={(e) => setDirectoryVisible(e.target.checked)}
+                />
+                Show me in the member directory
+              </label>
+              {directoryVisible && (
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <label className="block text-[11px] text-[#8a8477]">
+                    Preferred contact
+                    <select
+                      className="mt-1 w-full rounded-xl border border-[#e8e5df] bg-white px-3 py-3 text-[15px]"
+                      value={preferredContact}
+                      onChange={(e) => setPreferredContact(e.target.value as ContactPref)}
+                    >
+                      <option value="none">Don’t show contact</option>
+                      <option value="phone">Phone</option>
+                      <option value="email">Email</option>
+                      <option value="either">Phone or email</option>
+                    </select>
+                  </label>
+                  <label className="block text-[11px] text-[#8a8477] sm:col-span-2">
+                    Short note (optional)
+                    <input
+                      className="mt-1 w-full rounded-xl border border-[#e8e5df] bg-white px-3 py-3 text-[15px]"
+                      value={directoryNote}
+                      onChange={(e) => setDirectoryNote(e.target.value)}
+                      placeholder="e.g. 3.5 · weekday mornings"
+                    />
+                  </label>
+                </div>
+              )}
+              <Link href="/Summer27/members" className="mt-3 inline-block text-[12px] text-[#6b665e] underline-offset-2 hover:underline">
+                Browse directory
+              </Link>
+            </div>
+
             <button
               type="submit"
               className="rounded-xl bg-[#1a1a1a] py-3 text-[13px] font-medium text-white sm:col-span-2"

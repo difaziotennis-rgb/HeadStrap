@@ -1,12 +1,13 @@
 export const s27Nav: { href: string; label: string; memberOnly?: boolean }[] = [
   { href: "/Summer27", label: "Home" },
   { href: "/Summer27/book", label: "Courts" },
+  { href: "/Summer27/play", label: "Play", memberOnly: true },
+  { href: "/Summer27/members", label: "Members", memberOnly: true },
   { href: "/Summer27/clinics", label: "Clinics" },
   { href: "/Summer27/juniors", label: "Juniors" },
   { href: "/Summer27/lessons", label: "Lessons" },
   { href: "/Summer27/events", label: "Events" },
   { href: "/Summer27/stringing", label: "Stringing" },
-  { href: "/Summer27/member/portal", label: "My Account", memberOnly: true },
 ];
 
 /** Update when the club Instagram handle is live. */

@@ -4,8 +4,9 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useS27Session } from "../use-s27-session";
-import { canOneClick, startMemberPayment, storageMethodFor, type S27PayMethod } from "../payments";
+import { canOneClick, getPaymentProfile, startMemberPayment, storageMethodFor, type S27PayMethod } from "../payments";
 import { PayChooser } from "../PayChooser";
+import { MemberPicker } from "../MemberPicker";
 import {
   BOOKING_HOURS,
   COURTS,
@@ -20,11 +21,18 @@ import { canChangeBooking, CANCEL_WINDOW_HOURS } from "../booking-policy";
 import {
   KEYS,
   courtBookingKey,
+  courtShareForMember,
+  loadList,
   loadRecord,
+  memberOnCourt,
   saveRecord,
   type S27CourtBooking,
+  type S27CourtPlayer,
+  type S27MemberAccount,
 } from "../storage";
 import { DateChips, dateChipFromIso } from "../DateChips";
+
+type SplitMode = "solo" | "singles" | "doubles";
 
 function addDays(date: Date, n: number) {
   const d = new Date(date);
@@ -50,13 +58,21 @@ function Summer27BookInner() {
   const [paying, setPaying] = useState(false);
   const [pendingSlot, setPendingSlot] = useState<{ courtId: CourtId; hour: number } | null>(null);
   const [cancelTarget, setCancelTarget] = useState<S27CourtBooking | null>(null);
+  const [splitMode, setSplitMode] = useState<SplitMode>("solo");
+  const [partners, setPartners] = useState<S27MemberAccount[]>([]);
+  const [members, setMembers] = useState<S27MemberAccount[]>([]);
   const isMember = !!session;
   const rates = getLiveCourtRates();
   const rate = isMember ? rates.member : rates.guest;
   const savedCard = canOneClick(session);
 
+  const partnerSlots = splitMode === "solo" ? 0 : splitMode === "singles" ? 1 : 3;
+  const playerCount = 1 + partners.length;
+  const shareEach = Math.round((rate * duration * 100) / Math.max(playerCount, 1)) / 100;
+
   useEffect(() => {
     setBookings(loadRecord<S27CourtBooking>(KEYS.courts));
+    setMembers(loadList<S27MemberAccount>(KEYS.members));
   }, []);
 
   useEffect(() => {
@@ -90,10 +106,7 @@ function Summer27BookInner() {
 
   function isMine(booking: S27CourtBooking) {
     if (!session) return false;
-    return (
-      (!!booking.memberNumber && booking.memberNumber === session.memberNumber) ||
-      booking.clientEmail.trim().toLowerCase() === session.memberEmail.trim().toLowerCase()
-    );
+    return memberOnCourt(booking, session.memberNumber, session.memberEmail);
   }
 
   function occupancy(dateStr: string, courtId: CourtId, hour: number) {
@@ -114,6 +127,28 @@ function Summer27BookInner() {
     return true;
   }
 
+  function buildPlayers(): S27CourtPlayer[] | undefined {
+    if (!session || splitMode === "solo") return undefined;
+    const total = rate * duration;
+    const n = 1 + partners.length;
+    const base = Math.round((total / n) * 100) / 100;
+    const hostShare = Math.round((total - base * (n - 1)) * 100) / 100;
+    return [
+      {
+        memberNumber: session.memberNumber,
+        name: session.memberName,
+        email: session.memberEmail,
+        amount: hostShare,
+      },
+      ...partners.map((p) => ({
+        memberNumber: p.memberNumber,
+        name: p.name,
+        email: p.email,
+        amount: base,
+      })),
+    ];
+  }
+
   async function bookSlot(courtId: CourtId, hour: number, method: S27PayMethod) {
     if (!isMember || !session) {
       setMsg("Sign in as a member to book.");
@@ -127,8 +162,24 @@ function Summer27BookInner() {
       setMsg("That window is no longer open.");
       return;
     }
+    if (splitMode !== "solo" && partners.length !== partnerSlots) {
+      setMsg(
+        splitMode === "singles"
+          ? "Pick one partner to split singles."
+          : "Pick three partners to split doubles."
+      );
+      return;
+    }
+    for (const p of partners) {
+      if (!getPaymentProfile(p.memberNumber)?.last4) {
+        setMsg(`${p.name} needs a card on file to split.`);
+        return;
+      }
+    }
 
-    const amount = rate * duration;
+    const total = rate * duration;
+    const players = buildPlayers();
+    const hostAmount = players?.[0]?.amount ?? total;
     const id = `court-${Date.now()}`;
     const courtName = COURTS.find((c) => c.id === courtId)?.name || courtId;
     const booking: S27CourtBooking = {
@@ -142,10 +193,12 @@ function Summer27BookInner() {
       clientEmail: session.memberEmail,
       clientPhone: session.memberPhone || "",
       memberNumber: session.memberNumber,
-      amount,
+      amount: total,
       paymentStatus: "paid",
       paymentMethod: storageMethodFor(method),
       createdAt: new Date().toISOString(),
+      players,
+      format: splitMode,
     };
 
     const next = { ...bookings };
@@ -156,7 +209,7 @@ function Summer27BookInner() {
     setPaying(true);
     const result = await startMemberPayment({
       method,
-      amount,
+      amount: hostAmount,
       email: session.memberEmail,
       description: `${courtName} · ${formatPrettyDate(date)} · ${formatHour(hour)}`,
       successPath: "/Summer27/book",
@@ -173,8 +226,16 @@ function Summer27BookInner() {
     saveRecord(KEYS.courts, next);
     setBookings(next);
     setPendingSlot(null);
+    setSplitMode("solo");
+    setPartners([]);
     setPaying(false);
-    setMsg(`Booked ${courtName} ${formatHour(hour)}. $${amount} charged.`);
+    if (players && players.length > 1) {
+      setMsg(
+        `Booked ${courtName} ${formatHour(hour)}. $${hostAmount} charged to you · partners billed their share.`
+      );
+    } else {
+      setMsg(`Booked ${courtName} ${formatHour(hour)}. $${total} charged.`);
+    }
   }
 
   function requestSlot(courtId: CourtId, hour: number) {
@@ -187,6 +248,8 @@ function Summer27BookInner() {
       return;
     }
     setCancelTarget(null);
+    setSplitMode("solo");
+    setPartners([]);
     setPendingSlot({ courtId, hour });
     setMsg(null);
   }
@@ -234,9 +297,15 @@ function Summer27BookInner() {
   }
 
   function courtSlotName(booking: S27CourtBooking) {
+    if (booking.players && booking.players.length > 1) {
+      return booking.players
+        .map((p) => lastNameFromFull(p.name))
+        .filter(Boolean)
+        .slice(0, 4)
+        .join("/");
+    }
     const name = booking.clientName.trim();
     if (!name) return "Booked";
-    // Members: last name on the tee sheet. Guests: first name.
     if (booking.memberNumber) return lastNameFromFull(name);
     return name.split(/\s+/).filter(Boolean)[0] || "Booked";
   }
@@ -422,14 +491,71 @@ function Summer27BookInner() {
                 Close
               </button>
             </div>
-            <div className="px-4 py-4">
+            <div className="px-4 py-4 space-y-4">
+              <div>
+                <p className="mb-2 text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Who’s playing</p>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {(
+                    [
+                      { id: "solo", label: "Just me" },
+                      { id: "singles", label: "Split 2" },
+                      { id: "doubles", label: "Split 4" },
+                    ] as const
+                  ).map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => {
+                        setSplitMode(opt.id);
+                        setPartners([]);
+                      }}
+                      className={`rounded-xl border px-2 py-2.5 text-[12px] font-medium ${
+                        splitMode === opt.id
+                          ? "border-[#1a1a1a] bg-[#1a1a1a] text-white"
+                          : "border-[#e8e5df] bg-[#faf9f7] text-[#4a4a4a]"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {splitMode !== "solo" && session && (
+                <div>
+                  <p className="mb-2 text-[12px] text-[#6b665e]">
+                    {splitMode === "singles"
+                      ? "Add 1 partner — both cards charged equally."
+                      : "Add 3 partners — all four cards charged equally."}
+                  </p>
+                  <MemberPicker
+                    members={members}
+                    exclude={[session.memberNumber]}
+                    selected={partners}
+                    onChange={setPartners}
+                    max={partnerSlots}
+                    placeholder="Search partner…"
+                  />
+                </div>
+              )}
+
               <PayChooser
-                amount={rate * duration}
+                amount={
+                  splitMode === "solo" || partners.length !== partnerSlots
+                    ? rate * duration
+                    : Math.round((rate * duration - shareEach * partners.length) * 100) / 100
+                }
                 savedCard={savedCard}
                 paying={paying}
-                primaryLabel="Confirm"
+                disabled={splitMode !== "solo" && partners.length !== partnerSlots}
+                primaryLabel={splitMode === "solo" ? "Confirm" : "Confirm split"}
                 onPay={(method) => bookSlot(pendingSlot.courtId, pendingSlot.hour, method)}
               />
+              {splitMode !== "solo" && partners.length === partnerSlots && (
+                <p className="text-center text-[11px] text-[#8a8477]">
+                  Court ${rate * duration} · ~${shareEach} each
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -451,7 +577,16 @@ function Summer27BookInner() {
               </p>
               <p className="mt-0.5 text-[12px] text-[#6b665e]">
                 {formatPrettyDate(cancelTarget.date)} · {cancelTarget.durationHours} hour
-                {cancelTarget.durationHours === 1 ? "" : "s"} · ${cancelTarget.amount}
+                {cancelTarget.durationHours === 1 ? "" : "s"} · $
+                {session
+                  ? courtShareForMember(cancelTarget, session.memberNumber)
+                  : cancelTarget.amount}
+                {cancelTarget.players && cancelTarget.players.length > 1
+                  ? ` · with ${cancelTarget.players
+                      .filter((p) => p.memberNumber !== session?.memberNumber)
+                      .map((p) => p.name.split(" ")[0])
+                      .join(", ")}`
+                  : ""}
               </p>
               {cancelCancellable ? (
                 <>

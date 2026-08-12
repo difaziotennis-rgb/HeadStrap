@@ -73,7 +73,7 @@ export default function MemberAuth() {
           href="/Summer27/member/portal"
           className="rounded-lg border border-[#e8e5df] bg-white px-2.5 py-1.5 text-[11px] font-medium text-[#4a4a4a] hover:bg-[#faf9f7]"
         >
-          {session.memberName?.split(" ")[0] || "Account"}
+          My Account
         </Link>
         <button type="button" onClick={signOut} className="text-[11px] text-[#8a8477] hover:text-[#1a1a1a]">
           Sign out

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useS27Session } from "../use-s27-session";
 import {
   BOOKING_HOURS,
   COURTS,
@@ -17,6 +18,7 @@ import { lessonConflict } from "../lesson-slots";
 import { canChangeBooking, CANCEL_WINDOW_HOURS, eventStartHour } from "../booking-policy";
 import {
   KEYS,
+  courtShareForMember,
   loadList,
   loadRecord,
   persistCourts,
@@ -69,6 +71,7 @@ function shortPastDate(iso: string) {
 }
 
 export default function MemberBookings({ courts, clinics, lessons, events, stringing, charges, onChange }: Props) {
+  const session = useS27Session();
   const [editing, setEditing] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const liveClinics = getLiveClinics();
@@ -82,17 +85,27 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
 
   const rows = useMemo(() => {
     const items = [
-      ...courts.map((b) => ({
-        id: b.id,
-        kind: "court" as const,
-        date: b.date,
-        hour: b.hour,
-        label: `${b.courtName} · ${formatPrettyDate(b.date)} ${formatHour(b.hour)}`,
-        detail: `${b.durationHours} hr`,
-        amount: b.amount,
-        status: b.paymentStatus,
-        booking: b,
-      })),
+      ...courts.map((b) => {
+        const share = courtShareForMember(b, session?.memberNumber);
+        const partners =
+          b.players && b.players.length > 1
+            ? ` · with ${b.players
+                .filter((p) => p.memberNumber !== session?.memberNumber)
+                .map((p) => p.name.split(/\s+/)[0])
+                .join(", ")}`
+            : "";
+        return {
+          id: b.id,
+          kind: "court" as const,
+          date: b.date,
+          hour: b.hour,
+          label: `${b.courtName} · ${formatPrettyDate(b.date)} ${formatHour(b.hour)}`,
+          detail: `${b.durationHours} hr${partners}`,
+          amount: share,
+          status: b.paymentStatus,
+          booking: b,
+        };
+      }),
       ...clinics.map((b) => {
         const def = liveClinics.find((c) => c.id === b.clinicId);
         return {
@@ -165,7 +178,7 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
       })),
     ];
     return items.sort((a, b) => `${a.date}${String(a.hour).padStart(5, "0")}`.localeCompare(`${b.date}${String(b.hour).padStart(5, "0")}`));
-  }, [courts, clinics, lessons, events, stringing, charges, liveClinics, liveEvents]);
+  }, [courts, clinics, lessons, events, stringing, charges, liveClinics, liveEvents, session?.memberNumber]);
 
   const today = formatDateInput(new Date());
   const upcoming = rows.filter((row) => row.date >= today || row.status === "pending");

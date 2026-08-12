@@ -59,12 +59,21 @@ export default function Summer27Home() {
               >
                 {session ? "Book a court" : "Join"}
               </Link>
-              <Link
-                href="/Summer27/clinics"
-                className="rounded-full border border-white/40 bg-white/10 px-4 py-2.5 text-[12px] font-medium text-white hover:bg-white/20"
-              >
-                Clinics
-              </Link>
+              {session ? (
+                <Link
+                  href="/Summer27/play"
+                  className="rounded-full border border-white/40 bg-white/10 px-4 py-2.5 text-[12px] font-medium text-white hover:bg-white/20"
+                >
+                  Looking for a game
+                </Link>
+              ) : (
+                <Link
+                  href="/Summer27/clinics"
+                  className="rounded-full border border-white/40 bg-white/10 px-4 py-2.5 text-[12px] font-medium text-white hover:bg-white/20"
+                >
+                  Clinics
+                </Link>
+              )}
             </div>
           </div>
 

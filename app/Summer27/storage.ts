@@ -11,6 +11,7 @@ export const KEYS = {
   payment: "s27_member_payment_v1",
   stringPrefs: "s27_string_prefs_v1",
   pendingStripe: "s27_pending_stripe_v1",
+  lfg: "s27_lfg_posts_v1",
 } as const;
 
 export type S27MemberChild = {
@@ -30,6 +31,20 @@ export type S27MemberAccount = {
   createdAt: string;
   /** Dependents on a family membership */
   children?: S27MemberChild[];
+  /** Appear in the member directory for other logged-in members */
+  directoryVisible?: boolean;
+  /** How others may reach you when listed in the directory */
+  preferredContact?: "phone" | "email" | "either" | "none";
+  /** Optional short note shown in the directory */
+  directoryNote?: string;
+};
+
+export type S27CourtPlayer = {
+  memberNumber: string;
+  name: string;
+  email: string;
+  /** This member’s share of the court fee */
+  amount: number;
 };
 
 export type S27PaymentProfile = {
@@ -53,11 +68,73 @@ export type S27CourtBooking = {
   clientEmail: string;
   clientPhone: string;
   memberNumber?: string;
+  /** Total court fee (sum of player shares when split) */
   amount: number;
   paymentStatus: "pending" | "paid";
   paymentMethod: "stripe" | "saved-card" | "manual" | "paypal" | "venmo";
   createdAt: string;
+  /** Host + partners when the court is split */
+  players?: S27CourtPlayer[];
+  format?: "solo" | "singles" | "doubles";
+  lfgPostId?: string;
 };
+
+export type S27LfgFormat = "singles" | "doubles";
+
+export type S27LfgPlayer = {
+  memberNumber: string;
+  name: string;
+};
+
+export type S27LfgPost = {
+  id: string;
+  date: string;
+  hour: number;
+  format: S27LfgFormat;
+  levelNote?: string;
+  courtPref?: CourtId | "either";
+  hostMemberNumber: string;
+  hostName: string;
+  players: S27LfgPlayer[];
+  status: "open" | "booked" | "cancelled";
+  courtBookingId?: string;
+  createdAt: string;
+};
+
+export function lfgCapacity(format: S27LfgFormat) {
+  return format === "doubles" ? 4 : 2;
+}
+
+export function courtShareForMember(booking: S27CourtBooking, memberNumber?: string): number {
+  if (!memberNumber) return booking.amount;
+  const player = booking.players?.find((p) => p.memberNumber === memberNumber);
+  if (player) return player.amount;
+  if (booking.memberNumber === memberNumber) return booking.amount;
+  return booking.amount;
+}
+
+export function memberOnCourt(booking: S27CourtBooking, memberNumber?: string, email?: string): boolean {
+  if (!memberNumber && !email) return false;
+  if (memberNumber && booking.memberNumber === memberNumber) return true;
+  if (memberNumber && booking.players?.some((p) => p.memberNumber === memberNumber)) return true;
+  const e = email?.trim().toLowerCase();
+  if (e && booking.clientEmail.trim().toLowerCase() === e) return true;
+  if (e && booking.players?.some((p) => p.email.trim().toLowerCase() === e)) return true;
+  return false;
+}
+
+export function directoryContactLabel(member: S27MemberAccount): string | null {
+  if (!member.directoryVisible) return null;
+  const pref = member.preferredContact || "none";
+  if (pref === "none") return null;
+  if (pref === "phone" && member.phone) return member.phone;
+  if (pref === "email" && member.email) return member.email;
+  if (pref === "either") {
+    const parts = [member.phone, member.email].filter(Boolean);
+    return parts.length ? parts.join(" · ") : null;
+  }
+  return null;
+}
 
 export type S27ClinicBooking = {
   id: string;
