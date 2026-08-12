@@ -1,4 +1,4 @@
-import { s27Clinics, type CourtId } from "./summer27-data";
+import { type CourtId } from "./summer27-data";
 
 export const KEYS = {
   members: "s27_members_v1",
@@ -224,67 +224,3 @@ export function nextMemberNumber(existing: S27MemberAccount[]): string {
   return String(100 + existing.length);
 }
 
-export function seedPublicRosters() {
-  if (typeof window === "undefined") return;
-  const flag = localStorage.getItem("s27_seeded_rosters_v1");
-  if (flag === "1") return;
-
-  const existing = loadList<S27ClinicBooking>(KEYS.clinics);
-  if (existing.length > 0) {
-    localStorage.setItem("s27_seeded_rosters_v1", "1");
-    return;
-  }
-
-  const today = new Date();
-  const upcomingSaturday = new Date(today);
-  upcomingSaturday.setDate(today.getDate() + ((6 - today.getDay() + 7) % 7 || 7));
-  const sat = upcomingSaturday.toISOString().slice(0, 10);
-  const sunDate = new Date(upcomingSaturday);
-  sunDate.setDate(upcomingSaturday.getDate() + 1);
-  const sun = sunDate.toISOString().slice(0, 10);
-
-  const sampleNames = [
-    ["Claire Bennett", "claire@example.com"],
-    ["Owen Hart", "owen@example.com"],
-    ["Priya Shah", "priya@example.com"],
-    ["Miles Ortega", "miles@example.com"],
-    ["Helen Cho", "helen@example.com"],
-  ];
-
-  const seeded: S27ClinicBooking[] = [];
-  for (const clinic of s27Clinics.filter((c) => c.kind === "adult" && c.days.includes(6))) {
-    sampleNames.slice(0, 3).forEach(([name, email], i) => {
-      seeded.push({
-        id: `seed-${clinic.id}-${i}`,
-        clinicId: clinic.id,
-        clinicName: clinic.name,
-        date: sat,
-        clientName: name,
-        clientEmail: email,
-        amount: clinic.memberPrice,
-        paymentStatus: "paid",
-        paymentMethod: "manual",
-        createdAt: new Date().toISOString(),
-      });
-    });
-  }
-  for (const clinic of s27Clinics.filter((c) => c.kind === "adult" && c.days.includes(0))) {
-    sampleNames.slice(1, 4).forEach(([name, email], i) => {
-      seeded.push({
-        id: `seed-sun-${clinic.id}-${i}`,
-        clinicId: clinic.id,
-        clinicName: clinic.name,
-        date: sun,
-        clientName: name,
-        clientEmail: email,
-        amount: clinic.memberPrice,
-        paymentStatus: "paid",
-        paymentMethod: "manual",
-        createdAt: new Date().toISOString(),
-      });
-    });
-  }
-
-  saveList(KEYS.clinics, seeded);
-  localStorage.setItem("s27_seeded_rosters_v1", "1");
-}

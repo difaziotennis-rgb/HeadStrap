@@ -13,11 +13,11 @@ import {
   type ClinicDef,
 } from "../summer27-data";
 import { getLiveClinics } from "../schedule";
+import { seedMockBookings } from "../mock-bookings";
 import {
   KEYS,
   loadList,
   saveList,
-  seedPublicRosters,
   type S27ClinicBooking,
 } from "../storage";
 
@@ -60,7 +60,7 @@ function Summer27ClinicsInner() {
   const price = isMember ? clinic.memberPrice : clinic.guestPrice;
 
   useEffect(() => {
-    seedPublicRosters();
+    seedMockBookings();
     setBookings(loadList<S27ClinicBooking>(KEYS.clinics));
   }, []);
 

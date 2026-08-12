@@ -18,6 +18,7 @@ import {
   type S27MemberAccount,
   type S27StringingOrder,
 } from "../storage";
+import { seedMockBookings } from "../mock-bookings";
 import {
   BOOKING_HOURS,
   COURTS,
@@ -95,6 +96,7 @@ export default function Summer27DirectorPage() {
   const [catalog, setCatalog] = useState<S27Catalog>(defaultCatalog());
 
   function reload() {
+    seedMockBookings();
     ensureDerekMember();
     setMembers(loadList<S27MemberAccount>(KEYS.members));
     setCourts(uniqueCourts(loadRecord<S27CourtBooking>(KEYS.courts)));

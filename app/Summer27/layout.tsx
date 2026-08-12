@@ -1,13 +1,19 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import MemberAuth from "./MemberAuth";
+import { seedMockBookings } from "./mock-bookings";
 import { s27Nav } from "./summer27-data";
 
 export default function Summer27Layout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAdmin = pathname === "/Summer27/admin" || pathname?.startsWith("/Summer27/admin/");
+
+  useEffect(() => {
+    seedMockBookings();
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#f7f7f5] text-[#1a1a1a]">
