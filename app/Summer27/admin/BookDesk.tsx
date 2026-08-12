@@ -9,9 +9,10 @@ import {
   formatHour,
   formatPrettyDate,
   lessonProLabel,
+  lessonRateForPro,
   type CourtId,
 } from "../summer27-data";
-import { getLiveClinics, getLiveEvents, getLiveCourtRates, getLiveLessonRates, getLiveStringingLabor, getLivePros, getProgramBlock } from "../schedule";
+import { getLiveClinics, getLiveEvents, getLiveCourtRates, getLiveStringingLabor, getLivePros, getProgramBlock } from "../schedule";
 import {
   rememberStringing,
   stringPrefForMember,
@@ -279,8 +280,7 @@ function LessonsBlock({
     e.preventDefault();
     const name = member?.name || guestName.trim();
     if (!name || !pro) return;
-    const rates = getLiveLessonRates();
-    const hourly = member ? rates.member : rates.guest;
+    const hourly = lessonRateForPro(pro, !!member);
     onLessons([
       ...lessons,
       {

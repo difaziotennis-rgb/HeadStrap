@@ -165,6 +165,13 @@ function Summer27BookInner() {
       <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-[#6b665e]">
         ${rates.member}/hour members · ${rates.guest} guests. Court 1 is held weekday mornings and late afternoons for lessons.
       </p>
+      <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-[#6b665e]">
+        For seasonal court options, contact{" "}
+        <a href="mailto:difaziotennis@gmail.com" className="text-[#1a1a1a] underline-offset-2 hover:underline">
+          difaziotennis@gmail.com
+        </a>
+        .
+      </p>
 
       <div className="mt-5 flex flex-wrap items-end gap-3 rounded-2xl border border-[#e8e5df] bg-white p-4">
         <label className="text-[12px] text-[#6b665e]">

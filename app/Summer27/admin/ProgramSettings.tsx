@@ -59,6 +59,8 @@ export default function ProgramSettings({ catalog, onSave, onReset }: Props) {
       focus: "",
       bio: "",
       courtId: "court-2",
+      memberRate: draft.lessonRates?.member || 160,
+      guestRate: draft.lessonRates?.guest || 175,
       days: [1, 2, 3, 4, 5],
       windows: [
         { start: 9, end: 12 },
@@ -81,12 +83,6 @@ export default function ProgramSettings({ catalog, onSave, onReset }: Props) {
           </Field>
           <Field label="Court guest $/hr">
             <input className={inputClass} value={draft.courtRates.guest} onChange={(e) => setDraft({ ...draft, courtRates: { ...draft.courtRates, guest: Number(e.target.value) || 0 } })} />
-          </Field>
-          <Field label="Lesson member $/hr">
-            <input className={inputClass} value={draft.lessonRates.member} onChange={(e) => setDraft({ ...draft, lessonRates: { ...draft.lessonRates, member: Number(e.target.value) || 0 } })} />
-          </Field>
-          <Field label="Lesson guest $/hr">
-            <input className={inputClass} value={draft.lessonRates.guest} onChange={(e) => setDraft({ ...draft, lessonRates: { ...draft.lessonRates, guest: Number(e.target.value) || 0 } })} />
           </Field>
           <Field label="Stringing labor $">
             <input className={inputClass} value={draft.stringingLabor} onChange={(e) => setDraft({ ...draft, stringingLabor: Number(e.target.value) || 0 })} />
@@ -120,6 +116,12 @@ export default function ProgramSettings({ catalog, onSave, onReset }: Props) {
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>
+                <Field label="Member $/hr">
+                  <input className={inputClass} value={pro.memberRate ?? ""} onChange={(e) => updatePro(pro.id, { memberRate: Number(e.target.value) || 0 })} />
+                </Field>
+                <Field label="Guest $/hr">
+                  <input className={inputClass} value={pro.guestRate ?? ""} onChange={(e) => updatePro(pro.id, { guestRate: Number(e.target.value) || 0 })} />
+                </Field>
                 <div className="sm:col-span-2">
                   <p className="mb-1 text-[11px] text-[#8a8477]">Days</p>
                   <div className="flex flex-wrap gap-1">

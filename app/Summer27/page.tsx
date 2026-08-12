@@ -39,8 +39,8 @@ export default function Summer27Home() {
 
           <div className="grid gap-3 bg-[#faf9f7] p-4 sm:grid-cols-3 sm:p-6">
             {[
-              { label: "Courts", value: "$50 / hour", note: "Members · Court 1 & 2", href: "/Summer27/book" },
-              { label: "Lessons", value: "Choose a pro", note: "Private instruction", href: "/Summer27/lessons" },
+              { label: "Courts", value: "$50 / hour", note: "Members · $60 guests", href: "/Summer27/book" },
+              { label: "Lessons", value: "Choose a pro", note: "Rates by professional", href: "/Summer27/lessons" },
               { label: "Stringing", value: "$50 labor", note: "Plus cost of string", href: "/Summer27/stringing" },
             ].map((item) => (
               <Link key={item.label} href={item.href} className="rounded-xl border border-[#e8e5df] bg-white p-4 hover:bg-[#faf9f7]">
@@ -49,6 +49,13 @@ export default function Summer27Home() {
                 <p className="mt-1 text-[12px] text-[#6b665e]">{item.note}</p>
               </Link>
             ))}
+            <p className="text-[12px] text-[#6b665e] sm:col-span-3">
+              For seasonal court options, contact{" "}
+              <a href="mailto:difaziotennis@gmail.com" className="text-[#1a1a1a] underline-offset-2 hover:underline">
+                difaziotennis@gmail.com
+              </a>
+              .
+            </p>
           </div>
         </div>
       </section>

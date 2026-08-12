@@ -10,12 +10,13 @@ import {
   formatDateInput,
   formatHour,
   formatPrettyDate,
+  lessonRateForPro,
   parseDateInput,
   proScheduleLabel,
   s27Pros,
   type ProDef,
 } from "../summer27-data";
-import { getLiveLessonRates, getLivePros } from "../schedule";
+import { getLivePros } from "../schedule";
 import { openLessonHours } from "../lesson-slots";
 import {
   KEYS,
@@ -57,8 +58,8 @@ function Summer27LessonsInner() {
   const isMember = !!session;
   const savedCard = canOneClick(session);
   const hours = duration === "90" ? 1.5 : 1;
-  const rates = getLiveLessonRates();
-  const amount = Math.round((isMember ? rates.member : rates.guest) * hours);
+  const hourly = lessonRateForPro(pro, isMember);
+  const amount = Math.round(hourly * hours);
   const courtName = pro ? COURTS.find((c) => c.id === pro.courtId)?.name || pro.courtId : "";
 
   useEffect(() => {
@@ -161,7 +162,7 @@ function Summer27LessonsInner() {
         <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Lessons</p>
         <h2 className="mt-1 text-2xl font-semibold tracking-tight">Choose a professional</h2>
         <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-[#6b665e]">
-          ${rates.member}/hour members · ${rates.guest} guests.
+          Hourly rates vary by professional.
         </p>
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {pros.map((item) => (
@@ -176,7 +177,10 @@ function Summer27LessonsInner() {
               <p className="mt-3 text-[12px] text-[#8a8477]">
                 {COURTS.find((c) => c.id === item.courtId)?.name || item.courtId} · {proScheduleLabel(item)}
               </p>
-              <p className="mt-4 text-[13px] font-medium text-[#1a1a1a]">View times →</p>
+              <p className="mt-2 text-[13px] font-medium text-[#1a1a1a]">
+                ${lessonRateForPro(item, isMember)}/hour{isMember ? "" : " guest"}
+              </p>
+              <p className="mt-3 text-[13px] font-medium text-[#1a1a1a]">View times →</p>
             </Link>
           ))}
         </div>
@@ -193,7 +197,7 @@ function Summer27LessonsInner() {
       <h2 className="mt-1 text-2xl font-semibold tracking-tight">{pro.name}</h2>
       <p className="mt-2 text-[14px] leading-relaxed text-[#6b665e]">{pro.bio}</p>
       <p className="mt-2 text-[13px] text-[#6b665e]">
-        {courtName} · {proScheduleLabel(pro)} · ${rates.member}/hour
+        {courtName} · {proScheduleLabel(pro)} · ${hourly}/hour
       </p>
 
       <form onSubmit={bookLesson} className="mt-6 space-y-3 rounded-2xl border border-[#e8e5df] bg-white p-5">

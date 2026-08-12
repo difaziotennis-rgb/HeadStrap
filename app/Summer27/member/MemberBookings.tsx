@@ -9,9 +9,10 @@ import {
   formatHour,
   formatPrettyDate,
   lessonProLabel,
+  lessonRateForPro,
   type CourtId,
 } from "../summer27-data";
-import { getLiveClinics, getLiveCourtRates, getLiveEvents, getLiveLessonRates, getLivePros, getProgramBlock } from "../schedule";
+import { getLiveClinics, getLiveCourtRates, getLiveEvents, getLivePros, getProgramBlock } from "../schedule";
 import { lessonConflict } from "../lesson-slots";
 import { canChangeBooking, CANCEL_WINDOW_HOURS, eventStartHour } from "../booking-policy";
 import {
@@ -59,7 +60,6 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
   const liveClinics = getLiveClinics();
   const liveEvents = getLiveEvents();
   const courtRates = getLiveCourtRates();
-  const lessonRates = getLiveLessonRates();
 
   const [courtDraft, setCourtDraft] = useState({ date: "", hour: "8", durationHours: "1", courtId: "court-2" as CourtId });
   const [lessonDraft, setLessonDraft] = useState({ date: "", hour: "8", duration: "60" as "60" | "90", focus: "" });
@@ -272,7 +272,7 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
               proId: pro.id,
               proName: pro.name,
               courtId: pro.courtId,
-              amount: Math.round(lessonRates.member * hours),
+              amount: Math.round(lessonRateForPro(pro, true) * hours),
             }
           : b
       )

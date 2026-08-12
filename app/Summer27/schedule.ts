@@ -15,7 +15,7 @@ import {
   type SlotBlockReason,
 } from "./summer27-data";
 
-export const S27_CATALOG_KEY = "s27_catalog_v9";
+export const S27_CATALOG_KEY = "s27_catalog_v10";
 export const S27_BLOCKS_KEY = "s27_admin_blocks_v1";
 export const S27_NOTES_KEY = "s27_member_notes_v1";
 
@@ -97,15 +97,24 @@ function usableEvents(events: unknown, fallback: EventDef[]): EventDef[] {
 
 function usablePros(pros: unknown, fallback: ProDef[]): ProDef[] {
   if (!Array.isArray(pros) || pros.length === 0) return fallback;
-  const ok = pros.filter(
-    (p): p is ProDef =>
-      !!p &&
-      typeof p === "object" &&
-      typeof (p as ProDef).id === "string" &&
-      typeof (p as ProDef).name === "string" &&
-      Array.isArray((p as ProDef).days) &&
-      Array.isArray((p as ProDef).windows)
-  );
+  const ok = pros
+    .filter(
+      (p): p is ProDef =>
+        !!p &&
+        typeof p === "object" &&
+        typeof (p as ProDef).id === "string" &&
+        typeof (p as ProDef).name === "string" &&
+        Array.isArray((p as ProDef).days) &&
+        Array.isArray((p as ProDef).windows)
+    )
+    .map((p) => {
+      const def = fallback.find((f) => f.id === p.id);
+      return {
+        ...p,
+        memberRate: typeof p.memberRate === "number" ? p.memberRate : def?.memberRate ?? LESSON_RATES.member,
+        guestRate: typeof p.guestRate === "number" ? p.guestRate : def?.guestRate ?? LESSON_RATES.guest,
+      };
+    });
   return ok.length ? ok : fallback;
 }
 

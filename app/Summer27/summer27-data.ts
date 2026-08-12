@@ -20,7 +20,7 @@ export const BOOKING_HOURS = Array.from({ length: 13 }, (_, i) => i + 8); // 8 A
 
 export const COURT_RATES = {
   member: 50,
-  guest: 65,
+  guest: 60,
 } as const;
 
 export const LESSON_RATES = {
@@ -48,7 +48,17 @@ export type ProDef = {
   courtId: CourtId;
   days: number[];
   windows: ProWindow[];
+  memberRate: number;
+  guestRate: number;
 };
+
+export function lessonRateForPro(
+  pro: { memberRate?: number; guestRate?: number } | null | undefined,
+  isMember: boolean
+): number {
+  if (isMember) return Number(pro?.memberRate) || LESSON_RATES.member;
+  return Number(pro?.guestRate) || LESSON_RATES.guest;
+}
 
 export const s27Pros: ProDef[] = [
   {
@@ -58,6 +68,8 @@ export const s27Pros: ProDef[] = [
     focus: "Adults and match play",
     bio: "Private instruction on Court 1. Adults, college-bound juniors, and serious club players.",
     courtId: "court-1",
+    memberRate: 185,
+    guestRate: 200,
     days: [1, 2, 3, 4, 5],
     windows: [
       { start: 8, end: 12 },
@@ -71,6 +83,8 @@ export const s27Pros: ProDef[] = [
     focus: "Recreational adults & doubles",
     bio: "Rally, doubles, and returning to the game.",
     courtId: "court-2",
+    memberRate: 160,
+    guestRate: 175,
     days: [1, 2, 3, 4],
     windows: [
       { start: 9, end: 12 },
@@ -84,6 +98,8 @@ export const s27Pros: ProDef[] = [
     focus: "Juniors 8–16",
     bio: "After-school and Saturday hours for developing juniors.",
     courtId: "court-2",
+    memberRate: 160,
+    guestRate: 175,
     days: [2, 4, 6],
     windows: [
       { start: 9, end: 12 },
