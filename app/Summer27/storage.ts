@@ -13,6 +13,14 @@ export const KEYS = {
   pendingStripe: "s27_pending_stripe_v1",
 } as const;
 
+export type S27MemberChild = {
+  id: string;
+  name: string;
+  /** Optional birth year for junior level / age banding */
+  birthYear?: string;
+  notes?: string;
+};
+
 export type S27MemberAccount = {
   memberNumber: string;
   name: string;
@@ -20,6 +28,8 @@ export type S27MemberAccount = {
   phone: string;
   password: string;
   createdAt: string;
+  /** Dependents on a family membership */
+  children?: S27MemberChild[];
 };
 
 export type S27PaymentProfile = {
@@ -329,5 +339,33 @@ export function nextMemberNumber(existing: S27MemberAccount[]): string {
     if (!used.has(n)) return n;
   }
   return String(100 + existing.length);
+}
+
+export function findMemberAccount(memberNumber: string): S27MemberAccount | null {
+  if (typeof window === "undefined") return null;
+  return loadList<S27MemberAccount>(KEYS.members).find((m) => m.memberNumber === memberNumber) || null;
+}
+
+export function updateMemberAccount(
+  memberNumber: string,
+  patch: Partial<Omit<S27MemberAccount, "memberNumber" | "createdAt">>
+): S27MemberAccount | null {
+  if (typeof window === "undefined") return null;
+  const members = loadList<S27MemberAccount>(KEYS.members);
+  const idx = members.findIndex((m) => m.memberNumber === memberNumber);
+  if (idx < 0) return null;
+  const current = members[idx];
+  const next: S27MemberAccount = {
+    ...current,
+    ...patch,
+    memberNumber,
+    createdAt: current.createdAt,
+    children: patch.children !== undefined ? patch.children : current.children || [],
+  };
+  saveList(
+    KEYS.members,
+    members.map((m, i) => (i === idx ? next : m))
+  );
+  return next;
 }
 

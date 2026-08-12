@@ -15,7 +15,7 @@ import {
   type ClinicDef,
 } from "../summer27-data";
 import { getLiveClinics } from "../schedule";
-import { KEYS, loadList, saveList, type S27ClinicBooking } from "../storage";
+import { KEYS, findMemberAccount, loadList, saveList, type S27ClinicBooking, type S27MemberChild } from "../storage";
 import { DateChips, dateChipFromIso } from "../DateChips";
 import { canChangeBooking, CANCEL_WINDOW_HOURS } from "../booking-policy";
 
@@ -126,6 +126,7 @@ function Summer27JuniorsInner() {
   const [parentEmail, setParentEmail] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
   const [paying, setPaying] = useState(false);
+  const [familyChildren, setFamilyChildren] = useState<S27MemberChild[]>([]);
 
   const clinic = juniors.find((c) => c.id === selectedId);
   const dates = useMemo(() => nextDatesForClinic(clinic, 8, queryDate || date), [clinic, queryDate, date]);
@@ -136,6 +137,17 @@ function Summer27JuniorsInner() {
   const thisWeekStart = useMemo(() => startOfWeekMonday(new Date()), []);
   const days = useMemo(() => weekDates(weekStart), [weekStart]);
   const occurrences = useMemo(() => occurrencesForWeek(juniors, weekStart), [juniors, weekStart]);
+
+  useEffect(() => {
+    if (!session) {
+      setFamilyChildren([]);
+      return;
+    }
+    const account = findMemberAccount(session.memberNumber);
+    const kids = Array.isArray(account?.children) ? account!.children! : [];
+    setFamilyChildren(kids);
+    if (kids.length && !childName) setChildName(kids[0].name);
+  }, [session]); // eslint-disable-line react-hooks/exhaustive-deps — only refresh kids when session changes
 
   useEffect(() => {
     try {
@@ -522,12 +534,51 @@ function Summer27JuniorsInner() {
               </div>
 
               <div className="mt-4 space-y-3 pb-2">
-                <input
-                  value={childName}
-                  onChange={(e) => setChildName(e.target.value)}
-                  placeholder="Junior’s name"
-                  className="w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]"
-                />
+                {isMember && familyChildren.length > 0 ? (
+                  <div>
+                    <label className="block text-[11px] text-[#8a8477]">
+                      Child on your account
+                      <select
+                        value={familyChildren.some((c) => c.name === childName) ? childName : "__other"}
+                        onChange={(e) => {
+                          if (e.target.value === "__other") setChildName("");
+                          else setChildName(e.target.value);
+                        }}
+                        className="mt-1 w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]"
+                      >
+                        {familyChildren.map((c) => (
+                          <option key={c.id} value={c.name}>
+                            {c.name}
+                            {c.birthYear ? ` (${c.birthYear})` : ""}
+                          </option>
+                        ))}
+                        <option value="__other">Someone else…</option>
+                      </select>
+                    </label>
+                    {!familyChildren.some((c) => c.name === childName) && (
+                      <input
+                        value={childName}
+                        onChange={(e) => setChildName(e.target.value)}
+                        placeholder="Junior’s full name"
+                        className="mt-2 w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]"
+                      />
+                    )}
+                    <p className="mt-1.5 text-[12px] text-[#8a8477]">
+                      Manage kids in{" "}
+                      <Link href="/Summer27/member/portal" className="text-[#1a1a1a] underline-offset-2 hover:underline">
+                        My Account → Family
+                      </Link>
+                      .
+                    </p>
+                  </div>
+                ) : (
+                  <input
+                    value={childName}
+                    onChange={(e) => setChildName(e.target.value)}
+                    placeholder="Junior’s name"
+                    className="w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]"
+                  />
+                )}
                 {!isMember && (
                   <input
                     value={parentEmail}

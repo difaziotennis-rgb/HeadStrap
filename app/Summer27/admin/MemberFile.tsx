@@ -358,6 +358,11 @@ export default function MemberFile({
                     {member.email}
                     {member.phone ? ` · ${member.phone}` : ""}
                   </p>
+                  {Array.isArray(member.children) && member.children.length > 0 && (
+                    <p className="mt-1 text-[12px] text-[#6b665e]">
+                      Family: {member.children.map((c) => c.name).join(", ")}
+                    </p>
+                  )}
                   <div className="mt-2 flex gap-3">
                     <button
                       type="button"
