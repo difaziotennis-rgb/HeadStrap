@@ -19,7 +19,7 @@ import type {
 } from "../storage";
 import { Segmented } from "../DateChips";
 
-type Period = "this-week" | "last-week" | "this-month" | "last-month";
+type Scope = "week" | "month";
 
 type Props = {
   today: string;
@@ -56,10 +56,13 @@ function endOfMonth(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth() + 1, 0);
 }
 
-function rangeForPeriod(today: string, period: Period): { start: string; end: string; label: string } {
-  const t = parseDateInput(today);
-  if (period === "this-week") {
-    const start = startOfWeekMonday(t);
+function addMonths(d: Date, n: number): Date {
+  return new Date(d.getFullYear(), d.getMonth() + n, 1);
+}
+
+function rangeForCursor(scope: Scope, cursor: Date): { start: string; end: string; label: string } {
+  if (scope === "week") {
+    const start = startOfWeekMonday(cursor);
     const end = addDays(start, 6);
     return {
       start: formatDateInput(start),
@@ -67,28 +70,8 @@ function rangeForPeriod(today: string, period: Period): { start: string; end: st
       label: `${formatPrettyDate(formatDateInput(start))} – ${formatPrettyDate(formatDateInput(end))}`,
     };
   }
-  if (period === "last-week") {
-    const thisStart = startOfWeekMonday(t);
-    const start = addDays(thisStart, -7);
-    const end = addDays(start, 6);
-    return {
-      start: formatDateInput(start),
-      end: formatDateInput(end),
-      label: `${formatPrettyDate(formatDateInput(start))} – ${formatPrettyDate(formatDateInput(end))}`,
-    };
-  }
-  if (period === "this-month") {
-    const start = startOfMonth(t);
-    const end = endOfMonth(t);
-    return {
-      start: formatDateInput(start),
-      end: formatDateInput(end),
-      label: start.toLocaleDateString("en-US", { month: "long", year: "numeric" }),
-    };
-  }
-  const prev = new Date(t.getFullYear(), t.getMonth() - 1, 15);
-  const start = startOfMonth(prev);
-  const end = endOfMonth(prev);
+  const start = startOfMonth(cursor);
+  const end = endOfMonth(cursor);
   return {
     start: formatDateInput(start),
     end: formatDateInput(end),
@@ -104,6 +87,55 @@ function money(n: number) {
   return `$${Math.round(n).toLocaleString("en-US")}`;
 }
 
+function PeriodNav({
+  label,
+  isCurrent,
+  currentLabel,
+  onPrev,
+  onNext,
+  onCurrent,
+}: {
+  label: string;
+  isCurrent: boolean;
+  currentLabel: string;
+  onPrev: () => void;
+  onNext: () => void;
+  onCurrent: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-2xl border border-[#e8e5df] bg-white px-2 py-2">
+      <button
+        type="button"
+        onClick={onPrev}
+        className="rounded-full border border-[#e8e5df] px-3.5 py-2 text-[13px] text-[#4a4a4a] hover:bg-[#faf9f7]"
+        aria-label="Previous"
+      >
+        ←
+      </button>
+      <div className="min-w-0 text-center">
+        <p className="text-[15px] font-medium tracking-tight text-[#1a1a1a]">{label}</p>
+        {!isCurrent && (
+          <button
+            type="button"
+            onClick={onCurrent}
+            className="mt-0.5 text-[12px] text-[#8a8477] underline-offset-2 hover:text-[#1a1a1a] hover:underline"
+          >
+            {currentLabel}
+          </button>
+        )}
+      </div>
+      <button
+        type="button"
+        onClick={onNext}
+        className="rounded-full border border-[#e8e5df] px-3.5 py-2 text-[13px] text-[#4a4a4a] hover:bg-[#faf9f7]"
+        aria-label="Next"
+      >
+        →
+      </button>
+    </div>
+  );
+}
+
 export default function AdminStats({
   today,
   clinicsCatalog,
@@ -115,8 +147,27 @@ export default function AdminStats({
   stringing,
   charges,
 }: Props) {
-  const [period, setPeriod] = useState<Period>("this-week");
-  const { start, end, label } = useMemo(() => rangeForPeriod(today, period), [today, period]);
+  const todayDate = useMemo(() => parseDateInput(today), [today]);
+  const thisWeek = useMemo(() => startOfWeekMonday(todayDate), [todayDate]);
+  const thisMonth = useMemo(() => startOfMonth(todayDate), [todayDate]);
+
+  const [scope, setScope] = useState<Scope>("week");
+  const [cursor, setCursor] = useState(thisWeek);
+
+  const { start, end, label } = useMemo(() => rangeForCursor(scope, cursor), [scope, cursor]);
+  const isCurrent =
+    scope === "week"
+      ? formatDateInput(startOfWeekMonday(cursor)) === formatDateInput(thisWeek)
+      : formatDateInput(startOfMonth(cursor)) === formatDateInput(thisMonth);
+
+  function setScopeAndReset(next: Scope) {
+    setScope(next);
+    setCursor(next === "week" ? thisWeek : thisMonth);
+  }
+
+  function step(delta: number) {
+    setCursor((c) => (scope === "week" ? addDays(startOfWeekMonday(c), delta * 7) : addMonths(startOfMonth(c), delta)));
+  }
 
   const summary = useMemo(() => {
     const courtRows = courts.filter((b) => inRange(b.date, start, end));
@@ -193,23 +244,28 @@ export default function AdminStats({
 
   return (
     <div className="mt-4 space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h3 className="text-xl font-semibold tracking-tight">Stats</h3>
-          <p className="mt-1 text-[13px] text-[#6b665e]">{label}</p>
-        </div>
-        <div className="w-full overflow-x-auto sm:w-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <Segmented
-            value={period}
-            onChange={(v) => setPeriod(v as Period)}
-            options={[
-              { value: "this-week", label: "This week" },
-              { value: "last-week", label: "Last week" },
-              { value: "this-month", label: "This month" },
-              { value: "last-month", label: "Last month" },
-            ]}
-          />
-        </div>
+      <div>
+        <h3 className="text-xl font-semibold tracking-tight">Stats</h3>
+        <p className="mt-1 text-[13px] text-[#6b665e]">Flip through any past week or month.</p>
+      </div>
+
+      <div className="space-y-3">
+        <Segmented
+          value={scope}
+          onChange={(v) => setScopeAndReset(v as Scope)}
+          options={[
+            { value: "week", label: "Week" },
+            { value: "month", label: "Month" },
+          ]}
+        />
+        <PeriodNav
+          label={label}
+          isCurrent={isCurrent}
+          currentLabel={scope === "week" ? "This week" : "This month"}
+          onPrev={() => step(-1)}
+          onNext={() => step(1)}
+          onCurrent={() => setCursor(scope === "week" ? thisWeek : thisMonth)}
+        />
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
