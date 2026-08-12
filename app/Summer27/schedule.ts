@@ -139,8 +139,15 @@ function eventImagePath(raw: string | undefined, fallback: string | undefined) {
 
 function usableEvents(events: unknown, fallback: EventDef[]): EventDef[] {
   if (!Array.isArray(events) || events.length === 0) return fallback;
+  const fallbackIds = new Set(fallback.map((f) => f.id));
   const ok = events
-    .filter((e): e is EventDef => !!e && typeof e === "object" && typeof (e as EventDef).id === "string")
+    .filter(
+      (e): e is EventDef =>
+        !!e &&
+        typeof e === "object" &&
+        typeof (e as EventDef).id === "string" &&
+        fallbackIds.has((e as EventDef).id)
+    )
     .map((e) => {
       const base = fallback.find((f) => f.id === e.id);
       return {
@@ -151,6 +158,11 @@ function usableEvents(events: unknown, fallback: EventDef[]): EventDef[] {
         highlights: Array.isArray(e.highlights) && e.highlights.length ? e.highlights : base?.highlights || [],
       } as EventDef;
     });
+  // Ensure new default events appear even if an older saved catalog omitted them.
+  const ids = new Set(ok.map((e) => e.id));
+  for (const event of fallback) {
+    if (!ids.has(event.id)) ok.push(event);
+  }
   return ok.length ? ok : fallback;
 }
 
