@@ -27,7 +27,7 @@ import {
   type S27StringingOrder,
 } from "./storage";
 
-const MOCK_FLAG = "s27_mock_bookings_v1";
+const MOCK_FLAG = "s27_mock_bookings_v2";
 
 type Person = {
   name: string;

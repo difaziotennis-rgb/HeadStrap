@@ -284,7 +284,7 @@ function Summer27LessonsInner() {
         {openHours.length === 0 ? (
           <p className="rounded-xl bg-[#faf9f7] px-3 py-3 text-center text-[13px] text-[#8a8477]">No open times this day</p>
         ) : (
-          <PayChooser amount={amount} savedCard={savedCard} paying={paying} primaryLabel={`Book · $${amount}`} onPay={bookLesson} />
+          <PayChooser amount={amount} savedCard={savedCard} paying={paying} primaryLabel="Book" onPay={bookLesson} />
         )}
       </div>
     </main>

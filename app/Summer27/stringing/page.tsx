@@ -191,7 +191,7 @@ function Summer27StringingInner() {
           ${amount} total
         </p>
         {msg && <p className="text-[13px]">{msg}</p>}
-        <PayChooser amount={amount} savedCard={savedCard} paying={paying} primaryLabel={`Order · $${amount}`} onPay={submit} />
+        <PayChooser amount={amount} savedCard={savedCard} paying={paying} primaryLabel="Order" onPay={submit} />
       </div>
 
       {mine.length > 0 && (

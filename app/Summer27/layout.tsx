@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import MemberAuth from "./MemberAuth";
+import { seedMockBookings } from "./mock-bookings";
 import { s27Nav } from "./summer27-data";
 import { useS27Session } from "./use-s27-session";
 
@@ -11,6 +12,15 @@ export default function Summer27Layout({ children }: { children: React.ReactNode
   const session = useS27Session();
   const isAdmin = pathname === "/Summer27/admin" || pathname?.startsWith("/Summer27/admin/");
   const nav = s27Nav.filter((item) => !item.memberOnly || session);
+
+  // Seed before child pages read localStorage (effects run child→parent).
+  if (typeof window !== "undefined") {
+    try {
+      seedMockBookings();
+    } catch {
+      // preview seed should never block the club UI
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[#f7f7f5] text-[#1a1a1a]">

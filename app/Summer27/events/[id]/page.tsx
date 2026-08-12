@@ -201,7 +201,7 @@ function Summer27EventDetailInner() {
         {seatsLeft <= 0 ? (
           <p className="rounded-xl bg-[#faf9f7] px-3 py-3 text-center text-[13px] text-[#8a8477]">Sold out</p>
         ) : (
-          <PayChooser amount={total} savedCard={savedCard} paying={paying} primaryLabel={`Reserve · $${total}`} onPay={reserve} />
+          <PayChooser amount={total} savedCard={savedCard} paying={paying} primaryLabel="Reserve" onPay={reserve} />
         )}
       </div>
     </main>

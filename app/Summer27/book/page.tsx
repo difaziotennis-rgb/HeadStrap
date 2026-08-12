@@ -365,7 +365,7 @@ function Summer27BookInner() {
             amount={rate * duration}
             savedCard={savedCard}
             paying={paying}
-            primaryLabel={`Book · $${rate * duration}`}
+            primaryLabel="Book"
             onPay={(method) => bookSlot(pendingSlot.courtId, pendingSlot.hour, method)}
           />
         </div>

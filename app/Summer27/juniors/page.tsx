@@ -340,124 +340,77 @@ function Summer27JuniorsInner() {
         </button>
       </div>
 
-      <div className="mt-5 space-y-3 md:hidden">
-        {days.map((iso, dayIndex) => {
-          const dayOcc = occurrences.filter((o) => o.dayIndex === dayIndex);
-          const d = parseDateInput(iso);
-          const isToday = iso === todayIso;
-          return (
-            <section
-              key={iso}
-              className={`rounded-2xl border px-3 py-3 ${
-                isToday ? "border-[#1a1a1a]/25 bg-white" : "border-[#e8e5df] bg-[#faf9f7]"
-              }`}
-            >
-              <div className="mb-2 flex items-baseline justify-between gap-2">
-                <p className="text-[13px] font-medium text-[#1a1a1a]">
-                  {DAY_LABELS[dayIndex]}{" "}
-                  <span className="text-[#8a8477]">
-                    {d.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                  </span>
-                </p>
-                {isToday && <span className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Today</span>}
-              </div>
-              {dayOcc.length === 0 ? (
-                <p className="py-1 text-[12px] text-[#b0a99f]">No sessions</p>
-              ) : (
-                <ul className="space-y-2">
-                  {dayOcc.map((o) => {
-                    const taken = (rosterByClinicDate[`${o.clinic.id}|${o.date}`] || []).length;
-                    const open = Math.max(0, o.clinic.capacity - taken);
-                    return (
-                      <li key={`${o.clinic.id}-${o.date}`}>
-                        <button
-                          type="button"
-                          onClick={() => openClinic(o.clinic, o.date)}
-                          className="flex w-full items-start gap-3 rounded-xl border border-[#ece8e2] bg-white px-3 py-3 text-left transition hover:border-[#1a1a1a]/40"
-                        >
-                          <span className="w-14 shrink-0 pt-0.5 text-[12px] font-medium tabular-nums text-[#6b665e]">
-                            {formatHour(o.clinic.startHour)}
-                          </span>
-                          <span className="min-w-0 flex-1">
-                            <span className="block text-[14px] font-medium text-[#1a1a1a]">{o.clinic.name}</span>
-                            <span className="mt-0.5 block text-[12px] text-[#8a8477]">
-                              {o.clinic.level} · {open > 0 ? `${open} open` : "Full"}
-                            </span>
-                          </span>
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </section>
-          );
-        })}
-      </div>
-
-      <div className="mt-5 hidden overflow-hidden rounded-2xl border border-[#e8e5df] bg-white md:block">
-        <div className="grid grid-cols-7 border-b border-[#ece8e2] bg-[#faf9f7]">
-          {days.map((iso, i) => {
-            const d = parseDateInput(iso);
-            const isToday = iso === todayIso;
-            return (
-              <div
-                key={iso}
-                className={`border-r border-[#ece8e2] px-2 py-2.5 text-center last:border-r-0 ${
-                  isToday ? "bg-white" : ""
-                }`}
-              >
-                <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">{DAY_LABELS[i]}</p>
-                <p className={`mt-0.5 text-[15px] font-semibold ${isToday ? "text-[#1a1a1a]" : "text-[#4a4a4a]"}`}>
-                  {d.getDate()}
-                </p>
-              </div>
-            );
-          })}
-        </div>
-        <div className="grid grid-cols-7">
-          {days.map((iso, dayIndex) => {
-            const dayOcc = occurrences.filter((o) => o.dayIndex === dayIndex);
-            const isToday = iso === todayIso;
-            return (
-              <div
-                key={iso}
-                className={`min-h-[14rem] border-r border-[#ece8e2] p-2 last:border-r-0 ${
-                  isToday ? "bg-[#faf9f7]/60" : ""
-                }`}
-              >
-                {dayOcc.length === 0 ? (
-                  <p className="px-1 py-2 text-center text-[11px] text-[#d0cbc3]">—</p>
-                ) : (
-                  <ul className="space-y-1.5">
-                    {dayOcc.map((o) => {
-                      const taken = (rosterByClinicDate[`${o.clinic.id}|${o.date}`] || []).length;
-                      const open = Math.max(0, o.clinic.capacity - taken);
-                      return (
-                        <li key={`${o.clinic.id}-${o.date}`}>
-                          <button
-                            type="button"
-                            onClick={() => openClinic(o.clinic, o.date)}
-                            className="w-full rounded-lg border border-[#e8e5df] bg-[#f7f7f5] px-2 py-2 text-left transition hover:border-[#1a1a1a] hover:bg-white"
-                          >
-                            <span className="block text-[11px] font-medium tabular-nums text-[#6b665e]">
-                              {formatHour(o.clinic.startHour)}
-                            </span>
-                            <span className="mt-0.5 block text-[12px] font-medium leading-snug text-[#1a1a1a]">
-                              {shortClinicName(o.clinic.name)}
-                            </span>
-                            <span className="mt-1 block text-[10px] text-[#8a8477]">
-                              {open > 0 ? `${open} open` : "Full"}
-                            </span>
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </div>
-            );
-          })}
+      <div className="-mx-4 mt-5 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:overflow-visible sm:px-0">
+        <div className="min-w-[34rem] overflow-hidden rounded-2xl border border-[#e8e5df] bg-white sm:min-w-0">
+          <div className="grid grid-cols-7 border-b border-[#ece8e2] bg-[#faf9f7]">
+            {days.map((iso, i) => {
+              const d = parseDateInput(iso);
+              const isToday = iso === todayIso;
+              return (
+                <div
+                  key={iso}
+                  className={`border-r border-[#ece8e2] px-1 py-2 text-center last:border-r-0 sm:px-2 sm:py-2.5 ${
+                    isToday ? "bg-white" : ""
+                  }`}
+                >
+                  <p className="text-[9px] uppercase tracking-[0.1em] text-[#8a8477] sm:text-[10px] sm:tracking-[0.12em]">
+                    {DAY_LABELS[i]}
+                  </p>
+                  <p
+                    className={`mt-0.5 text-[13px] font-semibold sm:text-[15px] ${
+                      isToday ? "text-[#1a1a1a]" : "text-[#4a4a4a]"
+                    }`}
+                  >
+                    {d.getDate()}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+          <div className="grid grid-cols-7">
+            {days.map((iso, dayIndex) => {
+              const dayOcc = occurrences.filter((o) => o.dayIndex === dayIndex);
+              const isToday = iso === todayIso;
+              return (
+                <div
+                  key={iso}
+                  className={`min-h-[11rem] border-r border-[#ece8e2] p-1 last:border-r-0 sm:min-h-[14rem] sm:p-2 ${
+                    isToday ? "bg-[#faf9f7]/60" : ""
+                  }`}
+                >
+                  {dayOcc.length === 0 ? (
+                    <p className="px-0.5 py-2 text-center text-[10px] text-[#d0cbc3] sm:text-[11px]">—</p>
+                  ) : (
+                    <ul className="space-y-1 sm:space-y-1.5">
+                      {dayOcc.map((o) => {
+                        const taken = (rosterByClinicDate[`${o.clinic.id}|${o.date}`] || []).length;
+                        const open = Math.max(0, o.clinic.capacity - taken);
+                        return (
+                          <li key={`${o.clinic.id}-${o.date}`}>
+                            <button
+                              type="button"
+                              onClick={() => openClinic(o.clinic, o.date)}
+                              className="w-full rounded-md border border-[#e8e5df] bg-[#f7f7f5] px-1 py-1.5 text-left transition hover:border-[#1a1a1a] hover:bg-white sm:rounded-lg sm:px-2 sm:py-2"
+                            >
+                              <span className="block text-[9px] font-medium tabular-nums text-[#6b665e] sm:text-[11px]">
+                                {formatHour(o.clinic.startHour)}
+                              </span>
+                              <span className="mt-0.5 block text-[10px] font-medium leading-snug text-[#1a1a1a] sm:text-[12px]">
+                                {shortClinicName(o.clinic.name)}
+                              </span>
+                              <span className="mt-0.5 block text-[9px] text-[#8a8477] sm:mt-1 sm:text-[10px]">
+                                {open > 0 ? `${open} open` : "Full"}
+                              </span>
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -551,7 +504,7 @@ function Summer27JuniorsInner() {
                     amount={price}
                     savedCard={savedCard}
                     paying={paying}
-                    primaryLabel={`Enroll · $${price}`}
+                    primaryLabel="Enroll"
                     onPay={signUp}
                   />
                 )}
