@@ -76,7 +76,7 @@ export default function Summer27Layout({ children }: { children: React.ReactNode
           <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-2 px-4 py-3 sm:px-6">
             <p className="text-[11px] text-[#8a8477]">Hudson Valley tennis, quietly well run.</p>
             <Link href="/Summer27/admin" className="text-[10px] uppercase tracking-[0.1em] text-[#b0a99f] hover:text-[#6b665e]">
-              Admin
+              Director desk
             </Link>
           </div>
         </div>

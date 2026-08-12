@@ -4,7 +4,8 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useS27Session } from "../use-s27-session";
 import { canOneClick, startStripeCheckout } from "../payments";
-import { STRINGING_LABOR, STRING_OPTIONS } from "../summer27-data";
+import { STRING_OPTIONS } from "../summer27-data";
+import { getLiveStringingLabor } from "../schedule";
 import { KEYS, loadList, saveList, type S27StringingOrder } from "../storage";
 
 export default function Summer27StringingPage() {
@@ -29,7 +30,8 @@ function Summer27StringingInner() {
   const [paying, setPaying] = useState(false);
 
   const option = STRING_OPTIONS.find((s) => s.id === stringId) || STRING_OPTIONS[0];
-  const amount = STRINGING_LABOR + option.extra;
+  const labor = getLiveStringingLabor();
+  const amount = labor + option.extra;
   const isMember = !!session;
   const savedCard = canOneClick(session);
 
@@ -114,7 +116,7 @@ function Summer27StringingInner() {
       <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Pro shop</p>
       <h2 className="mt-1 text-2xl font-semibold tracking-tight">Stringing</h2>
       <p className="mt-2 text-[14px] text-[#6b665e]">
-        Labor is ${STRINGING_LABOR} plus the string you choose. Drop frames at the shop; typical turnaround 24–48 hours
+        Labor is ${labor} plus the string you choose. Drop frames at the shop; typical turnaround 24–48 hours
         during the season.
       </p>
 
@@ -141,7 +143,7 @@ function Summer27StringingInner() {
           </>
         )}
         <p className="text-[13px] text-[#6b665e]">
-          Total ${amount} (${STRINGING_LABOR} labor + ${option.extra} string)
+          Total ${amount} (${labor} labor + ${option.extra} string)
         </p>
         {msg && <p className="text-[13px]">{msg}</p>}
         <button disabled={paying} className="w-full rounded-lg bg-[#1a1a1a] py-2.5 text-[13px] font-medium text-white">

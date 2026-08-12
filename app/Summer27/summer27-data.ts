@@ -291,77 +291,10 @@ export type SlotBlockReason =
   | { type: "clinic"; label: string }
   | { type: "lesson"; label: string }
   | { type: "event"; label: string }
+  | { type: "hold"; label: string }
   | { type: "booked"; label: string };
 
 export function hoursOverlap(startA: number, durA: number, hour: number): boolean {
   return hour >= startA && hour < startA + durA;
 }
 
-export function getClinicBlocksForDate(dateStr: string): Array<{
-  clinic: ClinicDef;
-  startHour: number;
-  durationHours: number;
-  courts: CourtId[];
-}> {
-  const day = parseDateInput(dateStr).getDay();
-  return s27Clinics
-    .filter((c) => c.days.includes(day))
-    .map((c) => ({
-      clinic: c,
-      startHour: c.startHour,
-      durationHours: c.durationHours,
-      courts: c.blockCourts,
-    }));
-}
-
-export function getEventBlocksForDate(dateStr: string): Array<{
-  event: EventDef;
-  startHour: number;
-  durationHours: number;
-}> {
-  return s27Events
-    .filter((e) => e.date === dateStr)
-    .map((e) => {
-      const match = e.timeLabel.match(/(\d{1,2}):(\d{2})\s*(AM|PM).*?(\d{1,2}):(\d{2})\s*(AM|PM)/i);
-      if (!match) return { event: e, startHour: 16, durationHours: 3 };
-      const toHour = (h: string, m: string, p: string) => {
-        let hour = Number(h) % 12;
-        if (p.toUpperCase() === "PM") hour += 12;
-        return hour + Number(m) / 60;
-      };
-      const start = toHour(match[1], match[2], match[3]);
-      const end = toHour(match[4], match[5], match[6]);
-      return { event: e, startHour: start, durationHours: Math.max(1, end - start) };
-    });
-}
-
-export function getLessonHold(dateStr: string, courtId: CourtId, hour: number): boolean {
-  const day = parseDateInput(dateStr).getDay();
-  if (!PRIME_TEACHING.weekdays.includes(day)) return false;
-  if (courtId !== PRIME_TEACHING.courtId) return false;
-  const { morning, afternoon } = PRIME_TEACHING;
-  if (hour >= morning.start && hour < morning.end) return true;
-  if (hour >= afternoon.start && hour < afternoon.end) return true;
-  return false;
-}
-
-export function getProgramBlock(
-  dateStr: string,
-  courtId: CourtId,
-  hour: number
-): SlotBlockReason | null {
-  for (const block of getClinicBlocksForDate(dateStr)) {
-    if (block.courts.includes(courtId) && hoursOverlap(block.startHour, block.durationHours, hour)) {
-      return { type: "clinic", label: block.clinic.name };
-    }
-  }
-  for (const block of getEventBlocksForDate(dateStr)) {
-    if (hoursOverlap(block.startHour, block.durationHours, hour)) {
-      return { type: "event", label: block.event.title };
-    }
-  }
-  if (getLessonHold(dateStr, courtId, hour)) {
-    return { type: "lesson", label: "Private lesson hold" };
-  }
-  return null;
-}

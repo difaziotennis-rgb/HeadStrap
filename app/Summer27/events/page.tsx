@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { s27Events } from "../summer27-data";
+import { getLiveEvents } from "../schedule";
 import { KEYS, loadList, type S27EventBooking } from "../storage";
 
 export default function Summer27EventsPage() {
@@ -30,7 +30,7 @@ export default function Summer27EventsPage() {
         advance. Courts are blocked for event windows.
       </p>
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
-        {s27Events.map((event) => {
+        {getLiveEvents().map((event) => {
           const taken = counts[event.id] || 0;
           return (
             <Link

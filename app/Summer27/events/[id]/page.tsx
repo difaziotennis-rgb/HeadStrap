@@ -5,7 +5,8 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { useS27Session } from "../../use-s27-session";
 import { canOneClick, startStripeCheckout } from "../../payments";
-import { formatPrettyDate, s27Events } from "../../summer27-data";
+import { formatPrettyDate } from "../../summer27-data";
+import { getLiveEvents } from "../../schedule";
 import { KEYS, loadList, saveList, type S27EventBooking } from "../../storage";
 
 export default function Summer27EventDetailPage() {
@@ -20,7 +21,7 @@ function Summer27EventDetailInner() {
   const params = useParams<{ id: string }>();
   const searchParams = useSearchParams();
   const session = useS27Session();
-  const event = s27Events.find((e) => e.id === params.id);
+  const event = getLiveEvents().find((e) => e.id === params.id);
   const [bookings, setBookings] = useState<S27EventBooking[]>([]);
   const [guestCount, setGuestCount] = useState(1);
   const [name, setName] = useState("");

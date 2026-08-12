@@ -9,9 +9,9 @@ import {
   clinicTimeLabel,
   formatDateInput,
   parseDateInput,
-  s27Clinics,
   type ClinicDef,
 } from "../summer27-data";
+import { getLiveClinics } from "../schedule";
 import { KEYS, loadList, saveList, type S27ClinicBooking } from "../storage";
 
 function nextDatesForClinic(clinic: ClinicDef, count = 6): string[] {
@@ -35,7 +35,7 @@ export default function Summer27JuniorsPage() {
 }
 
 function Summer27JuniorsInner() {
-  const juniors = s27Clinics.filter((c) => c.kind === "junior");
+  const juniors = getLiveClinics().filter((c) => c.kind === "junior");
   const session = useS27Session();
   const searchParams = useSearchParams();
   const [bookings, setBookings] = useState<S27ClinicBooking[]>([]);

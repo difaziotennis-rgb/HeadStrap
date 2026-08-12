@@ -137,6 +137,20 @@ export function saveRecord<T>(key: string, value: Record<string, T>) {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
+export function uniqueCourts(map: Record<string, S27CourtBooking>): S27CourtBooking[] {
+  return Object.values(map).filter((b, i, arr) => arr.findIndex((x) => x.id === b.id) === i);
+}
+
+export function persistCourts(list: S27CourtBooking[]) {
+  const rec: Record<string, S27CourtBooking> = {};
+  for (const booking of list) {
+    for (let i = 0; i < booking.durationHours; i++) {
+      rec[courtBookingKey(booking.date, booking.courtId, booking.hour + i)] = booking;
+    }
+  }
+  saveRecord(KEYS.courts, rec);
+}
+
 export function courtBookingKey(date: string, courtId: string, hour: number) {
   return `${date}|${courtId}|${hour}`;
 }

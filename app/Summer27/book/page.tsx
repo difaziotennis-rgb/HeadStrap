@@ -8,14 +8,13 @@ import { canOneClick, startStripeCheckout } from "../payments";
 import {
   BOOKING_HOURS,
   COURTS,
-  COURT_RATES,
   formatHour,
   formatDateInput,
   formatPrettyDate,
-  getProgramBlock,
   parseDateInput,
   type CourtId,
 } from "../summer27-data";
+import { getLiveCourtRates, getProgramBlock } from "../schedule";
 import {
   KEYS,
   courtBookingKey,
@@ -50,7 +49,8 @@ function Summer27BookInner() {
   const [msg, setMsg] = useState<string | null>(null);
   const [paying, setPaying] = useState(false);
   const isMember = !!session;
-  const rate = isMember ? COURT_RATES.member : COURT_RATES.guest;
+  const rates = getLiveCourtRates();
+  const rate = isMember ? rates.member : rates.guest;
   const savedCard = canOneClick(session);
 
   useEffect(() => {
@@ -164,7 +164,7 @@ function Summer27BookInner() {
       <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Court booking</p>
       <h2 className="mt-1 text-2xl font-semibold tracking-tight">Court 1 &amp; Court 2</h2>
       <p className="mt-2 max-w-2xl text-[14px] text-[#6b665e]">
-        Member ${COURT_RATES.member}/hr · guest ${COURT_RATES.guest}/hr. Pay in advance. Clinics and events block both
+        Member ${rates.member}/hr · guest ${rates.guest}/hr. Pay in advance. Clinics and events block both
         courts; Court 1 is held for private lessons during prime teaching hours.
       </p>
 
@@ -240,6 +240,8 @@ function Summer27BookInner() {
                                 ? "bg-[#f4efe4] text-[#7a6230]"
                                 : occ.type === "event"
                                   ? "bg-[#ece8f5] text-[#4a3d6b]"
+                                  : occ.type === "hold"
+                                    ? "bg-[#f6eaea] text-[#7a3d3d]"
                                   : "bg-[#f3eee8] text-[#6b665e]"
                           }`}
                         >

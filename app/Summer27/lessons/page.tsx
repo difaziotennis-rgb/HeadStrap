@@ -9,10 +9,9 @@ import {
   formatDateInput,
   formatHour,
   formatPrettyDate,
-  getProgramBlock,
-  LESSON_RATES,
   parseDateInput,
 } from "../summer27-data";
+import { getLiveLessonRates, getProgramBlock } from "../schedule";
 import {
   KEYS,
   loadList,
@@ -47,7 +46,8 @@ function Summer27LessonsInner() {
   const isMember = !!session;
   const savedCard = canOneClick(session);
   const hours = duration === "90" ? 1.5 : 1;
-  const amount = Math.round((isMember ? LESSON_RATES.member : LESSON_RATES.guest) * hours);
+  const rates = getLiveLessonRates();
+  const amount = Math.round((isMember ? rates.member : rates.guest) * hours);
 
   useEffect(() => {
     setLessons(loadList<S27LessonBooking>(KEYS.lessons));
@@ -146,8 +146,8 @@ function Summer27LessonsInner() {
       <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Private lessons</p>
       <h2 className="mt-1 text-2xl font-semibold tracking-tight">Derek DiFazio</h2>
       <p className="mt-2 text-[14px] text-[#6b665e]">
-        Court 1 is held during weekday prime teaching hours (8–12 and 3–5). ${LESSON_RATES.member}/hr members · $
-        {LESSON_RATES.guest}/hr guests. Pay when you book.
+        Court 1 is held during weekday prime teaching hours. ${rates.member}/hr members · $
+        {rates.guest}/hr guests. Pay when you book.
       </p>
 
       <form onSubmit={bookLesson} className="mt-6 space-y-3 rounded-2xl border border-[#e8e5df] bg-white p-5">

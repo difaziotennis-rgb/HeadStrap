@@ -10,9 +10,9 @@ import {
   clinicTimeLabel,
   formatDateInput,
   parseDateInput,
-  s27Clinics,
   type ClinicDef,
 } from "../summer27-data";
+import { getLiveClinics } from "../schedule";
 import {
   KEYS,
   loadList,
@@ -45,14 +45,15 @@ function Summer27ClinicsInner() {
   const session = useS27Session();
   const searchParams = useSearchParams();
   const [bookings, setBookings] = useState<S27ClinicBooking[]>([]);
-  const [selectedId, setSelectedId] = useState(s27Clinics.find((c) => c.kind === "adult")?.id || s27Clinics[0].id);
+  const clinics = getLiveClinics();
+  const [selectedId, setSelectedId] = useState(clinics.find((c) => c.kind === "adult")?.id || clinics[0].id);
   const [date, setDate] = useState("");
   const [guestName, setGuestName] = useState("");
   const [guestEmail, setGuestEmail] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
   const [paying, setPaying] = useState(false);
 
-  const clinic = s27Clinics.find((c) => c.id === selectedId) || s27Clinics[0];
+  const clinic = clinics.find((c) => c.id === selectedId) || clinics[0];
   const dates = useMemo(() => nextDatesForClinic(clinic), [clinic]);
   const isMember = !!session;
   const savedCard = canOneClick(session);
@@ -162,7 +163,7 @@ function Summer27ClinicsInner() {
 
       <div className="mt-6 grid gap-4 lg:grid-cols-12">
         <div className="space-y-2 lg:col-span-5">
-          {s27Clinics
+          {clinics
             .filter((c) => c.kind === "adult")
             .map((c) => (
               <button
