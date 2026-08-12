@@ -155,6 +155,66 @@ export function courtBookingKey(date: string, courtId: string, hour: number) {
   return `${date}|${courtId}|${hour}`;
 }
 
+export const DEREK_MEMBER = {
+  memberNumber: "100",
+  name: "Derek DiFazio",
+  email: "difaziotennis@gmail.com",
+  phone: "631-901-5220",
+  password: "tennis",
+} as const;
+
+export function ensureDerekMember(): S27MemberAccount {
+  const account: S27MemberAccount = {
+    memberNumber: DEREK_MEMBER.memberNumber,
+    name: DEREK_MEMBER.name,
+    email: DEREK_MEMBER.email,
+    phone: DEREK_MEMBER.phone,
+    password: DEREK_MEMBER.password,
+    createdAt: "2026-08-11T00:00:00.000Z",
+  };
+  if (typeof window === "undefined") return account;
+
+  const members = loadList<S27MemberAccount>(KEYS.members);
+  const existing = members.find(
+    (m) =>
+      m.memberNumber === DEREK_MEMBER.memberNumber ||
+      m.email.toLowerCase() === DEREK_MEMBER.email.toLowerCase() ||
+      m.name.trim().toLowerCase() === "derek difazio"
+  );
+  const derek: S27MemberAccount = existing
+    ? {
+        ...existing,
+        name: DEREK_MEMBER.name,
+        email: DEREK_MEMBER.email,
+        phone: existing.phone || DEREK_MEMBER.phone,
+        password: DEREK_MEMBER.password,
+      }
+    : account;
+  saveList(
+    KEYS.members,
+    existing
+      ? members.map((m) => (m.memberNumber === existing.memberNumber ? derek : m))
+      : [derek, ...members]
+  );
+
+  const payments = loadList<S27PaymentProfile>(KEYS.payment);
+  if (!payments.some((p) => p.memberNumber === derek.memberNumber)) {
+    saveList(KEYS.payment, [
+      ...payments,
+      {
+        memberNumber: derek.memberNumber,
+        brand: "Visa",
+        last4: "4242",
+        expMonth: "12",
+        expYear: "28",
+        billingZip: "12572",
+        oneClick: true,
+      },
+    ]);
+  }
+  return derek;
+}
+
 export function nextMemberNumber(existing: S27MemberAccount[]): string {
   const used = new Set(existing.map((m) => m.memberNumber));
   for (let i = 101; i < 999; i++) {

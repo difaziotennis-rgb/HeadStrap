@@ -8,7 +8,7 @@ import {
   S27_MEMBER_SESSION_KEY,
   type S27MemberSession,
 } from "./member-session";
-import { KEYS, loadList, type S27MemberAccount } from "./storage";
+import { DEREK_MEMBER, KEYS, ensureDerekMember, loadList, type S27MemberAccount } from "./storage";
 
 export default function MemberAuth() {
   const [session, setSession] = useState<S27MemberSession | null>(null);
@@ -19,6 +19,7 @@ export default function MemberAuth() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    ensureDerekMember();
     setSession(parseS27Session(localStorage.getItem(S27_MEMBER_SESSION_KEY)));
   }, []);
 
@@ -53,6 +54,22 @@ export default function MemberAuth() {
     emitS27SessionChange();
     setOpen(false);
     setPassword("");
+    setMsg(null);
+  }
+
+  function signInAsDerek() {
+    const derek = ensureDerekMember();
+    const next: S27MemberSession = {
+      memberNumber: derek.memberNumber,
+      memberEmail: derek.email,
+      memberName: derek.name,
+      memberPhone: derek.phone,
+      signedInAt: new Date().toISOString(),
+    };
+    localStorage.setItem(S27_MEMBER_SESSION_KEY, JSON.stringify(next));
+    setSession(next);
+    emitS27SessionChange();
+    setOpen(false);
     setMsg(null);
   }
 
@@ -109,6 +126,16 @@ export default function MemberAuth() {
               Sign in
             </button>
           </form>
+          <button
+            type="button"
+            onClick={signInAsDerek}
+            className="mt-2 w-full rounded-lg border border-[#e8e5df] bg-[#faf9f7] py-2 text-[12px] font-medium text-[#4a4a4a] hover:bg-white"
+          >
+            Sign in as Derek DiFazio
+          </button>
+          <p className="mt-2 text-center text-[11px] text-[#8a8477]">
+            #{DEREK_MEMBER.memberNumber} · {DEREK_MEMBER.email} · {DEREK_MEMBER.password}
+          </p>
           <Link
             href="/Summer27/member"
             className="mt-2 block text-center text-[11px] text-[#8a8477] hover:text-[#1a1a1a]"

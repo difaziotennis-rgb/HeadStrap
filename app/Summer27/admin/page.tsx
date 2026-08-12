@@ -10,6 +10,7 @@ import {
   persistCourts,
   saveList,
   uniqueCourts,
+  ensureDerekMember,
   type S27ClinicBooking,
   type S27CourtBooking,
   type S27EventBooking,
@@ -94,6 +95,7 @@ export default function Summer27DirectorPage() {
   const [catalog, setCatalog] = useState<S27Catalog>(defaultCatalog());
 
   function reload() {
+    ensureDerekMember();
     setMembers(loadList<S27MemberAccount>(KEYS.members));
     setCourts(uniqueCourts(loadRecord<S27CourtBooking>(KEYS.courts)));
     setClinics(loadList<S27ClinicBooking>(KEYS.clinics));
