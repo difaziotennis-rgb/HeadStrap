@@ -55,6 +55,17 @@ function nextClinicDates(days: number[], count = 8) {
   return dates;
 }
 
+function monthHeading(ym: string) {
+  const [y, m] = ym.split("-").map(Number);
+  if (!y || !m) return ym;
+  return new Date(y, m - 1, 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+}
+
+function shortPastDate(iso: string) {
+  const d = new Date(`${iso}T12:00:00`);
+  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+}
+
 export default function MemberBookings({ courts, clinics, lessons, events, stringing, onChange }: Props) {
   const [editing, setEditing] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
@@ -142,10 +153,34 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
 
   const today = formatDateInput(new Date());
   const upcoming = rows.filter((row) => row.date >= today || row.status === "pending");
-  const past = rows
-    .filter((row) => row.date < today && row.status !== "pending")
-    .slice()
-    .reverse();
+
+  const pastByMonth = useMemo(() => {
+    const pastRows = rows
+      .filter((row) => row.date < today && row.status !== "pending")
+      .slice()
+      .reverse();
+    const map = new Map<string, typeof pastRows>();
+    for (const row of pastRows) {
+      const key = row.date.slice(0, 7);
+      const list = map.get(key);
+      if (list) list.push(row);
+      else map.set(key, [row]);
+    }
+    return Array.from(map.entries()).map(([key, items]) => ({
+      key,
+      label: monthHeading(key),
+      items,
+      total: items.reduce((sum, row) => sum + row.amount, 0),
+    }));
+  }, [rows, today]);
+
+  const pastCount = pastByMonth.reduce((sum, month) => sum + month.items.length, 0);
+
+  const [openPastMonth, setOpenPastMonth] = useState<string | null>(null);
+  const activePastMonth =
+    openPastMonth && pastByMonth.some((m) => m.key === openPastMonth)
+      ? openPastMonth
+      : pastByMonth[0]?.key || null;
 
   function flash(text: string) {
     setMsg(text);
@@ -331,6 +366,37 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
     flash("Stringing pickup updated.");
   }
 
+  function renderPastRow(row: (typeof rows)[number]) {
+    const kindLabel = row.kind === "stringing" ? "Stringing" : row.kind;
+    const title =
+      row.kind === "court"
+        ? (row.booking as S27CourtBooking).courtName
+        : row.kind === "clinic"
+          ? (row.booking as S27ClinicBooking).clinicName
+          : row.kind === "lesson"
+            ? lessonProLabel(row.booking as S27LessonBooking)
+            : row.kind === "event"
+              ? (row.booking as S27EventBooking).eventTitle
+              : (row.booking as S27StringingOrder).racket;
+
+    return (
+      <li key={row.id} className="flex items-start justify-between gap-3 px-3 py-2.5 sm:px-3.5">
+        <div className="min-w-0">
+          <p className="text-[13px] font-medium text-[#1a1a1a]">
+            <span className="text-[#8a8477]">{shortPastDate(row.date)}</span>
+            <span className="text-[#cfc9bf]"> · </span>
+            {title}
+          </p>
+          <p className="mt-0.5 text-[12px] capitalize text-[#6b665e]">
+            {kindLabel}
+            {row.detail ? ` · ${row.detail}` : ""}
+          </p>
+        </div>
+        <p className="shrink-0 text-[13px] tabular-nums text-[#4a4a4a]">${row.amount}</p>
+      </li>
+    );
+  }
+
   function renderBooking(row: (typeof rows)[number], canEdit: boolean) {
         const open = canEdit && canChangeBooking(row.date, row.hour);
         const clinicDef = row.kind === "clinic" ? liveClinics.find((c) => c.id === (row.booking as S27ClinicBooking).clinicId) : null;
@@ -485,11 +551,43 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
       </div>
 
       <div className="space-y-2">
-        <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Past</p>
-        {past.length === 0 ? (
+        <div className="flex items-baseline justify-between gap-2">
+          <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Past</p>
+          {pastCount > 0 ? (
+            <p className="text-[12px] text-[#8a8477]">{pastCount} booking{pastCount === 1 ? "" : "s"}</p>
+          ) : null}
+        </div>
+        {pastCount === 0 ? (
           <p className="text-[13px] text-[#8a8477]">None yet.</p>
         ) : (
-          past.map((row) => renderBooking(row, false))
+          <div className="overflow-hidden rounded-xl border border-[#ece8e2]">
+            {pastByMonth.map((month) => {
+              const open = month.key === activePastMonth;
+              return (
+                <div key={month.key} className="border-b border-[#ece8e2] last:border-b-0">
+                  <button
+                    type="button"
+                    onClick={() => setOpenPastMonth(open ? null : month.key)}
+                    className="flex w-full items-center justify-between gap-3 bg-[#faf9f7] px-3.5 py-3 text-left transition hover:bg-[#f5f3ef]"
+                    aria-expanded={open}
+                  >
+                    <span className="min-w-0">
+                      <span className="block text-[14px] font-medium text-[#1a1a1a]">{month.label}</span>
+                      <span className="mt-0.5 block text-[12px] text-[#8a8477]">
+                        {month.items.length} booking{month.items.length === 1 ? "" : "s"} · ${month.total}
+                      </span>
+                    </span>
+                    <span className="text-[16px] leading-none text-[#8a8477]" aria-hidden>
+                      {open ? "−" : "+"}
+                    </span>
+                  </button>
+                  {open ? (
+                    <ul className="divide-y divide-[#f0ede8] bg-white">{month.items.map(renderPastRow)}</ul>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
     </div>
