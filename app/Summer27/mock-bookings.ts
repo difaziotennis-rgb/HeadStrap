@@ -230,7 +230,7 @@ function seedLessons(): S27LessonBooking[] {
   let n = 0;
   const derek = s27Pros.find((p) => p.id === "derek") || s27Pros[0];
   const maya = s27Pros.find((p) => p.id === "maya-ellison");
-  const cole = s27Pros.find((p) => p.id === "cole-brennan");
+  const jonah = s27Pros.find((p) => p.id === "jonah-berkowitz");
   for (let offset = -1; offset <= 8; offset++) {
     const d = dayOffset(offset);
     const day = d.getDay();
@@ -284,7 +284,7 @@ function seedLessons(): S27LessonBooking[] {
         createdAt: new Date().toISOString(),
       });
     }
-    if (cole && [2, 4, 6].includes(day) && offset % 2 === 1) {
+    if (jonah && [2, 4, 6].includes(day) && offset % 2 === 1) {
       const kid = JUNIORS[Math.abs(offset) % JUNIORS.length];
       out.push({
         id: `mock-lesson-${++n}`,
@@ -295,11 +295,11 @@ function seedLessons(): S27LessonBooking[] {
         clientEmail: kid.email,
         clientPhone: "",
         memberNumber: kid.memberNumber,
-        proId: cole.id,
-        proName: cole.name,
-        courtId: cole.courtId,
+        proId: jonah.id,
+        proName: jonah.name,
+        courtId: jonah.courtId,
         focus: "Junior fundamentals",
-        amount: lessonRateForPro(cole, !!kid.memberNumber),
+        amount: lessonRateForPro(jonah, !!kid.memberNumber),
         paymentStatus: paid(offset + 4),
         paymentMethod: method(offset + 4),
         createdAt: new Date().toISOString(),

@@ -15,7 +15,8 @@ export function bookingProId(booking: Pick<S27LessonBooking, "proId" | "proName"
   if (booking.proId) return booking.proId;
   const name = lessonProLabel(booking).toLowerCase();
   if (name.includes("maya")) return "maya-ellison";
-  if (name.includes("cole")) return "cole-brennan";
+  if (name.includes("jonah") || name.includes("berkowitz")) return "jonah-berkowitz";
+  if (name.includes("cole")) return "jonah-berkowitz";
   return "derek";
 }
 

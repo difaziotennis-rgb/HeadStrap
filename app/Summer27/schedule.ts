@@ -15,7 +15,7 @@ import {
   type SlotBlockReason,
 } from "./summer27-data";
 
-export const S27_CATALOG_KEY = "s27_catalog_v12";
+export const S27_CATALOG_KEY = "s27_catalog_v13";
 export const S27_BLOCKS_KEY = "s27_admin_blocks_v1";
 export const S27_NOTES_KEY = "s27_member_notes_v1";
 
@@ -119,11 +119,23 @@ function usablePros(pros: unknown, fallback: ProDef[]): ProDef[] {
     .map((p) => {
       const def = fallback.find((f) => f.id === p.id);
       return {
+        ...def,
         ...p,
         memberRate: typeof p.memberRate === "number" ? p.memberRate : def?.memberRate ?? LESSON_RATES.member,
         guestRate: typeof p.guestRate === "number" ? p.guestRate : def?.guestRate ?? LESSON_RATES.guest,
-      };
+        longBio: p.longBio || def?.longBio,
+        quote: p.quote || def?.quote,
+        image: p.image || def?.image,
+        bio: p.bio || def?.bio || "",
+        focus: p.focus || def?.focus || "",
+        title: p.title || def?.title || "Teaching Professional",
+      } as ProDef;
     });
+  // Ensure new default pros appear even if an older saved catalog omitted them.
+  const ids = new Set(ok.map((p) => p.id));
+  for (const pro of fallback) {
+    if (!ids.has(pro.id)) ok.push(pro);
+  }
   return ok.length ? ok : fallback;
 }
 

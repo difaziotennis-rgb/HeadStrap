@@ -186,10 +186,9 @@ function Summer27LessonsInner() {
         </p>
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {pros.map((item) => (
-            <Link
+            <div
               key={item.id}
-              href={`/Summer27/lessons?pro=${encodeURIComponent(item.id)}`}
-              className="rounded-2xl border border-[#e8e5df] bg-white p-5 transition hover:border-[#d8d3cb] hover:bg-[#faf9f7]"
+              className="flex flex-col rounded-2xl border border-[#e8e5df] bg-white p-5 transition hover:border-[#d8d3cb]"
             >
               <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">{item.title}</p>
               <p className="mt-1 text-[18px] font-semibold tracking-tight">{item.name}</p>
@@ -200,8 +199,21 @@ function Summer27LessonsInner() {
               <p className="mt-2 text-[13px] font-medium text-[#1a1a1a]">
                 ${lessonRateForPro(item, isMember)}/hour{isMember ? "" : " guest"}
               </p>
-              <p className="mt-3 text-[13px] font-medium text-[#1a1a1a]">View times →</p>
-            </Link>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <Link
+                  href={`/Summer27/pros/${encodeURIComponent(item.id)}`}
+                  className="text-[13px] font-medium text-[#6b665e] underline-offset-2 hover:text-[#1a1a1a] hover:underline"
+                >
+                  Bio
+                </Link>
+                <Link
+                  href={`/Summer27/lessons?pro=${encodeURIComponent(item.id)}`}
+                  className="text-[13px] font-medium text-[#1a1a1a]"
+                >
+                  View times →
+                </Link>
+              </div>
+            </div>
           ))}
         </div>
       </main>
@@ -219,6 +231,12 @@ function Summer27LessonsInner() {
       <p className="mt-2 text-[13px] text-[#6b665e]">
         {courtName} · {proScheduleLabel(pro)} · ${hourly}/hour
       </p>
+      <Link
+        href={`/Summer27/pros/${encodeURIComponent(pro.id)}`}
+        className="mt-2 inline-block text-[13px] font-medium text-[#1a1a1a] underline-offset-2 hover:underline"
+      >
+        Full bio →
+      </Link>
 
       <div className="mt-6 space-y-4 rounded-2xl border border-[#e8e5df] bg-white p-4 sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">

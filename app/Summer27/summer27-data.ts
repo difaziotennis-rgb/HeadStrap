@@ -44,12 +44,17 @@ export type ProDef = {
   name: string;
   title: string;
   bio: string;
+  /** Longer copy for the pro bio page. */
+  longBio?: string;
+  quote?: string;
   focus: string;
   courtId: CourtId;
   days: number[];
   windows: ProWindow[];
   memberRate: number;
   guestRate: number;
+  /** Optional headshot under /public. */
+  image?: string;
 };
 
 export function lessonRateForPro(
@@ -67,6 +72,10 @@ export const s27Pros: ProDef[] = [
     title: "Director of Tennis",
     focus: "Adults and match play",
     bio: "Private instruction on Court 1. Adults, college-bound juniors, and serious club players.",
+    longBio:
+      "A native New Yorker, Derek has over 15 years of coaching experience from the beginner to Division I and professional levels and loves working with players of all ages and abilities. A national doubles champion as both a junior and an adult, Derek was ranked as high as #1 in New York and the Eastern Section, before playing #1 singles and doubles at Division I Clemson University where he achieved a top 25 ITA ranking and an ATP singles ranking while competing professionally.",
+    quote: "Movement is medicine. Play is essential.",
+    image: "/derek-bio.png",
     courtId: "court-1",
     memberRate: 185,
     guestRate: 200,
@@ -82,6 +91,9 @@ export const s27Pros: ProDef[] = [
     title: "Teaching Professional",
     focus: "Recreational adults & doubles",
     bio: "Rally, doubles, and returning to the game.",
+    longBio:
+      "Maya works with recreational adults and doubles partners who want clearer patterns, better communication, and more enjoyable match play. Sessions emphasize live-ball feeding, court positioning, and the habits that make club doubles click.",
+    quote: "Good doubles is a conversation.",
     courtId: "court-2",
     memberRate: 160,
     guestRate: 175,
@@ -92,11 +104,14 @@ export const s27Pros: ProDef[] = [
     ],
   },
   {
-    id: "cole-brennan",
-    name: "Cole Brennan",
-    title: "Junior Development",
-    focus: "Juniors 8–16",
-    bio: "After-school and Saturday hours for developing juniors.",
+    id: "jonah-berkowitz",
+    name: "Jonah Berkowitz",
+    title: "Teaching Professional",
+    focus: "Juniors & technique",
+    bio: "Hudson Valley native. Clean mechanics, measurable progress, and junior development.",
+    longBio:
+      "Hudson Valley native with years of experience coaching players of all ages. Jonah went undefeated in match play at FDR High School and competed at Brown University. His coaching is technique-first — clear cues, repeatable strokes, and steady progress for juniors and adults who want cleaner mechanics.",
+    quote: "Clean mechanics. Repeatable strokes.",
     courtId: "court-2",
     memberRate: 160,
     guestRate: 175,
