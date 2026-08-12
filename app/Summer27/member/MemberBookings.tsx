@@ -79,7 +79,6 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
   const [lessonDraft, setLessonDraft] = useState({ date: "", hour: "8", duration: "60" as "60" | "90", focus: "" });
   const [clinicDraft, setClinicDraft] = useState("");
   const [eventDraft, setEventDraft] = useState("1");
-  const [stringDraft, setStringDraft] = useState("");
 
   const rows = useMemo(() => {
     const items = [
@@ -530,20 +529,6 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
               >
                 <input className={`${inputClass} w-24`} type="number" min={1} max={6} value={eventDraft} onChange={(e) => setEventDraft(e.target.value)} />
                 <button className="rounded-lg bg-[#1a1a1a] px-3 py-1.5 text-[12px] text-white">Update spots</button>
-                <button type="button" onClick={() => setEditing(null)} className="text-[12px] text-[#8a8477]">Close</button>
-              </form>
-            )}
-
-            {editing === row.id && open && row.kind === "stringing" && (
-              <form
-                className="mt-3 flex flex-wrap gap-2"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  saveStringing(row);
-                }}
-              >
-                <input type="date" className={inputClass} value={stringDraft} onChange={(e) => setStringDraft(e.target.value)} />
-                <button className="rounded-lg bg-[#1a1a1a] px-3 py-1.5 text-[12px] text-white">Save pickup</button>
                 <button type="button" onClick={() => setEditing(null)} className="text-[12px] text-[#8a8477]">Close</button>
               </form>
             )}
