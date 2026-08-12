@@ -21,7 +21,6 @@ import {
 } from "../summer27-data";
 import { getLivePros } from "../schedule";
 import { openLessonHours } from "../lesson-slots";
-import { Segmented } from "../DateChips";
 import {
   KEYS,
   loadList,
@@ -48,7 +47,7 @@ function Summer27LessonsInner() {
   const [courts, setCourts] = useState<S27CourtBooking[]>([]);
   const [date, setDate] = useState(() => formatDateInput(new Date()));
   const [hour, setHour] = useState(7);
-  const [duration, setDuration] = useState<"60" | "90">("60");
+  const duration = "60" as const;
   const [focus, setFocus] = useState("");
   const [guestName, setGuestName] = useState("");
   const [guestEmail, setGuestEmail] = useState("");
@@ -63,7 +62,7 @@ function Summer27LessonsInner() {
 
   const isMember = !!session;
   const savedCard = canOneClick(session);
-  const hours = duration === "90" ? 1.5 : 1;
+  const hours = 1;
   const hourly = lessonRateForPro(pro, isMember);
   const amount = Math.round(hourly * hours);
   const courtName = pro ? COURTS.find((c) => c.id === pro.courtId)?.name || pro.courtId : "";
@@ -308,17 +307,7 @@ function Summer27LessonsInner() {
               className="mt-1 block w-full min-w-[10rem] rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]"
             />
           </label>
-          <div>
-            <p className="mb-1 text-[12px] text-[#6b665e]">Length</p>
-            <Segmented
-              value={duration}
-              onChange={(v) => setDuration(v as "60" | "90")}
-              options={[
-                { value: "60", label: "60 min" },
-                { value: "90", label: "90 min" },
-              ]}
-            />
-          </div>
+          <p className="text-[13px] text-[#6b665e]">60 minutes</p>
         </div>
         <div>
           <p className="mb-2 text-[12px] text-[#6b665e]">

@@ -261,7 +261,7 @@ function LessonsBlock({
   const [proId, setProId] = useState(pros[0]?.id || "derek");
   const [date, setDate] = useState(today());
   const [hour, setHour] = useState("8");
-  const [duration, setDuration] = useState<"60" | "90">("60");
+  const duration = "60" as const;
   const [guestName, setGuestName] = useState("");
   const [focus, setFocus] = useState("");
   const [status, setStatus] = useState<"paid" | "pending">("paid");
@@ -295,7 +295,7 @@ function LessonsBlock({
         proName: pro.name,
         courtId: pro.courtId,
         focus,
-        amount: duration === "90" ? Math.round(hourly * 1.5) : hourly,
+        amount: hourly,
         paymentStatus: status,
         paymentMethod: "manual",
         requestStatus: "accepted",
@@ -316,10 +316,7 @@ function LessonsBlock({
         <select className={inputClass} value={hour} onChange={(e) => setHour(e.target.value)}>
           {BOOKING_HOURS.map((h) => <option key={h} value={h}>{formatHour(h)}</option>)}
         </select>
-        <select className={inputClass} value={duration} onChange={(e) => setDuration(e.target.value as "60" | "90")}>
-          <option value="60">60 min</option>
-          <option value="90">90 min</option>
-        </select>
+        <p className="flex items-center text-[13px] text-[#6b665e]">60 minutes</p>
         {!member && <input className={inputClass} placeholder="Walk-up name" value={guestName} onChange={(e) => setGuestName(e.target.value)} />}
         <input className={inputClass} placeholder="Focus" value={focus} onChange={(e) => setFocus(e.target.value)} />
         <select className={inputClass} value={status} onChange={(e) => setStatus(e.target.value as "paid" | "pending")}>

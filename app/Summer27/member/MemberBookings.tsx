@@ -76,7 +76,7 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
   const courtRates = getLiveCourtRates();
 
   const [courtDraft, setCourtDraft] = useState({ date: "", hour: "7", durationHours: "1", courtId: "court-2" as CourtId });
-  const [lessonDraft, setLessonDraft] = useState({ date: "", hour: "8", duration: "60" as "60" | "90", focus: "" });
+  const [lessonDraft, setLessonDraft] = useState({ date: "", hour: "8", focus: "" });
   const [clinicDraft, setClinicDraft] = useState("");
   const [eventDraft, setEventDraft] = useState("1");
 
@@ -217,7 +217,7 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
     }
     if (row.kind === "lesson") {
       const b = row.booking as S27LessonBooking;
-      setLessonDraft({ date: b.date, hour: String(b.hour), duration: b.duration, focus: b.focus || "" });
+      setLessonDraft({ date: b.date, hour: String(b.hour), focus: b.focus || "" });
     }
     if (row.kind === "clinic") setClinicDraft(row.date);
     if (row.kind === "event") setEventDraft(String((row.booking as S27EventBooking).guestCount));
@@ -308,7 +308,7 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
       pro,
       date: lessonDraft.date,
       hour,
-      duration: lessonDraft.duration,
+      duration: "60",
       lessons: loadList<S27LessonBooking>(KEYS.lessons),
       courts: uniqueCourts(loadRecord<S27CourtBooking>(KEYS.courts)),
       ignoreId: row.id,
@@ -318,7 +318,7 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
       return;
     }
     const all = loadList<S27LessonBooking>(KEYS.lessons);
-    const hours = lessonDraft.duration === "90" ? 1.5 : 1;
+    const hours = 1;
     saveList(
       KEYS.lessons,
       all.map((b) =>
@@ -327,7 +327,7 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
               ...b,
               date: lessonDraft.date,
               hour,
-              duration: lessonDraft.duration,
+              duration: "60",
               focus: lessonDraft.focus.trim(),
               proId: pro.id,
               proName: pro.name,
@@ -489,10 +489,7 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
                     <option key={h} value={h}>{formatHour(h)}</option>
                   ))}
                 </select>
-                <select className={inputClass} value={lessonDraft.duration} onChange={(e) => setLessonDraft({ ...lessonDraft, duration: e.target.value as "60" | "90" })}>
-                  <option value="60">60 minutes</option>
-                  <option value="90">90 minutes</option>
-                </select>
+                <p className="flex items-center text-[13px] text-[#6b665e]">60 minutes</p>
                 <input className={`${inputClass} sm:col-span-3`} value={lessonDraft.focus} onChange={(e) => setLessonDraft({ ...lessonDraft, focus: e.target.value })} placeholder="Focus" />
                 <div className="flex gap-2 sm:col-span-3">
                   <button className="rounded-lg bg-[#1a1a1a] px-3 py-1.5 text-[12px] text-white">Save change</button>

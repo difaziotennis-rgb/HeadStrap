@@ -249,10 +249,8 @@ function seedLessons(): S27LessonBooking[] {
       const hours = [8, 9, 10, 11, 15, 16];
       hours.forEach((hour, hi) => {
         const who = personAt(offset * 6 + hi + 3);
-        const duration: "60" | "90" =
-          (hour === 8 && offset % 3 === 0) || (hour === 15 && offset % 3 === 1) ? "90" : "60";
+        const duration = "60" as const;
         if ((hour === 9 && offset % 3 === 0) || (hour === 16 && offset % 3 === 1)) return;
-        const hoursCount = duration === "90" ? 1.5 : 1;
         out.push({
           id: `mock-lesson-${++n}`,
           date,
@@ -266,7 +264,7 @@ function seedLessons(): S27LessonBooking[] {
           proName: derek.name,
           courtId: derek.courtId,
           focus: FOCUS[(offset + hi) % FOCUS.length],
-          amount: Math.round(lessonRateForPro(derek, !!who.memberNumber) * hoursCount),
+          amount: lessonRateForPro(derek, !!who.memberNumber),
           paymentStatus: paid(offset + hi),
           paymentMethod: method(offset + hi),
           requestStatus: "accepted",
@@ -325,7 +323,7 @@ function seedLessons(): S27LessonBooking[] {
       id: `mock-lesson-req-${i + 1}`,
       date: formatDateInput(d),
       hour: [9, 10, 15][i],
-      duration: i === 1 ? "90" : "60",
+      duration: "60",
       clientName: who.name,
       clientEmail: who.email,
       clientPhone: who.phone,
@@ -334,7 +332,7 @@ function seedLessons(): S27LessonBooking[] {
       proName: derek.name,
       courtId: derek.courtId,
       focus: FOCUS[i % FOCUS.length],
-      amount: Math.round(lessonRateForPro(derek, true) * (i === 1 ? 1.5 : 1)),
+      amount: lessonRateForPro(derek, true),
       paymentStatus: "pending",
       paymentMethod: "manual",
       requestStatus: "requested",
