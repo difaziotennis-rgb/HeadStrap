@@ -18,6 +18,7 @@ import {
   type S27MemberAccount,
   type S27StringingOrder,
 } from "../storage";
+import { bookingProId } from "../lesson-slots";
 import { PaidPill } from "./ui";
 
 type Props = {
@@ -52,12 +53,15 @@ type GlanceItem = {
   onToggle?: () => void;
 };
 
+type CourtLane = "court-1" | "court-2";
+
 type DayChip = {
   key: string;
   time: number;
   kind: "court" | "lesson" | "clinic" | "event" | "hold" | "request";
   label: string;
   sub?: string;
+  courts: CourtLane[];
 };
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
@@ -124,6 +128,28 @@ function chipClass(kind: DayChip["kind"]): string {
   }
 }
 
+function ChipCard({ chip }: { chip: DayChip }) {
+  return (
+    <div className={`rounded-md border px-1 py-1 sm:rounded-lg sm:px-1.5 sm:py-1.5 ${chipClass(chip.kind)}`}>
+      <span className="block text-[9px] font-medium tabular-nums text-[#6b665e] sm:text-[10px]">
+        {formatHour(chip.time)}
+      </span>
+      <span className="mt-0.5 block truncate text-[10px] font-medium leading-snug text-[#1a1a1a] sm:text-[11px]">
+        {chip.label}
+      </span>
+      {chip.sub ? (
+        <span className="mt-0.5 block truncate text-[9px] text-[#8a8477] sm:text-[10px]">{chip.sub}</span>
+      ) : null}
+    </div>
+  );
+}
+
+function lanesForChip(chip: DayChip): { both: boolean; c1: boolean; c2: boolean } {
+  const c1 = chip.courts.includes("court-1");
+  const c2 = chip.courts.includes("court-2");
+  return { both: c1 && c2, c1, c2 };
+}
+
 export default function TodayBoard({
   today,
   members,
@@ -165,14 +191,17 @@ export default function TodayBoard({
         key: `court-${b.id}`,
         time: b.hour,
         kind: "court",
-        label: b.courtName.replace("Court ", "C"),
-        sub: b.clientName.split(" ")[0],
+        label: b.clientName.split(" ")[0],
+        sub: `${b.durationHours}h`,
+        courts: [b.courtId === "court-2" ? "court-2" : "court-1"],
       });
     }
 
     for (const b of lessons) {
       if (!map[b.date]) continue;
       if (b.requestStatus === "declined") continue;
+      const pro = catalog.pros.find((p) => p.id === bookingProId(b));
+      const lane: CourtLane = (b.courtId || pro?.courtId) === "court-2" ? "court-2" : "court-1";
       if (b.requestStatus === "requested") {
         map[b.date].push({
           key: `req-${b.id}`,
@@ -180,6 +209,7 @@ export default function TodayBoard({
           kind: "request",
           label: "Request",
           sub: b.clientName.split(" ")[0],
+          courts: [lane],
         });
         continue;
       }
@@ -189,6 +219,7 @@ export default function TodayBoard({
         kind: "lesson",
         label: "Lesson",
         sub: b.clientName.split(" ")[0],
+        courts: [lane],
       });
     }
 
@@ -200,16 +231,19 @@ export default function TodayBoard({
       clinicKeys.add(key);
       const def = catalog.clinics.find((c) => c.id === b.clinicId);
       const count = clinics.filter((x) => x.clinicId === b.clinicId && x.date === b.date && x.paymentStatus === "paid").length;
+      const courtsForClinic = (def?.blockCourts || ["court-1", "court-2"]).filter(
+        (c): c is CourtLane => c === "court-1" || c === "court-2"
+      );
       map[b.date].push({
         key: `clinic-${key}`,
         time: def?.startHour ?? 8,
         kind: "clinic",
         label: shortClinicName(b.clinicName),
         sub: `${count} in`,
+        courts: courtsForClinic.length ? courtsForClinic : ["court-1", "court-2"],
       });
     }
 
-    // Scheduled clinics with no signups yet still show from catalog.
     for (const iso of days) {
       const jsDay = parseDateInput(iso).getDay();
       for (const def of catalog.clinics) {
@@ -217,12 +251,16 @@ export default function TodayBoard({
         const key = `${def.id}|${iso}`;
         if (clinicKeys.has(key)) continue;
         clinicKeys.add(key);
+        const courtsForClinic = (def.blockCourts || ["court-1", "court-2"]).filter(
+          (c): c is CourtLane => c === "court-1" || c === "court-2"
+        );
         map[iso].push({
           key: `clinic-${key}`,
           time: def.startHour,
           kind: "clinic",
           label: shortClinicName(def.name),
           sub: "0 in",
+          courts: courtsForClinic.length ? courtsForClinic : ["court-1", "court-2"],
         });
       }
     }
@@ -238,6 +276,7 @@ export default function TodayBoard({
         kind: "event",
         label: b.eventTitle.length > 18 ? `${b.eventTitle.slice(0, 16)}…` : b.eventTitle,
         sub: `${count} RSVP`,
+        courts: ["court-1", "court-2"],
       });
     }
 
@@ -250,17 +289,21 @@ export default function TodayBoard({
         kind: "event",
         label: def.title.length > 18 ? `${def.title.slice(0, 16)}…` : def.title,
         sub: "Event",
+        courts: ["court-1", "court-2"],
       });
     }
 
     for (const b of blocks) {
       if (!map[b.date]) continue;
+      const courtsForHold: CourtLane[] =
+        b.courtId === "both" ? ["court-1", "court-2"] : b.courtId === "court-2" ? ["court-2"] : ["court-1"];
       map[b.date].push({
         key: `hold-${b.id}`,
         time: b.startHour,
         kind: "hold",
         label: "Hold",
         sub: b.reason.slice(0, 12),
+        courts: courtsForHold,
       });
     }
 
@@ -414,7 +457,7 @@ export default function TodayBoard({
       </div>
 
       <div className="-mx-4 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:overflow-visible sm:px-0">
-        <div className="min-w-[34rem] overflow-hidden rounded-2xl border border-[#e8e5df] bg-white sm:min-w-0">
+        <div className="min-w-[52rem] overflow-hidden rounded-2xl border border-[#e8e5df] bg-white sm:min-w-0">
           <div className="grid grid-cols-7 border-b border-[#ece8e2] bg-[#faf9f7]">
             {days.map((iso, i) => {
               const d = parseDateInput(iso);
@@ -452,39 +495,73 @@ export default function TodayBoard({
               const chips = chipsByDay[iso] || [];
               const isToday = iso === today;
               const selected = iso === selectedDate;
+              const both = chips.filter((c) => lanesForChip(c).both);
+              const c1 = chips.filter((c) => {
+                const l = lanesForChip(c);
+                return l.c1 && !l.both;
+              });
+              const c2 = chips.filter((c) => {
+                const l = lanesForChip(c);
+                return l.c2 && !l.both;
+              });
+              const empty = chips.length === 0;
               return (
                 <button
                   key={iso}
                   type="button"
                   onClick={() => setSelectedDate(iso)}
-                  className={`min-h-[12rem] border-r border-[#ece8e2] p-1 text-left last:border-r-0 sm:min-h-[15rem] sm:p-2 ${
+                  className={`min-h-[14rem] border-r border-[#ece8e2] p-1 text-left last:border-r-0 sm:min-h-[16rem] sm:p-1.5 ${
                     selected ? "bg-[#faf9f7]" : isToday ? "bg-[#faf9f7]/40" : "bg-white hover:bg-[#faf9f7]/50"
                   }`}
                 >
-                  {chips.length === 0 ? (
+                  {empty ? (
                     <p className="px-0.5 py-2 text-center text-[10px] text-[#d0cbc3] sm:text-[11px]">—</p>
                   ) : (
-                    <ul className="space-y-1 sm:space-y-1.5">
-                      {chips.slice(0, 8).map((chip) => (
-                        <li
-                          key={chip.key}
-                          className={`rounded-md border px-1 py-1 sm:rounded-lg sm:px-1.5 sm:py-1.5 ${chipClass(chip.kind)}`}
-                        >
-                          <span className="block text-[9px] font-medium tabular-nums text-[#6b665e] sm:text-[10px]">
-                            {formatHour(chip.time)}
-                          </span>
-                          <span className="mt-0.5 block truncate text-[10px] font-medium leading-snug text-[#1a1a1a] sm:text-[11px]">
-                            {chip.label}
-                          </span>
-                          {chip.sub ? (
-                            <span className="mt-0.5 block truncate text-[9px] text-[#8a8477] sm:text-[10px]">{chip.sub}</span>
-                          ) : null}
-                        </li>
-                      ))}
-                      {chips.length > 8 ? (
-                        <li className="px-1 text-[9px] text-[#8a8477] sm:text-[10px]">+{chips.length - 8} more</li>
-                      ) : null}
-                    </ul>
+                    <div className="space-y-1">
+                      {both.length > 0 && (
+                        <ul className="space-y-1">
+                          {both.map((chip) => (
+                            <li key={chip.key}>
+                              <ChipCard chip={chip} />
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                      <div className="grid grid-cols-2 gap-1">
+                        <div className="min-w-0">
+                          <p className="mb-1 text-center text-[8px] font-semibold uppercase tracking-[0.12em] text-[#8a8477] sm:text-[9px]">
+                            Ct 1
+                          </p>
+                          {c1.length === 0 ? (
+                            <p className="py-1 text-center text-[9px] text-[#d0cbc3]">—</p>
+                          ) : (
+                            <ul className="space-y-1">
+                              {c1.map((chip) => (
+                                <li key={chip.key}>
+                                  <ChipCard chip={chip} />
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                        <div className="min-w-0 border-l border-[#ece8e2] pl-1">
+                          <p className="mb-1 text-center text-[8px] font-semibold uppercase tracking-[0.12em] text-[#8a8477] sm:text-[9px]">
+                            Ct 2
+                          </p>
+                          {c2.length === 0 ? (
+                            <p className="py-1 text-center text-[9px] text-[#d0cbc3]">—</p>
+                          ) : (
+                            <ul className="space-y-1">
+                              {c2.map((chip) => (
+                                <li key={chip.key}>
+                                  <ChipCard chip={chip} />
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   )}
                 </button>
               );
