@@ -15,6 +15,7 @@ import {
   type ProDef,
 } from "../summer27-data";
 import type { S27Catalog } from "../schedule";
+import { normalizePrimeTeaching } from "../schedule";
 import { Field, inputClass, uid } from "./ui";
 
 type Props = {
@@ -34,7 +35,7 @@ type Editor =
 const CATEGORIES: { id: Category; label: string; hint: string }[] = [
   { id: "rates", label: "Rates", hint: "Courts & stringing" },
   { id: "pros", label: "Pros", hint: "Staff & lessons" },
-  { id: "holds", label: "Holds", hint: "Court 1 blocks" },
+  { id: "holds", label: "Holds", hint: "Any hours" },
   { id: "clinics", label: "Clinics", hint: "Group sessions" },
   { id: "events", label: "Events", hint: "Calendar" },
 ];
@@ -46,13 +47,19 @@ const PRO_TITLES = ["Director of Tennis", "Teaching Professional", "Junior Devel
 const EVENT_CATEGORIES = ["Social", "Competitive", "Junior", "Member"];
 
 export default function ProgramSettings({ catalog, onSave, onReset }: Props) {
-  const [draft, setDraft] = useState(catalog);
+  const [draft, setDraft] = useState(() => ({
+    ...catalog,
+    primeTeaching: normalizePrimeTeaching(catalog.primeTeaching),
+  }));
   const [category, setCategory] = useState<Category>("rates");
   const [editor, setEditor] = useState<Editor>(null);
   const [dirty, setDirty] = useState(false);
 
   useEffect(() => {
-    setDraft(catalog);
+    setDraft({
+      ...catalog,
+      primeTeaching: normalizePrimeTeaching(catalog.primeTeaching),
+    });
     setDirty(false);
     setEditor(null);
   }, [catalog]);
@@ -217,104 +224,101 @@ export default function ProgramSettings({ catalog, onSave, onReset }: Props) {
       )}
 
       {category === "holds" && (
-        <section className="rounded-2xl border border-[#e8e5df] bg-white p-4 sm:p-5">
-          <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Court 1 lesson holds</p>
-          <p className="mt-1 text-[13px] text-[#6b665e]">Prime teaching windows reserved on Court 1.</p>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3">
-              <p className="text-[12px] font-medium text-[#1a1a1a]">Morning</p>
-              <div className="mt-2 grid grid-cols-2 gap-2">
-                <Field label="Start">
-                  <select
-                    className={inputClass}
-                    value={draft.primeTeaching.morning.start}
-                    onChange={(e) =>
-                      touch({
-                        ...draft,
-                        primeTeaching: {
-                          ...draft.primeTeaching,
-                          morning: { ...draft.primeTeaching.morning, start: Number(e.target.value) },
-                        },
-                      })
-                    }
-                  >
-                    {BOOKING_HOURS.map((h) => (
-                      <option key={h} value={h}>
-                        {formatHour(h)}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-                <Field label="End">
-                  <select
-                    className={inputClass}
-                    value={draft.primeTeaching.morning.end}
-                    onChange={(e) =>
-                      touch({
-                        ...draft,
-                        primeTeaching: {
-                          ...draft.primeTeaching,
-                          morning: { ...draft.primeTeaching.morning, end: Number(e.target.value) },
-                        },
-                      })
-                    }
-                  >
-                    {BOOKING_HOURS.map((h) => (
-                      <option key={h} value={h}>
-                        {formatHour(h)}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-              </div>
-            </div>
-            <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3">
-              <p className="text-[12px] font-medium text-[#1a1a1a]">Afternoon</p>
-              <div className="mt-2 grid grid-cols-2 gap-2">
-                <Field label="Start">
-                  <select
-                    className={inputClass}
-                    value={draft.primeTeaching.afternoon.start}
-                    onChange={(e) =>
-                      touch({
-                        ...draft,
-                        primeTeaching: {
-                          ...draft.primeTeaching,
-                          afternoon: { ...draft.primeTeaching.afternoon, start: Number(e.target.value) },
-                        },
-                      })
-                    }
-                  >
-                    {BOOKING_HOURS.map((h) => (
-                      <option key={h} value={h}>
-                        {formatHour(h)}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-                <Field label="End">
-                  <select
-                    className={inputClass}
-                    value={draft.primeTeaching.afternoon.end}
-                    onChange={(e) =>
-                      touch({
-                        ...draft,
-                        primeTeaching: {
-                          ...draft.primeTeaching,
-                          afternoon: { ...draft.primeTeaching.afternoon, end: Number(e.target.value) },
-                        },
-                      })
-                    }
-                  >
-                    {BOOKING_HOURS.map((h) => (
-                      <option key={h} value={h}>
-                        {formatHour(h)}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-              </div>
-            </div>
+        <section className="space-y-3">
+          <div className="rounded-2xl border border-[#e8e5df] bg-white p-4 sm:p-5">
+            <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Recurring Court 1 holds</p>
+            <p className="mt-1 text-[13px] text-[#6b665e]">
+              Weekday windows held for lessons — add any start/end, not just morning and evening. Remove a window to open
+              that time. One-off holds and opens are under Book → Holds.
+            </p>
+            <ul className="mt-4 divide-y divide-[#f0ede8] overflow-hidden rounded-xl border border-[#ece8e2]">
+              {draft.primeTeaching.windows.length === 0 ? (
+                <li className="px-3 py-4 text-[13px] text-[#8a8477]">No recurring holds — Court 1 stays open on weekdays.</li>
+              ) : (
+                draft.primeTeaching.windows.map((w, i) => (
+                  <li key={`${w.label}-${i}`} className="grid gap-2 bg-[#faf9f7] p-3 sm:grid-cols-[1fr_7rem_7rem_auto]">
+                    <input
+                      className={inputClass}
+                      value={w.label}
+                      onChange={(e) => {
+                        const windows = draft.primeTeaching.windows.map((row, idx) =>
+                          idx === i ? { ...row, label: e.target.value } : row
+                        );
+                        touch({ ...draft, primeTeaching: { windows } });
+                      }}
+                      placeholder="Reason / label"
+                    />
+                    <select
+                      className={inputClass}
+                      value={w.start}
+                      onChange={(e) => {
+                        const start = Number(e.target.value);
+                        const windows = draft.primeTeaching.windows.map((row, idx) =>
+                          idx === i ? { ...row, start, end: Math.max(row.end, start + 1) } : row
+                        );
+                        touch({ ...draft, primeTeaching: { windows } });
+                      }}
+                    >
+                      {BOOKING_HOURS.map((h) => (
+                        <option key={h} value={h}>
+                          {formatHour(h)}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      className={inputClass}
+                      value={w.end}
+                      onChange={(e) => {
+                        const end = Number(e.target.value);
+                        const windows = draft.primeTeaching.windows.map((row, idx) =>
+                          idx === i ? { ...row, end } : row
+                        );
+                        touch({ ...draft, primeTeaching: { windows } });
+                      }}
+                    >
+                      {BOOKING_HOURS.filter((h) => h > w.start)
+                        .concat([Math.max(...BOOKING_HOURS) + 1])
+                        .map((h) => (
+                          <option key={h} value={h}>
+                            {formatHour(h)}
+                          </option>
+                        ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        touch({
+                          ...draft,
+                          primeTeaching: {
+                            windows: draft.primeTeaching.windows.filter((_, idx) => idx !== i),
+                          },
+                        })
+                      }
+                      className="rounded-lg border border-[#fecaca] px-3 py-2 text-[12px] font-medium text-[#991b1b]"
+                    >
+                      Remove
+                    </button>
+                  </li>
+                ))
+              )}
+            </ul>
+            <button
+              type="button"
+              onClick={() =>
+                touch({
+                  ...draft,
+                  primeTeaching: {
+                    windows: [
+                      ...draft.primeTeaching.windows,
+                      { start: 12, end: 14, label: "Midday hold" },
+                    ],
+                  },
+                })
+              }
+              className="mt-3 w-full rounded-xl border border-dashed border-[#d6d1c8] py-2.5 text-[13px] font-medium text-[#4a4a4a] hover:bg-[#faf9f7]"
+            >
+              + Add time window
+            </button>
           </div>
         </section>
       )}

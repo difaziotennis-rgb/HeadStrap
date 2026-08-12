@@ -550,60 +550,116 @@ function HoldsBlock({
 }) {
   const [date, setDate] = useState(today());
   const [courtId, setCourtId] = useState<CourtId | "both">("both");
-  const [startHour, setStartHour] = useState("8");
-  const [durationHours, setDurationHours] = useState("1");
-  const [reason, setReason] = useState("Maintenance");
-  const list = blocks.filter((b) => inRangeDate(b.date, range, false));
+  const [kind, setKind] = useState<"hold" | "open">("hold");
+  const [startHour, setStartHour] = useState(8);
+  const [endHour, setEndHour] = useState(9);
+  const [reason, setReason] = useState("");
+  const list = blocks
+    .filter((b) => inRangeDate(b.date, range, false))
+    .slice()
+    .sort((a, b) =>
+      `${b.date}${String(b.startHour).padStart(2, "0")}`.localeCompare(
+        `${a.date}${String(a.startHour).padStart(2, "0")}`
+      )
+    );
+
+  const endOptions = BOOKING_HOURS.filter((h) => h > startHour).concat([Math.max(...BOOKING_HOURS) + 1]);
 
   function add(e: React.FormEvent) {
     e.preventDefault();
+    const durationHours = Math.max(1, endHour - startHour);
     onHolds([
       ...blocks,
       {
         id: uid("hold"),
         date,
         courtId,
-        startHour: Number(startHour),
-        durationHours: Number(durationHours) || 1,
-        reason: reason.trim() || "Director hold",
+        startHour,
+        durationHours,
+        reason:
+          reason.trim() ||
+          (kind === "open" ? "Open for public play" : "Director hold"),
+        kind,
         createdAt: new Date().toISOString(),
       },
     ]);
+    setReason("");
   }
 
   return (
     <>
-      <form onSubmit={add} className="grid gap-2 rounded-2xl border border-[#e8e5df] bg-white p-4 sm:grid-cols-3">
-        <input type="date" className={inputClass} value={date} onChange={(e) => setDate(e.target.value)} />
-        <select className={inputClass} value={courtId} onChange={(e) => setCourtId(e.target.value as CourtId | "both")}>
-          <option value="both">Both courts</option>
-          <option value="court-1">Court 1</option>
-          <option value="court-2">Court 2</option>
-        </select>
-        <select className={inputClass} value={startHour} onChange={(e) => setStartHour(e.target.value)}>
-          {BOOKING_HOURS.map((h) => <option key={h} value={h}>{formatHour(h)}</option>)}
-        </select>
-        <select className={inputClass} value={durationHours} onChange={(e) => setDurationHours(e.target.value)}>
-          {[1, 2, 3, 4].map((n) => <option key={n} value={n}>{n === 1 ? "1 hour" : `${n} hours`}</option>)}
-        </select>
-        <select className={inputClass} value={reason} onChange={(e) => setReason(e.target.value)}>
-          <option>Maintenance</option>
-          <option>Weather</option>
-          <option>Private event</option>
-          <option>Teaching</option>
-          <option>Other</option>
-        </select>
-        <button className="rounded-lg bg-[#1a1a1a] px-3 py-2 text-[12px] font-medium text-white">Add hold</button>
+      <form onSubmit={add} className="space-y-3 rounded-2xl border border-[#e8e5df] bg-white p-4">
+        <div>
+          <p className="text-[14px] font-medium">Hold or open a court</p>
+          <p className="mt-0.5 text-[12px] text-[#6b665e]">
+            Any reason, any hours. “Open” releases a recurring lesson hold for that window.
+          </p>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <select className={inputClass} value={kind} onChange={(e) => setKind(e.target.value as "hold" | "open")}>
+            <option value="hold">Hold (block booking)</option>
+            <option value="open">Open (release hold)</option>
+          </select>
+          <input type="date" className={inputClass} value={date} onChange={(e) => setDate(e.target.value)} />
+          <select className={inputClass} value={courtId} onChange={(e) => setCourtId(e.target.value as CourtId | "both")}>
+            <option value="both">Both courts</option>
+            <option value="court-1">Court 1</option>
+            <option value="court-2">Court 2</option>
+          </select>
+          <div className="grid grid-cols-2 gap-2">
+            <select
+              className={inputClass}
+              value={startHour}
+              onChange={(e) => {
+                const next = Number(e.target.value);
+                setStartHour(next);
+                if (endHour <= next) setEndHour(next + 1);
+              }}
+            >
+              {BOOKING_HOURS.map((h) => (
+                <option key={h} value={h}>
+                  {formatHour(h)}
+                </option>
+              ))}
+            </select>
+            <select className={inputClass} value={endHour} onChange={(e) => setEndHour(Number(e.target.value))}>
+              {endOptions.map((h) => (
+                <option key={h} value={h}>
+                  {formatHour(h)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <input
+            className={`${inputClass} sm:col-span-2`}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder={kind === "open" ? "Reason (optional) — e.g. Open Court 1 for members" : "Reason — e.g. Resurface, private event, rain…"}
+          />
+        </div>
+        <button type="submit" className="w-full rounded-xl bg-[#1a1a1a] py-2.5 text-[13px] font-medium text-white">
+          {kind === "open" ? "Open court" : "Add hold"}
+        </button>
       </form>
       <div className="overflow-hidden rounded-2xl border border-[#e8e5df] bg-white">
         {list.length === 0 ? (
-          <p className="p-4 text-[13px] text-[#8a8477]">No holds in this view.</p>
+          <p className="p-4 text-[13px] text-[#8a8477]">No holds or opens in this view.</p>
         ) : (
           list.map((b) => (
             <div key={b.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-[#f0ede8] p-3 last:border-0">
-              <p className="text-[14px] font-medium">
-                {formatPrettyDate(b.date)} {formatHour(b.startHour)} · {b.courtId === "both" ? "Both" : b.courtId} · {b.reason}
-              </p>
+              <div className="min-w-0">
+                <p className="text-[14px] font-medium">
+                  <span className={b.kind === "open" ? "text-[#166534]" : "text-[#1a1a1a]"}>
+                    {b.kind === "open" ? "Open" : "Hold"}
+                  </span>
+                  <span className="text-[#8a8477]"> · </span>
+                  {formatPrettyDate(b.date)} {formatHour(b.startHour)}–{formatHour(b.startHour + b.durationHours)}
+                </p>
+                <p className="text-[12px] text-[#6b665e]">
+                  {b.courtId === "both" ? "Both courts" : b.courtId === "court-1" ? "Court 1" : "Court 2"}
+                  {b.reason ? ` · ${b.reason}` : ""}
+                </p>
+              </div>
               <button type="button" onClick={() => onHolds(blocks.filter((x) => x.id !== b.id))} className="text-[12px] text-[#991b1b]">
                 Delete
               </button>

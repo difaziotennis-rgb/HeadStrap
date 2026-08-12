@@ -394,8 +394,8 @@ export default function TodayBoard({
         key: `hold-${b.id}`,
         time: b.startHour,
         kind: "hold",
-        label: "Hold",
-        sub: b.reason.slice(0, 12),
+        label: b.kind === "open" ? "Open" : "Hold",
+        sub: (b.kind === "open" ? "Released" : b.reason).slice(0, 12),
         courts: courtsForHold,
         ref: { type: "hold", id: b.id, date: b.date },
       });
@@ -1215,14 +1215,18 @@ function CalendarDetailSheet({
     );
   }
   return (
-    <DetailSheet eyebrow="Court hold" title={hold.reason || "Hold"} onClose={onClose}>
+    <DetailSheet
+      eyebrow={hold.kind === "open" ? "Court open" : "Court hold"}
+      title={hold.reason || (hold.kind === "open" ? "Open for play" : "Hold")}
+      onClose={onClose}
+    >
       <div className="divide-y divide-[#f0ede8]">
-        <DetailRow label="When" value={`${formatPrettyDate(hold.date)} · ${formatHour(hold.startHour)}`} />
+        <DetailRow label="When" value={`${formatPrettyDate(hold.date)} · ${formatHour(hold.startHour)}–${formatHour(hold.startHour + hold.durationHours)}`} />
         <DetailRow
           label="Courts"
           value={hold.courtId === "both" ? "Both courts" : hold.courtId === "court-2" ? "Court 2" : "Court 1"}
         />
-        <DetailRow label="Length" value={`${hold.durationHours}h`} />
+        <DetailRow label="Type" value={hold.kind === "open" ? "Open (releases recurring hold)" : "Hold (blocks booking)"} />
       </div>
     </DetailSheet>
   );

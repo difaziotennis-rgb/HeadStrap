@@ -27,12 +27,20 @@ export type S27AdminBlock = {
   durationHours: number;
   reason: string;
   createdAt: string;
+  /** `hold` blocks booking; `open` releases a recurring lesson hold for that window. */
+  kind?: "hold" | "open";
 };
 
 export type S27MemberNote = {
   memberNumber: string;
   note: string;
   updatedAt: string;
+};
+
+export type TeachingWindow = {
+  start: number;
+  end: number;
+  label: string;
 };
 
 export type S27Catalog = {
@@ -43,8 +51,7 @@ export type S27Catalog = {
   lessonRates: { member: number; guest: number };
   stringingLabor: number;
   primeTeaching: {
-    morning: { start: number; end: number };
-    afternoon: { start: number; end: number };
+    windows: TeachingWindow[];
   };
 };
 
@@ -68,10 +75,45 @@ export function defaultCatalog(): S27Catalog {
     lessonRates: { ...LESSON_RATES },
     stringingLabor: STRINGING_LABOR,
     primeTeaching: {
-      morning: { ...PRIME_TEACHING.morning },
-      afternoon: { ...PRIME_TEACHING.afternoon },
+      windows: [
+        { start: PRIME_TEACHING.morning.start, end: PRIME_TEACHING.morning.end, label: "Morning lessons" },
+        { start: PRIME_TEACHING.afternoon.start, end: PRIME_TEACHING.afternoon.end, label: "Afternoon lessons" },
+      ],
     },
   };
+}
+
+export function normalizePrimeTeaching(raw: unknown): S27Catalog["primeTeaching"] {
+  const defaults = defaultCatalog().primeTeaching;
+  if (!raw || typeof raw !== "object") return defaults;
+  const r = raw as {
+    windows?: TeachingWindow[];
+    morning?: { start: number; end: number };
+    afternoon?: { start: number; end: number };
+  };
+  if (Array.isArray(r.windows)) {
+    const windows = r.windows
+      .filter((w) => w && Number.isFinite(Number(w.start)) && Number.isFinite(Number(w.end)))
+      .map((w) => ({
+        start: Number(w.start),
+        end: Number(w.end),
+        label: String(w.label || "Hold").trim() || "Hold",
+      }))
+      .filter((w) => w.end > w.start);
+    return { windows };
+  }
+  const windows: TeachingWindow[] = [];
+  if (r.morning && Number(r.morning.end) > Number(r.morning.start)) {
+    windows.push({ start: Number(r.morning.start), end: Number(r.morning.end), label: "Morning lessons" });
+  }
+  if (r.afternoon && Number(r.afternoon.end) > Number(r.afternoon.start)) {
+    windows.push({
+      start: Number(r.afternoon.start),
+      end: Number(r.afternoon.end),
+      label: "Afternoon lessons",
+    });
+  }
+  return windows.length ? { windows } : defaults;
 }
 
 function usableClinics(clinics: unknown, fallback: ClinicDef[]): ClinicDef[] {
@@ -151,7 +193,7 @@ export function getCatalog(): S27Catalog {
     courtRates: saved.courtRates || defaults.courtRates,
     lessonRates: saved.lessonRates || defaults.lessonRates,
     stringingLabor: typeof saved.stringingLabor === "number" ? saved.stringingLabor : defaults.stringingLabor,
-    primeTeaching: saved.primeTeaching || defaults.primeTeaching,
+    primeTeaching: normalizePrimeTeaching(saved.primeTeaching),
   };
 }
 
@@ -255,21 +297,25 @@ export function getProgramBlock(
     }
   }
 
-  for (const block of getAdminBlocks()) {
-    if (block.date !== dateStr) continue;
-    if (block.courtId !== "both" && block.courtId !== courtId) continue;
-    if (hoursOverlap(block.startHour, block.durationHours, hour)) {
-      return { type: "hold", label: block.reason || "Reserved" };
-    }
+  const matchingBlocks = getAdminBlocks().filter((block) => {
+    if (block.date !== dateStr) return false;
+    if (block.courtId !== "both" && block.courtId !== courtId) return false;
+    return hoursOverlap(block.startHour, block.durationHours, hour);
+  });
+  if (matchingBlocks.some((b) => b.kind === "open")) {
+    // Explicitly release this slot (e.g. open Court 1 during a recurring lesson hold).
+    return null;
+  }
+  const hold = matchingBlocks.find((b) => b.kind !== "open");
+  if (hold) {
+    return { type: "hold", label: hold.reason || "Reserved" };
   }
 
   if (PRIME_TEACHING.weekdays.includes(day) && courtId === PRIME_TEACHING.courtId) {
-    const { morning, afternoon } = catalog.primeTeaching;
-    if (hour >= morning.start && hour < morning.end) {
-      return { type: "lesson", label: "Private lesson" };
-    }
-    if (hour >= afternoon.start && hour < afternoon.end) {
-      return { type: "lesson", label: "Private lesson" };
+    for (const window of catalog.primeTeaching.windows) {
+      if (hour >= window.start && hour < window.end) {
+        return { type: "lesson", label: window.label || "Private lesson" };
+      }
     }
   }
 
