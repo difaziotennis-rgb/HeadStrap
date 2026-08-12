@@ -428,38 +428,38 @@ function Summer27ClinicsInner() {
       </p>
 
       {sheetOpen && clinic && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
+        <div className="fixed inset-0 z-50 flex items-end justify-center p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:items-center sm:p-4">
           <button
             type="button"
             aria-label="Close clinic details"
-            className="absolute inset-0 bg-[#1a1a1a]/40"
+            className="absolute inset-0 bg-[#1a1a1a]/30"
             onClick={closeSheet}
           />
           <div
             role="dialog"
             aria-modal="true"
             aria-labelledby="clinic-sheet-title"
-            className="relative z-10 flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl border border-[#e8e5df] bg-white shadow-xl sm:rounded-3xl"
+            className="relative z-10 flex max-h-[68dvh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-[#e8e5df] bg-white shadow-xl sm:max-h-[85vh] sm:rounded-3xl"
           >
-            <div className="flex items-start justify-between gap-3 border-b border-[#ece8e2] px-5 pb-4 pt-5">
+            <div className="flex items-start justify-between gap-3 border-b border-[#ece8e2] px-4 pb-3 pt-3.5 sm:px-5 sm:pb-4 sm:pt-5">
               <div className="min-w-0">
                 <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Book clinic</p>
-                <h3 id="clinic-sheet-title" className="mt-1 text-xl font-semibold tracking-tight text-[#1a1a1a]">
+                <h3 id="clinic-sheet-title" className="mt-0.5 text-lg font-semibold tracking-tight text-[#1a1a1a] sm:mt-1 sm:text-xl">
                   {clinic.name}
                 </h3>
-                <p className="mt-1 text-[13px] text-[#6b665e]">{clinic.level}</p>
+                <p className="mt-0.5 text-[12px] text-[#6b665e] sm:mt-1 sm:text-[13px]">{clinic.level}</p>
               </div>
               <button
                 type="button"
                 onClick={closeSheet}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#e8e5df] text-[18px] leading-none text-[#6b665e] hover:bg-[#faf9f7] hover:text-[#1a1a1a]"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#e8e5df] text-[16px] leading-none text-[#6b665e] hover:bg-[#faf9f7] hover:text-[#1a1a1a] sm:h-9 sm:w-9 sm:text-[18px]"
                 aria-label="Close"
               >
                 ×
               </button>
             </div>
 
-            <div className="overflow-y-auto px-5 py-4">
+            <div className="overflow-y-auto px-4 py-3 sm:px-5 sm:py-4">
               <p className="text-[13px] leading-relaxed text-[#6b665e]">{clinic.description}</p>
               <p className="mt-2 text-[12px] text-[#8a8477]">
                 {clinicTimeLabel(clinic)} · ${clinic.memberPrice} members · ${clinic.guestPrice} guests
