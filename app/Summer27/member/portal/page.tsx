@@ -106,15 +106,15 @@ export default function Summer27PortalPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6">
+    <main className="mx-auto w-full max-w-4xl px-4 pb-10 pt-6 sm:px-6 sm:pt-8">
       <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">My account</p>
       <h2 className="mt-1 text-2xl font-semibold tracking-tight">{session.memberName}</h2>
       <p className="mt-1 text-[13px] text-[#6b665e]">
         Member #{session.memberNumber} · {session.memberEmail}
       </p>
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-5">
-        <section className="rounded-2xl border border-[#e8e5df] bg-white p-5 lg:col-span-3">
+      <div className="mt-5 grid gap-4 lg:grid-cols-5">
+        <section className="order-2 rounded-2xl border border-[#e8e5df] bg-white p-4 sm:p-5 lg:order-1 lg:col-span-3">
           <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Bookings</p>
           <MemberBookings
             courts={courts}
@@ -126,7 +126,7 @@ export default function Summer27PortalPage() {
           />
         </section>
 
-        <section className="rounded-2xl border border-[#e8e5df] bg-white p-5 lg:col-span-2">
+        <section className="order-1 rounded-2xl border border-[#e8e5df] bg-white p-4 sm:p-5 lg:order-2 lg:col-span-2">
           <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Saved card</p>
           {payment ? (
             <p className="mt-2 text-[13px] text-[#4a4a4a]">
@@ -136,18 +136,18 @@ export default function Summer27PortalPage() {
             <p className="mt-2 text-[13px] text-[#8a8477]">No card on file yet.</p>
           )}
           <form onSubmit={saveCard} className="mt-3 space-y-2">
-            <select value={brand} onChange={(e) => setBrand(e.target.value as S27PaymentProfile["brand"])} className="w-full rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]">
+            <select value={brand} onChange={(e) => setBrand(e.target.value as S27PaymentProfile["brand"])} className="w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]">
               <option>Visa</option>
               <option>Mastercard</option>
               <option>Amex</option>
             </select>
-            <input value={last4} onChange={(e) => setLast4(e.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="Last 4" className="w-full rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]" />
-            <label className="flex items-center gap-2 text-[12px]">
+            <input value={last4} onChange={(e) => setLast4(e.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="Last 4" className="w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]" />
+            <label className="flex items-center gap-2 text-[13px]">
               <input type="checkbox" checked={oneClick} onChange={(e) => setOneClick(e.target.checked)} />
               Use when booking
             </label>
             {savedMsg && <p className="text-[12px]">{savedMsg}</p>}
-            <button className="w-full rounded-lg bg-[#1a1a1a] py-2 text-[12px] font-medium text-white">Save card</button>
+            <button className="w-full rounded-xl bg-[#1a1a1a] py-3 text-[13px] font-medium text-white">Save card</button>
           </form>
         </section>
       </div>

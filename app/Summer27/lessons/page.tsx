@@ -18,6 +18,7 @@ import {
 } from "../summer27-data";
 import { getLivePros } from "../schedule";
 import { openLessonHours } from "../lesson-slots";
+import { Segmented } from "../DateChips";
 import {
   KEYS,
   loadList,
@@ -200,35 +201,53 @@ function Summer27LessonsInner() {
         {courtName} · {proScheduleLabel(pro)} · ${hourly}/hour
       </p>
 
-      <form onSubmit={bookLesson} className="mt-6 space-y-3 rounded-2xl border border-[#e8e5df] bg-white p-5">
-        <div className="grid gap-3 sm:grid-cols-2">
+      <form onSubmit={bookLesson} className="mt-6 space-y-4 rounded-2xl border border-[#e8e5df] bg-white p-4 sm:p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <label className="text-[12px] text-[#6b665e]">
             Date
-            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="mt-1 w-full rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]" />
+            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="mt-1 block w-full min-w-[10rem] rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]" />
           </label>
-          <label className="text-[12px] text-[#6b665e]">
-            Length
-            <select value={duration} onChange={(e) => setDuration(e.target.value as "60" | "90")} className="mt-1 w-full rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]">
-              <option value="60">60 minutes</option>
-              <option value="90">90 minutes</option>
-            </select>
-          </label>
+          <div>
+            <p className="mb-1 text-[12px] text-[#6b665e]">Length</p>
+            <Segmented
+              value={duration}
+              onChange={(v) => setDuration(v as "60" | "90")}
+              options={[
+                { value: "60", label: "60 min" },
+                { value: "90", label: "90 min" },
+              ]}
+            />
+          </div>
         </div>
-        <label className="block text-[12px] text-[#6b665e]">
-          Time on {courtName}
-          <select value={hour} onChange={(e) => setHour(Number(e.target.value))} className="mt-1 w-full rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]">
-            {openHours.map((h) => (
-              <option key={h} value={h}>
-                {formatHour(h)}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div>
+          <p className="mb-2 text-[12px] text-[#6b665e]">Time on {courtName}</p>
+          {openHours.length === 0 ? (
+            <p className="text-[13px] text-[#8a8477]">No open times this day.</p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {openHours.map((h) => {
+                const active = h === hour;
+                return (
+                  <button
+                    key={h}
+                    type="button"
+                    onClick={() => setHour(h)}
+                    className={`rounded-xl border px-3 py-2 text-[13px] font-medium ${
+                      active ? "border-[#1a1a1a] bg-[#1a1a1a] text-white" : "border-[#e8e5df] bg-[#faf9f7] text-[#1a1a1a]"
+                    }`}
+                  >
+                    {formatHour(h)}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
         {!isMember && (
           <>
-            <input value={guestName} onChange={(e) => setGuestName(e.target.value)} placeholder="Name" className="w-full rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]" />
-            <input value={guestEmail} onChange={(e) => setGuestEmail(e.target.value)} placeholder="Email" className="w-full rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]" />
-            <input value={guestPhone} onChange={(e) => setGuestPhone(e.target.value)} placeholder="Phone" className="w-full rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]" />
+            <input value={guestName} onChange={(e) => setGuestName(e.target.value)} placeholder="Name" className="w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]" />
+            <input value={guestEmail} onChange={(e) => setGuestEmail(e.target.value)} placeholder="Email" className="w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]" />
+            <input value={guestPhone} onChange={(e) => setGuestPhone(e.target.value)} placeholder="Phone" className="w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]" />
           </>
         )}
         <textarea
@@ -236,14 +255,14 @@ function Summer27LessonsInner() {
           onChange={(e) => setFocus(e.target.value)}
           placeholder="What would you like to work on?"
           rows={3}
-          className="w-full resize-none rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
+          className="w-full resize-none rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]"
         />
         <p className="text-[12px] text-[#8a8477]">
           {parseDateInput(date).toLocaleDateString("en-US", { weekday: "long" })} · ${amount}
           {savedCard ? ` · ${savedCard.brand} •••• ${savedCard.last4}` : ""}
         </p>
         {msg && <p className="text-[13px]">{msg}</p>}
-        <button disabled={paying || openHours.length === 0} className="w-full rounded-lg bg-[#1a1a1a] py-2.5 text-[13px] font-medium text-white disabled:opacity-40">
+        <button disabled={paying || openHours.length === 0} className="w-full rounded-xl bg-[#1a1a1a] py-3.5 text-[14px] font-medium text-white disabled:opacity-40">
           {openHours.length === 0 ? "No open times this day" : `Book · $${amount}`}
         </button>
       </form>

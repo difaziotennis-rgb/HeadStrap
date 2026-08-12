@@ -30,23 +30,23 @@ export default function Summer27EventsPage() {
   }, [bookings]);
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
+    <main className="mx-auto w-full max-w-6xl px-4 pb-10 pt-6 sm:px-6 sm:pt-8">
       <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Events</p>
       <h2 className="mt-1 text-2xl font-semibold tracking-tight">Club calendar</h2>
       <p className="mt-2 max-w-2xl text-[14px] text-[#6b665e]">Round robins, mixers, and a season close on the terrace.</p>
-      <div className="mt-6 grid gap-3 sm:grid-cols-2">
+      <div className="mt-5 grid gap-3 sm:grid-cols-2">
         {events.map((event) => {
           const taken = counts[event.id] || 0;
           return (
             <Link
               key={event.id}
               href={`/Summer27/events/${event.id}`}
-              className="rounded-2xl border border-[#e8e5df] bg-white p-5 hover:bg-[#faf9f7]"
+              className="rounded-2xl border border-[#e8e5df] bg-white p-4 active:bg-[#faf9f7] sm:p-5"
             >
               <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">{event.category}</p>
-              <h3 className="mt-1 text-[17px] font-medium">{event.title}</h3>
+              <h3 className="mt-1 text-[16px] font-medium sm:text-[17px]">{event.title}</h3>
               <p className="mt-1 text-[13px] text-[#6b665e]">{event.timeLabel}</p>
-              <p className="mt-2 text-[13px] text-[#4a4a4a]">{event.description}</p>
+              <p className="mt-2 text-[13px] leading-relaxed text-[#4a4a4a]">{event.description}</p>
               <p className="mt-3 text-[12px] text-[#8a8477]">
                 ${event.memberPrice} · {taken}/{event.capacity} signed up
               </p>

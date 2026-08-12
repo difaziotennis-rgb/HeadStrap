@@ -14,19 +14,17 @@ export default function Summer27Layout({ children }: { children: React.ReactNode
 
   return (
     <div className="min-h-screen bg-[#f7f7f5] text-[#1a1a1a]">
-      <header className="sticky top-0 z-40 bg-[#faf9f7]/95 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-3 sm:px-6 sm:py-4">
+      <header className="sticky top-0 z-40 border-b border-[#ece8e2]/80 bg-[#faf9f7]/95 backdrop-blur">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-3.5">
           <Link href="/Summer27" className="min-w-0">
-            <p className="text-[10px] uppercase tracking-[0.25em] text-[#b0a99f]">DiFazio Tennis</p>
-            <h1 className="text-[15px] font-semibold tracking-tight sm:text-[16px]">Rhinebeck Tennis Club</h1>
+            <p className="text-[10px] uppercase tracking-[0.22em] text-[#b0a99f]">DiFazio Tennis</p>
+            <h1 className="truncate text-[15px] font-semibold tracking-tight">Rhinebeck Tennis Club</h1>
           </Link>
-          <div className="flex items-center gap-2">
-            <MemberAuth />
-          </div>
+          <MemberAuth />
         </div>
         {!isAdmin && (
-          <div className="mx-auto w-full max-w-6xl px-4 pb-3 sm:px-6">
-            <nav className="flex gap-1 overflow-x-auto rounded-xl border border-[#e8e5df] bg-white/95 p-1 shadow-[0_8px_18px_rgba(26,26,26,0.06)] sm:rounded-2xl sm:p-1.5">
+          <div className="mx-auto w-full max-w-6xl px-3 pb-3 sm:px-6">
+            <nav className="-mx-0.5 flex gap-1 overflow-x-auto px-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {nav.map((item) => {
                 const active =
                   item.href === "/Summer27"
@@ -36,10 +34,10 @@ export default function Summer27Layout({ children }: { children: React.ReactNode
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`whitespace-nowrap rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors sm:rounded-lg sm:px-3 sm:py-1.5 sm:text-[12px] ${
+                    className={`shrink-0 rounded-full px-3.5 py-2 text-[12px] font-medium transition-colors ${
                       active
                         ? "bg-[#1a1a1a] text-white"
-                        : "text-[#6f695f] hover:bg-[#f7f5f1] hover:text-[#1a1a1a]"
+                        : "bg-white text-[#6f695f] ring-1 ring-[#e8e5df] hover:text-[#1a1a1a]"
                     }`}
                   >
                     {item.label}
@@ -52,7 +50,7 @@ export default function Summer27Layout({ children }: { children: React.ReactNode
       </header>
       <div>{children}</div>
       <footer className="border-t border-[#e8e5df] bg-[#f6f4f0]">
-        <div className="mx-auto grid w-full max-w-6xl gap-5 px-4 py-7 sm:grid-cols-2 sm:px-6 sm:py-8">
+        <div className="mx-auto grid w-full max-w-6xl gap-4 px-4 py-7 sm:grid-cols-2 sm:px-6 sm:py-8">
           <div>
             <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">DiFazio Tennis at RTC</p>
             <p className="mt-2 text-[13px] text-[#4a4a4a]">Courts 1 &amp; 2 · Pro shop · 2 Salisbury Ct, Rhinebeck, NY</p>

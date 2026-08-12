@@ -14,6 +14,7 @@ import {
 } from "../summer27-data";
 import { getLiveClinics } from "../schedule";
 import { KEYS, loadList, saveList, type S27ClinicBooking } from "../storage";
+import { DateChips, dateChipFromIso } from "../DateChips";
 
 function nextDatesForClinic(clinic: ClinicDef, count = 6, extra?: string): string[] {
   const dates: string[] = [];
@@ -101,14 +102,28 @@ function Summer27JuniorsInner() {
     }
   }, [searchParams]);
 
-  const roster = useMemo(
-    () =>
-      bookings.filter(
-        (b) => b.clinicId === clinic?.id && b.date === date && b.paymentStatus === "paid"
-      ),
-    [bookings, clinic?.id, date]
-  );
+  const rosterByDate = useMemo(() => {
+    const map: Record<string, S27ClinicBooking[]> = {};
+    if (!clinic) return map;
+    for (const b of bookings) {
+      if (b.clinicId !== clinic.id || b.paymentStatus !== "paid") continue;
+      (map[b.date] ||= []).push(b);
+    }
+    return map;
+  }, [bookings, clinic]);
+
+  const roster = rosterByDate[date] || [];
   const seatsLeft = clinic ? Math.max(0, clinic.capacity - roster.length) : 0;
+
+  const dateChips = useMemo(
+    () =>
+      dates.map((d) => {
+        const taken = (rosterByDate[d] || []).length;
+        const open = clinic ? Math.max(0, clinic.capacity - taken) : 0;
+        return dateChipFromIso(d, open <= 0 ? "Full" : `${open} open`);
+      }),
+    [dates, rosterByDate, clinic]
+  );
 
   async function signUp(e: React.FormEvent) {
     e.preventDefault();
@@ -165,64 +180,102 @@ function Summer27JuniorsInner() {
   if (!clinic) return null;
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
+    <main className="mx-auto w-full max-w-3xl px-4 pb-28 pt-6 sm:px-6 sm:pb-10 sm:pt-8">
       <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Juniors</p>
       <h2 className="mt-1 text-2xl font-semibold tracking-tight">Junior hours</h2>
-      <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-[#6b665e]">
+      <p className="mt-2 text-[14px] leading-relaxed text-[#6b665e]">
         Two small weekly sessions on Court 2 — Saturday mornings for ages 8–12, and Wednesday afternoons for ages 10–14.
         Rally, movement, and the beginnings of match play. $50 members · $65 guests.
       </p>
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-2">
-        {juniors.map((c) => (
-          <button
-            key={c.id}
-            type="button"
-            onClick={() => setSelectedId(c.id)}
-            className={`rounded-2xl border p-5 text-left ${
-              c.id === clinic.id ? "border-[#1a1a1a] bg-white" : "border-[#e8e5df] bg-[#faf9f7]"
-            }`}
-          >
-            <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">{c.level}</p>
-            <p className="mt-1 text-[17px] font-medium">{c.name}</p>
-            <p className="mt-1 text-[13px] text-[#6b665e]">
-              {clinicDayLabel(c.days)} · {clinicTimeLabel(c)} · max {c.capacity}
-            </p>
-            <p className="mt-2 text-[13px] text-[#4a4a4a]">{c.description}</p>
-          </button>
-        ))}
+      <div className="mt-5 -mx-4 border-y border-[#ece8e2] bg-white px-4 py-3 sm:mx-0 sm:rounded-2xl sm:border">
+        <p className="mb-2 text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Session</p>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {juniors.map((c) => {
+            const active = c.id === clinic.id;
+            return (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => setSelectedId(c.id)}
+                className={`rounded-2xl border p-4 text-left ${
+                  active ? "border-[#1a1a1a] bg-[#1a1a1a] text-white" : "border-[#e8e5df] bg-[#faf9f7]"
+                }`}
+              >
+                <p className={`text-[10px] uppercase tracking-[0.12em] ${active ? "text-white/70" : "text-[#8a8477]"}`}>
+                  {c.level}
+                </p>
+                <p className="mt-1 text-[15px] font-medium">{c.name}</p>
+                <p className={`mt-1 text-[12px] ${active ? "text-white/75" : "text-[#6b665e]"}`}>
+                  {clinicDayLabel(c.days)} · {clinicTimeLabel(c)}
+                </p>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      <form onSubmit={signUp} className="mt-6 max-w-xl space-y-3 rounded-2xl border border-[#e8e5df] bg-white p-5">
-        <label className="block text-[12px] text-[#6b665e]">
-          Date
-          <select value={date} onChange={(e) => setDate(e.target.value)} className="mt-1 w-full rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]">
-            {dates.map((d) => (
-              <option key={d} value={d}>
-                {parseDateInput(d).toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}
-              </option>
-            ))}
-          </select>
-        </label>
-        <input value={childName} onChange={(e) => setChildName(e.target.value)} placeholder="Junior’s name" className="w-full rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]" />
-        {!isMember && (
-          <input value={parentEmail} onChange={(e) => setParentEmail(e.target.value)} placeholder="Parent email" className="w-full rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]" />
-        )}
-        <p className="text-[12px] text-[#8a8477]">
-          {roster.length}/{clinic.capacity} signed up · ${price} {isMember ? "member" : "guest"}
+      <div className="mt-5">
+        <p className="mb-2 text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Date</p>
+        <DateChips items={dateChips} value={date} onChange={setDate} ariaLabel="Junior dates" />
+      </div>
+
+      <form onSubmit={signUp} className="mt-5 space-y-3 rounded-2xl border border-[#e8e5df] bg-white p-4 sm:p-5">
+        <p className="text-[13px] text-[#4a4a4a]">
+          {date
+            ? parseDateInput(date).toLocaleDateString("en-US", {
+                weekday: "long",
+                month: "short",
+                day: "numeric",
+              })
+            : ""}
+          {" · "}
+          {clinicTimeLabel(clinic)} · {roster.length}/{clinic.capacity} signed up
         </p>
+        <p className="text-[13px] text-[#6b665e]">{clinic.description}</p>
+        <input
+          value={childName}
+          onChange={(e) => setChildName(e.target.value)}
+          placeholder="Junior’s name"
+          className="w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]"
+        />
+        {!isMember && (
+          <input
+            value={parentEmail}
+            onChange={(e) => setParentEmail(e.target.value)}
+            placeholder="Parent email"
+            className="w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]"
+          />
+        )}
         {roster.length > 0 && (
-          <ul className="text-[13px] text-[#4a4a4a]">
+          <ul className="rounded-xl bg-[#faf9f7] px-3 py-2 text-[13px] text-[#4a4a4a]">
             {roster.map((b) => (
               <li key={b.id}>{b.clientName}</li>
             ))}
           </ul>
         )}
         {msg && <p className="text-[13px]">{msg}</p>}
-        <button disabled={paying || seatsLeft <= 0} className="w-full rounded-lg bg-[#1a1a1a] py-2.5 text-[13px] font-medium text-white disabled:opacity-40">
+        <button
+          disabled={paying || seatsLeft <= 0}
+          className="hidden w-full rounded-xl bg-[#1a1a1a] py-3.5 text-[14px] font-medium text-white disabled:opacity-40 sm:block"
+        >
           {seatsLeft <= 0 ? "Full" : `Enroll · $${price}`}
         </button>
       </form>
+
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[#e8e5df] bg-[#faf9f7]/95 p-3 backdrop-blur sm:hidden">
+        <button
+          type="button"
+          disabled={paying || seatsLeft <= 0}
+          onClick={() => {
+            const form = document.querySelector("main form");
+            if (form instanceof HTMLFormElement) form.requestSubmit();
+          }}
+          className="w-full rounded-xl bg-[#1a1a1a] py-3.5 text-[14px] font-medium text-white disabled:opacity-40"
+        >
+          {seatsLeft <= 0 ? "Full" : `Enroll · $${price}`}
+        </button>
+      </div>
     </main>
   );
 }

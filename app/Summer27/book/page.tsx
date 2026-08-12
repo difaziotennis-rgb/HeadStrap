@@ -22,6 +22,7 @@ import {
   saveRecord,
   type S27CourtBooking,
 } from "../storage";
+import { DateChips, dateChipFromIso, Segmented } from "../DateChips";
 
 function addDays(date: Date, n: number) {
   const d = new Date(date);
@@ -71,9 +72,19 @@ function Summer27BookInner() {
   }, [searchParams]);
 
   const weekDays = useMemo(() => {
-    const start = parseDateInput(date);
-    return Array.from({ length: 7 }, (_, i) => addDays(start, i - start.getDay()));
-  }, [date]);
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    return Array.from({ length: 14 }, (_, i) => addDays(start, i));
+  }, []);
+
+  const dayChips = useMemo(
+    () =>
+      weekDays.map((d) => {
+        const key = formatDateInput(d);
+        return dateChipFromIso(key);
+      }),
+    [weekDays]
+  );
 
   function occupancy(dateStr: string, courtId: CourtId, hour: number) {
     const program = getProgramBlock(dateStr, courtId, hour);
@@ -158,64 +169,125 @@ function Summer27BookInner() {
     setMsg(checkout.error || "Could not start checkout. Try again.");
   }
 
+  function slotClass(type: string) {
+    if (type === "clinic") return "bg-[#eef3ea] text-[#3d5a2c]";
+    if (type === "lesson") return "bg-[#f4efe4] text-[#7a6230]";
+    if (type === "event") return "bg-[#ece8f5] text-[#4a3d6b]";
+    if (type === "hold") return "bg-[#f6eaea] text-[#7a3d3d]";
+    return "bg-[#f3eee8] text-[#6b665e]";
+  }
+
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
+    <main className="mx-auto w-full max-w-3xl px-4 pb-10 pt-6 sm:max-w-6xl sm:px-6 sm:pt-8">
       <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Courts</p>
       <h2 className="mt-1 text-2xl font-semibold tracking-tight">Court 1 &amp; Court 2</h2>
       <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-[#6b665e]">
-        ${rates.member}/hour members · ${rates.guest} guests. Court 1 is held weekday mornings and late afternoons for lessons.
+        ${rates.member}/hour members · ${rates.guest} guests. Court 1 is held weekday mornings and late afternoons for
+        lessons.
       </p>
-      <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-[#6b665e]">
-        For seasonal court options, contact{" "}
+      <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-[#6b665e]">
+        Seasonal options:{" "}
         <a href="mailto:difaziotennis@gmail.com" className="text-[#1a1a1a] underline-offset-2 hover:underline">
           difaziotennis@gmail.com
         </a>
-        .
       </p>
 
-      <div className="mt-5 flex flex-wrap items-end gap-3 rounded-2xl border border-[#e8e5df] bg-white p-4">
-        <label className="text-[12px] text-[#6b665e]">
-          Date
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="mt-1 block rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
+      <div className="mt-5 -mx-4 border-y border-[#ece8e2] bg-white px-4 py-3 sm:mx-0 sm:rounded-2xl sm:border">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Day</p>
+          <Segmented
+            value={String(duration)}
+            onChange={(v) => setDuration(Number(v) as 1 | 2)}
+            options={[
+              { value: "1", label: "1 hour" },
+              { value: "2", label: "2 hours" },
+            ]}
           />
-        </label>
-        <label className="text-[12px] text-[#6b665e]">
-          Length
-          <select
-            value={duration}
-            onChange={(e) => setDuration(Number(e.target.value) as 1 | 2)}
-            className="mt-1 block rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
-          >
-            <option value={1}>1 hour</option>
-            <option value={2}>2 hours</option>
-          </select>
-        </label>
-        {!isMember && (
-          <>
-            <input value={guestName} onChange={(e) => setGuestName(e.target.value)} placeholder="Name" className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]" />
-            <input value={guestEmail} onChange={(e) => setGuestEmail(e.target.value)} placeholder="Email" className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]" />
-          </>
-        )}
-        <p className="text-[12px] text-[#6b665e]">
-          {isMember ? `$${rate}/hour` : `$${rate}/hour guest`}
-          {savedCard ? ` · ${savedCard.brand} •••• ${savedCard.last4}` : ""}
+        </div>
+        <DateChips items={dayChips} value={date} onChange={setDate} ariaLabel="Court dates" />
+        <p className="mt-3 text-[13px] font-medium text-[#1a1a1a]">
+          {parseDateInput(date).toLocaleDateString("en-US", {
+            weekday: "long",
+            month: "long",
+            day: "numeric",
+          })}
+          <span className="font-normal text-[#8a8477]">
+            {" · "}${rate}/hour
+            {savedCard ? ` · ${savedCard.brand} •••• ${savedCard.last4}` : ""}
+          </span>
         </p>
         {!isMember && (
-          <Link href="/Summer27/member" className="text-[12px] text-[#6b665e] underline">
-            Join for member rates
-          </Link>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <input
+              value={guestName}
+              onChange={(e) => setGuestName(e.target.value)}
+              placeholder="Name"
+              className="rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]"
+            />
+            <input
+              value={guestEmail}
+              onChange={(e) => setGuestEmail(e.target.value)}
+              placeholder="Email"
+              className="rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]"
+            />
+            <Link href="/Summer27/member" className="text-[12px] text-[#6b665e] underline sm:col-span-2">
+              Join for member rates
+            </Link>
+          </div>
         )}
       </div>
 
       {msg && (
-        <p className="mt-3 rounded-lg border border-[#e8e5df] bg-white px-3 py-2 text-[13px] text-[#4a4a4a]">{msg}</p>
+        <p className="mt-3 rounded-xl border border-[#e8e5df] bg-white px-3 py-2 text-[13px] text-[#4a4a4a]">{msg}</p>
       )}
 
-      <div className="mt-4 overflow-x-auto rounded-2xl border border-[#e8e5df] bg-white">
+      <div className="mt-4 space-y-4 lg:hidden">
+        {COURTS.map((court) => (
+          <section key={court.id} className="overflow-hidden rounded-2xl border border-[#e8e5df] bg-white">
+            <div className="border-b border-[#ece8e2] bg-[#faf9f7] px-4 py-3">
+              <p className="text-[13px] font-semibold">{court.name}</p>
+            </div>
+            <ul className="divide-y divide-[#f0ede8]">
+              {BOOKING_HOURS.map((hour) => {
+                const occ = occupancy(date, court.id, hour);
+                const open = canBook(date, court.id, hour);
+                return (
+                  <li key={hour} className="flex items-center gap-3 px-3 py-2.5">
+                    <span className="w-16 shrink-0 text-[12px] text-[#6b665e]">{formatHour(hour)}</span>
+                    <div className="min-w-0 flex-1">
+                      {occ ? (
+                        occ.type === "clinic" ? (
+                          <Link
+                            href={`${occ.kind === "junior" ? "/Summer27/juniors" : "/Summer27/clinics"}?clinic=${encodeURIComponent(occ.clinicId)}&date=${date}`}
+                            className={`block truncate rounded-lg px-3 py-2 text-[12px] font-medium ${slotClass(occ.type)}`}
+                          >
+                            {occ.label}
+                          </Link>
+                        ) : (
+                          <span className={`block truncate rounded-lg px-3 py-2 text-[12px] ${slotClass(occ.type)}`}>
+                            {occ.label}
+                          </span>
+                        )
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={!open || paying}
+                          onClick={() => bookSlot(court.id, hour)}
+                          className="w-full rounded-lg border border-[#e8e5df] bg-[#faf9f7] px-3 py-2 text-left text-[12px] font-medium text-[#1a1a1a] hover:bg-white disabled:opacity-35"
+                        >
+                          Book · ${rate * duration}
+                        </button>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        ))}
+      </div>
+
+      <div className="mt-4 hidden overflow-x-auto rounded-2xl border border-[#e8e5df] bg-white lg:block">
         <table className="w-full min-w-[640px] text-left text-[12px]">
           <thead>
             <tr className="border-b border-[#ece8e2] bg-[#faf9f7]">
@@ -240,24 +312,14 @@ function Summer27BookInner() {
                         occ.type === "clinic" ? (
                           <Link
                             href={`${occ.kind === "junior" ? "/Summer27/juniors" : "/Summer27/clinics"}?clinic=${encodeURIComponent(occ.clinicId)}&date=${date}`}
-                            className="block rounded-md bg-[#eef3ea] px-2 py-1.5 text-[11px] text-[#3d5a2c] hover:bg-[#e4ecdf]"
+                            className={`block rounded-md px-2 py-1.5 text-[11px] ${slotClass(occ.type)}`}
                           >
                             {occ.label}
                           </Link>
                         ) : (
-                        <span
-                          className={`block rounded-md px-2 py-1.5 text-[11px] ${
-                            occ.type === "lesson"
-                              ? "bg-[#f4efe4] text-[#7a6230]"
-                              : occ.type === "event"
-                                ? "bg-[#ece8f5] text-[#4a3d6b]"
-                                : occ.type === "hold"
-                                  ? "bg-[#f6eaea] text-[#7a3d3d]"
-                                : "bg-[#f3eee8] text-[#6b665e]"
-                          }`}
-                        >
-                          {occ.label}
-                        </span>
+                          <span className={`block rounded-md px-2 py-1.5 text-[11px] ${slotClass(occ.type)}`}>
+                            {occ.label}
+                          </span>
                         )
                       ) : (
                         <button
@@ -276,24 +338,6 @@ function Summer27BookInner() {
             ))}
           </tbody>
         </table>
-      </div>
-
-      <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-[#8a8477]">
-        {weekDays.map((d) => {
-          const key = formatDateInput(d);
-          return (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setDate(key)}
-              className={`rounded-full border px-3 py-1 ${
-                key === date ? "border-[#1a1a1a] bg-[#1a1a1a] text-white" : "border-[#e8e5df] bg-white"
-              }`}
-            >
-              {d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
-            </button>
-          );
-        })}
       </div>
     </main>
   );
