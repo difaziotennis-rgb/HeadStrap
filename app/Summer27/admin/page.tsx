@@ -10,6 +10,7 @@ import {
   saveList,
   uniqueCourts,
   ensureDerekMember,
+  type S27Charge,
   type S27ClinicBooking,
   type S27CourtBooking,
   type S27EventBooking,
@@ -37,16 +38,19 @@ import BookDesk from "./BookDesk";
 import Ledger from "./Ledger";
 import ProgramSettings from "./ProgramSettings";
 import StringingShop from "./StringingShop";
+import ChargeDesk from "./ChargeDesk";
 
-type Tab = "today" | "shop" | "members" | "book" | "ledger" | "program";
+type Tab = "today" | "charge" | "shop" | "book" | "members" | "money" | "settings";
 
-const TABS: { id: Tab; label: string; hint: string }[] = [
-  { id: "today", label: "Week", hint: "Calendar" },
-  { id: "shop", label: "Shop", hint: "Stringing" },
-  { id: "members", label: "Members", hint: "Full file" },
-  { id: "book", label: "Book", hint: "Add / edit" },
-  { id: "ledger", label: "Ledger", hint: "Night" },
-  { id: "program", label: "Program", hint: "Night" },
+/** Plain labels — no cryptic hints. Order matches how you run a day. */
+const TABS: { id: Tab; label: string }[] = [
+  { id: "today", label: "Week" },
+  { id: "charge", label: "Charge" },
+  { id: "shop", label: "Stringing" },
+  { id: "book", label: "Book" },
+  { id: "members", label: "Members" },
+  { id: "money", label: "Money" },
+  { id: "settings", label: "Settings" },
 ];
 
 export default function Summer27DirectorPage() {
@@ -60,6 +64,7 @@ export default function Summer27DirectorPage() {
   const [lessons, setLessons] = useState<S27LessonBooking[]>([]);
   const [events, setEvents] = useState<S27EventBooking[]>([]);
   const [stringing, setStringing] = useState<S27StringingOrder[]>([]);
+  const [charges, setCharges] = useState<S27Charge[]>([]);
   const [blocks, setBlocks] = useState<S27AdminBlock[]>([]);
   const [notes, setNotes] = useState<S27MemberNote[]>([]);
   const [catalog, setCatalog] = useState<S27Catalog>(defaultCatalog());
@@ -82,6 +87,7 @@ export default function Summer27DirectorPage() {
     setLessons(loadList<S27LessonBooking>(KEYS.lessons));
     setEvents(loadList<S27EventBooking>(KEYS.events));
     setStringing(loadList<S27StringingOrder>(KEYS.stringing));
+    setCharges(loadList<S27Charge>(KEYS.charges));
     setBlocks(getAdminBlocks());
     setNotes(getMemberNotes());
     setCatalog(getCatalog());
@@ -117,6 +123,10 @@ export default function Summer27DirectorPage() {
   function saveStringing(next: S27StringingOrder[]) {
     saveList(KEYS.stringing, next);
     setStringing(next);
+  }
+  function saveCharges(next: S27Charge[]) {
+    saveList(KEYS.charges, next);
+    setCharges(next);
   }
 
   async function markStringingReady(id: string) {
@@ -183,7 +193,7 @@ export default function Summer27DirectorPage() {
   }
 
   const today = formatDateInput(new Date());
-  const paidItems = [...courts, ...clinics, ...lessons, ...events, ...stringing];
+  const paidItems = [...courts, ...clinics, ...lessons, ...events, ...stringing, ...charges];
   const revenue = paidItems.filter((b) => b.paymentStatus === "paid").reduce((sum, b) => sum + b.amount, 0);
   const pending = paidItems.filter((b) => b.paymentStatus === "pending").reduce((sum, b) => sum + b.amount, 0);
   const todayCount =
@@ -192,6 +202,7 @@ export default function Summer27DirectorPage() {
     clinics.filter((b) => b.date === today).length +
     events.filter((b) => b.eventDate === today).length +
     stringing.filter((b) => (b.shopStatus || "in_shop") === "in_shop" || b.pickupDate === today).length +
+    charges.filter((b) => b.date === today).length +
     blocks.filter((b) => b.date === today).length;
   const unpaidToday = paidItems.filter((b) => {
     const date = "eventDate" in b ? b.eventDate : "pickupDate" in b && b.pickupDate ? b.pickupDate : "date" in b ? b.date : "";
@@ -202,9 +213,11 @@ export default function Summer27DirectorPage() {
     <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Director dashboard</p>
-          <h2 className="text-2xl font-semibold tracking-tight">Summer ’27</h2>
-          <p className="mt-1 text-[13px] text-[#6b665e]">Week at a glance. Tap a day for the full board.</p>
+          <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Director desk</p>
+          <h2 className="text-2xl font-semibold tracking-tight">Run the club</h2>
+          <p className="mt-1 text-[13px] text-[#6b665e]">
+            Week view, charge the shop, stringing queue, then bookings and money.
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Link href="/Summer27" className="rounded-lg border border-[#e8e5df] bg-white px-3 py-1.5 text-[12px] text-[#6b665e]">
@@ -219,14 +232,11 @@ export default function Summer27DirectorPage() {
             key={item.id}
             type="button"
             onClick={() => setTab(item.id)}
-            className={`rounded-lg px-3 py-1.5 text-[12px] font-medium ${
+            className={`rounded-lg px-3.5 py-2 text-[13px] font-medium ${
               tab === item.id ? "bg-[#1a1a1a] text-white" : "text-[#6b665e] hover:bg-[#faf9f7]"
             }`}
           >
             {item.label}
-            <span className={`ml-1.5 text-[10px] uppercase tracking-[0.08em] ${tab === item.id ? "text-white/70" : "text-[#8a8477]"}`}>
-              {item.hint}
-            </span>
           </button>
         ))}
       </div>
@@ -272,6 +282,17 @@ export default function Summer27DirectorPage() {
         />
       )}
 
+      {tab === "charge" && (
+        <ChargeDesk
+          members={members}
+          charges={charges}
+          onCharges={(next) => {
+            saveCharges(next);
+            ping("Charge saved.");
+          }}
+        />
+      )}
+
       {tab === "shop" && (
         <StringingShop
           stringing={stringing}
@@ -281,36 +302,6 @@ export default function Summer27DirectorPage() {
           }
           onMarkReady={markStringingReady}
           onMarkPickedUp={markStringingPickedUp}
-        />
-      )}
-
-      {tab !== "today" && tab !== "shop" && (
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Stat label="Today" value={String(todayCount)} />
-          <Stat label="Unpaid today" value={String(unpaidToday)} />
-          <Stat label="Paid (all)" value={`$${revenue}`} />
-          <Stat label="Pending (all)" value={`$${pending}`} />
-        </div>
-      )}
-
-      {tab === "members" && (
-        <MemberFile
-          members={members}
-          notes={notes}
-          courts={courts}
-          clinics={clinics}
-          lessons={lessons}
-          events={events}
-          stringing={stringing}
-          selectedNumber={selectedMember}
-          onSelect={setSelectedMember}
-          onSave={(next, nextNotes) => {
-            saveList(KEYS.members, next);
-            saveMemberNotes(nextNotes);
-            setMembers(next);
-            setNotes(nextNotes);
-            ping("Member file saved.");
-          }}
         />
       )}
 
@@ -350,29 +341,60 @@ export default function Summer27DirectorPage() {
         />
       )}
 
-      {tab === "ledger" && (
-        <Ledger
-          today={today}
+      {tab === "members" && (
+        <MemberFile
+          members={members}
+          notes={notes}
           courts={courts}
           clinics={clinics}
           lessons={lessons}
           events={events}
           stringing={stringing}
-          onCourts={saveCourts}
-          onClinics={saveClinics}
-          onLessons={saveLessons}
-          onEvents={saveEvents}
-          onStringing={saveStringing}
+          selectedNumber={selectedMember}
+          onSelect={setSelectedMember}
+          onSave={(next, nextNotes) => {
+            saveList(KEYS.members, next);
+            saveMemberNotes(nextNotes);
+            setMembers(next);
+            setNotes(nextNotes);
+            ping("Member file saved.");
+          }}
         />
       )}
 
-      {tab === "program" && (
+      {tab === "money" && (
+        <div className="mt-4 space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <Stat label="Today" value={String(todayCount)} />
+            <Stat label="Unpaid today" value={String(unpaidToday)} />
+            <Stat label="Paid (all)" value={`$${revenue}`} />
+            <Stat label="Pending (all)" value={`$${pending}`} />
+          </div>
+          <Ledger
+            today={today}
+            courts={courts}
+            clinics={clinics}
+            lessons={lessons}
+            events={events}
+            stringing={stringing}
+            charges={charges}
+            onCourts={saveCourts}
+            onClinics={saveClinics}
+            onLessons={saveLessons}
+            onEvents={saveEvents}
+            onStringing={saveStringing}
+            onCharges={saveCharges}
+          />
+        </div>
+      )}
+
+      {tab === "settings" && (
         <ProgramSettings
           catalog={catalog}
           onSave={(next) => {
             saveCatalog(next);
             setCatalog(next);
-            ping("Program settings saved. Public pages will use these values.");
+            ping("Settings saved.");
           }}
           onReset={() => {
             const next = defaultCatalog();

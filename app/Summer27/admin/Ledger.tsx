@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { formatPrettyDate, lessonProLabel } from "../summer27-data";
 import {
+  type S27Charge,
   type S27ClinicBooking,
   type S27CourtBooking,
   type S27EventBooking,
@@ -11,7 +12,7 @@ import {
 } from "../storage";
 import { PaidPill, inputClass } from "./ui";
 
-type Kind = "all" | "court" | "clinic" | "lesson" | "event" | "stringing";
+type Kind = "all" | "court" | "clinic" | "lesson" | "event" | "stringing" | "charge";
 type Range = "today" | "week" | "month" | "all";
 type Status = "all" | "paid" | "pending";
 
@@ -34,11 +35,13 @@ type Props = {
   lessons: S27LessonBooking[];
   events: S27EventBooking[];
   stringing: S27StringingOrder[];
+  charges: S27Charge[];
   onCourts: (next: S27CourtBooking[]) => void;
   onClinics: (next: S27ClinicBooking[]) => void;
   onLessons: (next: S27LessonBooking[]) => void;
   onEvents: (next: S27EventBooking[]) => void;
   onStringing: (next: S27StringingOrder[]) => void;
+  onCharges: (next: S27Charge[]) => void;
 };
 
 function inRange(date: string, today: string, range: Range) {
@@ -62,11 +65,13 @@ export default function Ledger({
   lessons,
   events,
   stringing,
+  charges,
   onCourts,
   onClinics,
   onLessons,
   onEvents,
   onStringing,
+  onCharges,
 }: Props) {
   const [range, setRange] = useState<Range>("today");
   const [kind, setKind] = useState<Kind>("all");
@@ -99,18 +104,20 @@ export default function Ledger({
         onToggle: () =>
           onClinics(clinics.map((x) => (x.id === b.id ? { ...x, paymentStatus: x.paymentStatus === "paid" ? "pending" : "paid" } : x))),
       })),
-      ...lessons.map((b) => ({
-        id: b.id,
-        kind: "lesson" as const,
-        date: b.date,
-        name: b.clientName,
-        label: `${lessonProLabel(b)} · ${b.duration} min`,
-        amount: b.amount,
-        status: b.paymentStatus,
-        method: b.paymentMethod,
-        onToggle: () =>
-          onLessons(lessons.map((x) => (x.id === b.id ? { ...x, paymentStatus: x.paymentStatus === "paid" ? "pending" : "paid" } : x))),
-      })),
+      ...lessons
+        .filter((b) => b.requestStatus !== "declined" && b.requestStatus !== "requested")
+        .map((b) => ({
+          id: b.id,
+          kind: "lesson" as const,
+          date: b.date,
+          name: b.clientName,
+          label: `${lessonProLabel(b)} · ${b.duration} min`,
+          amount: b.amount,
+          status: b.paymentStatus,
+          method: b.paymentMethod,
+          onToggle: () =>
+            onLessons(lessons.map((x) => (x.id === b.id ? { ...x, paymentStatus: x.paymentStatus === "paid" ? "pending" : "paid" } : x))),
+        })),
       ...events.map((b) => ({
         id: b.id,
         kind: "event" as const,
@@ -135,6 +142,18 @@ export default function Ledger({
         onToggle: () =>
           onStringing(stringing.map((x) => (x.id === b.id ? { ...x, paymentStatus: x.paymentStatus === "paid" ? "pending" : "paid" } : x))),
       })),
+      ...charges.map((b) => ({
+        id: b.id,
+        kind: "charge" as const,
+        date: b.date,
+        name: b.clientName,
+        label: b.description,
+        amount: b.amount,
+        status: b.paymentStatus,
+        method: b.paymentMethod,
+        onToggle: () =>
+          onCharges(charges.map((x) => (x.id === b.id ? { ...x, paymentStatus: x.paymentStatus === "paid" ? "pending" : "paid" } : x))),
+      })),
     ];
     const q = query.trim().toLowerCase();
     return all
@@ -143,13 +162,31 @@ export default function Ledger({
       .filter((row) => status === "all" || row.status === status)
       .filter((row) => !q || `${row.name} ${row.label}`.toLowerCase().includes(q))
       .sort((a, b) => `${b.date}${b.name}`.localeCompare(`${a.date}${a.name}`));
-  }, [courts, clinics, lessons, events, stringing, today, range, kind, status, query, onCourts, onClinics, onLessons, onEvents, onStringing]);
+  }, [
+    courts,
+    clinics,
+    lessons,
+    events,
+    stringing,
+    charges,
+    today,
+    range,
+    kind,
+    status,
+    query,
+    onCourts,
+    onClinics,
+    onLessons,
+    onEvents,
+    onStringing,
+    onCharges,
+  ]);
 
   const paid = rows.filter((r) => r.status === "paid").reduce((s, r) => s + r.amount, 0);
   const pending = rows.filter((r) => r.status === "pending").reduce((s, r) => s + r.amount, 0);
 
   return (
-    <div className="mt-4 space-y-3">
+    <div className="space-y-3">
       <div className="grid gap-2 sm:grid-cols-4">
         <select className={inputClass} value={range} onChange={(e) => setRange(e.target.value as Range)}>
           <option value="today">Today</option>
@@ -164,6 +201,7 @@ export default function Ledger({
           <option value="lesson">Lessons</option>
           <option value="event">Events</option>
           <option value="stringing">Stringing</option>
+          <option value="charge">Shop / misc</option>
         </select>
         <select className={inputClass} value={status} onChange={(e) => setStatus(e.target.value as Status)}>
           <option value="all">Paid + pending</option>
@@ -193,7 +231,10 @@ export default function Ledger({
           <p className="p-4 text-[13px] text-[#8a8477]">No charges in this view.</p>
         ) : (
           rows.map((row) => (
-            <div key={`${row.kind}-${row.id}`} className="flex flex-wrap items-center justify-between gap-2 border-b border-[#f0ede8] px-4 py-2.5 last:border-0">
+            <div
+              key={`${row.kind}-${row.id}`}
+              className="flex flex-wrap items-center justify-between gap-2 border-b border-[#f0ede8] px-4 py-2.5 last:border-0"
+            >
               <div className="min-w-0">
                 <p className="text-[14px] font-medium">
                   {row.name}

@@ -11,6 +11,7 @@ import {
   loadRecord,
   saveList,
   uniqueCourts,
+  type S27Charge,
   type S27ClinicBooking,
   type S27CourtBooking,
   type S27EventBooking,
@@ -26,6 +27,7 @@ export default function Summer27PortalPage() {
   const [lessons, setLessons] = useState<S27LessonBooking[]>([]);
   const [events, setEvents] = useState<S27EventBooking[]>([]);
   const [stringing, setStringing] = useState<S27StringingOrder[]>([]);
+  const [charges, setCharges] = useState<S27Charge[]>([]);
   const [payment, setPayment] = useState<S27PaymentProfile | null>(null);
   const [brand, setBrand] = useState<S27PaymentProfile["brand"]>("Visa");
   const [last4, setLast4] = useState("");
@@ -56,6 +58,11 @@ export default function Summer27PortalPage() {
     );
     setStringing(
       loadList<S27StringingOrder>(KEYS.stringing).filter(
+        (b) => b.memberNumber === session.memberNumber || b.clientEmail === session.memberEmail
+      )
+    );
+    setCharges(
+      loadList<S27Charge>(KEYS.charges).filter(
         (b) => b.memberNumber === session.memberNumber || b.clientEmail === session.memberEmail
       )
     );
@@ -115,13 +122,14 @@ export default function Summer27PortalPage() {
 
       <div className="mt-5 grid gap-4 lg:grid-cols-5">
         <section className="order-2 rounded-2xl border border-[#e8e5df] bg-white p-4 sm:p-5 lg:order-1 lg:col-span-3">
-          <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Bookings</p>
+          <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Bookings & bill</p>
           <MemberBookings
             courts={courts}
             clinics={clinics}
             lessons={lessons}
             events={events}
             stringing={stringing}
+            charges={charges}
             onChange={reload}
           />
         </section>

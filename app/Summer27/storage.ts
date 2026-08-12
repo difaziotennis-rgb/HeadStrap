@@ -7,6 +7,7 @@ export const KEYS = {
   lessons: "s27_lesson_bookings_v1",
   events: "s27_event_bookings_v1",
   stringing: "s27_stringing_orders_v1",
+  charges: "s27_charges_v1",
   payment: "s27_member_payment_v1",
   stringPrefs: "s27_string_prefs_v1",
   pendingStripe: "s27_pending_stripe_v1",
@@ -116,6 +117,20 @@ export type S27StringingOrder = {
   shopStatus?: "in_shop" | "ready" | "picked_up";
   readyAt?: string;
   notifiedAt?: string;
+};
+
+/** Pro shop / walk-up / misc charges with a member-visible note. */
+export type S27Charge = {
+  id: string;
+  date: string;
+  description: string;
+  clientName: string;
+  clientEmail: string;
+  memberNumber?: string;
+  amount: number;
+  paymentStatus: "pending" | "paid";
+  paymentMethod: "stripe" | "saved-card" | "manual" | "paypal" | "venmo";
+  createdAt: string;
 };
 
 export function stringingShopStatus(order: Pick<S27StringingOrder, "shopStatus">): "in_shop" | "ready" | "picked_up" {

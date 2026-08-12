@@ -23,6 +23,7 @@ import {
   saveList,
   stringingShopStatus,
   uniqueCourts,
+  type S27Charge,
   type S27ClinicBooking,
   type S27CourtBooking,
   type S27EventBooking,
@@ -38,6 +39,7 @@ type Props = {
   lessons: S27LessonBooking[];
   events: S27EventBooking[];
   stringing: S27StringingOrder[];
+  charges: S27Charge[];
   onChange: () => void;
 };
 
@@ -66,7 +68,7 @@ function shortPastDate(iso: string) {
   return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 }
 
-export default function MemberBookings({ courts, clinics, lessons, events, stringing, onChange }: Props) {
+export default function MemberBookings({ courts, clinics, lessons, events, stringing, charges, onChange }: Props) {
   const [editing, setEditing] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const liveClinics = getLiveClinics();
@@ -151,9 +153,20 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
           booking: b,
         };
       }),
+      ...charges.map((b) => ({
+        id: b.id,
+        kind: "charge" as const,
+        date: b.date,
+        hour: 12,
+        label: b.description,
+        detail: "Pro shop / misc",
+        amount: b.amount,
+        status: b.paymentStatus,
+        booking: b,
+      })),
     ];
     return items.sort((a, b) => `${a.date}${String(a.hour).padStart(5, "0")}`.localeCompare(`${b.date}${String(b.hour).padStart(5, "0")}`));
-  }, [courts, clinics, lessons, events, stringing, liveClinics, liveEvents]);
+  }, [courts, clinics, lessons, events, stringing, charges, liveClinics, liveEvents]);
 
   const today = formatDateInput(new Date());
   const upcoming = rows.filter((row) => row.date >= today || row.status === "pending");
@@ -215,7 +228,8 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
   function cancelBooking(row: (typeof rows)[number]) {
     const lessonRequest =
       row.kind === "lesson" && (row.booking as S27LessonBooking).requestStatus === "requested";
-    if (!lessonRequest && !canChangeBooking(row.date, row.hour)) {
+    const isCharge = row.kind === "charge";
+    if (!lessonRequest && !isCharge && !canChangeBooking(row.date, row.hour)) {
       setMsg(`Cancellations must be made at least ${CANCEL_WINDOW_HOURS} hours before start.`);
       return;
     }
@@ -227,6 +241,8 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
       saveList(KEYS.lessons, loadList<S27LessonBooking>(KEYS.lessons).filter((b) => b.id !== row.id));
     } else if (row.kind === "event") {
       saveList(KEYS.events, loadList<S27EventBooking>(KEYS.events).filter((b) => b.id !== row.id));
+    } else if (row.kind === "charge") {
+      saveList(KEYS.charges, loadList<S27Charge>(KEYS.charges).filter((b) => b.id !== row.id));
     } else {
       saveList(KEYS.stringing, loadList<S27StringingOrder>(KEYS.stringing).filter((b) => b.id !== row.id));
     }
@@ -372,7 +388,8 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
   }
 
   function renderPastRow(row: (typeof rows)[number]) {
-    const kindLabel = row.kind === "stringing" ? "Stringing" : row.kind;
+    const kindLabel =
+      row.kind === "stringing" ? "Stringing" : row.kind === "charge" ? "Charge" : row.kind;
     const title =
       row.kind === "court"
         ? (row.booking as S27CourtBooking).courtName
@@ -382,7 +399,9 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
             ? lessonProLabel(row.booking as S27LessonBooking)
             : row.kind === "event"
               ? (row.booking as S27EventBooking).eventTitle
-              : (row.booking as S27StringingOrder).racket;
+              : row.kind === "charge"
+                ? (row.booking as S27Charge).description
+                : (row.booking as S27StringingOrder).racket;
 
     return (
       <li key={row.id} className="flex items-start justify-between gap-3 px-3 py-2.5 sm:px-3.5">
@@ -405,14 +424,15 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
   function renderBooking(row: (typeof rows)[number], canEdit: boolean) {
         const lessonRequest =
           row.kind === "lesson" && (row.booking as S27LessonBooking).requestStatus === "requested";
-        const open = canEdit && (lessonRequest || canChangeBooking(row.date, row.hour));
+        const isCharge = row.kind === "charge";
+        const open = canEdit && (lessonRequest || isCharge || canChangeBooking(row.date, row.hour));
         const clinicDef = row.kind === "clinic" ? liveClinics.find((c) => c.id === (row.booking as S27ClinicBooking).clinicId) : null;
         return (
           <div key={row.id} className="rounded-lg border border-[#ece8e2] bg-[#faf9f7] p-3">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
                 <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">
-                  {row.kind === "stringing" ? "Stringing" : row.kind}
+                  {row.kind === "stringing" ? "Stringing" : row.kind === "charge" ? "Charge" : row.kind}
                 </p>
                 <p className="text-[13px] font-medium">{row.label}</p>
                 <p className="text-[12px] text-[#6b665e]">
@@ -431,7 +451,7 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
               </div>
               {open ? (
                 <div className="flex gap-2">
-                  {!lessonRequest && (
+                  {!lessonRequest && !isCharge && (
                     <button type="button" onClick={() => startEdit(row)} className="text-[12px] text-[#6b665e] underline-offset-2 hover:underline">
                       Change
                     </button>
