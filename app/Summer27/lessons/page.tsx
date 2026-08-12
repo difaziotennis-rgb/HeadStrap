@@ -147,7 +147,7 @@ function Summer27LessonsInner() {
       <h2 className="mt-1 text-2xl font-semibold tracking-tight">Derek DiFazio</h2>
       <p className="mt-2 text-[14px] leading-relaxed text-[#6b665e]">
         Private instruction with Derek on Court 1 — weekday mornings 8:00–12:00 and afternoons 3:00–5:00.
-        Members ${rates.member}/hour · guests ${rates.guest}/hour.
+        Members ${rates.member}/hour · guests ${rates.guest}/hour. Change or cancel from My Account until 24 hours before.
       </p>
 
       <form onSubmit={bookLesson} className="mt-6 space-y-3 rounded-2xl border border-[#e8e5df] bg-white p-5">

@@ -117,7 +117,7 @@ function Summer27StringingInner() {
       <h2 className="mt-1 text-2xl font-semibold tracking-tight">Stringing</h2>
       <p className="mt-2 text-[14px] text-[#6b665e]">
         Labor is ${labor} plus the string you choose. Drop frames at the shop; typical turnaround 24–48 hours
-        during the season.
+        during the season. Pickup changes until 24 hours before.
       </p>
 
       <form onSubmit={submit} className="mt-6 space-y-3 rounded-2xl border border-[#e8e5df] bg-white p-5">

@@ -1,15 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useS27Session } from "../../use-s27-session";
-import { formatHour, formatPrettyDate } from "../../summer27-data";
 import { getPaymentProfile } from "../../payments";
+import MemberBookings from "../MemberBookings";
 import {
   KEYS,
   loadList,
   loadRecord,
   saveList,
+  uniqueCourts,
   type S27ClinicBooking,
   type S27CourtBooking,
   type S27EventBooking,
@@ -31,13 +32,13 @@ export default function Summer27PortalPage() {
   const [oneClick, setOneClick] = useState(true);
   const [savedMsg, setSavedMsg] = useState<string | null>(null);
 
-  useEffect(() => {
+  const reload = useCallback(() => {
     if (!session) return;
-    const courtMap = loadRecord<S27CourtBooking>(KEYS.courts);
-    const uniqueCourts = Object.values(courtMap).filter(
-      (b, i, arr) => arr.findIndex((x) => x.id === b.id) === i
+    setCourts(
+      uniqueCourts(loadRecord<S27CourtBooking>(KEYS.courts)).filter(
+        (b) => b.memberNumber === session.memberNumber || b.clientEmail === session.memberEmail
+      )
     );
-    setCourts(uniqueCourts.filter((b) => b.memberNumber === session.memberNumber || b.clientEmail === session.memberEmail));
     setClinics(
       loadList<S27ClinicBooking>(KEYS.clinics).filter(
         (b) => b.memberNumber === session.memberNumber || b.clientEmail === session.memberEmail
@@ -67,43 +68,9 @@ export default function Summer27PortalPage() {
     }
   }, [session]);
 
-  const upcoming = useMemo(() => {
-    const today = new Date().toISOString().slice(0, 10);
-    return [
-      ...courts.map((b) => ({
-        when: `${b.date} ${String(b.hour).padStart(2, "0")}`,
-        label: `${b.courtName} · ${formatPrettyDate(b.date)} ${formatHour(b.hour)}`,
-        status: b.paymentStatus,
-        amount: b.amount,
-      })),
-      ...clinics.map((b) => ({
-        when: `${b.date} 08`,
-        label: `${b.clinicName} · ${formatPrettyDate(b.date)}`,
-        status: b.paymentStatus,
-        amount: b.amount,
-      })),
-      ...lessons.map((b) => ({
-        when: `${b.date} ${String(b.hour).padStart(2, "0")}`,
-        label: `Lesson · ${formatPrettyDate(b.date)} ${formatHour(b.hour)}`,
-        status: b.paymentStatus,
-        amount: b.amount,
-      })),
-      ...events.map((b) => ({
-        when: `${b.eventDate} 16`,
-        label: `${b.eventTitle} · ${b.guestCount} spot(s)`,
-        status: b.paymentStatus,
-        amount: b.amount,
-      })),
-      ...stringing.map((b) => ({
-        when: b.pickupDate || b.createdAt.slice(0, 10),
-        label: `Stringing · ${b.racket}`,
-        status: b.paymentStatus,
-        amount: b.amount,
-      })),
-    ]
-      .filter((row) => row.when.slice(0, 10) >= today || row.status === "pending")
-      .sort((a, b) => a.when.localeCompare(b.when));
-  }, [courts, clinics, lessons, events, stringing]);
+  useEffect(() => {
+    reload();
+  }, [reload]);
 
   function saveCard(e: React.FormEvent) {
     e.preventDefault();
@@ -149,20 +116,14 @@ export default function Summer27PortalPage() {
       <div className="mt-6 grid gap-4 lg:grid-cols-5">
         <section className="rounded-2xl border border-[#e8e5df] bg-white p-5 lg:col-span-3">
           <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Upcoming & pending</p>
-          {upcoming.length === 0 ? (
-            <p className="mt-3 text-[13px] text-[#8a8477]">Nothing on the books yet.</p>
-          ) : (
-            <ul className="mt-3 space-y-2">
-              {upcoming.map((row) => (
-                <li key={row.label + row.when} className="rounded-lg border border-[#ece8e2] bg-[#faf9f7] px-3 py-2">
-                  <p className="text-[13px] font-medium">{row.label}</p>
-                  <p className="text-[12px] text-[#6b665e]">
-                    ${row.amount} · {row.status === "paid" ? "Paid" : "Pending payment"}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          )}
+          <MemberBookings
+            courts={courts}
+            clinics={clinics}
+            lessons={lessons}
+            events={events}
+            stringing={stringing}
+            onChange={reload}
+          />
         </section>
 
         <section className="rounded-2xl border border-[#e8e5df] bg-white p-5 lg:col-span-2">

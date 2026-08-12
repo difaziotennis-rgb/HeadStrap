@@ -173,7 +173,7 @@ function Summer27ClinicsInner() {
       <h2 className="mt-1 text-2xl font-semibold tracking-tight">Weekly group sessions</h2>
       <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-[#6b665e]">
         Each session is listed by level. One-hour clinics are $50 members / $65 guests; 90-minute clinics are $80 /
-        $100. Max 10 players. Both courts are reserved during clinic hours.
+        $100. Max 10 players. Both courts are reserved during clinic hours. Change or cancel from My Account until 24 hours before.
       </p>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-12">

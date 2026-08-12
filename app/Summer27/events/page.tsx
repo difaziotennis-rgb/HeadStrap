@@ -27,7 +27,7 @@ export default function Summer27EventsPage() {
       <h2 className="mt-1 text-2xl font-semibold tracking-tight">A small club calendar</h2>
       <p className="mt-2 max-w-2xl text-[14px] text-[#6b665e]">
         Mixed doubles round robins, a member–guest mixer, ladies morning play, and one family afternoon. Pay in
-        advance. Courts are blocked for event windows.
+        advance. Courts are blocked for event windows. Members may change or cancel until 24 hours before start.
       </p>
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
         {getLiveEvents().map((event) => {

@@ -107,7 +107,7 @@ export default function Summer27Home() {
             {[
               "Join as a member and save a card for one-click booking.",
               "Pay in advance for courts, clinics, lessons, and events.",
-              "See who is signed up for each clinic before you commit.",
+              "Change or cancel from My Account until 24 hours before start.",
               "Court 1 is reserved for private instruction weekday mornings and late afternoons. Clinics use both courts.",
             ].map((step, i) => (
               <p key={step} className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3 text-[13px] text-[#4a4a4a]">

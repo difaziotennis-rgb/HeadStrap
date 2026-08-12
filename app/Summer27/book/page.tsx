@@ -166,7 +166,7 @@ function Summer27BookInner() {
       <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-[#6b665e]">
         Member ${rates.member}/hour · guest ${rates.guest}/hour, paid at booking. Clinic and event hours
         reserve both courts. Court 1 is reserved for private instruction weekday mornings 8:00–12:00 and
-        afternoons 3:00–5:00.
+        afternoons 3:00–5:00. Members may change or cancel until 24 hours before start.
       </p>
 
       <div className="mt-5 flex flex-wrap items-end gap-3 rounded-2xl border border-[#e8e5df] bg-white p-4">
