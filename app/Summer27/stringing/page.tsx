@@ -6,7 +6,7 @@ import { useS27Session } from "../use-s27-session";
 import { canOneClick, startStripeCheckout } from "../payments";
 import { STRING_OPTIONS } from "../summer27-data";
 import { getLiveStringingLabor } from "../schedule";
-import { KEYS, loadList, saveList, type S27StringingOrder } from "../storage";
+import { KEYS, loadList, rememberStringing, saveList, stringPrefForMember, type S27StringingOrder } from "../storage";
 
 export default function Summer27StringingPage() {
   return (
@@ -36,8 +36,19 @@ function Summer27StringingInner() {
   const savedCard = canOneClick(session);
 
   useEffect(() => {
-    setOrders(loadList<S27StringingOrder>(KEYS.stringing));
-  }, []);
+    const all = loadList<S27StringingOrder>(KEYS.stringing);
+    setOrders(all);
+    if (!session) return;
+    const pref = stringPrefForMember(session.memberNumber, all);
+    if (!pref) return;
+    setRacket(pref.racket);
+    if (STRING_OPTIONS.some((s) => s.id === pref.stringId)) setStringId(pref.stringId);
+    else {
+      const match = STRING_OPTIONS.find((s) => s.name === pref.stringName);
+      if (match) setStringId(match.id);
+    }
+    if (pref.tension) setTension(pref.tension.replace(/[^\d.]/g, "") || pref.tension);
+  }, [session]);
 
   useEffect(() => {
     const status = searchParams.get("payment");
@@ -86,6 +97,7 @@ function Summer27StringingInner() {
       paymentMethod: savedCard ? "saved-card" : "stripe",
       createdAt: new Date().toISOString(),
     };
+    rememberStringing(session?.memberNumber, order);
     if (savedCard) {
       order.paymentStatus = "paid";
       const next = [...orders, order];

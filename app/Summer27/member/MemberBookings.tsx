@@ -68,7 +68,6 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
   const [stringDraft, setStringDraft] = useState("");
 
   const rows = useMemo(() => {
-    const today = formatDateInput(new Date());
     const items = [
       ...courts.map((b) => ({
         id: b.id,
@@ -132,10 +131,15 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
         booking: b,
       })),
     ];
-    return items
-      .filter((row) => row.date >= today || row.status === "pending")
-      .sort((a, b) => `${a.date}${String(a.hour).padStart(5, "0")}`.localeCompare(`${b.date}${String(b.hour).padStart(5, "0")}`));
+    return items.sort((a, b) => `${a.date}${String(a.hour).padStart(5, "0")}`.localeCompare(`${b.date}${String(b.hour).padStart(5, "0")}`));
   }, [courts, clinics, lessons, events, stringing, liveClinics, liveEvents]);
+
+  const today = formatDateInput(new Date());
+  const upcoming = rows.filter((row) => row.date >= today || row.status === "pending");
+  const past = rows
+    .filter((row) => row.date < today && row.status !== "pending")
+    .slice()
+    .reverse();
 
   function flash(text: string) {
     setMsg(text);
@@ -321,18 +325,8 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
     flash("Stringing pickup updated.");
   }
 
-  if (rows.length === 0) {
-    return <p className="mt-3 text-[13px] text-[#8a8477]">Nothing on the books yet.</p>;
-  }
-
-  return (
-    <div className="mt-3 space-y-2">
-      <p className="text-[12px] text-[#8a8477]">
-        Change or cancel until {CANCEL_WINDOW_HOURS} hours before start. Inside that window, call the desk.
-      </p>
-      {msg && <p className="rounded-lg border border-[#e8e5df] bg-[#faf9f7] px-3 py-2 text-[13px]">{msg}</p>}
-      {rows.map((row) => {
-        const open = canChangeBooking(row.date, row.hour);
+  function renderBooking(row: (typeof rows)[number], canEdit: boolean) {
+        const open = canEdit && canChangeBooking(row.date, row.hour);
         const clinicDef = row.kind === "clinic" ? liveClinics.find((c) => c.id === (row.booking as S27ClinicBooking).clinicId) : null;
         return (
           <div key={row.id} className="rounded-lg border border-[#ece8e2] bg-[#faf9f7] p-3">
@@ -354,11 +348,7 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
                     Cancel
                   </button>
                 </div>
-              ) : (
-                <p className="max-w-[12rem] text-right text-[11px] text-[#8a8477]">
-                  Within {CANCEL_WINDOW_HOURS} hours — contact the desk to change or cancel.
-                </p>
-              )}
+              ) : null}
             </div>
 
             {editing === row.id && open && row.kind === "court" && (
@@ -464,7 +454,36 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
             )}
           </div>
         );
-      })}
+  }
+
+  if (rows.length === 0) {
+    return <p className="mt-3 text-[13px] text-[#8a8477]">Nothing on the books yet.</p>;
+  }
+
+  return (
+    <div className="mt-3 space-y-5">
+      <p className="text-[12px] text-[#8a8477]">
+        Change or cancel until {CANCEL_WINDOW_HOURS} hours before start.
+      </p>
+      {msg && <p className="rounded-lg border border-[#e8e5df] bg-[#faf9f7] px-3 py-2 text-[13px]">{msg}</p>}
+
+      <div className="space-y-2">
+        <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Upcoming</p>
+        {upcoming.length === 0 ? (
+          <p className="text-[13px] text-[#8a8477]">Nothing upcoming.</p>
+        ) : (
+          upcoming.map((row) => renderBooking(row, true))
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Past</p>
+        {past.length === 0 ? (
+          <p className="text-[13px] text-[#8a8477]">No past bookings yet.</p>
+        ) : (
+          past.map((row) => renderBooking(row, false))
+        )}
+      </div>
     </div>
   );
 }

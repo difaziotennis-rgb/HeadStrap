@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { formatHour, formatPrettyDate, lessonProLabel } from "../summer27-data";
+import { STRING_OPTIONS, formatHour, formatPrettyDate, lessonProLabel } from "../summer27-data";
 import { getPaymentProfile } from "../payments";
 import { getLiveClinics } from "../schedule";
 import {
   nextMemberNumber,
+  saveStringPref,
+  stringPrefForMember,
   type S27ClinicBooking,
   type S27CourtBooking,
   type S27EventBooking,
@@ -46,6 +48,7 @@ export default function MemberFile({
   const [noteDraft, setNoteDraft] = useState("");
   const [editing, setEditing] = useState(false);
   const [edit, setEdit] = useState({ name: "", email: "", phone: "" });
+  const [prefDraft, setPrefDraft] = useState({ racket: "", stringId: STRING_OPTIONS[0].id, tension: "52" });
   const q = query.trim().toLowerCase();
   const filtered = members
     .filter((m) => !q || `${m.name} ${m.email} ${m.memberNumber} ${m.phone}`.toLowerCase().includes(q))
@@ -56,7 +59,18 @@ export default function MemberFile({
   useEffect(() => {
     setNoteDraft(notes.find((n) => n.memberNumber === selectedNumber)?.note || "");
     setEditing(false);
-  }, [selectedNumber, notes]);
+    const pref = stringPrefForMember(selectedNumber || undefined, stringing);
+    if (pref) {
+      const match = STRING_OPTIONS.find((s) => s.id === pref.stringId) || STRING_OPTIONS.find((s) => s.name === pref.stringName);
+      setPrefDraft({
+        racket: pref.racket,
+        stringId: match?.id || STRING_OPTIONS[0].id,
+        tension: String(pref.tension).replace(/[^\d.]/g, "") || pref.tension,
+      });
+    } else {
+      setPrefDraft({ racket: "", stringId: STRING_OPTIONS[0].id, tension: "52" });
+    }
+  }, [selectedNumber, notes, stringing]);
 
   const file = useMemo(() => {
     if (!member) return null;
@@ -121,6 +135,7 @@ export default function MemberFile({
     const paid = history.filter((r) => r.status === "paid").reduce((s, r) => s + r.amount, 0);
     const pending = history.filter((r) => r.status === "pending").reduce((s, r) => s + r.amount, 0);
     const card = getPaymentProfile(member.memberNumber);
+    const stringPref = stringPrefForMember(member.memberNumber, stringItems);
     const note = notes.find((n) => n.memberNumber === member.memberNumber)?.note || "";
     const counts = {
       courts: courtItems.length,
@@ -129,7 +144,7 @@ export default function MemberFile({
       events: eventItems.length,
       stringing: stringItems.length,
     };
-    return { history, upcoming, paid, pending, card, note, counts };
+    return { history, upcoming, paid, pending, card, stringPref, note, counts };
   }, [member, courts, clinics, lessons, events, stringing, notes]);
 
   function addMember(e: React.FormEvent) {
@@ -155,6 +170,20 @@ export default function MemberFile({
       nextNotes.push({ memberNumber: member.memberNumber, note: noteDraft.trim(), updatedAt: new Date().toISOString() });
     }
     onSave(members, nextNotes);
+  }
+
+  function saveStringPreference() {
+    if (!member) return;
+    const option = STRING_OPTIONS.find((s) => s.id === prefDraft.stringId) || STRING_OPTIONS[0];
+    saveStringPref({
+      memberNumber: member.memberNumber,
+      racket: prefDraft.racket.trim(),
+      stringId: option.id,
+      stringName: option.name,
+      tension: prefDraft.tension.trim() || "52",
+      updatedAt: new Date().toISOString(),
+    });
+    onSave(members, notes);
   }
 
   function saveContact() {
@@ -286,6 +315,11 @@ export default function MemberFile({
                     {file.card.brand} •••• {file.card.last4}
                   </span>
                 )}
+                {file.stringPref && (
+                  <span className="rounded-full border border-[#e8e5df] px-2.5 py-1 text-[#6b665e]">
+                    {file.stringPref.stringName} @ {file.stringPref.tension}
+                  </span>
+                )}
               </div>
               <p className="mt-3 text-[13px] text-[#6b665e]">
                 {file.counts.courts} court · {file.counts.clinics} clinic · {file.counts.lessons} lesson · {file.counts.events} event · {file.counts.stringing} stringing
@@ -299,6 +333,33 @@ export default function MemberFile({
               />
               <button type="button" onClick={saveNote} className="mt-2 rounded-lg border border-[#e8e5df] px-3 py-1.5 text-[12px] text-[#6b665e]">
                 Save note
+              </button>
+            </section>
+
+            <section className="rounded-2xl border border-[#e8e5df] bg-white p-5">
+              <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">String preference</p>
+              {file.stringPref ? (
+                <p className="mt-2 text-[14px] font-medium">
+                  {file.stringPref.racket} · {file.stringPref.stringName} @ {file.stringPref.tension} lbs
+                </p>
+              ) : (
+                <p className="mt-2 text-[13px] text-[#8a8477]">No restringing on file yet. Saved automatically after their next order.</p>
+              )}
+              <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                <input className={inputClass} placeholder="Racket" value={prefDraft.racket} onChange={(e) => setPrefDraft({ ...prefDraft, racket: e.target.value })} />
+                <select className={inputClass} value={prefDraft.stringId} onChange={(e) => setPrefDraft({ ...prefDraft, stringId: e.target.value })}>
+                  {STRING_OPTIONS.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+                <select className={inputClass} value={prefDraft.tension} onChange={(e) => setPrefDraft({ ...prefDraft, tension: e.target.value })}>
+                  {["48", "50", "52", "54", "56", "58"].map((t) => (
+                    <option key={t} value={t}>{t} lbs</option>
+                  ))}
+                </select>
+              </div>
+              <button type="button" onClick={saveStringPreference} className="mt-2 rounded-lg border border-[#e8e5df] px-3 py-1.5 text-[12px] text-[#6b665e]">
+                Save string setup
               </button>
             </section>
 

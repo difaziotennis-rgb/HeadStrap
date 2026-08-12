@@ -115,7 +115,7 @@ export default function Summer27PortalPage() {
 
       <div className="mt-6 grid gap-4 lg:grid-cols-5">
         <section className="rounded-2xl border border-[#e8e5df] bg-white p-5 lg:col-span-3">
-          <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Upcoming & pending</p>
+          <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Bookings</p>
           <MemberBookings
             courts={courts}
             clinics={clinics}

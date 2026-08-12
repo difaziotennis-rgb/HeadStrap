@@ -15,6 +15,7 @@ import {
   loadList,
   loadRecord,
   persistCourts,
+  rememberStringing,
   saveList,
   uniqueCourts,
   type S27ClinicBooking,
@@ -422,7 +423,9 @@ export function seedMockBookings() {
     saveList(KEYS.clinics, keepReal(loadList<S27ClinicBooking>(KEYS.clinics), seedClinics()));
     saveList(KEYS.lessons, keepReal(loadList<S27LessonBooking>(KEYS.lessons), seedLessons()));
     saveList(KEYS.events, keepReal(loadList<S27EventBooking>(KEYS.events), seedEvents()));
-    saveList(KEYS.stringing, keepReal(loadList<S27StringingOrder>(KEYS.stringing), seedStringing()));
+    const stringOrders = keepReal(loadList<S27StringingOrder>(KEYS.stringing), seedStringing());
+    saveList(KEYS.stringing, stringOrders);
+    for (const order of stringOrders) rememberStringing(order.memberNumber, order);
   } catch (err) {
     console.error("Summer27 mock seed failed", err);
   } finally {

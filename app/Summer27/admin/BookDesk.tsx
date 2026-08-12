@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   BOOKING_HOURS,
   COURTS,
@@ -13,6 +13,8 @@ import {
 } from "../summer27-data";
 import { getLiveClinics, getLiveEvents, getLiveCourtRates, getLiveLessonRates, getLiveStringingLabor, getLivePros, getProgramBlock } from "../schedule";
 import {
+  rememberStringing,
+  stringPrefForMember,
   type S27ClinicBooking,
   type S27CourtBooking,
   type S27EventBooking,
@@ -428,6 +430,19 @@ function StringingBlock({
   const [guestName, setGuestName] = useState("");
   const [status, setStatus] = useState<"paid" | "pending">("paid");
   const stringOpt = STRING_OPTIONS.find((s) => s.id === stringId) || STRING_OPTIONS[0];
+
+  useEffect(() => {
+    if (!member) return;
+    const pref = stringPrefForMember(member.memberNumber, stringing);
+    if (!pref) return;
+    setRacket(pref.racket);
+    if (STRING_OPTIONS.some((s) => s.id === pref.stringId)) setStringId(pref.stringId);
+    else {
+      const match = STRING_OPTIONS.find((s) => s.name === pref.stringName);
+      if (match) setStringId(match.id);
+    }
+    if (pref.tension) setTension(String(pref.tension).replace(/[^\d.]/g, "") || pref.tension);
+  }, [member?.memberNumber]);
   const list = stringing
     .filter((b) => inRangeDate(b.pickupDate || b.createdAt.slice(0, 10), range, b.paymentStatus === "pending"))
     .slice()
@@ -437,9 +452,7 @@ function StringingBlock({
     e.preventDefault();
     const name = member?.name || guestName.trim();
     if (!racket.trim() || !name) return;
-    onStringing([
-      ...stringing,
-      {
+    const order = {
         id: uid("string"),
         racket: racket.trim(),
         stringId: stringOpt.id,
@@ -451,10 +464,11 @@ function StringingBlock({
         memberNumber: member?.memberNumber,
         amount: getLiveStringingLabor() + stringOpt.extra,
         paymentStatus: status,
-        paymentMethod: "manual",
+        paymentMethod: "manual" as const,
         createdAt: new Date().toISOString(),
-      },
-    ]);
+      };
+    rememberStringing(member?.memberNumber, order);
+    onStringing([...stringing, order]);
     setRacket("");
     setGuestName("");
   }

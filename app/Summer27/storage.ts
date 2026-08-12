@@ -8,6 +8,7 @@ export const KEYS = {
   events: "s27_event_bookings_v1",
   stringing: "s27_stringing_orders_v1",
   payment: "s27_member_payment_v1",
+  stringPrefs: "s27_string_prefs_v1",
   pendingStripe: "s27_pending_stripe_v1",
 } as const;
 
@@ -110,6 +111,60 @@ export type S27StringingOrder = {
   paymentMethod: "stripe" | "saved-card" | "manual";
   createdAt: string;
 };
+
+export type S27StringPref = {
+  memberNumber: string;
+  racket: string;
+  stringId: string;
+  stringName: string;
+  tension: string;
+  updatedAt: string;
+};
+
+export function getStringPref(memberNumber?: string): S27StringPref | null {
+  if (!memberNumber || typeof window === "undefined") return null;
+  return loadList<S27StringPref>(KEYS.stringPrefs).find((p) => p.memberNumber === memberNumber) || null;
+}
+
+export function saveStringPref(pref: S27StringPref) {
+  if (!pref.memberNumber || typeof window === "undefined") return;
+  const all = loadList<S27StringPref>(KEYS.stringPrefs).filter((p) => p.memberNumber !== pref.memberNumber);
+  saveList(KEYS.stringPrefs, [...all, pref]);
+}
+
+export function rememberStringing(
+  memberNumber: string | undefined,
+  order: Pick<S27StringingOrder, "racket" | "stringId" | "stringName" | "tension">
+) {
+  if (!memberNumber) return;
+  saveStringPref({
+    memberNumber,
+    racket: order.racket,
+    stringId: order.stringId,
+    stringName: order.stringName,
+    tension: order.tension,
+    updatedAt: new Date().toISOString(),
+  });
+}
+
+export function stringPrefForMember(memberNumber?: string, orders: S27StringingOrder[] = []): S27StringPref | null {
+  const saved = getStringPref(memberNumber);
+  if (saved) return saved;
+  if (!memberNumber) return null;
+  const latest = orders
+    .filter((order) => order.memberNumber === memberNumber)
+    .slice()
+    .sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""))[0];
+  if (!latest) return null;
+  return {
+    memberNumber,
+    racket: latest.racket,
+    stringId: latest.stringId,
+    stringName: latest.stringName,
+    tension: latest.tension,
+    updatedAt: latest.createdAt,
+  };
+}
 
 export function safeParse<T>(raw: string | null, fallback: T): T {
   if (!raw) return fallback;
