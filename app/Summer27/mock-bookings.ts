@@ -87,8 +87,17 @@ function nextDatesForDays(days: number[], count: number) {
   return dates;
 }
 
+function wrapIndex<T>(list: T[], i: number): T {
+  const n = list.length;
+  return list[((i % n) + n) % n];
+}
+
 function personAt(i: number): Person {
-  return MEMBERS[i % MEMBERS.length];
+  return wrapIndex(MEMBERS, i);
+}
+
+function guestAt(i: number): Person {
+  return wrapIndex(GUESTS, i);
 }
 
 function paid(i: number): "paid" | "pending" {
@@ -100,7 +109,10 @@ function method(i: number): "stripe" | "saved-card" | "manual" {
 }
 
 function keepReal<T extends { id: string }>(existing: T[], mock: T[]) {
-  return [...existing.filter((x) => !x.id.startsWith("mock-") && !x.id.startsWith("seed-")), ...mock];
+  return [
+    ...existing.filter((x) => x?.id && !x.id.startsWith("mock-") && !x.id.startsWith("seed-")),
+    ...mock,
+  ];
 }
 
 function seedMembers() {
@@ -172,7 +184,7 @@ function seedCourts(): S27CourtBooking[] {
       add(date, 11, 1, "court-1", personAt(base), base);
       if (dow === 0) add(date, 11, 1, "court-2", personAt(base + 1), base + 1);
       add(date, 12, 2, "court-1", personAt(base + 2), base + 2);
-      add(date, 12, 1, "court-2", GUESTS[offset % GUESTS.length], base + 3);
+      add(date, 12, 1, "court-2", guestAt(offset), base + 3);
       add(date, 14, 1, "court-1", personAt(base + 4), base + 4);
       add(date, 14, 2, "court-2", personAt(base + 5), base + 5);
       add(date, 16, 1, "court-1", personAt(base + 6), base + 6);
@@ -187,7 +199,7 @@ function seedCourts(): S27CourtBooking[] {
     if (dow === 2 || dow === 4) {
       add(date, 13, 1, "court-1", personAt(base + 3), base + 3);
       add(date, 13, 1, "court-2", personAt(base + 4), base + 4);
-      add(date, 14, 1, "court-1", GUESTS[(base + 5) % GUESTS.length], base + 5);
+      add(date, 14, 1, "court-1", guestAt(base + 5), base + 5);
       add(date, 17, 1, "court-2", personAt(base + 6), base + 6);
       add(date, 18, 1, "court-1", personAt(base + 7), base + 7);
       add(date, 19, 1, "court-2", personAt(base + 8), base + 8);
@@ -196,13 +208,13 @@ function seedCourts(): S27CourtBooking[] {
       add(date, 13, 2, "court-2", personAt(base + 4), base + 4);
       add(date, 14, 1, "court-1", personAt(base + 5), base + 5);
       add(date, 17, 1, "court-2", personAt(base + 6), base + 6);
-      add(date, 18, 1, "court-1", GUESTS[(base + 7) % GUESTS.length], base + 7);
+      add(date, 18, 1, "court-1", guestAt(base + 7), base + 7);
       add(date, 19, 1, "court-2", personAt(base + 8), base + 8);
     } else {
       add(date, 12, 1, "court-1", personAt(base + 3), base + 3);
       add(date, 12, 1, "court-2", personAt(base + 4), base + 4);
       add(date, 13, 1, "court-1", personAt(base + 5), base + 5);
-      add(date, 14, 1, "court-2", GUESTS[(base + 6) % GUESTS.length], base + 6);
+      add(date, 14, 1, "court-2", guestAt(base + 6), base + 6);
     }
   }
 
@@ -353,12 +365,15 @@ export function seedMockBookings() {
   if (typeof window === "undefined") return;
   if (localStorage.getItem(MOCK_FLAG) === "1") return;
 
-  seedMembers();
-  persistCourts(keepReal(uniqueCourts(loadRecord<S27CourtBooking>(KEYS.courts)), seedCourts()));
-  saveList(KEYS.clinics, keepReal(loadList<S27ClinicBooking>(KEYS.clinics), seedClinics()));
-  saveList(KEYS.lessons, keepReal(loadList<S27LessonBooking>(KEYS.lessons), seedLessons()));
-  saveList(KEYS.events, keepReal(loadList<S27EventBooking>(KEYS.events), seedEvents()));
-  saveList(KEYS.stringing, keepReal(loadList<S27StringingOrder>(KEYS.stringing), seedStringing()));
-
-  localStorage.setItem(MOCK_FLAG, "1");
+  try {
+    seedMembers();
+    persistCourts(keepReal(uniqueCourts(loadRecord<S27CourtBooking>(KEYS.courts)), seedCourts()));
+    saveList(KEYS.clinics, keepReal(loadList<S27ClinicBooking>(KEYS.clinics), seedClinics()));
+    saveList(KEYS.lessons, keepReal(loadList<S27LessonBooking>(KEYS.lessons), seedLessons()));
+    saveList(KEYS.events, keepReal(loadList<S27EventBooking>(KEYS.events), seedEvents()));
+    saveList(KEYS.stringing, keepReal(loadList<S27StringingOrder>(KEYS.stringing), seedStringing()));
+    localStorage.setItem(MOCK_FLAG, "1");
+  } catch (err) {
+    console.error("Summer27 mock seed failed", err);
+  }
 }

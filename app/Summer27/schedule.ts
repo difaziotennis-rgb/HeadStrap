@@ -70,13 +70,34 @@ export function defaultCatalog(): S27Catalog {
   };
 }
 
+function usableClinics(clinics: unknown, fallback: ClinicDef[]): ClinicDef[] {
+  if (!Array.isArray(clinics) || clinics.length === 0) return fallback;
+  const ok = clinics.filter(
+    (c): c is ClinicDef =>
+      !!c &&
+      typeof c === "object" &&
+      typeof (c as ClinicDef).id === "string" &&
+      typeof (c as ClinicDef).name === "string" &&
+      Array.isArray((c as ClinicDef).days)
+  );
+  return ok.length ? ok : fallback;
+}
+
+function usableEvents(events: unknown, fallback: EventDef[]): EventDef[] {
+  if (!Array.isArray(events) || events.length === 0) return fallback;
+  const ok = events.filter(
+    (e): e is EventDef => !!e && typeof e === "object" && typeof (e as EventDef).id === "string"
+  );
+  return ok.length ? ok : fallback;
+}
+
 export function getCatalog(): S27Catalog {
   const saved = readJson<Partial<S27Catalog> | null>(S27_CATALOG_KEY, null);
   const defaults = defaultCatalog();
   if (!saved) return defaults;
   return {
-    clinics: Array.isArray(saved.clinics) && saved.clinics.length ? saved.clinics : defaults.clinics,
-    events: Array.isArray(saved.events) && saved.events.length ? saved.events : defaults.events,
+    clinics: usableClinics(saved.clinics, defaults.clinics),
+    events: usableEvents(saved.events, defaults.events),
     courtRates: saved.courtRates || defaults.courtRates,
     lessonRates: saved.lessonRates || defaults.lessonRates,
     stringingLabor: typeof saved.stringingLabor === "number" ? saved.stringingLabor : defaults.stringingLabor,

@@ -293,13 +293,16 @@ export function formatPrettyDate(value: string): string {
   });
 }
 
-export function clinicDayLabel(days: number[]): string {
+export function clinicDayLabel(days: number[] | undefined | null): string {
   const names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  return days.map((d) => names[d]).join(" / ");
+  if (!Array.isArray(days) || days.length === 0) return "TBA";
+  return days.map((d) => names[d] || "").filter(Boolean).join(" / ");
 }
 
-export function clinicTimeLabel(clinic: ClinicDef): string {
-  return `${formatHour(clinic.startHour)}–${formatHour(clinic.startHour + clinic.durationHours)}`;
+export function clinicTimeLabel(clinic: Pick<ClinicDef, "startHour" | "durationHours">): string {
+  const start = Number(clinic.startHour) || 0;
+  const duration = Number(clinic.durationHours) || 1;
+  return `${formatHour(start)}–${formatHour(start + duration)}`;
 }
 
 export type SlotBlockReason =

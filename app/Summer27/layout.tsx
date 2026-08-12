@@ -12,7 +12,11 @@ export default function Summer27Layout({ children }: { children: React.ReactNode
   const isAdmin = pathname === "/Summer27/admin" || pathname?.startsWith("/Summer27/admin/");
 
   useEffect(() => {
-    seedMockBookings();
+    try {
+      seedMockBookings();
+    } catch (err) {
+      console.error("Summer27 mock seed failed", err);
+    }
   }, []);
 
   return (

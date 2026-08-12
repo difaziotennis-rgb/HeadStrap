@@ -1,16 +1,23 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useS27Session } from "./use-s27-session";
-import { clinicDayLabel, clinicTimeLabel } from "./summer27-data";
+import { clinicDayLabel, clinicTimeLabel, s27Clinics, s27Events } from "./summer27-data";
 import { getLiveClinics, getLiveEvents } from "./schedule";
 
 export default function Summer27Home() {
   const session = useS27Session();
-  const clinics = getLiveClinics();
-  const events = getLiveEvents();
-  const adultClinics = clinics.filter((c) => c.kind === "adult");
-  const juniorClinics = clinics.filter((c) => c.kind === "junior");
+  const [clinics, setClinics] = useState(s27Clinics);
+  const [events, setEvents] = useState(s27Events);
+
+  useEffect(() => {
+    setClinics(getLiveClinics());
+    setEvents(getLiveEvents());
+  }, []);
+
+  const adultClinics = clinics.filter((c) => c?.kind === "adult" && c.id);
+  const juniorClinics = clinics.filter((c) => c?.kind === "junior" && c.id);
 
   return (
     <main>
@@ -90,7 +97,7 @@ export default function Summer27Home() {
               </Link>
             </div>
             <ul className="mt-4 space-y-2">
-              {events.slice(0, 4).map((e) => (
+              {events.filter((e) => e?.id).slice(0, 4).map((e) => (
                 <li key={e.id}>
                   <Link href={`/Summer27/events/${e.id}`} className="block rounded-lg border border-[#ece8e2] bg-[#faf9f7] px-3 py-2.5 hover:bg-white">
                     <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">{e.category}</p>

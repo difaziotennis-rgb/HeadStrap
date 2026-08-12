@@ -119,12 +119,17 @@ export function safeParse<T>(raw: string | null, fallback: T): T {
 
 export function loadList<T>(key: string): T[] {
   if (typeof window === "undefined") return [];
-  return safeParse<T[]>(localStorage.getItem(key), []);
+  const parsed = safeParse<unknown>(localStorage.getItem(key), []);
+  return Array.isArray(parsed) ? (parsed as T[]) : [];
 }
 
 export function saveList<T>(key: string, value: T[]) {
   if (typeof window === "undefined") return;
-  localStorage.setItem(key, JSON.stringify(value));
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // private mode / quota
+  }
 }
 
 export function loadRecord<T>(key: string): Record<string, T> {
