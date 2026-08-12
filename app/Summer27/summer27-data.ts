@@ -74,7 +74,7 @@ export const s27Clinics: ClinicDef[] = [
     id: "sat-sun-point-play",
     name: "Weekend Point Play",
     kind: "adult",
-    level: "4.0+ or by pro invitation",
+    level: "3.5+ or by invitation",
     days: [0, 6],
     startHour: 9,
     durationHours: 1.5,
@@ -82,7 +82,7 @@ export const s27Clinics: ClinicDef[] = [
     memberPrice: 80,
     guestPrice: 100,
     description:
-      "Match-tempo point construction, serve + 1 patterns, and competitive games. Intended for 4.0+ players.",
+      "Match-tempo point construction, serve + 1 patterns, and competitive games. Intended for 3.5+ players, or by invitation.",
     blockCourts: ["court-1", "court-2"],
   },
   {
