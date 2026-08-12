@@ -92,6 +92,31 @@ export default function Summer27Home() {
       </section>
 
       <section className="mx-auto w-full max-w-6xl px-4 pb-6 sm:px-6">
+        <a
+          href={S27_INSTAGRAM_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group block overflow-hidden rounded-2xl border border-[#e8e5df] bg-[#1a1a1a] p-5 shadow-[0_14px_36px_rgba(26,26,26,0.07)] sm:p-8"
+        >
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-[10px] uppercase tracking-[0.16em] text-white/55">Featured for members</p>
+              <p className="mt-2 text-[28px] font-semibold tracking-tight text-white sm:text-4xl">
+                {S27_INSTAGRAM_HANDLE}
+              </p>
+              <p className="mt-2 max-w-lg text-[14px] leading-relaxed text-white/75 sm:text-[15px]">
+                Club life between sessions — court moments, clinic days, and what’s coming next. Follow along and check
+                in often.
+              </p>
+            </div>
+            <span className="inline-flex shrink-0 items-center rounded-full bg-white px-5 py-2.5 text-[13px] font-medium text-[#1a1a1a] transition group-hover:bg-[#f5f3ef]">
+              Open Instagram →
+            </span>
+          </div>
+        </a>
+      </section>
+
+      <section className="mx-auto w-full max-w-6xl px-4 pb-6 sm:px-6">
         <div className="rounded-2xl border border-[#e8e5df] bg-white p-4 sm:p-6">
           <div className="flex items-center justify-between gap-2">
             <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Coming up</p>
