@@ -265,14 +265,15 @@ function Summer27BookInner() {
           </Link>
         );
       }
-      if (occ.type === "booked" && isMine(occ.booking)) {
-        const cancellable = canChangeBooking(occ.booking.date, occ.booking.hour);
+      if (occ.type === "booked" && "booking" in occ && occ.booking && isMine(occ.booking)) {
+        const mine = occ.booking;
+        const cancellable = canChangeBooking(mine.date, mine.hour);
         return (
           <button
             type="button"
             onClick={() => {
               setPendingSlot(null);
-              setCancelTarget(occ.booking);
+              setCancelTarget(mine);
               setMsg(null);
             }}
             className={`w-full truncate rounded-md px-1.5 py-2 text-center text-[10px] font-medium leading-tight sm:px-2 sm:text-[11px] ${slotClass("mine")}`}
