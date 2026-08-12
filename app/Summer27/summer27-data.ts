@@ -260,7 +260,7 @@ export const s27Clinics: ClinicDef[] = [
     capacity: 6,
     memberPrice: 30,
     guestPrice: 40,
-    description: "First racquets, games, and fun on court — before ladies.",
+    description: "First racquets, games, and fun on court.",
     blockCourts: ["court-2"],
   },
   {
@@ -274,7 +274,7 @@ export const s27Clinics: ClinicDef[] = [
     capacity: 6,
     memberPrice: 30,
     guestPrice: 40,
-    description: "Rally games and basics — before ladies.",
+    description: "Rally games and early fundamentals.",
     blockCourts: ["court-2"],
   },
 ];
