@@ -46,7 +46,7 @@ export default function Summer27Layout({ children }: { children: React.ReactNode
                     key={item.href}
                     href={item.href}
                     className={`shrink-0 rounded-full px-3.5 py-2 text-[12px] font-medium transition-colors ${
-                      pushEnd ? "ml-auto" : ""
+                      pushEnd ? "ml-3 sm:ml-4" : ""
                     } ${
                       active
                         ? "bg-[#1a1a1a] text-white"
