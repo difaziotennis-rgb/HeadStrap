@@ -167,9 +167,10 @@ function Summer27JuniorsInner() {
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
       <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Juniors</p>
-      <h2 className="mt-1 text-2xl font-semibold tracking-tight">Weekly junior hours</h2>
-      <p className="mt-2 max-w-2xl text-[14px] text-[#6b665e]">
-        Small groups on Court 2. $50 members · $65 guests.
+      <h2 className="mt-1 text-2xl font-semibold tracking-tight">Junior hours</h2>
+      <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-[#6b665e]">
+        Two small weekly sessions on Court 2 — Saturday mornings for ages 8–12, and Wednesday afternoons for ages 10–14.
+        Rally, movement, and the beginnings of match play. $50 members · $65 guests.
       </p>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-2">

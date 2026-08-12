@@ -207,7 +207,7 @@ export const s27Clinics: ClinicDef[] = [
     capacity: 8,
     memberPrice: 50,
     guestPrice: 65,
-    description: "Rally games, serve progressions, and sportsmanship.",
+    description: "Rally, serve, and the habits of good tennis.",
     blockCourts: ["court-2"],
   },
   {
@@ -221,7 +221,7 @@ export const s27Clinics: ClinicDef[] = [
     capacity: 8,
     memberPrice: 50,
     guestPrice: 65,
-    description: "Movement, consistency, and a few points.",
+    description: "After-school movement, consistency, and point play.",
     blockCourts: ["court-2"],
   },
 ];
