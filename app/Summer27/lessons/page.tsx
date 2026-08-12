@@ -145,9 +145,9 @@ function Summer27LessonsInner() {
     <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6">
       <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Private lessons</p>
       <h2 className="mt-1 text-2xl font-semibold tracking-tight">Derek DiFazio</h2>
-      <p className="mt-2 text-[14px] text-[#6b665e]">
-        Court 1 is held during weekday prime teaching hours. ${rates.member}/hr members · $
-        {rates.guest}/hr guests. Pay when you book.
+      <p className="mt-2 text-[14px] leading-relaxed text-[#6b665e]">
+        Private instruction with Derek on Court 1 — weekday mornings 8:00–12:00 and afternoons 3:00–5:00.
+        Members ${rates.member}/hour · guests ${rates.guest}/hour.
       </p>
 
       <form onSubmit={bookLesson} className="mt-6 space-y-3 rounded-2xl border border-[#e8e5df] bg-white p-5">

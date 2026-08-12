@@ -702,7 +702,7 @@ function ClinicsTab({
     date: formatDateInput(new Date()),
     clientName: "",
     clientEmail: "",
-    amount: String(clinics[0]?.memberPrice || 40),
+    amount: String(clinics[0]?.memberPrice || 50),
     paymentStatus: "paid" as "paid" | "pending",
   });
   const [editing, setEditing] = useState<string | null>(null);

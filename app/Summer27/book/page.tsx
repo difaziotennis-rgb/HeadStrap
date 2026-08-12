@@ -163,9 +163,10 @@ function Summer27BookInner() {
     <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
       <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Court booking</p>
       <h2 className="mt-1 text-2xl font-semibold tracking-tight">Court 1 &amp; Court 2</h2>
-      <p className="mt-2 max-w-2xl text-[14px] text-[#6b665e]">
-        Member ${rates.member}/hr · guest ${rates.guest}/hr. Pay in advance. Clinics and events block both
-        courts; Court 1 is held for private lessons during prime teaching hours.
+      <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-[#6b665e]">
+        Member ${rates.member}/hour · guest ${rates.guest}/hour, paid at booking. Clinic and event hours
+        reserve both courts. Court 1 is reserved for private instruction weekday mornings 8:00–12:00 and
+        afternoons 3:00–5:00.
       </p>
 
       <div className="mt-5 flex flex-wrap items-end gap-3 rounded-2xl border border-[#e8e5df] bg-white p-4">

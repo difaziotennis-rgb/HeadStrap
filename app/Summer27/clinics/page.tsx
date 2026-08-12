@@ -157,8 +157,9 @@ function Summer27ClinicsInner() {
     <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
       <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Adult clinics</p>
       <h2 className="mt-1 text-2xl font-semibold tracking-tight">Weekly group sessions</h2>
-      <p className="mt-2 max-w-2xl text-[14px] text-[#6b665e]">
-        Max 10 players. Courts are blocked during clinic hours. See who’s signed up before you join. Pay in advance.
+      <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-[#6b665e]">
+        Each session is listed by level. One-hour clinics are $50 members / $65 guests; 90-minute clinics are $80 /
+        $100. Max 10 players. Both courts are reserved during clinic hours.
       </p>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-12">
@@ -187,10 +188,12 @@ function Summer27ClinicsInner() {
         </div>
 
         <div className="rounded-2xl border border-[#e8e5df] bg-white p-5 lg:col-span-7">
-          <h3 className="text-lg font-medium">{clinic.name}</h3>
+          <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">{clinic.level}</p>
+          <h3 className="mt-1 text-lg font-medium">{clinic.name}</h3>
           <p className="mt-1 text-[13px] text-[#6b665e]">{clinic.description}</p>
           <p className="mt-2 text-[12px] text-[#8a8477]">
-            {clinicDayLabel(clinic.days)} · {clinicTimeLabel(clinic)} · {clinic.capacity} max
+            {clinicDayLabel(clinic.days)} · {clinicTimeLabel(clinic)} · {clinic.capacity} max · ${clinic.memberPrice} / $
+            {clinic.guestPrice}
           </p>
 
           <label className="mt-4 block text-[12px] text-[#6b665e]">

@@ -44,7 +44,7 @@ export default function Summer27Home() {
           <div className="grid gap-3 bg-[#faf9f7] p-4 sm:grid-cols-3 sm:p-6">
             {[
               { label: "Courts", value: "Court 1 & Court 2", note: "Hourly member play · clinics blocked" },
-              { label: "Lessons", value: "Derek DiFazio", note: "Court 1 held during prime teaching hours" },
+              { label: "Lessons", value: "Derek DiFazio", note: "Court 1 · weekday mornings & late afternoons" },
               { label: "Pro shop", value: "Stringing", note: "$50 labor + cost of string" },
             ].map((item) => (
               <div key={item.label} className="rounded-xl border border-[#e8e5df] bg-white p-4">
@@ -69,7 +69,8 @@ export default function Summer27Home() {
             <ul className="mt-4 space-y-2">
               {adultClinics.map((c) => (
                 <li key={c.id} className="rounded-lg border border-[#ece8e2] bg-[#faf9f7] px-3 py-2.5">
-                  <p className="text-[13px] font-medium">{c.name}</p>
+                  <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">{c.level}</p>
+                  <p className="mt-0.5 text-[13px] font-medium">{c.name}</p>
                   <p className="text-[12px] text-[#6b665e]">
                     {clinicDayLabel(c.days)} · {clinicTimeLabel(c)} · max {c.capacity} · ${c.memberPrice} members
                   </p>
@@ -109,7 +110,7 @@ export default function Summer27Home() {
               "Join as a member and save a card for one-click booking.",
               "Pay in advance for courts, clinics, lessons, and events.",
               "See who is signed up for each clinic before you commit.",
-              "Court 1 is held for lessons in prime hours; clinics take both courts.",
+              "Court 1 is reserved for private instruction weekday mornings and late afternoons. Clinics use both courts.",
             ].map((step, i) => (
               <p key={step} className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3 text-[13px] text-[#4a4a4a]">
                 <span className="font-medium">{i + 1}.</span> {step}
