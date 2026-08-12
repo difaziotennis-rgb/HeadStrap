@@ -370,12 +370,6 @@ export default function Summer27DirectorPage() {
           events={events}
           stringing={stringing}
           charges={charges}
-          onCourts={saveCourts}
-          onClinics={saveClinics}
-          onLessons={saveLessons}
-          onEvents={saveEvents}
-          onStringing={saveStringing}
-          onCharges={saveCharges}
         />
       )}
 
