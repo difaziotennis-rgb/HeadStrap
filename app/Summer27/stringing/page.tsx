@@ -59,7 +59,7 @@ function Summer27StringingInner() {
       );
       saveList(KEYS.stringing, all);
       setOrders(all);
-      setMsg("Stringing paid. Drop the frame at the pro shop.");
+      setMsg("Paid. Drop the frame at the shop.");
     }
   }, [searchParams]);
 
@@ -103,7 +103,7 @@ function Summer27StringingInner() {
       const next = [...orders, order];
       saveList(KEYS.stringing, next);
       setOrders(next);
-      setMsg(`Order in. $${amount} charged to saved card. Drop frame at the shop.`);
+      setMsg(`Order in. $${amount} charged. Drop the frame at the shop.`);
       return;
     }
     const next = [...orders, order];
@@ -128,25 +128,37 @@ function Summer27StringingInner() {
       <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Pro shop</p>
       <h2 className="mt-1 text-2xl font-semibold tracking-tight">Stringing</h2>
       <p className="mt-2 text-[14px] text-[#6b665e]">
-        Labor is ${labor} plus the string you choose. Drop frames at the shop; typical turnaround 24–48 hours
-        during the season. Pickup changes until 24 hours before.
+        ${labor} labor plus string. Drop frames at the shop — usually ready in a day or two.
       </p>
 
       <form onSubmit={submit} className="mt-6 space-y-3 rounded-2xl border border-[#e8e5df] bg-white p-5">
-        <input value={racket} onChange={(e) => setRacket(e.target.value)} placeholder="Racket model" className="w-full rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]" />
+        <label className="block text-[12px] text-[#6b665e]">
+          Racket
+          <input value={racket} onChange={(e) => setRacket(e.target.value)} placeholder="Model" className="mt-1 w-full rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]" />
+        </label>
         <label className="block text-[12px] text-[#6b665e]">
           String
           <select value={stringId} onChange={(e) => setStringId(e.target.value)} className="mt-1 w-full rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]">
             {STRING_OPTIONS.map((s) => (
               <option key={s.id} value={s.id}>
-                {s.name} {s.extra ? `(+$${s.extra})` : "(no extra)"}
+                {s.name}{s.extra ? ` · +$${s.extra}` : ""}
               </option>
             ))}
           </select>
         </label>
         <div className="grid gap-3 sm:grid-cols-2">
-          <input value={tension} onChange={(e) => setTension(e.target.value)} placeholder="Tension (lbs)" className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]" />
-          <input type="date" value={pickupDate} onChange={(e) => setPickupDate(e.target.value)} className="rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]" />
+          <label className="text-[12px] text-[#6b665e]">
+            Tension
+            <select value={tension} onChange={(e) => setTension(e.target.value)} className="mt-1 w-full rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]">
+              {["48", "50", "51", "52", "53", "54", "55", "56", "58"].map((t) => (
+                <option key={t} value={t}>{t} lbs</option>
+              ))}
+            </select>
+          </label>
+          <label className="text-[12px] text-[#6b665e]">
+            Pickup
+            <input type="date" value={pickupDate} onChange={(e) => setPickupDate(e.target.value)} className="mt-1 w-full rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]" />
+          </label>
         </div>
         {!isMember && (
           <>
@@ -155,11 +167,11 @@ function Summer27StringingInner() {
           </>
         )}
         <p className="text-[13px] text-[#6b665e]">
-          Total ${amount} (${labor} labor + ${option.extra} string)
+          ${amount} total
         </p>
         {msg && <p className="text-[13px]">{msg}</p>}
         <button disabled={paying} className="w-full rounded-lg bg-[#1a1a1a] py-2.5 text-[13px] font-medium text-white">
-          {savedCard ? `One-click · $${amount}` : `Pay $${amount}`}
+          Order · ${amount}
         </button>
       </form>
 
@@ -169,7 +181,7 @@ function Summer27StringingInner() {
           <ul className="mt-2 space-y-2 text-[13px]">
             {mine.map((o) => (
               <li key={o.id}>
-                {o.racket} · {o.stringName} @ {o.tension} lbs · ${o.amount}
+                {o.racket} · {o.stringName} @ {/lbs/i.test(o.tension) ? o.tension : `${o.tension} lbs`} · ${o.amount}
               </li>
             ))}
           </ul>

@@ -8,7 +8,7 @@ import {
   S27_MEMBER_SESSION_KEY,
   type S27MemberSession,
 } from "./member-session";
-import { DEREK_MEMBER, KEYS, ensureDerekMember, loadList, type S27MemberAccount } from "./storage";
+import { KEYS, ensureDerekMember, loadList, type S27MemberAccount } from "./storage";
 
 export default function MemberAuth() {
   const [session, setSession] = useState<S27MemberSession | null>(null);
@@ -48,7 +48,7 @@ export default function MemberAuth() {
       return idMatch && String(m.password || "") === pass;
     });
     if (!match) {
-      setMsg("No match. Check email / member # and password, or join first.");
+      setMsg("Check email and password.");
       return;
     }
     const next: S27MemberSession = {
@@ -66,22 +66,6 @@ export default function MemberAuth() {
     setMsg(null);
   }
 
-  function signInAsDerek() {
-    const derek = ensureDerekMember();
-    const next: S27MemberSession = {
-      memberNumber: derek.memberNumber,
-      memberEmail: derek.email,
-      memberName: derek.name,
-      memberPhone: derek.phone,
-      signedInAt: new Date().toISOString(),
-    };
-    localStorage.setItem(S27_MEMBER_SESSION_KEY, JSON.stringify(next));
-    setSession(next);
-    emitS27SessionChange();
-    setOpen(false);
-    setMsg(null);
-  }
-
   if (session) {
     return (
       <div className="flex items-center gap-2">
@@ -89,13 +73,9 @@ export default function MemberAuth() {
           href="/Summer27/member/portal"
           className="rounded-lg border border-[#e8e5df] bg-white px-2.5 py-1.5 text-[11px] font-medium text-[#4a4a4a] hover:bg-[#faf9f7]"
         >
-          {session.memberName?.split(" ")[0] || "Member"} · #{session.memberNumber}
+          {session.memberName?.split(" ")[0] || "Account"}
         </Link>
-        <button
-          type="button"
-          onClick={signOut}
-          className="text-[11px] text-[#8a8477] hover:text-[#1a1a1a]"
-        >
+        <button type="button" onClick={signOut} className="text-[11px] text-[#8a8477] hover:text-[#1a1a1a]">
           Sign out
         </button>
       </div>
@@ -109,7 +89,7 @@ export default function MemberAuth() {
         onClick={() => setOpen((v) => !v)}
         className="rounded-lg border border-[#e8e5df] bg-white px-2.5 py-1.5 text-[11px] font-medium text-[#4a4a4a] hover:bg-[#faf9f7]"
       >
-        Member login
+        Sign in
       </button>
       {open && (
         <div className="absolute right-0 z-50 mt-2 w-72 rounded-xl border border-[#e8e5df] bg-white p-3 shadow-lg">
@@ -128,29 +108,16 @@ export default function MemberAuth() {
               className="w-full rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px] outline-none focus:border-[#1a1a1a]"
             />
             {msg && <p className="text-[12px] text-[#991b1b]">{msg}</p>}
-            <button
-              type="submit"
-              className="w-full rounded-lg bg-[#1a1a1a] py-2 text-[12px] font-medium text-white"
-            >
+            <button type="submit" className="w-full rounded-lg bg-[#1a1a1a] py-2 text-[12px] font-medium text-white">
               Sign in
             </button>
           </form>
-          <button
-            type="button"
-            onClick={signInAsDerek}
-            className="mt-2 w-full rounded-lg border border-[#e8e5df] bg-[#faf9f7] py-2 text-[12px] font-medium text-[#4a4a4a] hover:bg-white"
-          >
-            Sign in as Derek DiFazio
-          </button>
-          <p className="mt-2 text-center text-[11px] text-[#8a8477]">
-            #{DEREK_MEMBER.memberNumber} · {DEREK_MEMBER.email} · {DEREK_MEMBER.password}
-          </p>
           <Link
             href="/Summer27/member"
             className="mt-2 block text-center text-[11px] text-[#8a8477] hover:text-[#1a1a1a]"
             onClick={() => setOpen(false)}
           >
-            Join as a member
+            Join
           </Link>
         </div>
       )}

@@ -5,7 +5,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { useS27Session } from "../../use-s27-session";
 import { canOneClick, startStripeCheckout } from "../../payments";
-import { formatPrettyDate } from "../../summer27-data";
+import { formatPrettyDate, s27Events, type EventDef } from "../../summer27-data";
 import { getLiveEvents } from "../../schedule";
 import { KEYS, loadList, saveList, type S27EventBooking } from "../../storage";
 
@@ -21,7 +21,7 @@ function Summer27EventDetailInner() {
   const params = useParams<{ id: string }>();
   const searchParams = useSearchParams();
   const session = useS27Session();
-  const event = getLiveEvents().find((e) => e.id === params.id);
+  const [event, setEvent] = useState<EventDef | undefined>(() => s27Events.find((e) => e.id === params.id));
   const [bookings, setBookings] = useState<S27EventBooking[]>([]);
   const [guestCount, setGuestCount] = useState(1);
   const [name, setName] = useState("");
@@ -30,8 +30,14 @@ function Summer27EventDetailInner() {
   const [paying, setPaying] = useState(false);
 
   useEffect(() => {
+    try {
+      const live = getLiveEvents().find((e) => e.id === params.id);
+      if (live) setEvent(live);
+    } catch {
+      // keep default
+    }
     setBookings(loadList<S27EventBooking>(KEYS.events));
-  }, []);
+  }, [params.id]);
 
   useEffect(() => {
     const status = searchParams.get("payment");
@@ -42,7 +48,7 @@ function Summer27EventDetailInner() {
       );
       saveList(KEYS.events, all);
       setBookings(all);
-      setMsg("You’re in. Payment received.");
+      setMsg("You’re in.");
     }
   }, [searchParams]);
 
@@ -90,7 +96,7 @@ function Summer27EventDetailInner() {
       const next = [...bookings, booking];
       saveList(KEYS.events, next);
       setBookings(next);
-      setMsg(`Reserved. Charged $${total} to ${savedCard.brand} •••• ${savedCard.last4}.`);
+      setMsg(`Reserved. $${total} charged.`);
       return;
     }
     const next = [...bookings, booking];
@@ -132,11 +138,6 @@ function Summer27EventDetailInner() {
         {formatPrettyDate(event.date)} · {event.timeLabel}
       </p>
       <p className="mt-3 text-[14px] text-[#4a4a4a]">{event.description}</p>
-      <ul className="mt-3 list-disc space-y-1 pl-5 text-[13px] text-[#6b665e]">
-        {event.highlights.map((h) => (
-          <li key={h}>{h}</li>
-        ))}
-      </ul>
 
       <div className="mt-6 rounded-2xl border border-[#e8e5df] bg-white p-5">
         <p className="text-[12px] uppercase tracking-[0.12em] text-[#8a8477]">Signed up</p>
@@ -163,7 +164,7 @@ function Summer27EventDetailInner() {
           </>
         )}
         <label className="block text-[12px] text-[#6b665e]">
-          Spots (you + guests)
+          Players
           <select value={guestCount} onChange={(e) => setGuestCount(Number(e.target.value))} className="mt-1 w-full rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]">
             {[1, 2, 3, 4].map((n) => (
               <option key={n} value={n}>
@@ -177,7 +178,7 @@ function Summer27EventDetailInner() {
         </p>
         {msg && <p className="text-[13px]">{msg}</p>}
         <button disabled={paying || seatsLeft <= 0} className="w-full rounded-lg bg-[#1a1a1a] py-2.5 text-[13px] font-medium text-white disabled:opacity-40">
-          {seatsLeft <= 0 ? "Sold out" : savedCard ? `One-click · $${total}` : `Pay $${total} & reserve`}
+          {seatsLeft <= 0 ? "Sold out" : `Reserve · $${total}`}
         </button>
       </form>
     </main>

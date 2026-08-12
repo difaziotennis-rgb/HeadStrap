@@ -1,12 +1,12 @@
-export const s27Nav = [
-  { href: "/Summer27", label: "Overview" },
+export const s27Nav: { href: string; label: string; memberOnly?: boolean }[] = [
+  { href: "/Summer27", label: "Home" },
   { href: "/Summer27/book", label: "Courts" },
   { href: "/Summer27/clinics", label: "Clinics" },
   { href: "/Summer27/juniors", label: "Juniors" },
   { href: "/Summer27/lessons", label: "Lessons" },
   { href: "/Summer27/events", label: "Events" },
   { href: "/Summer27/stringing", label: "Stringing" },
-  { href: "/Summer27/member/portal", label: "My Account" },
+  { href: "/Summer27/member/portal", label: "My Account", memberOnly: true },
 ];
 
 export const COURTS = [
@@ -55,8 +55,8 @@ export const s27Pros: ProDef[] = [
     id: "derek",
     name: "Derek DiFazio",
     title: "Director of Tennis",
-    focus: "High-performance adults & match play",
-    bio: "Private instruction on Court 1 during weekday prime teaching hours — adults, college-bound juniors, and serious club players.",
+    focus: "Adults and match play",
+    bio: "Private instruction on Court 1. Adults, college-bound juniors, and serious club players.",
     courtId: "court-1",
     days: [1, 2, 3, 4, 5],
     windows: [
@@ -69,7 +69,7 @@ export const s27Pros: ProDef[] = [
     name: "Maya Ellison",
     title: "Teaching Professional",
     focus: "Recreational adults & doubles",
-    bio: "A measured technical hour for club players — rally consistency, doubles patterns, and returning to the game.",
+    bio: "Rally, doubles, and returning to the game.",
     courtId: "court-2",
     days: [1, 2, 3, 4],
     windows: [
@@ -82,7 +82,7 @@ export const s27Pros: ProDef[] = [
     name: "Cole Brennan",
     title: "Junior Development",
     focus: "Juniors 8–16",
-    bio: "After-school and Saturday private hours for developing juniors. Fundamentals through live-ball point play.",
+    bio: "After-school and Saturday hours for developing juniors.",
     courtId: "court-2",
     days: [2, 4, 6],
     windows: [
@@ -121,8 +121,7 @@ export const s27Clinics: ClinicDef[] = [
     capacity: 10,
     memberPrice: 50,
     guestPrice: 65,
-    description:
-      "High-tempo footwork, live-ball feeding, and cooperative drill patterns to start the weekend. Bring water; balls provided.",
+    description: "Footwork, live-ball feeding, and cooperative drills.",
     blockCourts: ["court-1", "court-2"],
   },
   {
@@ -136,8 +135,7 @@ export const s27Clinics: ClinicDef[] = [
     capacity: 10,
     memberPrice: 80,
     guestPrice: 100,
-    description:
-      "Match-tempo point construction, serve + 1 patterns, and competitive games. Intended for 4.0+ players, or by pro invitation.",
+    description: "Match-tempo points, serve + 1 patterns, and competitive games.",
     blockCourts: ["court-1", "court-2"],
   },
   {
@@ -151,8 +149,7 @@ export const s27Clinics: ClinicDef[] = [
     capacity: 10,
     memberPrice: 50,
     guestPrice: 65,
-    description:
-      "A measured introduction to rally, serve, and court positioning — right after morning lessons, before the afternoon private hour. Ideal for new members and anyone returning to the game.",
+    description: "Rally, serve, and court positioning. New players welcome.",
     blockCourts: ["court-1", "court-2"],
   },
   {
@@ -166,8 +163,7 @@ export const s27Clinics: ClinicDef[] = [
     capacity: 10,
     memberPrice: 50,
     guestPrice: 65,
-    description:
-      "Rally fundamentals, toss and contact, and easy live-ball games. A calm first step into club play after work.",
+    description: "Rally fundamentals and easy live-ball games.",
     blockCourts: ["court-1", "court-2"],
   },
   {
@@ -181,8 +177,7 @@ export const s27Clinics: ClinicDef[] = [
     capacity: 10,
     memberPrice: 80,
     guestPrice: 100,
-    description:
-      "Drills into competitive points after work. Rotating partners, doubles focus, and a social finish.",
+    description: "Drills into competitive points. Rotating partners, doubles focus.",
     blockCourts: ["court-1", "court-2"],
   },
   {
@@ -196,8 +191,7 @@ export const s27Clinics: ClinicDef[] = [
     capacity: 8,
     memberPrice: 50,
     guestPrice: 65,
-    description:
-      "One-hour intro session: rally games, serve progressions, and sportsmanship. No overnight camps — just a weekly hour.",
+    description: "Rally games, serve progressions, and sportsmanship.",
     blockCourts: ["court-2"],
   },
   {
@@ -211,8 +205,7 @@ export const s27Clinics: ClinicDef[] = [
     capacity: 8,
     memberPrice: 50,
     guestPrice: 65,
-    description:
-      "Light after-school hit: movement, consistency, and a few points. First-year offering — small group, no full-day camp.",
+    description: "Movement, consistency, and a few points.",
     blockCourts: ["court-2"],
   },
 ];
@@ -240,8 +233,7 @@ export const s27Events: EventDef[] = [
     capacity: 16,
     memberPrice: 45,
     guestPrice: 60,
-    description:
-      "Rotating mixed doubles with balanced pairings, short sets, and a courtside sip after play. Partner optional — we’ll pair you.",
+    description: "Rotating mixed doubles. Partner optional — we’ll pair you.",
     highlights: ["Rotating partners", "Social scoring", "Light bites after"],
   },
   {
@@ -253,8 +245,7 @@ export const s27Events: EventDef[] = [
     capacity: 12,
     memberPrice: 40,
     guestPrice: 55,
-    description:
-      "A weekday ladies round robin on Court 1 & 2. Intermediate+ rally, no pressure, coffee after.",
+    description: "Ladies doubles, then coffee.",
     highlights: ["Doubles only", "Coffee social", "Members + guests"],
   },
   {
@@ -266,8 +257,7 @@ export const s27Events: EventDef[] = [
     capacity: 16,
     memberPrice: 55,
     guestPrice: 70,
-    description:
-      "Bring one guest for mixed/same-gender doubles, then a simple clubhouse toast. Classic country-club evening.",
+    description: "Bring a guest for doubles, then a clubhouse toast.",
     highlights: ["One guest included in pair", "Round-robin draw", "Post-play toast"],
   },
   {
@@ -279,9 +269,8 @@ export const s27Events: EventDef[] = [
     capacity: 20,
     memberPrice: 30,
     guestPrice: 40,
-    description:
-      "Parent–child games and easy round robins. Not a camp — just a social hour for families to hit together.",
-    highlights: ["Parent–child games", "All ages welcome", "No overnight programming"],
+    description: "Parent–child games and easy round robins.",
+    highlights: ["Parent–child games", "All ages welcome"],
   },
   {
     id: "mixed-rr-august",
@@ -292,8 +281,7 @@ export const s27Events: EventDef[] = [
     capacity: 16,
     memberPrice: 45,
     guestPrice: 60,
-    description:
-      "Mid-summer mixed doubles mixer with rotating partners and a leaderboard for fun, not glory.",
+    description: "Mid-summer mixed doubles with rotating partners.",
     highlights: ["Rotating mixed doubles", "Fun leaderboard", "Courtside water & fruit"],
   },
   {
@@ -305,8 +293,7 @@ export const s27Events: EventDef[] = [
     capacity: 40,
     memberPrice: 55,
     guestPrice: 75,
-    description:
-      "End-of-season mixed round robin (optional) plus a simple Hudson Valley club dinner on the terrace.",
+    description: "Optional mixed round robin, then dinner on the terrace.",
     highlights: ["Optional tennis block", "Terrace dinner", "Member awards toast"],
   },
 ];
@@ -316,7 +303,7 @@ export const STRING_OPTIONS = [
   { id: "multifilament", name: "Multifilament", extra: 28 },
   { id: "poly", name: "Polyester", extra: 32 },
   { id: "hybrid", name: "Hybrid (poly + multi)", extra: 38 },
-  { id: "own", name: "I'll bring my own string", extra: 0 },
+  { id: "own", name: "Own string", extra: 0 },
 ];
 
 export function formatHour(hour: number): string {

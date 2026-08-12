@@ -15,7 +15,7 @@ import {
   type SlotBlockReason,
 } from "./summer27-data";
 
-export const S27_CATALOG_KEY = "s27_catalog_v7";
+export const S27_CATALOG_KEY = "s27_catalog_v9";
 export const S27_BLOCKS_KEY = "s27_admin_blocks_v1";
 export const S27_NOTES_KEY = "s27_member_notes_v1";
 
@@ -228,17 +228,17 @@ export function getProgramBlock(
     if (block.date !== dateStr) continue;
     if (block.courtId !== "both" && block.courtId !== courtId) continue;
     if (hoursOverlap(block.startHour, block.durationHours, hour)) {
-      return { type: "hold", label: block.reason || "Director hold" };
+      return { type: "hold", label: block.reason || "Reserved" };
     }
   }
 
   if (PRIME_TEACHING.weekdays.includes(day) && courtId === PRIME_TEACHING.courtId) {
     const { morning, afternoon } = catalog.primeTeaching;
     if (hour >= morning.start && hour < morning.end) {
-      return { type: "lesson", label: "Private lesson hold" };
+      return { type: "lesson", label: "Private lesson" };
     }
     if (hour >= afternoon.start && hour < afternoon.end) {
-      return { type: "lesson", label: "Private lesson hold" };
+      return { type: "lesson", label: "Private lesson" };
     }
   }
 

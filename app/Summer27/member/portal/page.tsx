@@ -90,16 +90,16 @@ export default function Summer27PortalPage() {
     };
     saveList(KEYS.payment, [...all, next]);
     setPayment(next);
-    setSavedMsg("Card saved for one-click booking.");
+    setSavedMsg("Card saved.");
   }
 
   if (!session) {
     return (
       <main className="mx-auto max-w-xl px-4 py-16 text-center">
-        <h2 className="text-xl font-medium">Member dashboard</h2>
-        <p className="mt-2 text-[14px] text-[#6b665e]">Sign in or join to see your courts, clinics, and events.</p>
+        <h2 className="text-xl font-medium">My Account</h2>
+        <p className="mt-2 text-[14px] text-[#6b665e]">Sign in above, or join.</p>
         <Link href="/Summer27/member" className="mt-4 inline-block rounded-lg bg-[#1a1a1a] px-4 py-2 text-[13px] text-white">
-          Join / sign in
+          Join
         </Link>
       </main>
     );
@@ -131,7 +131,6 @@ export default function Summer27PortalPage() {
           {payment ? (
             <p className="mt-2 text-[13px] text-[#4a4a4a]">
               {payment.brand} •••• {payment.last4}
-              {payment.oneClick ? " · one-click on" : ""}
             </p>
           ) : (
             <p className="mt-2 text-[13px] text-[#8a8477]">No card on file yet.</p>
@@ -145,7 +144,7 @@ export default function Summer27PortalPage() {
             <input value={last4} onChange={(e) => setLast4(e.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="Last 4" className="w-full rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]" />
             <label className="flex items-center gap-2 text-[12px]">
               <input type="checkbox" checked={oneClick} onChange={(e) => setOneClick(e.target.checked)} />
-              One-click booking
+              Use when booking
             </label>
             {savedMsg && <p className="text-[12px]">{savedMsg}</p>}
             <button className="w-full rounded-lg bg-[#1a1a1a] py-2 text-[12px] font-medium text-white">Save card</button>

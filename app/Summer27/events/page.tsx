@@ -3,12 +3,20 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { getLiveEvents } from "../schedule";
+import { s27Events, type EventDef } from "../summer27-data";
 import { KEYS, loadList, type S27EventBooking } from "../storage";
 
 export default function Summer27EventsPage() {
   const [bookings, setBookings] = useState<S27EventBooking[]>([]);
+  const [events, setEvents] = useState<EventDef[]>(s27Events);
 
   useEffect(() => {
+    try {
+      const live = getLiveEvents();
+      if (live.length) setEvents(live);
+    } catch {
+      // keep defaults
+    }
     setBookings(loadList<S27EventBooking>(KEYS.events));
   }, []);
 
@@ -24,13 +32,10 @@ export default function Summer27EventsPage() {
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
       <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Events</p>
-      <h2 className="mt-1 text-2xl font-semibold tracking-tight">A small club calendar</h2>
-      <p className="mt-2 max-w-2xl text-[14px] text-[#6b665e]">
-        Mixed doubles round robins, a member–guest mixer, ladies morning play, and one family afternoon. Pay in
-        advance. Courts are blocked for event windows. Members may change or cancel until 24 hours before start.
-      </p>
+      <h2 className="mt-1 text-2xl font-semibold tracking-tight">Club calendar</h2>
+      <p className="mt-2 max-w-2xl text-[14px] text-[#6b665e]">Round robins, mixers, and a season close on the terrace.</p>
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
-        {getLiveEvents().map((event) => {
+        {events.map((event) => {
           const taken = counts[event.id] || 0;
           return (
             <Link
@@ -43,7 +48,7 @@ export default function Summer27EventsPage() {
               <p className="mt-1 text-[13px] text-[#6b665e]">{event.timeLabel}</p>
               <p className="mt-2 text-[13px] text-[#4a4a4a]">{event.description}</p>
               <p className="mt-3 text-[12px] text-[#8a8477]">
-                ${event.memberPrice} members · ${event.guestPrice} guests · {taken}/{event.capacity} signed up
+                ${event.memberPrice} · {taken}/{event.capacity} signed up
               </p>
             </Link>
           );

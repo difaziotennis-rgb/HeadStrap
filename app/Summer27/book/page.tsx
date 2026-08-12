@@ -45,7 +45,6 @@ function Summer27BookInner() {
   const [duration, setDuration] = useState<1 | 2>(1);
   const [guestName, setGuestName] = useState("");
   const [guestEmail, setGuestEmail] = useState("");
-  const [guestPhone, setGuestPhone] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
   const [paying, setPaying] = useState(false);
   const isMember = !!session;
@@ -67,7 +66,7 @@ function Summer27BookInner() {
       }
       saveRecord(KEYS.courts, all);
       setBookings(all);
-      setMsg("Payment received. Your court time is confirmed.");
+      setMsg("Court confirmed.");
     }
   }, [searchParams]);
 
@@ -97,9 +96,9 @@ function Summer27BookInner() {
   async function bookSlot(courtId: CourtId, hour: number) {
     const name = isMember ? session!.memberName : guestName.trim();
     const email = isMember ? session!.memberEmail : guestEmail.trim();
-    const phone = isMember ? session!.memberPhone || "" : guestPhone.trim();
+    const phone = isMember ? session!.memberPhone || "" : "";
     if (!name || !email) {
-      setMsg(isMember ? "Please sign in again." : "Add your name and email, or join as a member.");
+      setMsg(isMember ? "Please sign in again." : "Add your name and email.");
       return;
     }
     if (!canBook(date, courtId, hour)) {
@@ -136,7 +135,7 @@ function Summer27BookInner() {
       booking.paymentStatus = "paid";
       saveRecord(KEYS.courts, next);
       setBookings(next);
-      setMsg(`Booked ${courtName} ${formatHour(hour)} with saved ${savedCard.brand} •••• ${savedCard.last4}. $${amount} charged.`);
+      setMsg(`Booked ${courtName} ${formatHour(hour)}. $${amount} charged.`);
       return;
     }
 
@@ -161,12 +160,10 @@ function Summer27BookInner() {
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
-      <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Court booking</p>
+      <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Courts</p>
       <h2 className="mt-1 text-2xl font-semibold tracking-tight">Court 1 &amp; Court 2</h2>
       <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-[#6b665e]">
-        Member ${rates.member}/hour · guest ${rates.guest}/hour, paid at booking. Clinic and event hours
-        reserve both courts. Court 1 is reserved for private instruction weekday mornings 8:00–12:00 and
-        afternoons 3:00–5:00. Members may change or cancel until 24 hours before start.
+        ${rates.member}/hour members · ${rates.guest} guests. Court 1 is held weekday mornings and late afternoons for lessons.
       </p>
 
       <div className="mt-5 flex flex-wrap items-end gap-3 rounded-2xl border border-[#e8e5df] bg-white p-4">
@@ -197,8 +194,8 @@ function Summer27BookInner() {
           </>
         )}
         <p className="text-[12px] text-[#6b665e]">
-          {isMember ? `Member rate $${rate}/hr` : `Guest rate $${rate}/hr`}
-          {savedCard ? ` · one-click ${savedCard.brand} •••• ${savedCard.last4}` : ""}
+          {isMember ? `$${rate}/hour` : `$${rate}/hour guest`}
+          {savedCard ? ` · ${savedCard.brand} •••• ${savedCard.last4}` : ""}
         </p>
         {!isMember && (
           <Link href="/Summer27/member" className="text-[12px] text-[#6b665e] underline">
@@ -246,7 +243,7 @@ function Summer27BookInner() {
                                   : "bg-[#f3eee8] text-[#6b665e]"
                           }`}
                         >
-                          {occ.type === "booked" ? occ.label : occ.label}
+                          {occ.label}
                         </span>
                       ) : (
                         <button
@@ -255,7 +252,7 @@ function Summer27BookInner() {
                           onClick={() => bookSlot(court.id, hour)}
                           className="w-full rounded-md border border-[#e8e5df] bg-[#faf9f7] px-2 py-1.5 text-[11px] font-medium text-[#1a1a1a] hover:bg-white disabled:opacity-40"
                         >
-                          Open · ${rate * duration}
+                          ${rate * duration}
                         </button>
                       )}
                     </td>

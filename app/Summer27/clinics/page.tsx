@@ -86,7 +86,7 @@ function Summer27ClinicsInner() {
       );
       saveList(KEYS.clinics, all);
       setBookings(all);
-      setMsg("Clinic confirmed. You’re on the roster.");
+      setMsg("You’re on the roster.");
     }
   }, [searchParams]);
 
@@ -141,7 +141,7 @@ function Summer27ClinicsInner() {
       const next = [...bookings, booking];
       saveList(KEYS.clinics, next);
       setBookings(next);
-      setMsg(`Signed up. Charged $${price} to ${savedCard.brand} •••• ${savedCard.last4}.`);
+      setMsg(`You’re in. $${price} charged.`);
       return;
     }
 
@@ -169,11 +169,10 @@ function Summer27ClinicsInner() {
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
-      <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Adult clinics</p>
-      <h2 className="mt-1 text-2xl font-semibold tracking-tight">Weekly group sessions</h2>
+      <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Clinics</p>
+      <h2 className="mt-1 text-2xl font-semibold tracking-tight">Weekly group play</h2>
       <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-[#6b665e]">
-        Each session is listed by level. One-hour clinics are $50 members / $65 guests; 90-minute clinics are $80 /
-        $100. Max 10 players. Both courts are reserved during clinic hours. Change or cancel from My Account until 24 hours before.
+        Choose a level, then a date. One hour $50 · 90 minutes $80. Guests $65 / $100.
       </p>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-12">
@@ -192,12 +191,12 @@ function Summer27ClinicsInner() {
                 <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">{c.level}</p>
                 <p className="mt-0.5 text-[15px] font-medium">{c.name}</p>
                 <p className="text-[12px] text-[#6b665e]">
-                  {clinicDayLabel(c.days)} · {clinicTimeLabel(c)} · ${c.memberPrice} / ${c.guestPrice}
+                  {clinicDayLabel(c.days)} · {clinicTimeLabel(c)} · ${c.memberPrice}
                 </p>
               </button>
             ))}
-          <Link href="/Summer27/juniors" className="block text-[12px] text-[#6b665e] underline">
-            Looking for juniors? Small weekly hours only — no camps.
+          <Link href="/Summer27/juniors" className="block text-[12px] text-[#6b665e] hover:text-[#1a1a1a]">
+            Junior hours →
           </Link>
         </div>
 
@@ -206,8 +205,8 @@ function Summer27ClinicsInner() {
           <h3 className="mt-1 text-lg font-medium">{clinic.name}</h3>
           <p className="mt-1 text-[13px] text-[#6b665e]">{clinic.description}</p>
           <p className="mt-2 text-[12px] text-[#8a8477]">
-            {clinicDayLabel(clinic.days)} · {clinicTimeLabel(clinic)} · {clinic.capacity} max · ${clinic.memberPrice} / $
-            {clinic.guestPrice}
+            {clinicDayLabel(clinic.days)} · {clinicTimeLabel(clinic)} · {clinic.capacity} max · ${clinic.memberPrice}
+            {!isMember ? ` / $${clinic.guestPrice} guest` : ""}
           </p>
 
           <label className="mt-4 block text-[12px] text-[#6b665e]">
@@ -237,13 +236,12 @@ function Summer27ClinicsInner() {
               </span>
             </div>
             {roster.length === 0 ? (
-              <p className="mt-2 text-[13px] text-[#8a8477]">No one yet — first on the list.</p>
+              <p className="mt-2 text-[13px] text-[#8a8477]">None yet.</p>
             ) : (
               <ul className="mt-2 space-y-1">
                 {roster.map((b) => (
                   <li key={b.id} className="text-[13px] text-[#4a4a4a]">
                     {b.clientName}
-                    {b.memberNumber ? ` · #${b.memberNumber}` : ""}
                   </li>
                 ))}
               </ul>
@@ -263,7 +261,7 @@ function Summer27ClinicsInner() {
               disabled={paying || seatsLeft <= 0}
               className="w-full rounded-lg bg-[#1a1a1a] py-2.5 text-[13px] font-medium text-white disabled:opacity-40"
             >
-              {seatsLeft <= 0 ? "Full" : savedCard ? `One-click · $${price}` : `Pay $${price} & join`}
+              {seatsLeft <= 0 ? "Full" : `Join · $${price}`}
             </button>
           </form>
         </div>

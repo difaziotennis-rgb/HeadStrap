@@ -81,7 +81,7 @@ function Summer27LessonsInner() {
       );
       saveList(KEYS.lessons, all);
       setLessons(all);
-      setMsg("Lesson confirmed and paid.");
+      setMsg("Lesson confirmed.");
     }
   }, [searchParams]);
 
@@ -134,7 +134,7 @@ function Summer27LessonsInner() {
       const next = [...lessons, booking];
       saveList(KEYS.lessons, next);
       setLessons(next);
-      setMsg(`Lesson with ${pro.name} · ${formatPrettyDate(date)} ${formatHour(hour)}. Charged $${amount}.`);
+      setMsg(`Lesson booked · ${formatPrettyDate(date)} ${formatHour(hour)}. $${amount} charged.`);
       return;
     }
 
@@ -158,11 +158,10 @@ function Summer27LessonsInner() {
   if (!pro) {
     return (
       <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6">
-        <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Private lessons</p>
+        <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Lessons</p>
         <h2 className="mt-1 text-2xl font-semibold tracking-tight">Choose a professional</h2>
         <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-[#6b665e]">
-          Members ${rates.member}/hour · guests ${rates.guest}/hour. Pick your pro first, then choose a time on their court.
-          Change or cancel from My Account until 24 hours before.
+          ${rates.member}/hour members · ${rates.guest} guests.
         </p>
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {pros.map((item) => (
@@ -177,7 +176,7 @@ function Summer27LessonsInner() {
               <p className="mt-3 text-[12px] text-[#8a8477]">
                 {COURTS.find((c) => c.id === item.courtId)?.name || item.courtId} · {proScheduleLabel(item)}
               </p>
-              <p className="mt-4 text-[13px] font-medium text-[#1a1a1a]">Book with {item.name.split(" ")[0]} →</p>
+              <p className="mt-4 text-[13px] font-medium text-[#1a1a1a]">View times →</p>
             </Link>
           ))}
         </div>
@@ -188,13 +187,13 @@ function Summer27LessonsInner() {
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6">
       <Link href="/Summer27/lessons" className="text-[12px] text-[#8a8477] hover:text-[#1a1a1a]">
-        ← All professionals
+        ← Pros
       </Link>
       <p className="mt-4 text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">{pro.title}</p>
       <h2 className="mt-1 text-2xl font-semibold tracking-tight">{pro.name}</h2>
       <p className="mt-2 text-[14px] leading-relaxed text-[#6b665e]">{pro.bio}</p>
       <p className="mt-2 text-[13px] text-[#6b665e]">
-        {courtName} · {proScheduleLabel(pro)} · members ${rates.member}/hour · guests ${rates.guest}/hour
+        {courtName} · {proScheduleLabel(pro)} · ${rates.member}/hour
       </p>
 
       <form onSubmit={bookLesson} className="mt-6 space-y-3 rounded-2xl border border-[#e8e5df] bg-white p-5">
@@ -236,12 +235,12 @@ function Summer27LessonsInner() {
           className="w-full resize-none rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
         />
         <p className="text-[12px] text-[#8a8477]">
-          {parseDateInput(date).toLocaleDateString("en-US", { weekday: "long" })} · {pro.name} · ${amount}
-          {savedCard ? ` · one-click ${savedCard.brand} •••• ${savedCard.last4}` : ""}
+          {parseDateInput(date).toLocaleDateString("en-US", { weekday: "long" })} · ${amount}
+          {savedCard ? ` · ${savedCard.brand} •••• ${savedCard.last4}` : ""}
         </p>
         {msg && <p className="text-[13px]">{msg}</p>}
         <button disabled={paying || openHours.length === 0} className="w-full rounded-lg bg-[#1a1a1a] py-2.5 text-[13px] font-medium text-white disabled:opacity-40">
-          {openHours.length === 0 ? "No open times this day" : savedCard ? `One-click · $${amount}` : `Pay $${amount} & book`}
+          {openHours.length === 0 ? "No open times this day" : `Book · $${amount}`}
         </button>
       </form>
     </main>

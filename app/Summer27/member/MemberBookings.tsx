@@ -113,7 +113,7 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
           date: b.eventDate,
           hour: eventStartHour(def?.timeLabel),
           label: `${b.eventTitle} · ${formatPrettyDate(b.eventDate)}`,
-          detail: `${b.guestCount} spot${b.guestCount === 1 ? "" : "s"}`,
+          detail: `${b.guestCount} player${b.guestCount === 1 ? "" : "s"}`,
           amount: b.amount,
           status: b.paymentStatus,
           booking: b,
@@ -184,7 +184,7 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
     } else {
       saveList(KEYS.stringing, loadList<S27StringingOrder>(KEYS.stringing).filter((b) => b.id !== row.id));
     }
-    flash("Booking cancelled. The desk will handle any refund if it was already paid.");
+    flash("Cancelled.");
   }
 
   function saveCourt(row: (typeof rows)[number]) {
@@ -332,7 +332,9 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
           <div key={row.id} className="rounded-lg border border-[#ece8e2] bg-[#faf9f7] p-3">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
-                <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">{row.kind}</p>
+                <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">
+                  {row.kind === "stringing" ? "Stringing" : row.kind}
+                </p>
                 <p className="text-[13px] font-medium">{row.label}</p>
                 <p className="text-[12px] text-[#6b665e]">
                   ${row.amount} · {row.status === "paid" ? "Paid" : "Pending"}
@@ -457,20 +459,20 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
   }
 
   if (rows.length === 0) {
-    return <p className="mt-3 text-[13px] text-[#8a8477]">Nothing on the books yet.</p>;
+    return <p className="mt-3 text-[13px] text-[#8a8477]">No bookings yet.</p>;
   }
 
   return (
     <div className="mt-3 space-y-5">
       <p className="text-[12px] text-[#8a8477]">
-        Change or cancel until {CANCEL_WINDOW_HOURS} hours before start.
+        Changes until {CANCEL_WINDOW_HOURS} hours before.
       </p>
       {msg && <p className="rounded-lg border border-[#e8e5df] bg-[#faf9f7] px-3 py-2 text-[13px]">{msg}</p>}
 
       <div className="space-y-2">
         <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Upcoming</p>
         {upcoming.length === 0 ? (
-          <p className="text-[13px] text-[#8a8477]">Nothing upcoming.</p>
+          <p className="text-[13px] text-[#8a8477]">None yet.</p>
         ) : (
           upcoming.map((row) => renderBooking(row, true))
         )}
@@ -479,7 +481,7 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
       <div className="space-y-2">
         <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Past</p>
         {past.length === 0 ? (
-          <p className="text-[13px] text-[#8a8477]">No past bookings yet.</p>
+          <p className="text-[13px] text-[#8a8477]">None yet.</p>
         ) : (
           past.map((row) => renderBooking(row, false))
         )}

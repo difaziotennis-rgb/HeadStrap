@@ -32,7 +32,7 @@ export default function Summer27JoinPage() {
   function join(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim() || !email.trim() || password.length < 4) {
-      setMsg("Name, email, and a password (4+ characters) are required.");
+      setMsg("Name, email, and a password are required.");
       return;
     }
     const members = loadList<S27MemberAccount>(KEYS.members);
@@ -82,10 +82,9 @@ export default function Summer27JoinPage() {
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6">
       <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Membership</p>
-      <h2 className="mt-1 text-2xl font-semibold tracking-tight">Join Summer ’27</h2>
+      <h2 className="mt-1 text-2xl font-semibold tracking-tight">Join</h2>
       <p className="mt-2 text-[14px] text-[#6b665e]">
-        Member court rate $50/hr, clinic and event discounts, a dashboard of everything you’re signed up for, and
-        optional saved card for one-click booking. Everything is paid in advance.
+        Member court time $50/hour, clinic and event rates, and a simple account for everything you book.
       </p>
 
       <form onSubmit={join} className="mt-6 space-y-3 rounded-2xl border border-[#e8e5df] bg-white p-5">
@@ -96,10 +95,7 @@ export default function Summer27JoinPage() {
 
         <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-4">
           <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Save a card (optional)</p>
-          <p className="mt-1 text-[12px] text-[#6b665e]">
-            Stored on this device for one-click bookings. Live charges still go through Stripe checkout unless you use
-            the saved-card shortcut.
-          </p>
+          <p className="mt-1 text-[12px] text-[#6b665e]">Use it to book without re-entering details.</p>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             <select value={brand} onChange={(e) => setBrand(e.target.value as S27PaymentProfile["brand"])} className="rounded-lg border border-[#e8e5df] bg-white px-3 py-2 text-[13px]">
               <option>Visa</option>
@@ -113,13 +109,13 @@ export default function Summer27JoinPage() {
           </div>
           <label className="mt-3 flex items-center gap-2 text-[13px] text-[#4a4a4a]">
             <input type="checkbox" checked={oneClick} onChange={(e) => setOneClick(e.target.checked)} />
-            Enable one-click booking
+            Use saved card when booking
           </label>
         </div>
 
         {msg && <p className="text-[13px] text-[#991b1b]">{msg}</p>}
         <button className="w-full rounded-lg bg-[#1a1a1a] py-2.5 text-[13px] font-medium text-white">
-          Create member account
+          Join
         </button>
       </form>
     </main>

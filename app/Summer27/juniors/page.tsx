@@ -9,6 +9,7 @@ import {
   clinicTimeLabel,
   formatDateInput,
   parseDateInput,
+  s27Clinics,
   type ClinicDef,
 } from "../summer27-data";
 import { getLiveClinics } from "../schedule";
@@ -35,11 +36,11 @@ export default function Summer27JuniorsPage() {
 }
 
 function Summer27JuniorsInner() {
-  const juniors = getLiveClinics().filter((c) => c.kind === "junior");
+  const [juniors, setJuniors] = useState<ClinicDef[]>(s27Clinics.filter((c) => c.kind === "junior"));
   const session = useS27Session();
   const searchParams = useSearchParams();
   const [bookings, setBookings] = useState<S27ClinicBooking[]>([]);
-  const [selectedId, setSelectedId] = useState(juniors[0]?.id || "");
+  const [selectedId, setSelectedId] = useState(s27Clinics.find((c) => c.kind === "junior")?.id || "");
   const [date, setDate] = useState("");
   const [childName, setChildName] = useState("");
   const [parentEmail, setParentEmail] = useState("");
@@ -53,6 +54,15 @@ function Summer27JuniorsInner() {
   const price = clinic ? (isMember ? clinic.memberPrice : clinic.guestPrice) : 0;
 
   useEffect(() => {
+    try {
+      const live = getLiveClinics().filter((c) => c.kind === "junior");
+      if (live.length) {
+        setJuniors(live);
+        setSelectedId((id) => (live.some((c) => c.id === id) ? id : live[0].id));
+      }
+    } catch {
+      // keep defaults
+    }
     setBookings(loadList<S27ClinicBooking>(KEYS.clinics));
   }, []);
 
@@ -69,7 +79,7 @@ function Summer27JuniorsInner() {
       );
       saveList(KEYS.clinics, all);
       setBookings(all);
-      setMsg("Junior session confirmed.");
+      setMsg("Enrolled.");
     }
   }, [searchParams]);
 
@@ -114,7 +124,7 @@ function Summer27JuniorsInner() {
       const next = [...bookings, booking];
       saveList(KEYS.clinics, next);
       setBookings(next);
-      setMsg(`Enrolled. Charged $${price} to saved card.`);
+      setMsg(`Enrolled. $${price} charged.`);
       return;
     }
     const next = [...bookings, booking];
@@ -139,10 +149,9 @@ function Summer27JuniorsInner() {
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
       <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Juniors</p>
-      <h2 className="mt-1 text-2xl font-semibold tracking-tight">A light first year</h2>
+      <h2 className="mt-1 text-2xl font-semibold tracking-tight">Weekly junior hours</h2>
       <p className="mt-2 max-w-2xl text-[14px] text-[#6b665e]">
-        No overnight camps, no all-day weeks. Just two small weekly hours while we learn the club. Court 2 is held
-        for these sessions.
+        Small groups on Court 2. $50 members · $65 guests.
       </p>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
@@ -192,7 +201,7 @@ function Summer27JuniorsInner() {
         )}
         {msg && <p className="text-[13px]">{msg}</p>}
         <button disabled={paying || seatsLeft <= 0} className="w-full rounded-lg bg-[#1a1a1a] py-2.5 text-[13px] font-medium text-white disabled:opacity-40">
-          {seatsLeft <= 0 ? "Full" : savedCard ? `One-click · $${price}` : `Pay $${price} & enroll`}
+          {seatsLeft <= 0 ? "Full" : `Enroll · $${price}`}
         </button>
       </form>
     </main>
