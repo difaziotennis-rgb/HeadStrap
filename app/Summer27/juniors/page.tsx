@@ -511,10 +511,10 @@ function Summer27JuniorsInner() {
                 {roster.length === 0 ? (
                   <p className="mt-2 text-[13px] text-[#8a8477]">None yet.</p>
                 ) : (
-                  <ul className="mt-2 grid gap-1 sm:grid-cols-2">
+                  <ul className="mt-2 space-y-1.5">
                     {roster.map((b) => (
-                      <li key={b.id} className="text-[13px] text-[#4a4a4a]">
-                        {b.clientName}
+                      <li key={b.id} className="text-[14px] font-medium text-[#1a1a1a]">
+                        {b.clientName.trim() || "Player"}
                       </li>
                     ))}
                   </ul>

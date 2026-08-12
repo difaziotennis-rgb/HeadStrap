@@ -239,7 +239,7 @@ function Summer27BookInner() {
     if (type === "event") return "Event";
     if (type === "hold") return "Held";
     if (type === "mine") return "Yours";
-    if (type === "booked") return label.split(" ")[0] || "Booked";
+    if (type === "booked") return lastNameFromFull(label) || "Booked";
     return (
       label
         .replace(/^Weekend\s+/i, "")
@@ -249,6 +249,20 @@ function Summer27BookInner() {
         .replace(/\s+&\s+Drills$/i, "")
         .trim() || label
     );
+  }
+
+  function courtSlotName(booking: S27CourtBooking) {
+    const name = booking.clientName.trim();
+    if (!name) return "Booked";
+    // Members: last name on the tee sheet. Guests: first name.
+    if (booking.memberNumber) return lastNameFromFull(name);
+    return name.split(/\s+/).filter(Boolean)[0] || "Booked";
+  }
+
+  function lastNameFromFull(full: string) {
+    const parts = full.trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return "";
+    return parts.length > 1 ? parts[parts.length - 1] : parts[0];
   }
 
   function renderSlot(courtId: CourtId, hour: number) {
@@ -286,8 +300,11 @@ function Summer27BookInner() {
       return (
         <span
           className={`block truncate rounded-md px-1.5 py-2 text-center text-[10px] leading-tight sm:px-2 sm:text-[11px] ${slotClass(occ.type)}`}
+          title={occ.type === "booked" && "booking" in occ && occ.booking ? occ.booking.clientName : occ.label}
         >
-          {shortOccLabel(occ.label, occ.type)}
+          {occ.type === "booked" && "booking" in occ && occ.booking
+            ? courtSlotName(occ.booking)
+            : shortOccLabel(occ.label, occ.type)}
         </span>
       );
     }
