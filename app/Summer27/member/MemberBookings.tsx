@@ -170,7 +170,6 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
       key,
       label: monthHeading(key),
       items,
-      total: items.reduce((sum, row) => sum + row.amount, 0),
     }));
   }, [rows, today]);
 
@@ -574,7 +573,7 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
                     <span className="min-w-0">
                       <span className="block text-[14px] font-medium text-[#1a1a1a]">{month.label}</span>
                       <span className="mt-0.5 block text-[12px] text-[#8a8477]">
-                        {month.items.length} booking{month.items.length === 1 ? "" : "s"} · ${month.total}
+                        {month.items.length} booking{month.items.length === 1 ? "" : "s"}
                       </span>
                     </span>
                     <span className="text-[16px] leading-none text-[#8a8477]" aria-hidden>
