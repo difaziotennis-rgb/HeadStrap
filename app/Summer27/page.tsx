@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { useS27Session } from "./use-s27-session";
 import {
-  clinicDayLabel,
   clinicTimeLabel,
   formatDateInput,
   formatPrettyDate,
@@ -34,7 +33,6 @@ function upcomingClinicSessions(count = 6) {
 
 export default function Summer27Home() {
   const session = useS27Session();
-  const adultClinics = s27Clinics.filter((c) => c.kind === "adult");
   const events = s27Events;
   const upcoming = useMemo(() => upcomingClinicSessions(6), []);
 
@@ -126,54 +124,28 @@ export default function Summer27Home() {
       </section>
 
       <section className="mx-auto w-full max-w-6xl px-4 pb-10 sm:px-6">
-        <div className="grid gap-4 lg:grid-cols-2">
-          <div className="rounded-2xl border border-[#e8e5df] bg-white p-4 sm:p-6">
-            <div className="flex items-center justify-between">
-              <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Weekly clinics</p>
-              <Link href="/Summer27/clinics" className="text-[12px] text-[#6b665e] hover:text-[#1a1a1a]">
-                Sign up
-              </Link>
-            </div>
-            <ul className="mt-4 space-y-2">
-              {adultClinics.map((c) => (
-                <li key={c.id}>
-                  <Link
-                    href={`/Summer27/clinics?clinic=${encodeURIComponent(c.id)}`}
-                    className="block rounded-xl border border-[#ece8e2] bg-[#faf9f7] px-3 py-2.5 hover:bg-white"
-                  >
-                    <p className="text-[13px] font-medium">{c.name}</p>
-                    <p className="text-[12px] text-[#6b665e]">
-                      {c.level} · {clinicDayLabel(c.days)} · {clinicTimeLabel(c)} · ${c.memberPrice}
-                    </p>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-            <Link href="/Summer27/juniors" className="mt-3 inline-block text-[12px] text-[#6b665e] hover:text-[#1a1a1a]">
-              Junior hours →
+        <div className="rounded-2xl border border-[#e8e5df] bg-white p-4 sm:p-6">
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Events</p>
+            <Link href="/Summer27/events" className="text-[12px] text-[#6b665e] hover:text-[#1a1a1a]">
+              Calendar
             </Link>
           </div>
-
-          <div className="rounded-2xl border border-[#e8e5df] bg-white p-4 sm:p-6">
-            <div className="flex items-center justify-between">
-              <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Events</p>
-              <Link href="/Summer27/events" className="text-[12px] text-[#6b665e] hover:text-[#1a1a1a]">
-                Calendar
-              </Link>
-            </div>
-            <ul className="mt-4 space-y-2">
-              {events.slice(0, 4).map((e) => (
-                <li key={e.id}>
-                  <Link href={`/Summer27/events/${e.id}`} className="block rounded-xl border border-[#ece8e2] bg-[#faf9f7] px-3 py-2.5 hover:bg-white">
-                    <p className="text-[13px] font-medium">{e.title}</p>
-                    <p className="text-[12px] text-[#6b665e]">
-                      {formatPrettyDate(e.date)} · {e.timeLabel}
-                    </p>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
+          <ul className="mt-4 grid gap-2 sm:grid-cols-2">
+            {events.slice(0, 4).map((e) => (
+              <li key={e.id}>
+                <Link
+                  href={`/Summer27/events/${e.id}`}
+                  className="block rounded-xl border border-[#ece8e2] bg-[#faf9f7] px-3 py-2.5 hover:bg-white"
+                >
+                  <p className="text-[13px] font-medium">{e.title}</p>
+                  <p className="text-[12px] text-[#6b665e]">
+                    {formatPrettyDate(e.date)} · {e.timeLabel}
+                  </p>
+                </Link>
+              </li>
+            ))}
+          </ul>
         </div>
       </section>
     </main>
