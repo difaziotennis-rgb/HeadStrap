@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
+  clinicTimeLabel,
   formatDateInput,
   formatHour,
   formatPrettyDate,
@@ -55,6 +56,14 @@ type GlanceItem = {
 
 type CourtLane = "court-1" | "court-2";
 
+type ChipRef =
+  | { type: "court"; id: string; date: string }
+  | { type: "lesson"; id: string; date: string }
+  | { type: "request"; id: string; date: string }
+  | { type: "clinic"; clinicId: string; date: string }
+  | { type: "event"; eventId: string; date: string }
+  | { type: "hold"; id: string; date: string };
+
 type DayChip = {
   key: string;
   time: number;
@@ -62,6 +71,7 @@ type DayChip = {
   label: string;
   sub?: string;
   courts: CourtLane[];
+  ref: ChipRef;
 };
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
@@ -128,10 +138,17 @@ function chipClass(kind: DayChip["kind"]): string {
   }
 }
 
-function ChipCard({ chip }: { chip: DayChip }) {
+function ChipCard({ chip, onOpen }: { chip: DayChip; onOpen: (chip: DayChip) => void }) {
   const solid = chip.kind !== "court";
   return (
-    <div className={`rounded-md border px-1 py-1 sm:rounded-lg sm:px-1.5 sm:py-1.5 ${chipClass(chip.kind)}`}>
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onOpen(chip);
+      }}
+      className={`w-full rounded-md border px-1 py-1 text-left sm:rounded-lg sm:px-1.5 sm:py-1.5 ${chipClass(chip.kind)}`}
+    >
       <span
         className={`block text-[9px] font-semibold tabular-nums sm:text-[10px] ${
           solid ? "text-white/85" : "text-[#713f12]"
@@ -155,7 +172,7 @@ function ChipCard({ chip }: { chip: DayChip }) {
           {chip.sub}
         </span>
       ) : null}
-    </div>
+    </button>
   );
 }
 
@@ -223,6 +240,21 @@ export default function TodayBoard({
   const thisWeekStart = useMemo(() => startOfWeekMonday(parseDateInput(today)), [today]);
   const [weekStart, setWeekStart] = useState(thisWeekStart);
   const [selectedDate, setSelectedDate] = useState(today);
+  const [detail, setDetail] = useState<ChipRef | null>(null);
+
+  useEffect(() => {
+    if (!detail) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setDetail(null);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [detail]);
+
+  function openChip(chip: DayChip) {
+    setSelectedDate(chip.ref.date);
+    setDetail(chip.ref);
+  }
 
   const days = useMemo(
     () => Array.from({ length: 7 }, (_, i) => formatDateInput(addDays(weekStart, i))),
@@ -245,6 +277,7 @@ export default function TodayBoard({
         label: b.clientName.split(" ")[0],
         sub: `${b.durationHours}h`,
         courts: [b.courtId === "court-2" ? "court-2" : "court-1"],
+        ref: { type: "court", id: b.id, date: b.date },
       });
     }
 
@@ -261,6 +294,7 @@ export default function TodayBoard({
           label: "Request",
           sub: b.clientName.split(" ")[0],
           courts: [lane],
+          ref: { type: "request", id: b.id, date: b.date },
         });
         continue;
       }
@@ -271,6 +305,7 @@ export default function TodayBoard({
         label: "Lesson",
         sub: b.clientName.split(" ")[0],
         courts: [lane],
+        ref: { type: "lesson", id: b.id, date: b.date },
       });
     }
 
@@ -292,6 +327,7 @@ export default function TodayBoard({
         label: shortClinicName(b.clinicName),
         sub: `${count} in`,
         courts: courtsForClinic.length ? courtsForClinic : ["court-1", "court-2"],
+        ref: { type: "clinic", clinicId: b.clinicId || def?.id || b.clinicName, date: b.date },
       });
     }
 
@@ -315,15 +351,16 @@ export default function TodayBoard({
           label: shortClinicName(def.name),
           sub: "0 in",
           courts: courtsForClinic.length ? courtsForClinic : ["court-1", "court-2"],
+          ref: { type: "clinic", clinicId: def.id, date: iso },
         });
       }
     }
 
     for (const b of events) {
       if (!map[b.eventDate]) continue;
-      const already = map[b.eventDate].some((c) => c.kind === "event" && c.label === b.eventTitle);
+      const already = map[b.eventDate].some((c) => c.kind === "event" && c.key.includes(b.eventId));
       if (already) continue;
-      const count = events.filter((x) => x.eventDate === b.eventDate && x.eventTitle === b.eventTitle).length;
+      const count = events.filter((x) => x.eventDate === b.eventDate && x.eventId === b.eventId).length;
       map[b.eventDate].push({
         key: `event-${b.eventId}-${b.eventDate}`,
         time: 16,
@@ -331,6 +368,7 @@ export default function TodayBoard({
         label: b.eventTitle.length > 18 ? `${b.eventTitle.slice(0, 16)}…` : b.eventTitle,
         sub: `${count} RSVP`,
         courts: ["court-1", "court-2"],
+        ref: { type: "event", eventId: b.eventId, date: b.eventDate },
       });
     }
 
@@ -344,6 +382,7 @@ export default function TodayBoard({
         label: def.title.length > 18 ? `${def.title.slice(0, 16)}…` : def.title,
         sub: "Event",
         courts: ["court-1", "court-2"],
+        ref: { type: "event", eventId: def.id, date: def.date },
       });
     }
 
@@ -358,6 +397,7 @@ export default function TodayBoard({
         label: "Hold",
         sub: b.reason.slice(0, 12),
         courts: courtsForHold,
+        ref: { type: "hold", id: b.id, date: b.date },
       });
     }
 
@@ -555,11 +595,18 @@ export default function TodayBoard({
               const bands = dayChipBands(chips);
               const empty = chips.length === 0;
               return (
-                <button
+                <div
                   key={iso}
-                  type="button"
+                  role="button"
+                  tabIndex={0}
                   onClick={() => setSelectedDate(iso)}
-                  className={`min-h-[14rem] border-r border-[#ece8e2] p-1 text-left last:border-r-0 sm:min-h-[16rem] sm:p-1.5 ${
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setSelectedDate(iso);
+                    }
+                  }}
+                  className={`min-h-[14rem] cursor-pointer border-r border-[#ece8e2] p-1 text-left last:border-r-0 sm:min-h-[16rem] sm:p-1.5 ${
                     selected
                       ? "bg-[#eff6ff] ring-2 ring-inset ring-[#3b82f6]"
                       : isToday
@@ -582,18 +629,18 @@ export default function TodayBoard({
                       {bands.map((band) => (
                         <div key={`${iso}-${band.time}`} className="space-y-1">
                           {band.both.map((chip) => (
-                            <ChipCard key={chip.key} chip={chip} />
+                            <ChipCard key={chip.key} chip={chip} onOpen={openChip} />
                           ))}
                           {(band.c1.length > 0 || band.c2.length > 0) && (
                             <div className="grid grid-cols-2 gap-1">
                               <div className="min-w-0 space-y-1">
                                 {band.c1.map((chip) => (
-                                  <ChipCard key={chip.key} chip={chip} />
+                                  <ChipCard key={chip.key} chip={chip} onOpen={openChip} />
                                 ))}
                               </div>
                               <div className="min-w-0 space-y-1 border-l border-[#ece8e2] pl-1">
                                 {band.c2.map((chip) => (
-                                  <ChipCard key={chip.key} chip={chip} />
+                                  <ChipCard key={chip.key} chip={chip} onOpen={openChip} />
                                 ))}
                               </div>
                             </div>
@@ -602,7 +649,7 @@ export default function TodayBoard({
                       ))}
                     </div>
                   )}
-                </button>
+                </div>
               );
             })}
           </div>
@@ -810,6 +857,373 @@ export default function TodayBoard({
           ))}
         </section>
       )}
+
+      {detail && (
+        <CalendarDetailSheet
+          detail={detail}
+          members={members}
+          courts={courts}
+          clinics={clinics}
+          lessons={lessons}
+          events={events}
+          blocks={blocks}
+          catalog={catalog}
+          onClose={() => setDetail(null)}
+          onOpenMember={(n) => {
+            setDetail(null);
+            onOpenMember(n);
+          }}
+          onToggleCourt={onToggleCourt}
+          onToggleClinic={onToggleClinic}
+          onToggleLesson={onToggleLesson}
+          onAcceptLessonRequest={(id) => {
+            onAcceptLessonRequest(id);
+            setDetail(null);
+          }}
+          onDeclineLessonRequest={(id) => {
+            onDeclineLessonRequest(id);
+            setDetail(null);
+          }}
+          onToggleEvent={onToggleEvent}
+        />
+      )}
     </div>
+  );
+}
+
+function DetailSheet({
+  eyebrow,
+  title,
+  onClose,
+  children,
+  footer,
+}: {
+  eyebrow: string;
+  title: string;
+  onClose: () => void;
+  children: ReactNode;
+  footer?: ReactNode;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:items-center sm:p-4">
+      <button type="button" aria-label="Close" className="absolute inset-0 bg-[#1a1a1a]/35" onClick={onClose} />
+      <div
+        role="dialog"
+        aria-modal="true"
+        className="relative z-10 flex max-h-[80dvh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-[#e8e5df] bg-white shadow-xl"
+      >
+        <div className="flex items-start justify-between gap-3 border-b border-[#ece8e2] px-4 py-3.5 sm:px-5">
+          <div className="min-w-0">
+            <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">{eyebrow}</p>
+            <h3 className="mt-0.5 text-lg font-semibold tracking-tight text-[#1a1a1a]">{title}</h3>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#e8e5df] text-[16px] leading-none text-[#6b665e] hover:bg-[#faf9f7]"
+            aria-label="Close"
+          >
+            ×
+          </button>
+        </div>
+        <div className="overflow-y-auto px-4 py-4 sm:px-5">{children}</div>
+        <div className="border-t border-[#ece8e2] px-4 py-3 sm:px-5">
+          {footer || (
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full rounded-xl bg-[#1a1a1a] py-3 text-[14px] font-medium text-white"
+            >
+              Close
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DetailRow({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <div className="flex items-start justify-between gap-3 py-2">
+      <p className="shrink-0 text-[12px] text-[#8a8477]">{label}</p>
+      <div className="min-w-0 text-right text-[14px] font-medium text-[#1a1a1a]">{value}</div>
+    </div>
+  );
+}
+
+function PersonRow({
+  name,
+  detail,
+  status,
+  onToggle,
+  onFile,
+}: {
+  name: string;
+  detail?: string;
+  status?: "paid" | "pending";
+  onToggle?: () => void;
+  onFile?: () => void;
+}) {
+  return (
+    <li className="flex flex-wrap items-center justify-between gap-2 py-2.5">
+      <div className="min-w-0">
+        {onFile ? (
+          <button type="button" onClick={onFile} className="text-left text-[15px] font-medium hover:underline">
+            {name}
+          </button>
+        ) : (
+          <p className="text-[15px] font-medium">{name}</p>
+        )}
+        {detail ? <p className="text-[12px] text-[#6b665e]">{detail}</p> : null}
+      </div>
+      {status ? <PaidPill status={status} onToggle={onToggle} /> : null}
+    </li>
+  );
+}
+
+function CalendarDetailSheet({
+  detail,
+  members,
+  courts,
+  clinics,
+  lessons,
+  events,
+  blocks,
+  catalog,
+  onClose,
+  onOpenMember,
+  onToggleCourt,
+  onToggleClinic,
+  onToggleLesson,
+  onAcceptLessonRequest,
+  onDeclineLessonRequest,
+  onToggleEvent,
+}: {
+  detail: ChipRef;
+  members: S27MemberAccount[];
+  courts: S27CourtBooking[];
+  clinics: S27ClinicBooking[];
+  lessons: S27LessonBooking[];
+  events: S27EventBooking[];
+  blocks: S27AdminBlock[];
+  catalog: S27Catalog;
+  onClose: () => void;
+  onOpenMember: (memberNumber: string) => void;
+  onToggleCourt: (id: string) => void;
+  onToggleClinic: (id: string) => void;
+  onToggleLesson: (id: string) => void;
+  onAcceptLessonRequest: (id: string) => void;
+  onDeclineLessonRequest: (id: string) => void;
+  onToggleEvent: (id: string) => void;
+}) {
+  if (detail.type === "court") {
+    const b = courts.find((x) => x.id === detail.id);
+    if (!b) {
+      return (
+        <DetailSheet eyebrow="Court" title="Booking not found" onClose={onClose}>
+          <p className="text-[14px] text-[#8a8477]">This booking may have been removed.</p>
+        </DetailSheet>
+      );
+    }
+    const memberNo = memberNumberFor(members, b.memberNumber, b.clientEmail);
+    return (
+      <DetailSheet eyebrow="Court booking" title={b.clientName} onClose={onClose}>
+        <div className="divide-y divide-[#f0ede8]">
+          <DetailRow label="When" value={`${formatPrettyDate(b.date)} · ${formatHour(b.hour)}`} />
+          <DetailRow label="Court" value={`${b.courtName} · ${b.durationHours}h`} />
+          <DetailRow label="Phone" value={b.clientPhone || "—"} />
+          <DetailRow label="Email" value={b.clientEmail || "—"} />
+          <DetailRow label="Amount" value={`$${b.amount} · ${b.paymentMethod}`} />
+          <DetailRow
+            label="Payment"
+            value={<PaidPill status={b.paymentStatus} onToggle={() => onToggleCourt(b.id)} />}
+          />
+        </div>
+        {memberNo ? (
+          <button
+            type="button"
+            onClick={() => onOpenMember(memberNo)}
+            className="mt-4 w-full rounded-xl border border-[#e8e5df] py-2.5 text-[14px] font-medium"
+          >
+            Open member file
+          </button>
+        ) : null}
+      </DetailSheet>
+    );
+  }
+
+  if (detail.type === "lesson" || detail.type === "request") {
+    const b = lessons.find((x) => x.id === detail.id);
+    if (!b) {
+      return (
+        <DetailSheet eyebrow="Lesson" title="Booking not found" onClose={onClose}>
+          <p className="text-[14px] text-[#8a8477]">This booking may have been removed.</p>
+        </DetailSheet>
+      );
+    }
+    const memberNo = memberNumberFor(members, b.memberNumber, b.clientEmail);
+    const isRequest = b.requestStatus === "requested";
+    return (
+      <DetailSheet
+        eyebrow={isRequest ? "Lesson request" : "Lesson"}
+        title={b.clientName}
+        onClose={onClose}
+        footer={
+          isRequest ? (
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => onDeclineLessonRequest(b.id)}
+                className="rounded-xl border border-[#fecaca] bg-[#fef2f2] py-3 text-[14px] font-medium text-[#991b1b]"
+              >
+                Decline
+              </button>
+              <button
+                type="button"
+                onClick={() => onAcceptLessonRequest(b.id)}
+                className="rounded-xl bg-[#166534] py-3 text-[14px] font-medium text-white"
+              >
+                Accept
+              </button>
+            </div>
+          ) : undefined
+        }
+      >
+        <div className="divide-y divide-[#f0ede8]">
+          <DetailRow label="When" value={`${formatPrettyDate(b.date)} · ${formatHour(b.hour)}`} />
+          <DetailRow label="Pro" value={lessonProLabel(b)} />
+          <DetailRow label="Length" value={`${b.duration} min`} />
+          <DetailRow label="Focus" value={b.focus || "—"} />
+          <DetailRow label="Phone" value={b.clientPhone || "—"} />
+          <DetailRow label="Email" value={b.clientEmail || "—"} />
+          <DetailRow label="Amount" value={`$${b.amount} · ${b.paymentMethod}`} />
+          {!isRequest ? (
+            <DetailRow
+              label="Payment"
+              value={<PaidPill status={b.paymentStatus} onToggle={() => onToggleLesson(b.id)} />}
+            />
+          ) : null}
+        </div>
+        {memberNo ? (
+          <button
+            type="button"
+            onClick={() => onOpenMember(memberNo)}
+            className="mt-4 w-full rounded-xl border border-[#e8e5df] py-2.5 text-[14px] font-medium"
+          >
+            Open member file
+          </button>
+        ) : null}
+      </DetailSheet>
+    );
+  }
+
+  if (detail.type === "clinic") {
+    const def = clinicDefFor(catalog, detail.clinicId);
+    const roster = clinics
+      .filter(
+        (x) =>
+          x.date === detail.date &&
+          (x.clinicId === detail.clinicId || (!!def && x.clinicId === def.id) || x.clinicName === def?.name)
+      )
+      .slice()
+      .sort((a, b) => a.clientName.localeCompare(b.clientName));
+    const name = def?.name || roster[0]?.clinicName || "Clinic";
+    const timeLabel = def
+      ? clinicTimeLabel(def)
+      : formatHour(clinicStartHour(catalog, detail.clinicId, name));
+    const paid = roster.filter((r) => r.paymentStatus === "paid").length;
+    const owed = roster.filter((r) => r.paymentStatus === "pending").length;
+    return (
+      <DetailSheet eyebrow="Clinic" title={name} onClose={onClose}>
+        <div className="divide-y divide-[#f0ede8] border-b border-[#f0ede8] pb-2">
+          <DetailRow label="When" value={`${formatPrettyDate(detail.date)} · ${timeLabel}`} />
+          <DetailRow label="Level" value={def?.level || "—"} />
+          <DetailRow
+            label="Signed up"
+            value={`${roster.length}${def ? ` / ${def.capacity}` : ""}${owed ? ` · ${owed} unpaid` : ""}`}
+          />
+          <DetailRow label="Paid" value={`${paid}`} />
+        </div>
+        {roster.length === 0 ? (
+          <p className="mt-4 text-[14px] text-[#8a8477]">Nobody signed up yet.</p>
+        ) : (
+          <ul className="mt-1 divide-y divide-[#f0ede8]">
+            {roster.map((row) => {
+              const n = memberNumberFor(members, row.memberNumber, row.clientEmail);
+              return (
+                <PersonRow
+                  key={row.id}
+                  name={row.clientName}
+                  detail={`$${row.amount}`}
+                  status={row.paymentStatus}
+                  onToggle={() => onToggleClinic(row.id)}
+                  onFile={n ? () => onOpenMember(n) : undefined}
+                />
+              );
+            })}
+          </ul>
+        )}
+      </DetailSheet>
+    );
+  }
+
+  if (detail.type === "event") {
+    const def = catalog.events.find((e) => e.id === detail.eventId);
+    const roster = events
+      .filter((x) => x.eventDate === detail.date && (x.eventId === detail.eventId || x.eventTitle === def?.title))
+      .slice()
+      .sort((a, b) => a.attendeeName.localeCompare(b.attendeeName));
+    const title = def?.title || roster[0]?.eventTitle || "Event";
+    const guests = roster.reduce((s, r) => s + (r.guestCount || 1), 0);
+    return (
+      <DetailSheet eyebrow="Event" title={title} onClose={onClose}>
+        <div className="divide-y divide-[#f0ede8] border-b border-[#f0ede8] pb-2">
+          <DetailRow label="When" value={formatPrettyDate(detail.date)} />
+          <DetailRow label="RSVPs" value={`${roster.length} · ${guests} guest${guests === 1 ? "" : "s"}`} />
+          {def?.capacity ? <DetailRow label="Capacity" value={String(def.capacity)} /> : null}
+        </div>
+        {roster.length === 0 ? (
+          <p className="mt-4 text-[14px] text-[#8a8477]">No RSVPs yet.</p>
+        ) : (
+          <ul className="mt-1 divide-y divide-[#f0ede8]">
+            {roster.map((row) => {
+              const n = memberNumberFor(members, row.memberNumber, row.attendeeEmail);
+              return (
+                <PersonRow
+                  key={row.id}
+                  name={row.attendeeName}
+                  detail={`×${row.guestCount} · $${row.amount}`}
+                  status={row.paymentStatus}
+                  onToggle={() => onToggleEvent(row.id)}
+                  onFile={n ? () => onOpenMember(n) : undefined}
+                />
+              );
+            })}
+          </ul>
+        )}
+      </DetailSheet>
+    );
+  }
+
+  const hold = blocks.find((x) => x.id === detail.id);
+  if (!hold) {
+    return (
+      <DetailSheet eyebrow="Hold" title="Hold not found" onClose={onClose}>
+        <p className="text-[14px] text-[#8a8477]">This hold may have been removed.</p>
+      </DetailSheet>
+    );
+  }
+  return (
+    <DetailSheet eyebrow="Court hold" title={hold.reason || "Hold"} onClose={onClose}>
+      <div className="divide-y divide-[#f0ede8]">
+        <DetailRow label="When" value={`${formatPrettyDate(hold.date)} · ${formatHour(hold.startHour)}`} />
+        <DetailRow
+          label="Courts"
+          value={hold.courtId === "both" ? "Both courts" : hold.courtId === "court-2" ? "Court 2" : "Court 1"}
+        />
+        <DetailRow label="Length" value={`${hold.durationHours}h`} />
+      </div>
+    </DetailSheet>
   );
 }
