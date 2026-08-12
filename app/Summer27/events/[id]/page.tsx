@@ -6,7 +6,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import { useS27Session } from "../../use-s27-session";
 import { canOneClick, startMemberPayment, storageMethodFor, type S27PayMethod } from "../../payments";
 import { PayChooser } from "../../PayChooser";
-import { formatPrettyDate, parseDateInput, s27Events, type EventDef } from "../../summer27-data";
+import { eventDateRangeLabel, parseDateInput, s27Events, type EventDef } from "../../summer27-data";
 import { getLiveEvents } from "../../schedule";
 import { KEYS, loadList, saveList, type S27EventBooking } from "../../storage";
 
@@ -160,7 +160,7 @@ function Summer27EventDetailInner() {
               <p className="text-[10px] uppercase tracking-[0.16em] text-white/70">{event.category}</p>
               <h2 className="mt-2 text-[28px] font-semibold tracking-tight sm:text-4xl">{event.title}</h2>
               <p className="mt-3 text-[14px] text-white/85 sm:text-[15px]">
-                {formatPrettyDate(event.date)} · {event.timeLabel}
+                {eventDateRangeLabel(event)} · {event.timeLabel}
               </p>
               <p className="mt-2 text-[13px] text-white/70">Courts 3 &amp; 4 · Clubhouse</p>
             </div>

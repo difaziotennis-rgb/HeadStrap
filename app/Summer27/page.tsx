@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { useS27Session } from "./use-s27-session";
 import {
   clinicTimeLabel,
+  clinicsSuspendedOnDate,
   formatDateInput,
   formatPrettyDate,
   parseDateInput,
@@ -24,6 +25,7 @@ function upcomingClinicSessions(count = 6) {
     d.setDate(start.getDate() + i);
     const day = d.getDay();
     const iso = formatDateInput(d);
+    if (clinicsSuspendedOnDate(iso, s27Events)) continue;
     for (const clinic of clinics) {
       if (!clinic.days.includes(day)) continue;
       out.push({ date: iso, clinic });

@@ -3,6 +3,8 @@ import {
   LESSON_RATES,
   PRIME_TEACHING,
   STRINGING_LABOR,
+  clinicsSuspendedOnDate,
+  eventSpansDate,
   hoursOverlap,
   parseDateInput,
   s27Clinics,
@@ -15,7 +17,7 @@ import {
   type SlotBlockReason,
 } from "./summer27-data";
 
-export const S27_CATALOG_KEY = "s27_catalog_v20";
+export const S27_CATALOG_KEY = "s27_catalog_v21";
 export const S27_BLOCKS_KEY = "s27_admin_blocks_v1";
 export const S27_NOTES_KEY = "s27_member_notes_v1";
 
@@ -292,31 +294,40 @@ export function getProgramBlock(
 ): SlotBlockReason | null {
   const catalog = getCatalog();
   const day = parseDateInput(dateStr).getDay();
+  const clinicsOff = clinicsSuspendedOnDate(dateStr, catalog.events);
 
-  for (const clinic of catalog.clinics) {
-    if (!clinic.days.includes(day)) continue;
-    if (
-      clinic.blockCourts.includes(courtId) &&
-      hoursOverlap(clinic.startHour, clinic.durationHours, hour)
-    ) {
-      return { type: "clinic", label: clinic.name, clinicId: clinic.id, kind: clinic.kind };
+  if (!clinicsOff) {
+    for (const clinic of catalog.clinics) {
+      if (!clinic.days.includes(day)) continue;
+      if (
+        clinic.blockCourts.includes(courtId) &&
+        hoursOverlap(clinic.startHour, clinic.durationHours, hour)
+      ) {
+        return { type: "clinic", label: clinic.name, clinicId: clinic.id, kind: clinic.kind };
+      }
     }
   }
 
-  for (const event of catalog.events.filter((e) => e.date === dateStr)) {
-    const match = event.timeLabel.match(
-      /(\d{1,2}):(\d{2})\s*(AM|PM).*?(\d{1,2}):(\d{2})\s*(AM|PM)/i
-    );
+  for (const event of catalog.events.filter((e) => eventSpansDate(e, dateStr))) {
     let start = 16;
     let duration = 3;
-    if (match) {
-      const toHour = (h: string, m: string, p: string) => {
-        let hr = Number(h) % 12;
-        if (p.toUpperCase() === "PM") hr += 12;
-        return hr + Number(m) / 60;
-      };
-      start = toHour(match[1], match[2], match[3]);
-      duration = Math.max(1, toHour(match[4], match[5], match[6]) - start);
+    if (event.suspendClinics || event.endDate) {
+      // Multi-day / championship weekends reserve daytime court hours.
+      start = 8;
+      duration = 10;
+    } else {
+      const match = event.timeLabel.match(
+        /(\d{1,2}):(\d{2})\s*(AM|PM).*?(\d{1,2}):(\d{2})\s*(AM|PM)/i
+      );
+      if (match) {
+        const toHour = (h: string, m: string, p: string) => {
+          let hr = Number(h) % 12;
+          if (p.toUpperCase() === "PM") hr += 12;
+          return hr + Number(m) / 60;
+        };
+        start = toHour(match[1], match[2], match[3]);
+        duration = Math.max(1, toHour(match[4], match[5], match[6]) - start);
+      }
     }
     if (hoursOverlap(start, duration, hour)) {
       return { type: "event", label: event.title };

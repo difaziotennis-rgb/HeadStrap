@@ -283,6 +283,8 @@ export type EventDef = {
   id: string;
   title: string;
   date: string;
+  /** Inclusive end date for multi-day events (defaults to `date`). */
+  endDate?: string;
   timeLabel: string;
   category: string;
   capacity: number;
@@ -290,6 +292,8 @@ export type EventDef = {
   guestPrice: number;
   description: string;
   highlights: string[];
+  /** When true, recurring clinics do not run on any date this event covers. */
+  suspendClinics?: boolean;
   /** Unsplash (or similar) hero for event cards / detail. */
   image: string;
   /** Soft wash used behind cards and detail chrome. */
@@ -360,6 +364,23 @@ export const s27Events: EventDef[] = [
     theme: { wash: "#2f4a3a", soft: "#eef2ea", accent: "#4a6b52" },
   },
   {
+    id: "club-championships",
+    title: "Club Championship Weekend",
+    date: "2027-09-04",
+    endDate: "2027-09-06",
+    timeLabel: "Labor Day weekend · Sat–Mon",
+    category: "Championship",
+    capacity: 32,
+    memberPrice: 50,
+    guestPrice: 65,
+    description:
+      "Men’s doubles and women’s doubles Club Championships over Labor Day weekend. Draw format set once entries are in. Normal clinics are cancelled for the weekend — courts reserved for championship play.",
+    highlights: ["Men’s doubles", "Women’s doubles", "Format TBD by entries", "No regular clinics"],
+    suspendClinics: true,
+    image: "/s27/events/season-close.jpg",
+    theme: { wash: "#243528", soft: "#eef2ea", accent: "#4a6b52" },
+  },
+  {
     id: "season-close-social",
     title: "Season Close Club Social",
     date: "2027-09-11",
@@ -413,6 +434,39 @@ export function formatPrettyDate(value: string): string {
     day: "numeric",
     year: "numeric",
   });
+}
+
+export function eventEndDate(event: Pick<EventDef, "date" | "endDate">): string {
+  const end = (event.endDate || "").trim();
+  return end && end >= event.date ? end : event.date;
+}
+
+export function eventSpansDate(event: Pick<EventDef, "date" | "endDate">, dateStr: string): boolean {
+  return dateStr >= event.date && dateStr <= eventEndDate(event);
+}
+
+export function clinicsSuspendedOnDate(dateStr: string, events: EventDef[] = s27Events): boolean {
+  return events.some((e) => e.suspendClinics && eventSpansDate(e, dateStr));
+}
+
+export function eventDateRangeLabel(event: Pick<EventDef, "date" | "endDate">): string {
+  const end = eventEndDate(event);
+  if (end === event.date) return formatPrettyDate(event.date);
+  const a = parseDateInput(event.date);
+  const b = parseDateInput(end);
+  const sameMonth = a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear();
+  const startLabel = a.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+  const endLabel = b.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: sameMonth ? undefined : "short",
+    day: "numeric",
+    year: "numeric",
+  });
+  return `${startLabel} – ${endLabel}`;
 }
 
 export function clinicDayLabel(days: number[] | undefined | null): string {

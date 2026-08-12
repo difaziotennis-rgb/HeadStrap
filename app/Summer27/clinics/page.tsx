@@ -8,13 +8,16 @@ import { canOneClick, startMemberPayment, storageMethodFor, type S27PayMethod } 
 import { PayChooser } from "../PayChooser";
 import {
   clinicTimeLabel,
+  clinicsSuspendedOnDate,
   formatDateInput,
   formatHour,
   parseDateInput,
   s27Clinics,
+  s27Events,
   type ClinicDef,
+  type EventDef,
 } from "../summer27-data";
-import { getLiveClinics } from "../schedule";
+import { getLiveClinics, getLiveEvents } from "../schedule";
 import { KEYS, findMemberAccount, loadList, saveList, type S27ClinicBooking, type S27MemberChild } from "../storage";
 import { DateChips, dateChipFromIso } from "../DateChips";
 import { canChangeBooking, CANCEL_WINDOW_HOURS } from "../booking-policy";
@@ -57,7 +60,12 @@ function weekRangeLabel(weekStart: Date): string {
   return `${a} – ${b}`;
 }
 
-function nextDatesForClinic(clinic: ClinicDef | undefined, count = 8, extra?: string): string[] {
+function nextDatesForClinic(
+  clinic: ClinicDef | undefined,
+  count = 8,
+  extra?: string,
+  events: EventDef[] = s27Events
+): string[] {
   const dates: string[] = [];
   if (!clinic || !Array.isArray(clinic.days)) return dates;
   const start = new Date();
@@ -65,9 +73,17 @@ function nextDatesForClinic(clinic: ClinicDef | undefined, count = 8, extra?: st
   for (let i = 0; i < 60 && dates.length < count; i++) {
     const d = new Date(start);
     d.setDate(start.getDate() + i);
-    if (clinic.days.includes(d.getDay())) dates.push(formatDateInput(d));
+    const iso = formatDateInput(d);
+    if (!clinic.days.includes(d.getDay())) continue;
+    if (clinicsSuspendedOnDate(iso, events)) continue;
+    dates.push(iso);
   }
-  if (extra && clinic.days.includes(parseDateInput(extra).getDay()) && !dates.includes(extra)) {
+  if (
+    extra &&
+    clinic.days.includes(parseDateInput(extra).getDay()) &&
+    !clinicsSuspendedOnDate(extra, events) &&
+    !dates.includes(extra)
+  ) {
     dates.push(extra);
     dates.sort();
   }
@@ -87,10 +103,11 @@ function shortClinicName(name: string): string {
     .replace(/\s+Junior\s+/i, " ");
 }
 
-function occurrencesForWeek(clinics: ClinicDef[], weekStart: Date): Occurrence[] {
+function occurrencesForWeek(clinics: ClinicDef[], weekStart: Date, events: EventDef[]): Occurrence[] {
   const out: Occurrence[] = [];
   for (let i = 0; i < 7; i++) {
     const date = formatDateInput(addDays(weekStart, i));
+    if (clinicsSuspendedOnDate(date, events)) continue;
     const jsDay = parseDateInput(date).getDay();
     for (const clinic of clinics) {
       if (!clinic.days.includes(jsDay)) continue;
@@ -116,6 +133,7 @@ function Summer27ClinicsInner() {
 
   const [bookings, setBookings] = useState<S27ClinicBooking[]>([]);
   const [clinics, setClinics] = useState<ClinicDef[]>(s27Clinics);
+  const [events, setEvents] = useState<EventDef[]>(s27Events);
   const [weekStart, setWeekStart] = useState(() =>
     startOfWeekMonday(queryDate ? parseDateInput(queryDate) : new Date())
   );
@@ -132,14 +150,20 @@ function Summer27ClinicsInner() {
   const [paying, setPaying] = useState(false);
 
   const clinic = clinics.find((c) => c.id === selectedId);
-  const dates = useMemo(() => nextDatesForClinic(clinic, 8, queryDate || date), [clinic, queryDate, date]);
+  const dates = useMemo(
+    () => nextDatesForClinic(clinic, 8, queryDate || date, events),
+    [clinic, queryDate, date, events]
+  );
   const isMember = !!session;
   const savedCard = canOneClick(session);
   const price = clinic ? (isMember ? clinic.memberPrice : clinic.guestPrice) : 0;
   const todayIso = formatDateInput(new Date());
   const thisWeekStart = useMemo(() => startOfWeekMonday(new Date()), []);
   const days = useMemo(() => weekDates(weekStart), [weekStart]);
-  const occurrences = useMemo(() => occurrencesForWeek(clinics, weekStart), [clinics, weekStart]);
+  const occurrences = useMemo(
+    () => occurrencesForWeek(clinics, weekStart, events),
+    [clinics, weekStart, events]
+  );
 
   useEffect(() => {
     if (!session) {
@@ -163,6 +187,8 @@ function Summer27ClinicsInner() {
           return id;
         });
       }
+      const liveEvents = getLiveEvents();
+      if (liveEvents.length) setEvents(liveEvents);
     } catch {
       // keep defaults
     }

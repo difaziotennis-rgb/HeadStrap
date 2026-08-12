@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { getLiveEvents } from "../schedule";
-import { formatPrettyDate, parseDateInput, s27Events, type EventDef } from "../summer27-data";
+import { eventDateRangeLabel, parseDateInput, s27Events, type EventDef } from "../summer27-data";
 import { KEYS, loadList, type S27EventBooking } from "../storage";
 
 function monthHeading(ym: string) {
@@ -119,7 +119,7 @@ export default function Summer27EventsPage() {
                     <div className="px-4 py-3" style={{ background: theme.soft }}>
                       <p className="text-[13px] text-[#4a4a4a]">{event.timeLabel}</p>
                       <p className="mt-1 text-[12px] text-[#6b665e]">
-                        {formatPrettyDate(event.date)} · ${event.memberPrice} members · {open > 0 ? `${open} open` : "Full"}
+                        {eventDateRangeLabel(event)} · ${event.memberPrice} members · {open > 0 ? `${open} open` : "Full"}
                       </p>
                     </div>
                   </Link>

@@ -44,7 +44,7 @@ const START_HOURS = Array.from({ length: 25 }, (_, i) => 8 + i * 0.5);
 const DURATIONS = [0.5, 1, 1.5, 2];
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const PRO_TITLES = ["Director of Tennis", "Teaching Professional", "Junior Development Coach", "Junior Development", "Associate Pro"];
-const EVENT_CATEGORIES = ["Social", "Competitive", "Junior", "Member"];
+const EVENT_CATEGORIES = ["Social", "Competitive", "Junior", "Member", "Championship", "Tournament · Viewing", "Tennis Social", "Family"];
 
 export default function ProgramSettings({ catalog, onSave, onReset }: Props) {
   const [draft, setDraft] = useState(() => ({
@@ -369,7 +369,8 @@ export default function ProgramSettings({ catalog, onSave, onReset }: Props) {
                   <div className="min-w-0">
                     <p className="text-[15px] font-medium">{event.title}</p>
                     <p className="mt-0.5 text-[12px] text-[#6b665e]">
-                      {formatPrettyDate(event.date)} · {event.timeLabel}
+                      {event.endDate ? `${formatPrettyDate(event.date)} – ${formatPrettyDate(event.endDate)}` : formatPrettyDate(event.date)} ·{" "}
+                      {event.timeLabel}
                     </p>
                     <p className="mt-0.5 text-[11px] text-[#8a8477]">
                       {event.category} · ${event.memberPrice} / ${event.guestPrice} · cap {event.capacity}
