@@ -7,7 +7,7 @@ import { canOneClick, startMemberPayment, storageMethodFor, type S27PayMethod } 
 import { PayChooser } from "../PayChooser";
 import { STRING_OPTIONS } from "../summer27-data";
 import { getLiveStringingLabor } from "../schedule";
-import { KEYS, loadList, rememberStringing, saveList, stringPrefForMember, type S27StringingOrder } from "../storage";
+import { KEYS, loadList, rememberStringing, saveList, stringPrefForMember, stringingShopStatus, type S27StringingOrder } from "../storage";
 
 export default function Summer27StringingPage() {
   return (
@@ -96,6 +96,7 @@ function Summer27StringingInner() {
       paymentStatus: "pending",
       paymentMethod: storageMethodFor(method),
       createdAt: new Date().toISOString(),
+      shopStatus: "in_shop",
     };
     rememberStringing(session?.memberNumber, order);
 
@@ -197,12 +198,30 @@ function Summer27StringingInner() {
       {mine.length > 0 && (
         <div className="mt-6 rounded-2xl border border-[#e8e5df] bg-white p-5">
           <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Your orders</p>
-          <ul className="mt-2 space-y-2 text-[13px]">
-            {mine.map((o) => (
-              <li key={o.id}>
-                {o.racket} · {o.stringName} @ {/lbs/i.test(o.tension) ? o.tension : `${o.tension} lbs`} · ${o.amount}
-              </li>
-            ))}
+          <ul className="mt-2 space-y-3 text-[13px]">
+            {mine.map((o) => {
+              const status = stringingShopStatus(o);
+              const label =
+                status === "ready"
+                  ? "Ready for pickup"
+                  : status === "picked_up"
+                    ? "Picked up"
+                    : "In the shop";
+              return (
+                <li key={o.id} className="flex flex-wrap items-baseline justify-between gap-2">
+                  <span>
+                    {o.racket} · {o.stringName} @ {/lbs/i.test(o.tension) ? o.tension : `${o.tension} lbs`} · ${o.amount}
+                  </span>
+                  <span
+                    className={`text-[11px] uppercase tracking-[0.1em] ${
+                      status === "ready" ? "text-[#3d5a2c]" : "text-[#8a8477]"
+                    }`}
+                  >
+                    {label}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}

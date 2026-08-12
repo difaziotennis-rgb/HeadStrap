@@ -64,6 +64,7 @@ export default function Summer27DirectorPage() {
   const [blocks, setBlocks] = useState<S27AdminBlock[]>([]);
   const [notes, setNotes] = useState<S27MemberNote[]>([]);
   const [catalog, setCatalog] = useState<S27Catalog>(defaultCatalog());
+  const [notifyingStringId, setNotifyingStringId] = useState<string | null>(null);
 
   function reload() {
     try {
@@ -131,6 +132,65 @@ export default function Summer27DirectorPage() {
     saveList(KEYS.stringing, next);
     setStringing(next);
   }
+
+  async function markStringingReady(id: string) {
+    const order = stringing.find((x) => x.id === id);
+    if (!order) return;
+    if (!order.clientEmail?.trim()) {
+      ping("Add an email on this order before notifying.");
+      return;
+    }
+
+    setNotifyingStringId(id);
+    const readyAt = new Date().toISOString();
+    let notifiedAt: string | undefined;
+
+    try {
+      const res = await fetch("/api/summer27/stringing-ready", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId: order.id,
+          clientName: order.clientName,
+          clientEmail: order.clientEmail,
+          racket: order.racket,
+          stringName: order.stringName,
+          tension: order.tension,
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; emailed?: boolean; error?: string };
+      if (res.ok && data.emailed !== false) {
+        notifiedAt = readyAt;
+        ping(`Ready — emailed ${order.clientName}.`);
+      } else {
+        ping(data.error ? `Marked ready. Email failed: ${data.error}` : "Marked ready. Email failed — text them.");
+      }
+    } catch {
+      ping("Marked ready. Email failed — text them.");
+    }
+
+    saveStringing(
+      stringing.map((x) =>
+        x.id === id
+          ? {
+              ...x,
+              shopStatus: "ready" as const,
+              readyAt,
+              notifiedAt: notifiedAt || x.notifiedAt,
+            }
+          : x
+      )
+    );
+    setNotifyingStringId(null);
+  }
+
+  function markStringingPickedUp(id: string) {
+    saveStringing(
+      stringing.map((x) => (x.id === id ? { ...x, shopStatus: "picked_up" as const } : x))
+    );
+    ping("Marked picked up.");
+  }
+
   function saveHolds(next: S27AdminBlock[]) {
     saveAdminBlocks(next);
     setBlocks(next);
@@ -145,7 +205,7 @@ export default function Summer27DirectorPage() {
     lessons.filter((b) => b.date === today).length +
     clinics.filter((b) => b.date === today).length +
     events.filter((b) => b.eventDate === today).length +
-    stringing.filter((b) => b.pickupDate === today).length +
+    stringing.filter((b) => (b.shopStatus || "in_shop") === "in_shop" || b.pickupDate === today).length +
     blocks.filter((b) => b.date === today).length;
   const unpaidToday = paidItems.filter((b) => {
     const date = "eventDate" in b ? b.eventDate : "pickupDate" in b && b.pickupDate ? b.pickupDate : "date" in b ? b.date : "";
@@ -235,6 +295,7 @@ export default function Summer27DirectorPage() {
           stringing={stringing}
           blocks={blocks}
           catalog={catalog}
+          notifyingId={notifyingStringId}
           onOpenMember={(memberNumber) => {
             setSelectedMember(memberNumber);
             setTab("members");
@@ -254,6 +315,8 @@ export default function Summer27DirectorPage() {
           onToggleStringing={(id) =>
             saveStringing(stringing.map((x) => (x.id === id ? { ...x, paymentStatus: x.paymentStatus === "paid" ? "pending" : "paid" } : x)))
           }
+          onMarkStringingReady={markStringingReady}
+          onMarkStringingPickedUp={markStringingPickedUp}
         />
       )}
 

@@ -27,7 +27,7 @@ import {
   type S27StringingOrder,
 } from "./storage";
 
-const MOCK_FLAG = "s27_mock_bookings_v2";
+const MOCK_FLAG = "s27_mock_bookings_v3";
 
 type Person = {
   name: string;
@@ -410,6 +410,9 @@ function seedStringing(): S27StringingOrder[] {
       amount: STRINGING_LABOR + racket[3],
       paymentStatus: paid(i),
       paymentMethod: method(i),
+      shopStatus: i < 5 ? ("in_shop" as const) : i === 5 ? ("ready" as const) : ("picked_up" as const),
+      readyAt: i >= 5 ? new Date().toISOString() : undefined,
+      notifiedAt: i === 5 ? new Date().toISOString() : undefined,
       createdAt: new Date().toISOString(),
     } satisfies S27StringingOrder;
   });

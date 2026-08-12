@@ -4,6 +4,7 @@ import { formatHour, formatPrettyDate, lessonProLabel } from "../summer27-data";
 import type { S27Catalog } from "../schedule";
 import type { S27AdminBlock } from "../schedule";
 import {
+  stringingShopStatus,
   type S27ClinicBooking,
   type S27CourtBooking,
   type S27EventBooking,
@@ -23,12 +24,15 @@ type Props = {
   stringing: S27StringingOrder[];
   blocks: S27AdminBlock[];
   catalog: S27Catalog;
+  notifyingId?: string | null;
   onOpenMember: (memberNumber: string) => void;
   onToggleCourt: (id: string) => void;
   onToggleClinic: (id: string) => void;
   onToggleLesson: (id: string) => void;
   onToggleEvent: (id: string) => void;
   onToggleStringing: (id: string) => void;
+  onMarkStringingReady: (id: string) => void;
+  onMarkStringingPickedUp: (id: string) => void;
 };
 
 type GlanceItem = {
@@ -63,12 +67,15 @@ export default function TodayBoard({
   stringing,
   blocks,
   catalog,
+  notifyingId,
   onOpenMember,
   onToggleCourt,
   onToggleClinic,
   onToggleLesson,
   onToggleEvent,
   onToggleStringing,
+  onMarkStringingReady,
+  onMarkStringingPickedUp,
 }: Props) {
   const nowHour = new Date().getHours();
   const courtItems: GlanceItem[] = courts
@@ -130,7 +137,14 @@ export default function TodayBoard({
   ).sort((a, b) => a.time - b.time);
 
   const todayEvents = events.filter((b) => b.eventDate === today);
-  const pickups = stringing.filter((b) => b.pickupDate === today);
+  const shopQueue = stringing
+    .filter((b) => stringingShopStatus(b) === "in_shop")
+    .slice()
+    .sort((a, b) => (a.createdAt || "").localeCompare(b.createdAt || ""));
+  const readyForPickup = stringing
+    .filter((b) => stringingShopStatus(b) === "ready")
+    .slice()
+    .sort((a, b) => (a.readyAt || "").localeCompare(b.readyAt || ""));
   const timeline = [...courtItems, ...lessonItems, ...holdItems].sort((a, b) => a.time - b.time || a.name.localeCompare(b.name));
   const hourGroups = timeline.reduce<Array<{ hour: number; items: GlanceItem[] }>>((acc, item) => {
     const last = acc[acc.length - 1];
@@ -274,24 +288,79 @@ export default function TodayBoard({
         </section>
       )}
 
-      {pickups.length > 0 && (
+      {(shopQueue.length > 0 || readyForPickup.length > 0) && (
         <section className="overflow-hidden rounded-2xl border border-[#e8e5df] bg-white">
           <p className="border-b border-[#f0ede8] px-4 py-3 text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">
-            Stringing pickup
+            Stringing shop
           </p>
-          <ul className="divide-y divide-[#f0ede8]">
-            {pickups.map((row) => (
-              <li key={row.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5">
-                <div>
-                  <p className="text-[16px] font-medium">{row.clientName}</p>
-                  <p className="text-[13px] text-[#6b665e]">
-                    {row.racket} · {row.stringName} @ {row.tension}
-                  </p>
-                </div>
-                <PaidPill status={row.paymentStatus} onToggle={() => onToggleStringing(row.id)} />
-              </li>
-            ))}
-          </ul>
+
+          {shopQueue.length > 0 && (
+            <div className="border-b border-[#f0ede8] last:border-0">
+              <p className="px-4 pt-3 text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">
+                In shop · {shopQueue.length}
+              </p>
+              <ul className="divide-y divide-[#f0ede8]">
+                {shopQueue.map((row) => {
+                  const busy = notifyingId === row.id;
+                  return (
+                    <li key={row.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+                      <div className="min-w-0">
+                        <p className="text-[16px] font-medium">{row.clientName}</p>
+                        <p className="text-[13px] text-[#6b665e]">
+                          {row.racket} · {row.stringName} @ {/lbs/i.test(row.tension) ? row.tension : `${row.tension} lbs`}
+                        </p>
+                        {row.pickupDate ? (
+                          <p className="mt-0.5 text-[12px] text-[#8a8477]">Asked for {formatPrettyDate(row.pickupDate)}</p>
+                        ) : null}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <PaidPill status={row.paymentStatus} onToggle={() => onToggleStringing(row.id)} />
+                        <button
+                          type="button"
+                          disabled={busy || !row.clientEmail}
+                          onClick={() => onMarkStringingReady(row.id)}
+                          className="rounded-full bg-[#1a1a1a] px-3.5 py-2 text-[12px] font-medium text-white disabled:opacity-40"
+                          title={!row.clientEmail ? "Needs an email on the order" : "Mark ready and email the member"}
+                        >
+                          {busy ? "Notifying…" : "Ready · notify"}
+                        </button>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
+
+          {readyForPickup.length > 0 && (
+            <div>
+              <p className="px-4 pt-3 text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">
+                Ready · {readyForPickup.length}
+              </p>
+              <ul className="divide-y divide-[#f0ede8]">
+                {readyForPickup.map((row) => (
+                  <li key={row.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+                    <div className="min-w-0">
+                      <p className="text-[16px] font-medium">{row.clientName}</p>
+                      <p className="text-[13px] text-[#6b665e]">
+                        {row.racket} · {row.stringName} @ {/lbs/i.test(row.tension) ? row.tension : `${row.tension} lbs`}
+                      </p>
+                      <p className="mt-0.5 text-[12px] text-[#3d5a2c]">
+                        {row.notifiedAt ? "Member notified" : "Ready — notify may have failed"}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => onMarkStringingPickedUp(row.id)}
+                      className="rounded-full border border-[#e8e5df] bg-[#faf9f7] px-3.5 py-2 text-[12px] font-medium text-[#4a4a4a]"
+                    >
+                      Picked up
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </section>
       )}
     </div>

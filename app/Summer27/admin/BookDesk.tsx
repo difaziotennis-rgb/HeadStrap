@@ -466,6 +466,7 @@ function StringingBlock({
         paymentStatus: status,
         paymentMethod: "manual" as const,
         createdAt: new Date().toISOString(),
+        shopStatus: "in_shop" as const,
       };
     rememberStringing(member?.memberNumber, order);
     onStringing([...stringing, order]);

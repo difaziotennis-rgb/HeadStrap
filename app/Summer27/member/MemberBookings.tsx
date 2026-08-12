@@ -21,6 +21,7 @@ import {
   loadRecord,
   persistCourts,
   saveList,
+  stringingShopStatus,
   uniqueCourts,
   type S27ClinicBooking,
   type S27CourtBooking,
@@ -119,17 +120,22 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
           booking: b,
         };
       }),
-      ...stringing.map((b) => ({
-        id: b.id,
-        kind: "stringing" as const,
-        date: b.pickupDate || b.createdAt.slice(0, 10),
-        hour: 9,
-        label: `Stringing · ${b.racket}`,
-        detail: `${b.stringName} @ ${b.tension}${b.pickupDate ? ` · pickup ${formatPrettyDate(b.pickupDate)}` : ""}`,
-        amount: b.amount,
-        status: b.paymentStatus,
-        booking: b,
-      })),
+      ...stringing.map((b) => {
+        const shop = stringingShopStatus(b);
+        const shopLabel =
+          shop === "ready" ? "Ready for pickup" : shop === "picked_up" ? "Picked up" : "In the shop";
+        return {
+          id: b.id,
+          kind: "stringing" as const,
+          date: b.pickupDate || b.createdAt.slice(0, 10),
+          hour: 9,
+          label: `Stringing · ${b.racket}`,
+          detail: `${b.stringName} @ ${b.tension}${b.pickupDate ? ` · pickup ${formatPrettyDate(b.pickupDate)}` : ""} · ${shopLabel}`,
+          amount: b.amount,
+          status: b.paymentStatus,
+          booking: b,
+        };
+      }),
     ];
     return items.sort((a, b) => `${a.date}${String(a.hour).padStart(5, "0")}`.localeCompare(`${b.date}${String(b.hour).padStart(5, "0")}`));
   }, [courts, clinics, lessons, events, stringing, liveClinics, liveEvents]);

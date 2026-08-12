@@ -110,7 +110,15 @@ export type S27StringingOrder = {
   paymentStatus: "pending" | "paid";
   paymentMethod: "stripe" | "saved-card" | "manual" | "paypal" | "venmo";
   createdAt: string;
+  /** Shop workflow — missing means still in the queue. */
+  shopStatus?: "in_shop" | "ready" | "picked_up";
+  readyAt?: string;
+  notifiedAt?: string;
 };
+
+export function stringingShopStatus(order: Pick<S27StringingOrder, "shopStatus">): "in_shop" | "ready" | "picked_up" {
+  return order.shopStatus || "in_shop";
+}
 
 export type S27StringPref = {
   memberNumber: string;
