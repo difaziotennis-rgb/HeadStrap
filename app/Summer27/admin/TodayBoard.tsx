@@ -114,31 +114,46 @@ function shortClinicName(name: string): string {
 function chipClass(kind: DayChip["kind"]): string {
   switch (kind) {
     case "lesson":
-      return "border-[#d7e0ef] bg-[#f4f7fb]";
+      return "border-[#3b82f6] bg-[#3b82f6] text-white";
     case "clinic":
-      return "border-[#d8e3d4] bg-[#f3f7f1]";
+      return "border-[#16a34a] bg-[#16a34a] text-white";
     case "event":
-      return "border-[#e4ddd2] bg-[#f8f5f0]";
+      return "border-[#a855f7] bg-[#a855f7] text-white";
     case "hold":
-      return "border-[#e8e5df] bg-[#f0ede8]";
+      return "border-[#64748b] bg-[#64748b] text-white";
     case "request":
-      return "border-[#c9d6eb] bg-[#eaf0f8]";
+      return "border-[#ea580c] bg-[#ea580c] text-white";
     default:
-      return "border-[#e8e5df] bg-[#f7f7f5]";
+      return "border-[#ca8a04] bg-[#eab308] text-[#1a1a1a]";
   }
 }
 
 function ChipCard({ chip }: { chip: DayChip }) {
+  const solid = chip.kind !== "court";
   return (
     <div className={`rounded-md border px-1 py-1 sm:rounded-lg sm:px-1.5 sm:py-1.5 ${chipClass(chip.kind)}`}>
-      <span className="block text-[9px] font-medium tabular-nums text-[#6b665e] sm:text-[10px]">
+      <span
+        className={`block text-[9px] font-semibold tabular-nums sm:text-[10px] ${
+          solid ? "text-white/85" : "text-[#713f12]"
+        }`}
+      >
         {formatHour(chip.time)}
       </span>
-      <span className="mt-0.5 block truncate text-[10px] font-medium leading-snug text-[#1a1a1a] sm:text-[11px]">
+      <span
+        className={`mt-0.5 block truncate text-[10px] font-semibold leading-snug sm:text-[11px] ${
+          solid ? "text-white" : "text-[#1a1a1a]"
+        }`}
+      >
         {chip.label}
       </span>
       {chip.sub ? (
-        <span className="mt-0.5 block truncate text-[9px] text-[#8a8477] sm:text-[10px]">{chip.sub}</span>
+        <span
+          className={`mt-0.5 block truncate text-[9px] sm:text-[10px] ${
+            solid ? "text-white/80" : "text-[#713f12]"
+          }`}
+        >
+          {chip.sub}
+        </span>
       ) : null}
     </div>
   );
@@ -471,19 +486,23 @@ export default function TodayBoard({
                   type="button"
                   onClick={() => setSelectedDate(iso)}
                   className={`border-r border-[#ece8e2] px-1 py-2 text-center last:border-r-0 sm:px-2 sm:py-2.5 ${
-                    selected ? "bg-[#1a1a1a] text-white" : isToday ? "bg-white" : ""
+                    selected
+                      ? "bg-[#1d4ed8] text-white"
+                      : isToday
+                        ? "bg-[#dbeafe] text-[#1e3a8a]"
+                        : "bg-[#f8fafc]"
                   }`}
                 >
                   <p
                     className={`text-[9px] uppercase tracking-[0.1em] sm:text-[10px] sm:tracking-[0.12em] ${
-                      selected ? "text-white/65" : "text-[#8a8477]"
+                      selected ? "text-white/75" : isToday ? "text-[#1d4ed8]" : "text-[#64748b]"
                     }`}
                   >
                     {DAY_LABELS[i]}
                   </p>
                   <p
                     className={`mt-0.5 text-[13px] font-semibold sm:text-[15px] ${
-                      selected ? "text-white" : isToday ? "text-[#1a1a1a]" : "text-[#4a4a4a]"
+                      selected ? "text-white" : isToday ? "text-[#1e3a8a]" : "text-[#0f172a]"
                     }`}
                   >
                     {d.getDate()}
@@ -513,7 +532,11 @@ export default function TodayBoard({
                   type="button"
                   onClick={() => setSelectedDate(iso)}
                   className={`min-h-[14rem] border-r border-[#ece8e2] p-1 text-left last:border-r-0 sm:min-h-[16rem] sm:p-1.5 ${
-                    selected ? "bg-[#faf9f7]" : isToday ? "bg-[#faf9f7]/40" : "bg-white hover:bg-[#faf9f7]/50"
+                    selected
+                      ? "bg-[#eff6ff] ring-2 ring-inset ring-[#3b82f6]"
+                      : isToday
+                        ? "bg-[#f0f9ff]"
+                        : "bg-white hover:bg-[#f8fafc]"
                   }`}
                 >
                   {empty ? (
