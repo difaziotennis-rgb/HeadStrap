@@ -48,9 +48,6 @@ const TABS: { id: Tab; label: string; hint: string }[] = [
 ];
 
 export default function Summer27DirectorPage() {
-  const [authed, setAuthed] = useState(false);
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
   const [tab, setTab] = useState<Tab>("today");
   const [flash, setFlash] = useState<string | null>(null);
   const [selectedMember, setSelectedMember] = useState<string | null>(null);
@@ -90,26 +87,13 @@ export default function Summer27DirectorPage() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (sessionStorage.getItem("s27_admin") === "1") setAuthed(true);
+    sessionStorage.setItem("s27_admin", "1");
+    reload();
   }, []);
-
-  useEffect(() => {
-    if (authed) reload();
-  }, [authed]);
 
   function ping(message: string) {
     setFlash(message);
     window.setTimeout(() => setFlash(null), 2500);
-  }
-
-  function login(e: React.FormEvent) {
-    e.preventDefault();
-    if (password === "admin" || password === "admin123") {
-      sessionStorage.setItem("s27_admin", "1");
-      setAuthed(true);
-      return;
-    }
-    setError("Use admin or admin123.");
   }
 
   function saveCourts(next: S27CourtBooking[]) {
@@ -213,23 +197,7 @@ export default function Summer27DirectorPage() {
   }).length;
 
   if (!authed) {
-    return (
-      <main className="mx-auto max-w-sm px-4 py-16">
-        <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Summer ’27</p>
-        <h2 className="mt-1 text-xl font-medium">Director desk</h2>
-        <form onSubmit={login} className="mt-4 space-y-2">
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Password"
-            className="w-full rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
-          />
-          {error && <p className="text-[12px] text-[#991b1b]">{error}</p>}
-          <button className="w-full rounded-lg bg-[#1a1a1a] py-2 text-[13px] text-white">Enter</button>
-        </form>
-      </main>
-    );
+    return null;
   }
 
   return (
@@ -244,16 +212,6 @@ export default function Summer27DirectorPage() {
           <Link href="/Summer27" className="rounded-lg border border-[#e8e5df] bg-white px-3 py-1.5 text-[12px] text-[#6b665e]">
             View site
           </Link>
-          <button
-            type="button"
-            onClick={() => {
-              sessionStorage.removeItem("s27_admin");
-              setAuthed(false);
-            }}
-            className="text-[12px] text-[#8a8477]"
-          >
-            Sign out
-          </button>
         </div>
       </div>
 
