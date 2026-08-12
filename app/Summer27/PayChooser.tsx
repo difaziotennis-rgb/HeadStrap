@@ -1,8 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import type { S27PaymentProfile } from "./storage";
 
-export type S27PayMethod = "saved-card" | "stripe" | "paypal" | "venmo";
+export type S27PayMethod = "saved-card";
 
 export function PayChooser({
   amount,
@@ -31,69 +32,32 @@ export function PayChooser({
       </div>
 
       {savedCard ? (
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => onPay("saved-card")}
-          className="w-full rounded-2xl bg-[#1a1a1a] py-3.5 text-[14px] font-medium text-white disabled:opacity-40"
-        >
-          {paying ? "Working…" : `${action} · ${savedCard.brand} •••• ${savedCard.last4}`}
-        </button>
-      ) : null}
-
-      <div className="grid grid-cols-3 gap-2">
-        <PayMethodButton
-          label="Venmo"
-          hint="App"
-          disabled={busy}
-          onClick={() => onPay("venmo")}
-          className="border-[#b8d4ea] bg-[#eef6fb] text-[#0b3d5c] hover:bg-[#e4f0f8]"
-        />
-        <PayMethodButton
-          label="PayPal"
-          hint="Account"
-          disabled={busy}
-          onClick={() => onPay("paypal")}
-          className="border-[#c5d4e8] bg-[#f0f5fb] text-[#003087] hover:bg-[#e7eef8]"
-        />
-        <PayMethodButton
-          label="Card"
-          hint="Stripe"
-          disabled={busy}
-          onClick={() => onPay("stripe")}
-          className="border-[#ddd8e8] bg-[#f6f4fa] text-[#2a2140] hover:bg-[#efeaf6]"
-        />
-      </div>
-
-      <p className="text-center text-[11px] leading-relaxed text-[#8a8477]">
-        {savedCard ? "Or pay another way." : "No card on file needed."}
-      </p>
+        <>
+          <p className="text-[12px] leading-relaxed text-[#6b665e]">
+            Charges {savedCard.brand} •••• {savedCard.last4} now.
+          </p>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => onPay("saved-card")}
+            className="w-full rounded-2xl bg-[#1a1a1a] py-3.5 text-[14px] font-medium text-white disabled:opacity-40"
+          >
+            {paying ? "Charging…" : `${action} · ${savedCard.brand} •••• ${savedCard.last4}`}
+          </button>
+        </>
+      ) : (
+        <div className="rounded-2xl border border-[#ead9c2] bg-[#fbf6ee] px-4 py-3.5">
+          <p className="text-[13px] leading-relaxed text-[#6b665e]">
+            A card on file is required. Add one in My Account, then come back to pay.
+          </p>
+          <Link
+            href="/Summer27/member/portal?tab=card"
+            className="mt-3 inline-block text-[13px] font-medium text-[#1a1a1a] underline-offset-2 hover:underline"
+          >
+            Add card on file
+          </Link>
+        </div>
+      )}
     </div>
-  );
-}
-
-function PayMethodButton({
-  label,
-  hint,
-  disabled,
-  onClick,
-  className,
-}: {
-  label: string;
-  hint: string;
-  disabled?: boolean;
-  onClick: () => void;
-  className: string;
-}) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      className={`flex min-h-[4.25rem] flex-col items-center justify-center rounded-2xl border px-2 py-3 text-center transition disabled:opacity-40 ${className}`}
-    >
-      <span className="text-[13px] font-semibold tracking-tight">{label}</span>
-      <span className="mt-0.5 text-[10px] opacity-70">{hint}</span>
-    </button>
   );
 }

@@ -112,14 +112,12 @@ function guestAt(i: number): Person {
   return wrapIndex(GUESTS, i);
 }
 
-function paid(i: number): "paid" | "pending" {
-  return i % 6 === 0 ? "pending" : "paid";
+function paid(_i: number): "paid" | "pending" {
+  return "paid";
 }
 
-function method(i: number): "stripe" | "saved-card" | "manual" | "paypal" | "venmo" {
-  if (i % 7 === 0) return "venmo";
-  if (i % 5 === 0) return "paypal";
-  return i % 3 === 0 ? "manual" : "saved-card";
+function method(_i: number): "stripe" | "saved-card" | "manual" | "paypal" | "venmo" {
+  return "saved-card";
 }
 
 function keepReal<T extends { id: string }>(existing: T[], mock: T[]) {
@@ -333,8 +331,8 @@ function seedLessons(): S27LessonBooking[] {
       courtId: derek.courtId,
       focus: FOCUS[i % FOCUS.length],
       amount: lessonRateForPro(derek, true),
-      paymentStatus: "pending",
-      paymentMethod: "manual",
+      paymentStatus: "paid",
+      paymentMethod: "saved-card",
       requestStatus: "requested",
       createdAt: new Date().toISOString(),
     });

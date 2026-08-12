@@ -246,10 +246,12 @@ function Summer27ClinicsInner() {
   }
 
   async function signUp(method: S27PayMethod) {
-    const name = isMember ? session!.memberName : guestName.trim();
-    const email = isMember ? session!.memberEmail : guestEmail.trim();
-    if (!name || !email) {
-      setMsg("Name and email required.");
+    if (!isMember || !session) {
+      setMsg("Sign in as a member to book.");
+      return;
+    }
+    if (!savedCard) {
+      setMsg("Add a card on file in My Account to book.");
       return;
     }
     if (seatsLeft <= 0) {
@@ -268,11 +270,11 @@ function Summer27ClinicsInner() {
       clinicId: clinic.id,
       clinicName: clinic.name,
       date,
-      clientName: name,
-      clientEmail: email,
-      memberNumber: session?.memberNumber,
+      clientName: session.memberName,
+      clientEmail: session.memberEmail,
+      memberNumber: session.memberNumber,
       amount: price,
-      paymentStatus: "pending",
+      paymentStatus: "paid",
       paymentMethod: storageMethodFor(method),
       createdAt: new Date().toISOString(),
     };
@@ -281,7 +283,7 @@ function Summer27ClinicsInner() {
     const result = await startMemberPayment({
       method,
       amount: price,
-      email,
+      email: session.memberEmail,
       description: `${clinic.name} · ${date}`,
       successPath: "/Summer27/clinics",
       bookingId: id,
@@ -294,32 +296,11 @@ function Summer27ClinicsInner() {
       return;
     }
 
-    if (result.kind === "saved-card") {
-      booking.paymentStatus = "paid";
-      booking.paymentMethod = "saved-card";
-      const next = [...bookings, booking];
-      saveList(KEYS.clinics, next);
-      setBookings(next);
-      setPaying(false);
-      setMsg(`You’re in. $${price} charged.`);
-      return;
-    }
-
     const next = [...bookings, booking];
     saveList(KEYS.clinics, next);
     setBookings(next);
     setPaying(false);
-
-    if (result.kind === "redirect") {
-      window.location.href = result.url;
-      return;
-    }
-
-    setMsg(
-      result.method === "venmo"
-        ? "Booking held. Finish in Venmo — we’ll confirm once it arrives."
-        : "Booking held. Finish in PayPal — we’ll confirm once it arrives."
-    );
+    setMsg(`You’re in. $${price} charged.`);
   }
 
   const isThisWeek = formatDateInput(weekStart) === formatDateInput(thisWeekStart);

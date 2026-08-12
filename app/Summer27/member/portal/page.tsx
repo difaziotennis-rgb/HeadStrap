@@ -52,7 +52,7 @@ export default function Summer27PortalPage() {
   const [payment, setPayment] = useState<S27PaymentProfile | null>(null);
   const [brand, setBrand] = useState<S27PaymentProfile["brand"]>("Visa");
   const [last4, setLast4] = useState("");
-  const [oneClick, setOneClick] = useState(true);
+  const [oneClick] = useState(true);
   const [msg, setMsg] = useState<string | null>(null);
 
   const [profile, setProfile] = useState({ name: "", email: "", phone: "", password: "", confirm: "" });
@@ -116,7 +116,6 @@ export default function Summer27PortalPage() {
     if (card) {
       setBrand(card.brand);
       setLast4(card.last4);
-      setOneClick(card.oneClick);
     }
   }, [session]);
 
@@ -444,7 +443,7 @@ export default function Summer27PortalPage() {
             </p>
           ) : (
             <p className="mt-2 text-[13px] text-[#8a8477]">
-              No card on file. Pay by Venmo, PayPal, or card when you book.
+              No card on file yet. Add one to book courts, lessons, clinics, and events.
             </p>
           )}
           <form onSubmit={saveCard} className="mt-3 space-y-2">
@@ -463,11 +462,7 @@ export default function Summer27PortalPage() {
               placeholder="Last 4"
               className="w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]"
             />
-            <label className="flex items-center gap-2 text-[13px]">
-              <input type="checkbox" checked={oneClick} onChange={(e) => setOneClick(e.target.checked)} />
-              Use when booking
-            </label>
-            <button className="w-full rounded-xl bg-[#1a1a1a] py-3 text-[13px] font-medium text-white">Save card</button>
+              <button className="w-full rounded-xl bg-[#1a1a1a] py-3 text-[13px] font-medium text-white">Save card</button>
           </form>
         </section>
       )}

@@ -26,13 +26,16 @@ export default function Summer27JoinPage() {
   const [expMonth, setExpMonth] = useState("");
   const [expYear, setExpYear] = useState("");
   const [zip, setZip] = useState("");
-  const [oneClick, setOneClick] = useState(true);
   const [msg, setMsg] = useState<string | null>(null);
 
   function join(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim() || !email.trim() || password.length < 4) {
       setMsg("Name, email, and a password are required.");
+      return;
+    }
+    if (last4.trim().length !== 4) {
+      setMsg("Add a card on file (last 4 digits) to join.");
       return;
     }
     const members = loadList<S27MemberAccount>(KEYS.members);
@@ -51,19 +54,17 @@ export default function Summer27JoinPage() {
     };
     saveList(KEYS.members, [...members, account]);
 
-    if (last4.trim().length === 4) {
-      const payments = loadList<S27PaymentProfile>(KEYS.payment);
-      payments.push({
-        memberNumber,
-        brand,
-        last4: last4.trim(),
-        expMonth,
-        expYear,
-        billingZip: zip,
-        oneClick,
-      });
-      saveList(KEYS.payment, payments);
-    }
+    const payments = loadList<S27PaymentProfile>(KEYS.payment);
+    payments.push({
+      memberNumber,
+      brand,
+      last4: last4.trim(),
+      expMonth,
+      expYear,
+      billingZip: zip,
+      oneClick: true,
+    });
+    saveList(KEYS.payment, payments);
 
     localStorage.setItem(
       S27_MEMBER_SESSION_KEY,
@@ -84,7 +85,7 @@ export default function Summer27JoinPage() {
       <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Membership</p>
       <h2 className="mt-1 text-2xl font-semibold tracking-tight">Join</h2>
       <p className="mt-2 text-[14px] text-[#6b665e]">
-        Member court time $50/hour, clinic and event rates, and a simple account for everything you book. A saved card is optional — you can also pay by Venmo, PayPal, or card when you book.
+        Member court time $50/hour, clinic and event rates, and a simple account for everything you book. Add a card on file — it’s how all bookings and shop charges are paid.
       </p>
 
       <form onSubmit={join} className="mt-6 space-y-3 rounded-2xl border border-[#e8e5df] bg-white p-5">
@@ -94,8 +95,8 @@ export default function Summer27JoinPage() {
         <input value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" type="password" className="w-full rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]" />
 
         <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-4">
-          <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Save a card (optional)</p>
-          <p className="mt-1 text-[12px] text-[#6b665e]">Skip this if you prefer Venmo, PayPal, or card at checkout.</p>
+          <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Card on file (required)</p>
+          <p className="mt-1 text-[12px] text-[#6b665e]">Used automatically when you book and when the shop charges your account.</p>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             <select value={brand} onChange={(e) => setBrand(e.target.value as S27PaymentProfile["brand"])} className="rounded-lg border border-[#e8e5df] bg-white px-3 py-2 text-[13px]">
               <option>Visa</option>
@@ -107,10 +108,6 @@ export default function Summer27JoinPage() {
             <input value={expYear} onChange={(e) => setExpYear(e.target.value)} placeholder="Exp year" className="rounded-lg border border-[#e8e5df] bg-white px-3 py-2 text-[13px]" />
             <input value={zip} onChange={(e) => setZip(e.target.value)} placeholder="Billing ZIP" className="rounded-lg border border-[#e8e5df] bg-white px-3 py-2 text-[13px] sm:col-span-2" />
           </div>
-          <label className="mt-3 flex items-center gap-2 text-[13px] text-[#4a4a4a]">
-            <input type="checkbox" checked={oneClick} onChange={(e) => setOneClick(e.target.checked)} />
-            Use saved card when booking
-          </label>
         </div>
 
         {msg && <p className="text-[13px] text-[#991b1b]">{msg}</p>}

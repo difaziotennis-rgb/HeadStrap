@@ -74,10 +74,16 @@ function Summer27StringingInner() {
   );
 
   async function submit(method: S27PayMethod) {
-    const clientName = isMember ? session!.memberName : name.trim();
-    const clientEmail = isMember ? session!.memberEmail : email.trim();
-    if (!clientName || !clientEmail || !racket.trim()) {
-      setMsg("Please add your name, email, and racket.");
+    if (!isMember || !session) {
+      setMsg("Sign in as a member to order.");
+      return;
+    }
+    if (!savedCard) {
+      setMsg("Add a card on file in My Account to order.");
+      return;
+    }
+    if (!racket.trim()) {
+      setMsg("Please add your racket.");
       return;
     }
     const id = `string-${Date.now()}`;
@@ -87,22 +93,22 @@ function Summer27StringingInner() {
       stringId: option.id,
       stringName: option.name,
       tension,
-      clientName,
-      clientEmail,
-      memberNumber: session?.memberNumber,
+      clientName: session.memberName,
+      clientEmail: session.memberEmail,
+      memberNumber: session.memberNumber,
       amount,
-      paymentStatus: "pending",
+      paymentStatus: "paid",
       paymentMethod: storageMethodFor(method),
       createdAt: new Date().toISOString(),
       shopStatus: "in_shop",
     };
-    rememberStringing(session?.memberNumber, order);
+    rememberStringing(session.memberNumber, order);
 
     setPaying(true);
     const result = await startMemberPayment({
       method,
       amount,
-      email: clientEmail,
+      email: session.memberEmail,
       description: `Stringing · ${option.name} · ${racket}`,
       successPath: "/Summer27/stringing",
       bookingId: id,
@@ -115,32 +121,11 @@ function Summer27StringingInner() {
       return;
     }
 
-    if (result.kind === "saved-card") {
-      order.paymentStatus = "paid";
-      order.paymentMethod = "saved-card";
-      const next = [...orders, order];
-      saveList(KEYS.stringing, next);
-      setOrders(next);
-      setPaying(false);
-      setMsg(`Order in. $${amount} charged. Drop the frame at the shop.`);
-      return;
-    }
-
     const next = [...orders, order];
     saveList(KEYS.stringing, next);
     setOrders(next);
     setPaying(false);
-
-    if (result.kind === "redirect") {
-      window.location.href = result.url;
-      return;
-    }
-
-    setMsg(
-      result.method === "venmo"
-        ? "Order held. Finish in Venmo — drop the frame at the shop after."
-        : "Order held. Finish in PayPal — drop the frame at the shop after."
-    );
+    setMsg(`Order in. $${amount} charged. Drop the frame at the shop.`);
   }
 
   return (

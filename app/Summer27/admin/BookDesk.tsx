@@ -27,7 +27,7 @@ import type { S27AdminBlock } from "../schedule";
 import { PaidPill, inputClass, uid } from "./ui";
 
 type Section = "courts" | "clinics" | "lessons" | "events" | "stringing" | "holds";
-type Range = "today" | "upcoming" | "pending" | "all";
+type Range = "today" | "upcoming" | "all";
 
 type Props = {
   members: S27MemberAccount[];
@@ -47,8 +47,7 @@ type Props = {
 
 const today = () => formatDateInput(new Date());
 
-function inRangeDate(date: string, range: Range, pending: boolean) {
-  if (range === "pending") return pending;
+function inRangeDate(date: string, range: Range) {
   if (range === "all") return true;
   const t = today();
   if (range === "today") return date === t;
@@ -75,7 +74,6 @@ export default function BookDesk(props: Props) {
         <select className={inputClass} value={range} onChange={(e) => setRange(e.target.value as Range)}>
           <option value="today">Today</option>
           <option value="upcoming">Upcoming</option>
-          <option value="pending">Pending pay</option>
           <option value="all">All records</option>
         </select>
         <select className={inputClass} value={memberNo} onChange={(e) => setMemberNo(e.target.value)}>
@@ -111,11 +109,10 @@ function CourtsBlock({
   const [hour, setHour] = useState("8");
   const [courtId, setCourtId] = useState<CourtId>("court-2");
   const [guestName, setGuestName] = useState("");
-  const [status, setStatus] = useState<"paid" | "pending">("paid");
   const list = useMemo(
     () =>
       courts
-        .filter((b) => inRangeDate(b.date, range, b.paymentStatus === "pending"))
+        .filter((b) => inRangeDate(b.date, range))
         .slice()
         .sort((a, b) => `${a.date}${a.hour}`.localeCompare(`${b.date}${b.hour}`)),
     [courts, range]
@@ -141,7 +138,7 @@ function CourtsBlock({
         clientPhone: member?.phone || "",
         memberNumber: member?.memberNumber,
         amount: (member ? rates.member : rates.guest) * hours,
-        paymentStatus: status,
+        paymentStatus: "paid",
         paymentMethod: "manual",
         createdAt: new Date().toISOString(),
       },
@@ -160,10 +157,6 @@ function CourtsBlock({
           {BOOKING_HOURS.map((h) => <option key={h} value={h}>{formatHour(h)}</option>)}
         </select>
         {!member && <input className={`${inputClass} sm:col-span-2`} placeholder="Walk-up name" value={guestName} onChange={(e) => setGuestName(e.target.value)} />}
-        <select className={inputClass} value={status} onChange={(e) => setStatus(e.target.value as "paid" | "pending")}>
-          <option value="paid">Paid</option>
-          <option value="pending">Pending</option>
-        </select>
         <button className="rounded-lg bg-[#1a1a1a] px-3 py-2 text-[12px] font-medium text-white">Add court</button>
       </form>
       <SimpleList
@@ -173,7 +166,6 @@ function CourtsBlock({
           title: `${b.courtName} · ${formatPrettyDate(b.date)} ${formatHour(b.hour)}`,
           detail: `${b.clientName} · ${b.durationHours}h · $${b.amount}${getProgramBlock(b.date, b.courtId, b.hour)?.type === "clinic" ? " · overlaps clinic" : ""}`,
           status: b.paymentStatus,
-          onPaid: () => onCourts(courts.map((x) => (x.id === b.id ? { ...x, paymentStatus: x.paymentStatus === "paid" ? "pending" : "paid" } : x))),
           onDelete: () => onCourts(courts.filter((x) => x.id !== b.id)),
         }))}
       />
@@ -191,10 +183,9 @@ function ClinicsBlock({
   const [clinicId, setClinicId] = useState(defs[0]?.id || "");
   const [date, setDate] = useState(today());
   const [guestName, setGuestName] = useState("");
-  const [status, setStatus] = useState<"paid" | "pending">("paid");
-  const def = defs.find((c) => c.id === clinicId);
+    const def = defs.find((c) => c.id === clinicId);
   const list = clinics
-    .filter((b) => inRangeDate(b.date, range, b.paymentStatus === "pending"))
+    .filter((b) => inRangeDate(b.date, range))
     .slice()
     .sort((a, b) => `${a.date}${a.clinicName}`.localeCompare(`${b.date}${b.clinicName}`));
 
@@ -214,7 +205,7 @@ function ClinicsBlock({
         clientEmail: member?.email || "",
         memberNumber: member?.memberNumber,
         amount: member ? def.memberPrice : def.guestPrice,
-        paymentStatus: status,
+        paymentStatus: "paid",
         paymentMethod: "manual",
         createdAt: new Date().toISOString(),
       },
@@ -230,10 +221,6 @@ function ClinicsBlock({
         </select>
         <input type="date" className={inputClass} value={date} onChange={(e) => setDate(e.target.value)} />
         {!member && <input className={inputClass} placeholder="Walk-up name" value={guestName} onChange={(e) => setGuestName(e.target.value)} />}
-        <select className={inputClass} value={status} onChange={(e) => setStatus(e.target.value as "paid" | "pending")}>
-          <option value="paid">Paid</option>
-          <option value="pending">Pending</option>
-        </select>
         <button className="rounded-lg bg-[#1a1a1a] px-3 py-2 text-[12px] font-medium text-white">Add to roster</button>
       </form>
       <SimpleList
@@ -243,7 +230,6 @@ function ClinicsBlock({
           title: b.clinicName,
           detail: `${formatPrettyDate(b.date)} · ${b.clientName} · $${b.amount}`,
           status: b.paymentStatus,
-          onPaid: () => onClinics(clinics.map((x) => (x.id === b.id ? { ...x, paymentStatus: x.paymentStatus === "paid" ? "pending" : "paid" } : x))),
           onDelete: () => onClinics(clinics.filter((x) => x.id !== b.id)),
         }))}
       />
@@ -264,10 +250,9 @@ function LessonsBlock({
   const duration = "60" as const;
   const [guestName, setGuestName] = useState("");
   const [focus, setFocus] = useState("");
-  const [status, setStatus] = useState<"paid" | "pending">("paid");
-  const pro = pros.find((p) => p.id === proId) || pros[0];
+    const pro = pros.find((p) => p.id === proId) || pros[0];
   const list = lessons
-    .filter((b) => inRangeDate(b.date, range, b.paymentStatus === "pending" || b.requestStatus === "requested"))
+    .filter((b) => inRangeDate(b.date, range) || b.requestStatus === "requested")
     .slice()
     .sort((a, b) => {
       const req = Number(b.requestStatus === "requested") - Number(a.requestStatus === "requested");
@@ -296,7 +281,7 @@ function LessonsBlock({
         courtId: pro.courtId,
         focus,
         amount: hourly,
-        paymentStatus: status,
+        paymentStatus: "paid",
         paymentMethod: "manual",
         requestStatus: "accepted",
         createdAt: new Date().toISOString(),
@@ -319,10 +304,6 @@ function LessonsBlock({
         <p className="flex items-center text-[13px] text-[#6b665e]">60 minutes</p>
         {!member && <input className={inputClass} placeholder="Walk-up name" value={guestName} onChange={(e) => setGuestName(e.target.value)} />}
         <input className={inputClass} placeholder="Focus" value={focus} onChange={(e) => setFocus(e.target.value)} />
-        <select className={inputClass} value={status} onChange={(e) => setStatus(e.target.value as "paid" | "pending")}>
-          <option value="paid">Paid</option>
-          <option value="pending">Pending</option>
-        </select>
         <button className="rounded-lg bg-[#1a1a1a] px-3 py-2 text-[12px] font-medium text-white">Add lesson</button>
       </form>
       <SimpleList
@@ -358,7 +339,6 @@ function LessonsBlock({
                 </button>
               </>
             ) : null,
-            onPaid: () => onLessons(lessons.map((x) => (x.id === b.id ? { ...x, paymentStatus: x.paymentStatus === "paid" ? "pending" : "paid" } : x))),
             onDelete: () => onLessons(lessons.filter((x) => x.id !== b.id)),
           };
         })}
@@ -377,10 +357,9 @@ function EventsBlock({
   const [eventId, setEventId] = useState(defs[0]?.id || "");
   const [guestName, setGuestName] = useState("");
   const [guestCount, setGuestCount] = useState("1");
-  const [status, setStatus] = useState<"paid" | "pending">("paid");
-  const def = defs.find((e) => e.id === eventId);
+    const def = defs.find((e) => e.id === eventId);
   const list = events
-    .filter((b) => inRangeDate(b.eventDate, range, b.paymentStatus === "pending"))
+    .filter((b) => inRangeDate(b.eventDate, range))
     .slice()
     .sort((a, b) => a.eventDate.localeCompare(b.eventDate));
 
@@ -402,7 +381,7 @@ function EventsBlock({
         guestCount: spots,
         memberNumber: member?.memberNumber,
         amount: (member ? def.memberPrice : def.guestPrice) * spots,
-        paymentStatus: status,
+        paymentStatus: "paid",
         paymentMethod: "manual",
         createdAt: new Date().toISOString(),
       },
@@ -420,10 +399,6 @@ function EventsBlock({
         <select className={inputClass} value={guestCount} onChange={(e) => setGuestCount(e.target.value)}>
           {[1, 2, 3, 4].map((n) => <option key={n} value={n}>{n} spot{n > 1 ? "s" : ""}</option>)}
         </select>
-        <select className={inputClass} value={status} onChange={(e) => setStatus(e.target.value as "paid" | "pending")}>
-          <option value="paid">Paid</option>
-          <option value="pending">Pending</option>
-        </select>
         <button className="rounded-lg bg-[#1a1a1a] px-3 py-2 text-[12px] font-medium text-white">Add reservation</button>
       </form>
       <SimpleList
@@ -433,7 +408,6 @@ function EventsBlock({
           title: b.eventTitle,
           detail: `${b.attendeeName} ×${b.guestCount} · $${b.amount}`,
           status: b.paymentStatus,
-          onPaid: () => onEvents(events.map((x) => (x.id === b.id ? { ...x, paymentStatus: x.paymentStatus === "paid" ? "pending" : "paid" } : x))),
           onDelete: () => onEvents(events.filter((x) => x.id !== b.id)),
         }))}
       />
@@ -451,8 +425,7 @@ function StringingBlock({
   const [stringId, setStringId] = useState(STRING_OPTIONS[0].id);
   const [tension, setTension] = useState("52");
   const [guestName, setGuestName] = useState("");
-  const [status, setStatus] = useState<"paid" | "pending">("paid");
-  const stringOpt = STRING_OPTIONS.find((s) => s.id === stringId) || STRING_OPTIONS[0];
+    const stringOpt = STRING_OPTIONS.find((s) => s.id === stringId) || STRING_OPTIONS[0];
 
   useEffect(() => {
     if (!member) return;
@@ -467,7 +440,7 @@ function StringingBlock({
     if (pref.tension) setTension(String(pref.tension).replace(/[^\d.]/g, "") || pref.tension);
   }, [member?.memberNumber]);
   const list = stringing
-    .filter((b) => inRangeDate(b.pickupDate || b.createdAt.slice(0, 10), range, b.paymentStatus === "pending"))
+    .filter((b) => inRangeDate(b.pickupDate || b.createdAt.slice(0, 10), range))
     .slice()
     .sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
 
@@ -485,7 +458,7 @@ function StringingBlock({
         clientEmail: member?.email || "",
         memberNumber: member?.memberNumber,
         amount: getLiveStringingLabor() + stringOpt.extra,
-        paymentStatus: status,
+        paymentStatus: "paid" as const,
         paymentMethod: "manual" as const,
         createdAt: new Date().toISOString(),
         shopStatus: "in_shop" as const,
@@ -507,10 +480,6 @@ function StringingBlock({
           {["48", "50", "52", "54", "56", "58"].map((t) => <option key={t} value={t}>{t} lbs</option>)}
         </select>
         {!member && <input className={inputClass} placeholder="Walk-up name" value={guestName} onChange={(e) => setGuestName(e.target.value)} />}
-        <select className={inputClass} value={status} onChange={(e) => setStatus(e.target.value as "paid" | "pending")}>
-          <option value="paid">Paid</option>
-          <option value="pending">Pending</option>
-        </select>
         <button className="rounded-lg bg-[#1a1a1a] px-3 py-2 text-[12px] font-medium text-white">Add order</button>
       </form>
       <SimpleList
@@ -520,7 +489,6 @@ function StringingBlock({
           title: `${b.racket} · ${b.stringName} @ ${b.tension}`,
           detail: `${b.clientName} · $${b.amount}`,
           status: b.paymentStatus,
-          onPaid: () => onStringing(stringing.map((x) => (x.id === b.id ? { ...x, paymentStatus: x.paymentStatus === "paid" ? "pending" : "paid" } : x))),
           onDelete: () => onStringing(stringing.filter((x) => x.id !== b.id)),
         }))}
       />
@@ -544,7 +512,7 @@ function HoldsBlock({
   const [endHour, setEndHour] = useState(9);
   const [reason, setReason] = useState("");
   const list = blocks
-    .filter((b) => inRangeDate(b.date, range, false))
+    .filter((b) => inRangeDate(b.date, range))
     .slice()
     .sort((a, b) =>
       `${b.date}${String(b.startHour).padStart(2, "0")}`.localeCompare(
@@ -671,7 +639,6 @@ function SimpleList({
     detail: string;
     status: "paid" | "pending";
     actions?: ReactNode;
-    onPaid: () => void;
     onDelete: () => void;
   }>;
 }) {
@@ -688,7 +655,7 @@ function SimpleList({
           </div>
           <div className="flex items-center gap-2">
             {row.actions}
-            <PaidPill status={row.status} onToggle={row.onPaid} />
+            <PaidPill status={row.status} />
             <button type="button" onClick={row.onDelete} className="text-[12px] text-[#991b1b]">
               Delete
             </button>

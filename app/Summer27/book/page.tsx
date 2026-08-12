@@ -46,8 +46,6 @@ function Summer27BookInner() {
   const [date, setDate] = useState(() => formatDateInput(new Date()));
   const [bookings, setBookings] = useState<Record<string, S27CourtBooking>>({});
   const duration = 1;
-  const [guestName, setGuestName] = useState("");
-  const [guestEmail, setGuestEmail] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
   const [paying, setPaying] = useState(false);
   const [pendingSlot, setPendingSlot] = useState<{ courtId: CourtId; hour: number } | null>(null);
@@ -102,7 +100,7 @@ function Summer27BookInner() {
     const program = getProgramBlock(dateStr, courtId, hour);
     if (program) return program;
     const existing = bookings[courtBookingKey(dateStr, courtId, hour)];
-    if (existing?.paymentStatus === "paid" || existing?.paymentStatus === "pending") {
+    if (existing?.paymentStatus === "paid") {
       return { type: "booked" as const, label: existing.clientName, booking: existing };
     }
     return null;
@@ -117,11 +115,12 @@ function Summer27BookInner() {
   }
 
   async function bookSlot(courtId: CourtId, hour: number, method: S27PayMethod) {
-    const name = isMember ? session!.memberName : guestName.trim();
-    const email = isMember ? session!.memberEmail : guestEmail.trim();
-    const phone = isMember ? session!.memberPhone || "" : "";
-    if (!name || !email) {
-      setMsg(isMember ? "Please sign in again." : "Add your name and email.");
+    if (!isMember || !session) {
+      setMsg("Sign in as a member to book.");
+      return;
+    }
+    if (!savedCard) {
+      setMsg("Add a card on file in My Account to book.");
       return;
     }
     if (!canBook(date, courtId, hour)) {
@@ -139,12 +138,12 @@ function Summer27BookInner() {
       durationHours: duration,
       courtId,
       courtName,
-      clientName: name,
-      clientEmail: email,
-      clientPhone: phone,
-      memberNumber: session?.memberNumber,
+      clientName: session.memberName,
+      clientEmail: session.memberEmail,
+      clientPhone: session.memberPhone || "",
+      memberNumber: session.memberNumber,
       amount,
-      paymentStatus: "pending",
+      paymentStatus: "paid",
       paymentMethod: storageMethodFor(method),
       createdAt: new Date().toISOString(),
     };
@@ -158,7 +157,7 @@ function Summer27BookInner() {
     const result = await startMemberPayment({
       method,
       amount,
-      email,
+      email: session.memberEmail,
       description: `${courtName} · ${formatPrettyDate(date)} · ${formatHour(hour)}`,
       successPath: "/Summer27/book",
       bookingId: id,
@@ -171,37 +170,20 @@ function Summer27BookInner() {
       return;
     }
 
-    if (result.kind === "saved-card") {
-      booking.paymentStatus = "paid";
-      booking.paymentMethod = "saved-card";
-      saveRecord(KEYS.courts, next);
-      setBookings(next);
-      setPendingSlot(null);
-      setPaying(false);
-      setMsg(`Booked ${courtName} ${formatHour(hour)}. $${amount} charged.`);
-      return;
-    }
-
     saveRecord(KEYS.courts, next);
     setBookings(next);
     setPendingSlot(null);
     setPaying(false);
-
-    if (result.kind === "redirect") {
-      window.location.href = result.url;
-      return;
-    }
-
-    setMsg(
-      result.method === "venmo"
-        ? `Court held for ${formatHour(hour)}. Finish in Venmo — we’ll confirm once it arrives.`
-        : `Court held for ${formatHour(hour)}. Finish in PayPal — we’ll confirm once it arrives.`
-    );
+    setMsg(`Booked ${courtName} ${formatHour(hour)}. $${amount} charged.`);
   }
 
   function requestSlot(courtId: CourtId, hour: number) {
-    if (!isMember && (!guestName.trim() || !guestEmail.trim())) {
-      setMsg("Add your name and email first.");
+    if (!isMember) {
+      setMsg("Sign in as a member to book.");
+      return;
+    }
+    if (!savedCard) {
+      setMsg("Add a card on file in My Account to book.");
       return;
     }
     setCancelTarget(null);
@@ -363,21 +345,18 @@ function Summer27BookInner() {
           </span>
         </p>
         {!isMember && (
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            <input
-              value={guestName}
-              onChange={(e) => setGuestName(e.target.value)}
-              placeholder="Name"
-              className="rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]"
-            />
-            <input
-              value={guestEmail}
-              onChange={(e) => setGuestEmail(e.target.value)}
-              placeholder="Email"
-              className="rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]"
-            />
-            <Link href="/Summer27/member" className="text-[12px] text-[#6b665e] underline sm:col-span-2">
-              Join for member rates
+          <div className="mt-3 rounded-xl border border-[#ead9c2] bg-[#fbf6ee] px-3 py-3 text-[13px] text-[#6b665e]">
+            Sign in with a card on file to book.{" "}
+            <Link href="/Summer27/member" className="font-medium text-[#1a1a1a] underline-offset-2 hover:underline">
+              Join or sign in
+            </Link>
+          </div>
+        )}
+        {isMember && !savedCard && (
+          <div className="mt-3 rounded-xl border border-[#ead9c2] bg-[#fbf6ee] px-3 py-3 text-[13px] text-[#6b665e]">
+            Add a card on file to book.{" "}
+            <Link href="/Summer27/member/portal?tab=card" className="font-medium text-[#1a1a1a] underline-offset-2 hover:underline">
+              My Account
             </Link>
           </div>
         )}
@@ -430,7 +409,7 @@ function Summer27BookInner() {
             <div className="flex items-start justify-between gap-3 border-b border-[#ece8e2] px-4 py-3.5">
               <div>
                 <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">
-                  {savedCard ? "Confirm booking" : "Pay to book"}
+                  Confirm booking
                 </p>
                 <p className="mt-1 text-[15px] font-medium text-[#1a1a1a]">
                   {pendingCourtName} · {formatHour(pendingSlot.hour)}
@@ -444,12 +423,6 @@ function Summer27BookInner() {
               </button>
             </div>
             <div className="px-4 py-4">
-              {savedCard && (
-                <p className="mb-3 text-[12px] leading-relaxed text-[#6b665e]">
-                  Confirm to charge {savedCard.brand} •••• {savedCard.last4}. You can cancel from this page until{" "}
-                  {CANCEL_WINDOW_HOURS} hours before start.
-                </p>
-              )}
               <PayChooser
                 amount={rate * duration}
                 savedCard={savedCard}

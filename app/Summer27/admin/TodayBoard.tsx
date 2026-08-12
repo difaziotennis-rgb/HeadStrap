@@ -51,7 +51,6 @@ type GlanceItem = {
   extra?: string;
   status?: "paid" | "pending";
   memberNumber?: string;
-  onToggle?: () => void;
 };
 
 type CourtLane = "court-1" | "court-2";
@@ -418,7 +417,6 @@ export default function TodayBoard({
       extra: `$${b.amount}`,
       status: b.paymentStatus,
       memberNumber: memberNumberFor(members, b.memberNumber, b.clientEmail),
-      onToggle: () => onToggleCourt(b.id),
     }));
   const lessonItems: GlanceItem[] = lessons
     .filter((b) => b.date === selectedDate && b.requestStatus !== "declined" && b.requestStatus !== "requested")
@@ -431,7 +429,6 @@ export default function TodayBoard({
       extra: b.focus || `$${b.amount}`,
       status: b.paymentStatus,
       memberNumber: memberNumberFor(members, b.memberNumber, b.clientEmail),
-      onToggle: () => onToggleLesson(b.id),
     }));
   const lessonRequests = lessons
     .filter((b) => b.requestStatus === "requested" && days.includes(b.date))
@@ -478,31 +475,6 @@ export default function TodayBoard({
     else acc.push({ hour: item.time, items: [item] });
     return acc;
   }, []);
-
-  const pendingRows = [
-    ...courts
-      .filter((b) => b.date === selectedDate && b.paymentStatus === "pending")
-      .map((b) => ({ id: b.id, name: b.clientName, label: b.courtName, amount: b.amount, onToggle: () => onToggleCourt(b.id) })),
-    ...clinics
-      .filter((b) => b.date === selectedDate && b.paymentStatus === "pending")
-      .map((b) => ({ id: b.id, name: b.clientName, label: b.clinicName, amount: b.amount, onToggle: () => onToggleClinic(b.id) })),
-    ...lessons
-      .filter(
-        (b) =>
-          b.date === selectedDate &&
-          b.paymentStatus === "pending" &&
-          b.requestStatus !== "requested" &&
-          b.requestStatus !== "declined"
-      )
-      .map((b) => ({ id: b.id, name: b.clientName, label: lessonProLabel(b), amount: b.amount, onToggle: () => onToggleLesson(b.id) })),
-    ...events
-      .filter((b) => b.eventDate === selectedDate && b.paymentStatus === "pending")
-      .map((b) => ({ id: b.id, name: b.attendeeName, label: b.eventTitle, amount: b.amount, onToggle: () => onToggleEvent(b.id) })),
-    ...stringing
-      .filter((b) => b.pickupDate === selectedDate && b.paymentStatus === "pending")
-      .map((b) => ({ id: b.id, name: b.clientName, label: "Stringing", amount: b.amount, onToggle: () => onToggleStringing(b.id) })),
-  ];
-  const pendingTotal = pendingRows.reduce((sum, row) => sum + row.amount, 0);
 
   function goWeek(delta: number) {
     setWeekStart((w) => {
@@ -736,27 +708,6 @@ export default function TodayBoard({
         )}
       </div>
 
-      {pendingRows.length > 0 && (
-        <section className="rounded-2xl border border-[#ead9c2] bg-[#fbf6ee] p-4">
-          <p className="text-[12px] font-medium uppercase tracking-[0.12em] text-[#8a6230]">
-            Unpaid · ${pendingTotal}
-          </p>
-          <ul className="mt-2 space-y-1.5">
-            {pendingRows.map((row) => (
-              <li key={row.id} className="flex items-baseline justify-between gap-2 text-[15px]">
-                <span>
-                  {row.name}
-                  <span className="text-[#8a8477]"> · {row.label}</span>
-                </span>
-                <button type="button" onClick={row.onToggle} className="text-[13px] font-medium text-[#8a6230]">
-                  ${row.amount} · mark paid
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
       <section className="overflow-hidden rounded-2xl border border-[#e8e5df] bg-white">
         <p className="border-b border-[#f0ede8] px-4 py-3 text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">
           Courts & lessons
@@ -783,7 +734,7 @@ export default function TodayBoard({
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
-                        {item.status && <PaidPill status={item.status} onToggle={item.onToggle} />}
+                        {item.status && <PaidPill status={item.status} />}
                         {item.memberNumber && (
                           <button
                             type="button"
@@ -823,7 +774,7 @@ export default function TodayBoard({
                 >
                   {row.clientName}
                 </button>
-                <PaidPill status={row.paymentStatus} onToggle={() => onToggleClinic(row.id)} />
+                <PaidPill status={row.paymentStatus} />
               </li>
             ))}
           </ul>
@@ -849,7 +800,7 @@ export default function TodayBoard({
                       {row.attendeeName}
                       <span className="text-[#8a8477]"> ×{row.guestCount}</span>
                     </span>
-                    <PaidPill status={row.paymentStatus} onToggle={() => onToggleEvent(row.id)} />
+                    <PaidPill status={row.paymentStatus} />
                   </li>
                 ))}
               </ul>
@@ -956,13 +907,11 @@ function PersonRow({
   name,
   detail,
   status,
-  onToggle,
   onFile,
 }: {
   name: string;
   detail?: string;
   status?: "paid" | "pending";
-  onToggle?: () => void;
   onFile?: () => void;
 }) {
   return (
@@ -977,7 +926,7 @@ function PersonRow({
         )}
         {detail ? <p className="text-[12px] text-[#6b665e]">{detail}</p> : null}
       </div>
-      {status ? <PaidPill status={status} onToggle={onToggle} /> : null}
+      {status ? <PaidPill status={status} /> : null}
     </li>
   );
 }
@@ -1037,7 +986,7 @@ function CalendarDetailSheet({
           <DetailRow label="Amount" value={`$${b.amount} · ${b.paymentMethod}`} />
           <DetailRow
             label="Payment"
-            value={<PaidPill status={b.paymentStatus} onToggle={() => onToggleCourt(b.id)} />}
+            value={<PaidPill status={b.paymentStatus} />}
           />
         </div>
         {memberNo ? (
@@ -1101,7 +1050,7 @@ function CalendarDetailSheet({
           {!isRequest ? (
             <DetailRow
               label="Payment"
-              value={<PaidPill status={b.paymentStatus} onToggle={() => onToggleLesson(b.id)} />}
+              value={<PaidPill status={b.paymentStatus} />}
             />
           ) : null}
         </div>
@@ -1133,7 +1082,6 @@ function CalendarDetailSheet({
       ? clinicTimeLabel(def)
       : formatHour(clinicStartHour(catalog, detail.clinicId, name));
     const paid = roster.filter((r) => r.paymentStatus === "paid").length;
-    const owed = roster.filter((r) => r.paymentStatus === "pending").length;
     return (
       <DetailSheet eyebrow="Clinic" title={name} onClose={onClose}>
         <div className="divide-y divide-[#f0ede8] border-b border-[#f0ede8] pb-2">
@@ -1141,7 +1089,7 @@ function CalendarDetailSheet({
           <DetailRow label="Level" value={def?.level || "—"} />
           <DetailRow
             label="Signed up"
-            value={`${roster.length}${def ? ` / ${def.capacity}` : ""}${owed ? ` · ${owed} unpaid` : ""}`}
+            value={`${roster.length}${def ? ` / ${def.capacity}` : ""}`}
           />
           <DetailRow label="Paid" value={`${paid}`} />
         </div>
@@ -1157,7 +1105,6 @@ function CalendarDetailSheet({
                   name={row.clientName}
                   detail={`$${row.amount}`}
                   status={row.paymentStatus}
-                  onToggle={() => onToggleClinic(row.id)}
                   onFile={n ? () => onOpenMember(n) : undefined}
                 />
               );
@@ -1195,7 +1142,6 @@ function CalendarDetailSheet({
                   name={row.attendeeName}
                   detail={`×${row.guestCount} · $${row.amount}`}
                   status={row.paymentStatus}
-                  onToggle={() => onToggleEvent(row.id)}
                   onFile={n ? () => onOpenMember(n) : undefined}
                 />
               );

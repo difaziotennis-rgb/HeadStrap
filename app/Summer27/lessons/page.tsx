@@ -104,8 +104,12 @@ function Summer27LessonsInner() {
 
   function submitRequest() {
     if (!pro || !requestMode) return;
-    if (!isMember) {
+    if (!isMember || !session) {
       setMsg("Sign in as a member to request a lesson.");
+      return;
+    }
+    if (!savedCard) {
+      setMsg("Add a card on file in My Account to request a lesson.");
       return;
     }
     if (!preferredHours.includes(hour)) {
@@ -120,17 +124,17 @@ function Summer27LessonsInner() {
       date,
       hour,
       duration,
-      clientName: session!.memberName,
-      clientEmail: session!.memberEmail,
-      clientPhone: session!.memberPhone || "",
-      memberNumber: session!.memberNumber,
+      clientName: session.memberName,
+      clientEmail: session.memberEmail,
+      clientPhone: session.memberPhone || "",
+      memberNumber: session.memberNumber,
       proId: pro.id,
       proName: pro.name,
       courtId: pro.courtId,
       focus: focus.trim(),
       amount,
-      paymentStatus: "pending",
-      paymentMethod: "manual",
+      paymentStatus: "paid",
+      paymentMethod: "saved-card",
       requestStatus: "requested",
       createdAt: new Date().toISOString(),
     };
@@ -140,17 +144,18 @@ function Summer27LessonsInner() {
     setSubmitting(false);
     setFocus("");
     setMsg(
-      `Request sent for ${formatPrettyDate(date)} · ${formatHour(hour)}. You’ll hear back if a time works.`
+      `Request sent for ${formatPrettyDate(date)} · ${formatHour(hour)}. $${amount} charged — you’ll hear back if a time works.`
     );
   }
 
   async function bookLesson(method: S27PayMethod) {
     if (!pro || requestMode) return;
-    const name = isMember ? session!.memberName : guestName.trim();
-    const email = isMember ? session!.memberEmail : guestEmail.trim();
-    const phone = isMember ? session!.memberPhone || "" : guestPhone.trim();
-    if (!name || !email) {
-      setMsg("Name and email required.");
+    if (!isMember || !session) {
+      setMsg("Sign in as a member to book.");
+      return;
+    }
+    if (!savedCard) {
+      setMsg("Add a card on file in My Account to book.");
       return;
     }
     if (!openHours.includes(hour)) {
@@ -164,16 +169,16 @@ function Summer27LessonsInner() {
       date,
       hour,
       duration,
-      clientName: name,
-      clientEmail: email,
-      clientPhone: phone,
-      memberNumber: session?.memberNumber,
+      clientName: session.memberName,
+      clientEmail: session.memberEmail,
+      clientPhone: session.memberPhone || "",
+      memberNumber: session.memberNumber,
       proId: pro.id,
       proName: pro.name,
       courtId: pro.courtId,
       focus: focus.trim(),
       amount,
-      paymentStatus: "pending",
+      paymentStatus: "paid",
       paymentMethod: storageMethodFor(method),
       createdAt: new Date().toISOString(),
     };
@@ -182,7 +187,7 @@ function Summer27LessonsInner() {
     const result = await startMemberPayment({
       method,
       amount,
-      email,
+      email: session.memberEmail,
       description: `Private lesson · ${pro.name} · ${formatPrettyDate(date)} ${formatHour(hour)}`,
       successPath: `/Summer27/lessons?pro=${encodeURIComponent(pro.id)}`,
       bookingId: id,
@@ -195,32 +200,11 @@ function Summer27LessonsInner() {
       return;
     }
 
-    if (result.kind === "saved-card") {
-      booking.paymentStatus = "paid";
-      booking.paymentMethod = "saved-card";
-      const next = [...lessons, booking];
-      saveList(KEYS.lessons, next);
-      setLessons(next);
-      setPaying(false);
-      setMsg(`Lesson booked · ${formatPrettyDate(date)} ${formatHour(hour)}. $${amount} charged.`);
-      return;
-    }
-
     const next = [...lessons, booking];
     saveList(KEYS.lessons, next);
     setLessons(next);
     setPaying(false);
-
-    if (result.kind === "redirect") {
-      window.location.href = result.url;
-      return;
-    }
-
-    setMsg(
-      result.method === "venmo"
-        ? "Lesson held. Finish in Venmo — we’ll confirm once it arrives."
-        : "Lesson held. Finish in PayPal — we’ll confirm once it arrives."
-    );
+    setMsg(`Lesson booked · ${formatPrettyDate(date)} ${formatHour(hour)}. $${amount} charged.`);
   }
 
   if (!pro) {

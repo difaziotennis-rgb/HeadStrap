@@ -66,10 +66,12 @@ function Summer27EventDetailInner() {
 
   async function reserve(method: S27PayMethod) {
     if (!event) return;
-    const attendeeName = isMember ? session!.memberName : name.trim();
-    const attendeeEmail = isMember ? session!.memberEmail : email.trim();
-    if (!attendeeName || !attendeeEmail) {
-      setMsg("Name and email required.");
+    if (!isMember || !session) {
+      setMsg("Sign in as a member to reserve.");
+      return;
+    }
+    if (!savedCard) {
+      setMsg("Add a card on file in My Account to reserve.");
       return;
     }
     if (guestCount > seatsLeft) {
@@ -82,12 +84,12 @@ function Summer27EventDetailInner() {
       eventId: event.id,
       eventTitle: event.title,
       eventDate: event.date,
-      attendeeName,
-      attendeeEmail,
+      attendeeName: session.memberName,
+      attendeeEmail: session.memberEmail,
       guestCount,
-      memberNumber: session?.memberNumber,
+      memberNumber: session.memberNumber,
       amount: total,
-      paymentStatus: "pending",
+      paymentStatus: "paid",
       paymentMethod: storageMethodFor(method),
       createdAt: new Date().toISOString(),
     };
@@ -96,7 +98,7 @@ function Summer27EventDetailInner() {
     const result = await startMemberPayment({
       method,
       amount: total,
-      email: attendeeEmail,
+      email: session.memberEmail,
       description: `${event.title} · ${guestCount} player(s)`,
       successPath: `/Summer27/events/${event.id}`,
       bookingId: id,
@@ -109,32 +111,11 @@ function Summer27EventDetailInner() {
       return;
     }
 
-    if (result.kind === "saved-card") {
-      booking.paymentStatus = "paid";
-      booking.paymentMethod = "saved-card";
-      const next = [...bookings, booking];
-      saveList(KEYS.events, next);
-      setBookings(next);
-      setPaying(false);
-      setMsg(`Reserved. $${total} charged.`);
-      return;
-    }
-
     const next = [...bookings, booking];
     saveList(KEYS.events, next);
     setBookings(next);
     setPaying(false);
-
-    if (result.kind === "redirect") {
-      window.location.href = result.url;
-      return;
-    }
-
-    setMsg(
-      result.method === "venmo"
-        ? "Reservation held. Finish in Venmo — we’ll confirm once it arrives."
-        : "Reservation held. Finish in PayPal — we’ll confirm once it arrives."
-    );
+    setMsg(`Reserved. $${total} charged.`);
   }
 
   if (!event) {

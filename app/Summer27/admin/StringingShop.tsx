@@ -7,7 +7,6 @@ import { PaidPill } from "./ui";
 type Props = {
   stringing: S27StringingOrder[];
   notifyingId?: string | null;
-  onTogglePaid: (id: string) => void;
   onMarkReady: (id: string) => void;
   onMarkPickedUp: (id: string) => void;
 };
@@ -15,7 +14,6 @@ type Props = {
 export default function StringingShop({
   stringing,
   notifyingId,
-  onTogglePaid,
   onMarkReady,
   onMarkPickedUp,
 }: Props) {
@@ -80,7 +78,7 @@ export default function StringingShop({
                     ) : null}
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <PaidPill status={row.paymentStatus} onToggle={() => onTogglePaid(row.id)} />
+                    <PaidPill status={row.paymentStatus} />
                     <button
                       type="button"
                       disabled={busy || !row.clientEmail}
@@ -118,7 +116,7 @@ export default function StringingShop({
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <PaidPill status={row.paymentStatus} onToggle={() => onTogglePaid(row.id)} />
+                  <PaidPill status={row.paymentStatus} />
                   <button
                     type="button"
                     onClick={() => onMarkPickedUp(row.id)}
@@ -147,7 +145,7 @@ export default function StringingShop({
                     {row.racket} · {row.stringName}
                   </p>
                 </div>
-                <PaidPill status={row.paymentStatus} onToggle={() => onTogglePaid(row.id)} />
+                <PaidPill status={row.paymentStatus} />
               </li>
             ))}
           </ul>

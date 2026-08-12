@@ -191,16 +191,14 @@ export default function AdminStats({
       { key: "charges", label: "Shop / misc", rows: chargeRows },
     ].map((b) => {
       const paid = b.rows.filter((r) => r.paymentStatus === "paid").reduce((s, r) => s + r.amount, 0);
-      const owed = b.rows.filter((r) => r.paymentStatus === "pending").reduce((s, r) => s + r.amount, 0);
-      return { ...b, count: b.rows.length, paid, owed };
+      return { ...b, count: b.rows.length, paid };
     });
 
     const paid = buckets.reduce((s, b) => s + b.paid, 0);
-    const owed = buckets.reduce((s, b) => s + b.owed, 0);
     const courtHours = courtRows.reduce((s, b) => s + (Number(b.durationHours) || 1), 0);
     const lessonHours = lessonRows.reduce((s, b) => s + lessonSpan(b.duration), 0);
 
-    return { buckets, paid, owed, courtHours, lessonHours, lessonCount: lessonRows.length };
+    return { buckets, paid, courtHours, lessonHours, lessonCount: lessonRows.length };
   }, [courts, clinics, lessons, events, stringing, charges, start, end]);
 
   const clinicRanks = useMemo(() => {
@@ -268,9 +266,8 @@ export default function AdminStats({
         />
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="sm:max-w-sm">
         <BigStat label="Brought in" value={money(summary.paid)} tone="good" />
-        <BigStat label="Still owed" value={money(summary.owed)} tone="warn" />
       </div>
 
       <section className="overflow-hidden rounded-2xl border border-[#e8e5df] bg-white">
@@ -291,7 +288,6 @@ export default function AdminStats({
               </div>
               <div className="text-right tabular-nums">
                 <p className="text-[15px] font-medium">{money(b.paid)}</p>
-                {b.owed > 0 ? <p className="text-[12px] text-[#b45309]">{money(b.owed)} owed</p> : null}
               </div>
             </li>
           ))}

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { formatDateInput, formatPrettyDate } from "../summer27-data";
+import { getPaymentProfile } from "../payments";
 import { type S27Charge, type S27MemberAccount } from "../storage";
 import { PaidPill, inputClass } from "./ui";
 
@@ -43,7 +44,6 @@ export default function ChargeDesk({ members, charges, onCharges }: Props) {
   const [guestEmail, setGuestEmail] = useState("");
   const [amount, setAmount] = useState("5");
   const [description, setDescription] = useState("Can of balls");
-  const [status, setStatus] = useState<"paid" | "pending">("paid");
   const [msg, setMsg] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(0);
@@ -153,6 +153,16 @@ export default function ChargeDesk({ members, charges, onCharges }: Props) {
       return;
     }
 
+    let paymentMethod: S27Charge["paymentMethod"] = "manual";
+    if (selected) {
+      const card = getPaymentProfile(selected.memberNumber);
+      if (!card?.last4) {
+        setMsg(`${selected.name} needs a card on file before you can charge.`);
+        return;
+      }
+      paymentMethod = "saved-card";
+    }
+
     const row: S27Charge = {
       id: `charge-${Date.now()}`,
       date: formatDateInput(new Date()),
@@ -161,12 +171,16 @@ export default function ChargeDesk({ members, charges, onCharges }: Props) {
       clientEmail: email,
       memberNumber: selected?.memberNumber,
       amount: dollars,
-      paymentStatus: status,
-      paymentMethod: "manual",
+      paymentStatus: "paid",
+      paymentMethod,
       createdAt: new Date().toISOString(),
     };
     onCharges([row, ...charges]);
-    setMsg(`Charged ${name} $${dollars.toFixed(dollars % 1 ? 2 : 0)} · ${note}`);
+    setMsg(
+      selected
+        ? `Charged ${name} $${dollars.toFixed(dollars % 1 ? 2 : 0)} to card on file · ${note}`
+        : `Recorded $${dollars.toFixed(dollars % 1 ? 2 : 0)} for ${name} · ${note}`
+    );
     setGuestName("");
     setGuestEmail("");
     setMemberNumber("");
@@ -212,7 +226,7 @@ export default function ChargeDesk({ members, charges, onCharges }: Props) {
         <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Quick charge</p>
         <h3 className="mt-0.5 text-xl font-semibold tracking-tight">Pro shop & misc</h3>
         <p className="mt-1 max-w-xl text-[13px] text-[#6b665e]">
-          Type a name or member # — suggestions autofill from your roster. The note shows on their bill.
+          Type a name or member # — members are charged on the card on file right away. Guests are recorded as paid at the desk.
         </p>
       </div>
 
@@ -347,14 +361,6 @@ export default function ChargeDesk({ members, charges, onCharges }: Props) {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <select
-            className={inputClass}
-            value={status}
-            onChange={(e) => setStatus(e.target.value as "paid" | "pending")}
-          >
-            <option value="paid">Mark paid now</option>
-            <option value="pending">Leave unpaid</option>
-          </select>
           <button type="submit" className="rounded-xl bg-[#1a1a1a] px-5 py-2.5 text-[14px] font-medium text-white">
             Charge ${Number(amount) > 0 ? (Number(amount) % 1 ? Number(amount).toFixed(2) : amount) : "—"}
           </button>
@@ -386,18 +392,7 @@ export default function ChargeDesk({ members, charges, onCharges }: Props) {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-[14px] tabular-nums">${row.amount}</span>
-                  <PaidPill
-                    status={row.paymentStatus}
-                    onToggle={() =>
-                      onCharges(
-                        charges.map((x) =>
-                          x.id === row.id
-                            ? { ...x, paymentStatus: x.paymentStatus === "paid" ? "pending" : "paid" }
-                            : x
-                        )
-                      )
-                    }
-                  />
+                  <PaidPill status={row.paymentStatus} />
                   <button
                     type="button"
                     onClick={() => onCharges(charges.filter((x) => x.id !== row.id))}

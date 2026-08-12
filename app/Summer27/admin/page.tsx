@@ -203,7 +203,7 @@ export default function Summer27DirectorPage() {
           <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Director desk</p>
           <h2 className="text-2xl font-semibold tracking-tight">Run the club</h2>
           <p className="mt-1 text-[13px] text-[#6b665e]">
-            Week view, charge desk, stringing — Stats for activity, Finances for paid vs owed.
+            Week view, charge desk, stringing — Stats for activity, Finances for what’s been charged.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -284,9 +284,6 @@ export default function Summer27DirectorPage() {
         <StringingShop
           stringing={stringing}
           notifyingId={notifyingStringId}
-          onTogglePaid={(id) =>
-            saveStringing(stringing.map((x) => (x.id === id ? { ...x, paymentStatus: x.paymentStatus === "paid" ? "pending" : "paid" } : x)))
-          }
           onMarkReady={markStringingReady}
           onMarkPickedUp={markStringingPickedUp}
         />

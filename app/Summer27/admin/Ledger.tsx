@@ -15,8 +15,6 @@ import { PaidPill, inputClass } from "./ui";
 
 type Kind = "all" | "court" | "clinic" | "lesson" | "event" | "stringing" | "charge";
 type Mode = "today" | "week" | "month" | "all";
-type PayFilter = "all" | "owed" | "paid";
-
 type Row = {
   id: string;
   kind: Exclude<Kind, "all">;
@@ -25,7 +23,6 @@ type Row = {
   label: string;
   amount: number;
   status: "paid" | "pending";
-  onToggle: () => void;
 };
 
 type Props = {
@@ -115,12 +112,6 @@ export default function Ledger({
   events,
   stringing,
   charges,
-  onCourts,
-  onClinics,
-  onLessons,
-  onEvents,
-  onStringing,
-  onCharges,
 }: Props) {
   const todayDate = useMemo(() => parseDateInput(today), [today]);
   const thisWeek = useMemo(() => startOfWeekMonday(todayDate), [todayDate]);
@@ -129,7 +120,6 @@ export default function Ledger({
   const [mode, setMode] = useState<Mode>("week");
   const [cursor, setCursor] = useState(thisWeek);
   const [kind, setKind] = useState<Kind>("all");
-  const [pay, setPay] = useState<PayFilter>("all");
   const [query, setQuery] = useState("");
 
   const window = useMemo(() => windowFor(mode, today, cursor), [mode, today, cursor]);
@@ -161,8 +151,6 @@ export default function Ledger({
         label: b.courtName,
         amount: b.amount,
         status: b.paymentStatus,
-        onToggle: () =>
-          onCourts(courts.map((x) => (x.id === b.id ? { ...x, paymentStatus: x.paymentStatus === "paid" ? "pending" : "paid" } : x))),
       })),
       ...clinics.map((b) => ({
         id: b.id,
@@ -172,8 +160,6 @@ export default function Ledger({
         label: b.clinicName,
         amount: b.amount,
         status: b.paymentStatus,
-        onToggle: () =>
-          onClinics(clinics.map((x) => (x.id === b.id ? { ...x, paymentStatus: x.paymentStatus === "paid" ? "pending" : "paid" } : x))),
       })),
       ...lessons
         .filter((b) => b.requestStatus !== "declined" && b.requestStatus !== "requested")
@@ -185,8 +171,6 @@ export default function Ledger({
           label: `${lessonProLabel(b)} · ${b.duration} min`,
           amount: b.amount,
           status: b.paymentStatus,
-          onToggle: () =>
-            onLessons(lessons.map((x) => (x.id === b.id ? { ...x, paymentStatus: x.paymentStatus === "paid" ? "pending" : "paid" } : x))),
         })),
       ...events.map((b) => ({
         id: b.id,
@@ -196,8 +180,6 @@ export default function Ledger({
         label: `${b.eventTitle} ×${b.guestCount}`,
         amount: b.amount,
         status: b.paymentStatus,
-        onToggle: () =>
-          onEvents(events.map((x) => (x.id === b.id ? { ...x, paymentStatus: x.paymentStatus === "paid" ? "pending" : "paid" } : x))),
       })),
       ...stringing.map((b) => ({
         id: b.id,
@@ -207,8 +189,6 @@ export default function Ledger({
         label: b.racket,
         amount: b.amount,
         status: b.paymentStatus,
-        onToggle: () =>
-          onStringing(stringing.map((x) => (x.id === b.id ? { ...x, paymentStatus: x.paymentStatus === "paid" ? "pending" : "paid" } : x))),
       })),
       ...charges.map((b) => ({
         id: b.id,
@@ -218,8 +198,6 @@ export default function Ledger({
         label: b.description,
         amount: b.amount,
         status: b.paymentStatus,
-        onToggle: () =>
-          onCharges(charges.map((x) => (x.id === b.id ? { ...x, paymentStatus: x.paymentStatus === "paid" ? "pending" : "paid" } : x))),
       })),
     ];
     const q = query.trim().toLowerCase();
@@ -229,11 +207,6 @@ export default function Ledger({
         return row.date >= window.start && row.date <= window.end;
       })
       .filter((row) => kind === "all" || row.kind === kind)
-      .filter((row) => {
-        if (pay === "owed") return row.status === "pending";
-        if (pay === "paid") return row.status === "paid";
-        return true;
-      })
       .filter((row) => !q || `${row.name} ${row.label}`.toLowerCase().includes(q))
       .sort((a, b) => `${b.date}${b.name}`.localeCompare(`${a.date}${a.name}`));
   }, [
@@ -245,18 +218,10 @@ export default function Ledger({
     charges,
     window,
     kind,
-    pay,
     query,
-    onCourts,
-    onClinics,
-    onLessons,
-    onEvents,
-    onStringing,
-    onCharges,
   ]);
 
-  const paid = rows.filter((r) => r.status === "paid").reduce((s, r) => s + r.amount, 0);
-  const owed = rows.filter((r) => r.status === "pending").reduce((s, r) => s + r.amount, 0);
+  const paid = rows.reduce((s, r) => s + r.amount, 0);
 
   const byDate = useMemo(() => {
     const map = new Map<string, Row[]>();
@@ -269,7 +234,6 @@ export default function Ledger({
       date,
       items,
       total: items.reduce((s, r) => s + r.amount, 0),
-      owed: items.filter((r) => r.status === "pending").reduce((s, r) => s + r.amount, 0),
     }));
   }, [rows]);
 
@@ -277,27 +241,12 @@ export default function Ledger({
     <div className="mt-4 space-y-5">
       <div>
         <h3 className="text-xl font-semibold tracking-tight">Finances</h3>
-        <p className="mt-1 text-[13px] text-[#6b665e]">Flip through past weeks or months — tap to mark paid.</p>
+        <p className="mt-1 text-[13px] text-[#6b665e]">Everything is charged up front — flip through past weeks or months.</p>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="rounded-2xl border border-[#bbf7d0] bg-[#f0fdf4] px-4 py-4">
-          <p className="text-[12px] font-medium text-[#6b665e]">Paid</p>
-          <p className="mt-1 text-3xl font-semibold tracking-tight tabular-nums">{money(paid)}</p>
-        </div>
-        <div className="rounded-2xl border border-[#fde68a] bg-[#fffbeb] px-4 py-4">
-          <p className="text-[12px] font-medium text-[#6b665e]">Still owed</p>
-          <p className="mt-1 text-3xl font-semibold tracking-tight tabular-nums">{money(owed)}</p>
-          {owed > 0 ? (
-            <button
-              type="button"
-              onClick={() => setPay("owed")}
-              className="mt-2 text-[12px] font-medium text-[#b45309] underline-offset-2 hover:underline"
-            >
-              Show unpaid only
-            </button>
-          ) : null}
-        </div>
+      <div className="rounded-2xl border border-[#bbf7d0] bg-[#f0fdf4] px-4 py-4 sm:max-w-sm">
+        <p className="text-[12px] font-medium text-[#6b665e]">Brought in</p>
+        <p className="mt-1 text-3xl font-semibold tracking-tight tabular-nums">{money(paid)}</p>
       </div>
 
       <div className="space-y-3">
@@ -351,17 +300,6 @@ export default function Ledger({
           <p className="text-center text-[13px] text-[#6b665e]">{window.label}</p>
         )}
 
-        <div className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <Segmented
-            value={pay}
-            onChange={(v) => setPay(v as PayFilter)}
-            options={[
-              { value: "all", label: "All" },
-              { value: "owed", label: "Unpaid" },
-              { value: "paid", label: "Paid" },
-            ]}
-          />
-        </div>
         <div className="grid gap-2 sm:grid-cols-2">
           <select className={inputClass} value={kind} onChange={(e) => setKind(e.target.value as Kind)}>
             <option value="all">All types</option>
@@ -391,10 +329,7 @@ export default function Ledger({
             <section key={group.date} className="overflow-hidden rounded-2xl border border-[#e8e5df] bg-white">
               <div className="flex items-baseline justify-between gap-3 border-b border-[#f0ede8] bg-[#faf9f7] px-4 py-2.5">
                 <p className="text-[14px] font-medium">{formatPrettyDate(group.date)}</p>
-                <p className="text-[13px] tabular-nums text-[#6b665e]">
-                  {money(group.total)}
-                  {group.owed > 0 ? <span className="ml-2 text-[#b45309]">{money(group.owed)} owed</span> : null}
-                </p>
+                <p className="text-[13px] tabular-nums text-[#6b665e]">{money(group.total)}</p>
               </div>
               <ul className="divide-y divide-[#f0ede8]">
                 {group.items.map((row) => (
@@ -410,7 +345,7 @@ export default function Ledger({
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-[15px] font-medium tabular-nums">{money(row.amount)}</span>
-                      <PaidPill status={row.status} onToggle={row.onToggle} />
+                      <PaidPill status={row.status} />
                     </div>
                   </li>
                 ))}

@@ -208,7 +208,6 @@ export default function MemberFile({
     })();
 
     const paid = history.filter((r) => r.status === "paid").reduce((s, r) => s + r.amount, 0);
-    const pending = history.filter((r) => r.status === "pending").reduce((s, r) => s + r.amount, 0);
     const card = getPaymentProfile(member.memberNumber);
     const stringPref = stringPrefForMember(member.memberNumber, stringItems);
     const note = notes.find((n) => n.memberNumber === member.memberNumber)?.note || "";
@@ -220,7 +219,7 @@ export default function MemberFile({
       stringing: stringItems.length,
       charges: chargeItems.length,
     };
-    return { history, upcoming, pastByMonth, pastCount: past.length, paid, pending, card, stringPref, note, counts };
+    return { history, upcoming, pastByMonth, pastCount: past.length, paid, card, stringPref, note, counts };
   }, [member, courts, clinics, lessons, events, stringing, charges, notes]);
 
   const activeMonth =
@@ -393,7 +392,6 @@ export default function MemberFile({
               )}
               <div className="mt-3 flex flex-wrap gap-2 text-[13px]">
                 <span className="rounded-full bg-[#eef4ea] px-2.5 py-1 text-[#3d5c34]">Paid ${file.paid}</span>
-                <span className="rounded-full bg-[#f7efe3] px-2.5 py-1 text-[#8a6230]">Pending ${file.pending}</span>
                 {file.card && (
                   <span className="rounded-full border border-[#e8e5df] px-2.5 py-1 text-[#6b665e]">
                     {file.card.brand} •••• {file.card.last4}
