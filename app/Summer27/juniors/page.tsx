@@ -17,6 +17,7 @@ import {
 import { getLiveClinics } from "../schedule";
 import { KEYS, loadList, saveList, type S27ClinicBooking } from "../storage";
 import { DateChips, dateChipFromIso } from "../DateChips";
+import { canChangeBooking, CANCEL_WINDOW_HOURS } from "../booking-policy";
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 
@@ -203,6 +204,11 @@ function Summer27JuniorsInner() {
 
   const roster = clinic && date ? rosterByClinicDate[`${clinic.id}|${date}`] || [] : [];
   const seatsLeft = clinic ? Math.max(0, clinic.capacity - roster.length) : 0;
+  const myBookings =
+    session
+      ? roster.filter((b) => b.memberNumber === session.memberNumber || b.clientEmail === session.memberEmail)
+      : [];
+  const cancellable = !!(clinic && canChangeBooking(date, clinic.startHour));
 
   const dateChips = useMemo(
     () =>
@@ -225,6 +231,18 @@ function Summer27JuniorsInner() {
   function closeSheet() {
     setSheetOpen(false);
     setMsg(null);
+  }
+
+  function cancelSignup(booking: S27ClinicBooking) {
+    if (!clinic) return;
+    if (!canChangeBooking(date, clinic.startHour)) {
+      setMsg(`Cancellations need at least ${CANCEL_WINDOW_HOURS} hours’ notice.`);
+      return;
+    }
+    const next = loadList<S27ClinicBooking>(KEYS.clinics).filter((b) => b.id !== booking.id);
+    saveList(KEYS.clinics, next);
+    setBookings(next);
+    setMsg(`Cancelled ${booking.clientName}.`);
   }
 
   async function signUp(method: S27PayMethod) {
@@ -383,23 +401,45 @@ function Summer27JuniorsInner() {
                   ) : (
                     <ul className="space-y-1 sm:space-y-1.5">
                       {dayOcc.map((o) => {
-                        const taken = (rosterByClinicDate[`${o.clinic.id}|${o.date}`] || []).length;
+                        const dayRoster = rosterByClinicDate[`${o.clinic.id}|${o.date}`] || [];
+                        const taken = dayRoster.length;
                         const open = Math.max(0, o.clinic.capacity - taken);
+                        const mine =
+                          !!session &&
+                          dayRoster.some(
+                            (b) => b.memberNumber === session.memberNumber || b.clientEmail === session.memberEmail
+                          );
                         return (
                           <li key={`${o.clinic.id}-${o.date}`}>
                             <button
                               type="button"
                               onClick={() => openClinic(o.clinic, o.date)}
-                              className="w-full rounded-md border border-[#e8e5df] bg-[#f7f7f5] px-1 py-1.5 text-left transition hover:border-[#1a1a1a] hover:bg-white sm:rounded-lg sm:px-2 sm:py-2"
+                              className={`w-full rounded-md border px-1 py-1.5 text-left transition sm:rounded-lg sm:px-2 sm:py-2 ${
+                                mine
+                                  ? "border-[#1a1a1a] bg-[#1a1a1a] text-white hover:bg-[#2a2a2a]"
+                                  : "border-[#e8e5df] bg-[#f7f7f5] hover:border-[#1a1a1a] hover:bg-white"
+                              }`}
                             >
-                              <span className="block text-[9px] font-medium tabular-nums text-[#6b665e] sm:text-[11px]">
+                              <span
+                                className={`block text-[9px] font-medium tabular-nums sm:text-[11px] ${
+                                  mine ? "text-white/70" : "text-[#6b665e]"
+                                }`}
+                              >
                                 {formatHour(o.clinic.startHour)}
                               </span>
-                              <span className="mt-0.5 block text-[10px] font-medium leading-snug text-[#1a1a1a] sm:text-[12px]">
+                              <span
+                                className={`mt-0.5 block text-[10px] font-medium leading-snug sm:text-[12px] ${
+                                  mine ? "text-white" : "text-[#1a1a1a]"
+                                }`}
+                              >
                                 {shortClinicName(o.clinic.name)}
                               </span>
-                              <span className="mt-0.5 block text-[9px] text-[#8a8477] sm:mt-1 sm:text-[10px]">
-                                {open > 0 ? `${open} open` : "Full"}
+                              <span
+                                className={`mt-0.5 block text-[9px] sm:mt-1 sm:text-[10px] ${
+                                  mine ? "text-white/65" : "text-[#8a8477]"
+                                }`}
+                              >
+                                {mine ? "Yours" : open > 0 ? `${open} open` : "Full"}
                               </span>
                             </button>
                           </li>
@@ -497,6 +537,34 @@ function Summer27JuniorsInner() {
                   />
                 )}
                 {msg && <p className="text-[13px] text-[#4a4a4a]">{msg}</p>}
+                {myBookings.length > 0 && (
+                  <div className="space-y-2 rounded-xl bg-[#faf9f7] px-3 py-3">
+                    <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Your enrollments</p>
+                    <ul className="space-y-2">
+                      {myBookings.map((b) => (
+                        <li key={b.id} className="flex items-center justify-between gap-2">
+                          <span className="text-[13px] text-[#4a4a4a]">{b.clientName}</span>
+                          {cancellable ? (
+                            <button
+                              type="button"
+                              onClick={() => cancelSignup(b)}
+                              className="shrink-0 text-[12px] font-medium text-[#991b1b] hover:underline"
+                            >
+                              Cancel
+                            </button>
+                          ) : (
+                            <span className="text-[11px] text-[#8a8477]">Locked</span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                    {!cancellable && (
+                      <p className="text-[12px] text-[#8a8477]">
+                        Changes need {CANCEL_WINDOW_HOURS} hours’ notice.
+                      </p>
+                    )}
+                  </div>
+                )}
                 {seatsLeft <= 0 ? (
                   <p className="rounded-xl bg-[#faf9f7] px-3 py-3 text-center text-[13px] text-[#8a8477]">Full</p>
                 ) : (

@@ -17,6 +17,7 @@ import {
 import { getLiveClinics } from "../schedule";
 import { KEYS, loadList, saveList, type S27ClinicBooking } from "../storage";
 import { DateChips, dateChipFromIso } from "../DateChips";
+import { canChangeBooking, CANCEL_WINDOW_HOURS } from "../booking-policy";
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 
@@ -203,8 +204,11 @@ function Summer27ClinicsInner() {
 
   const roster = clinic && date ? rosterByClinicDate[`${clinic.id}|${date}`] || [] : [];
   const seatsLeft = clinic ? Math.max(0, clinic.capacity - roster.length) : 0;
-  const alreadyIn =
-    !!session && roster.some((b) => b.memberNumber === session.memberNumber || b.clientEmail === session.memberEmail);
+  const myBooking =
+    session &&
+    roster.find((b) => b.memberNumber === session.memberNumber || b.clientEmail === session.memberEmail);
+  const alreadyIn = !!myBooking;
+  const cancellable = !!(myBooking && clinic && canChangeBooking(date, clinic.startHour));
 
   const dateChips = useMemo(
     () =>
@@ -227,6 +231,18 @@ function Summer27ClinicsInner() {
   function closeSheet() {
     setSheetOpen(false);
     setMsg(null);
+  }
+
+  function cancelSignup() {
+    if (!myBooking || !clinic) return;
+    if (!canChangeBooking(date, clinic.startHour)) {
+      setMsg(`Cancellations need at least ${CANCEL_WINDOW_HOURS} hours’ notice.`);
+      return;
+    }
+    const next = loadList<S27ClinicBooking>(KEYS.clinics).filter((b) => b.id !== myBooking.id);
+    saveList(KEYS.clinics, next);
+    setBookings(next);
+    setMsg("Signup cancelled.");
   }
 
   async function signUp(method: S27PayMethod) {
@@ -390,23 +406,45 @@ function Summer27ClinicsInner() {
                   ) : (
                     <ul className="space-y-1 sm:space-y-1.5">
                       {dayOcc.map((o) => {
-                        const taken = (rosterByClinicDate[`${o.clinic.id}|${o.date}`] || []).length;
+                        const dayRoster = rosterByClinicDate[`${o.clinic.id}|${o.date}`] || [];
+                        const taken = dayRoster.length;
                         const open = Math.max(0, o.clinic.capacity - taken);
+                        const mine =
+                          !!session &&
+                          dayRoster.some(
+                            (b) => b.memberNumber === session.memberNumber || b.clientEmail === session.memberEmail
+                          );
                         return (
                           <li key={`${o.clinic.id}-${o.date}`}>
                             <button
                               type="button"
                               onClick={() => openClinic(o.clinic, o.date)}
-                              className="w-full rounded-md border border-[#e8e5df] bg-[#f7f7f5] px-1 py-1.5 text-left transition hover:border-[#1a1a1a] hover:bg-white sm:rounded-lg sm:px-2 sm:py-2"
+                              className={`w-full rounded-md border px-1 py-1.5 text-left transition sm:rounded-lg sm:px-2 sm:py-2 ${
+                                mine
+                                  ? "border-[#1a1a1a] bg-[#1a1a1a] text-white hover:bg-[#2a2a2a]"
+                                  : "border-[#e8e5df] bg-[#f7f7f5] hover:border-[#1a1a1a] hover:bg-white"
+                              }`}
                             >
-                              <span className="block text-[9px] font-medium tabular-nums text-[#6b665e] sm:text-[11px]">
+                              <span
+                                className={`block text-[9px] font-medium tabular-nums sm:text-[11px] ${
+                                  mine ? "text-white/70" : "text-[#6b665e]"
+                                }`}
+                              >
                                 {formatHour(o.clinic.startHour)}
                               </span>
-                              <span className="mt-0.5 block text-[10px] font-medium leading-snug text-[#1a1a1a] sm:text-[12px]">
+                              <span
+                                className={`mt-0.5 block text-[10px] font-medium leading-snug sm:text-[12px] ${
+                                  mine ? "text-white" : "text-[#1a1a1a]"
+                                }`}
+                              >
                                 {shortClinicName(o.clinic.name)}
                               </span>
-                              <span className="mt-0.5 block text-[9px] text-[#8a8477] sm:mt-1 sm:text-[10px]">
-                                {open > 0 ? `${open} open` : "Full"}
+                              <span
+                                className={`mt-0.5 block text-[9px] sm:mt-1 sm:text-[10px] ${
+                                  mine ? "text-white/65" : "text-[#8a8477]"
+                                }`}
+                              >
+                                {mine ? "Yours" : open > 0 ? `${open} open` : "Full"}
                               </span>
                             </button>
                           </li>
@@ -506,12 +544,25 @@ function Summer27ClinicsInner() {
                   </>
                 )}
                 {msg && <p className="text-[13px] text-[#4a4a4a]">{msg}</p>}
-                {seatsLeft <= 0 ? (
+                {alreadyIn ? (
+                  <div className="space-y-2 rounded-xl bg-[#faf9f7] px-3 py-3 text-center">
+                    <p className="text-[13px] text-[#4a4a4a]">You’re signed up</p>
+                    {cancellable ? (
+                      <button
+                        type="button"
+                        onClick={cancelSignup}
+                        className="text-[13px] font-medium text-[#991b1b] hover:underline"
+                      >
+                        Cancel signup
+                      </button>
+                    ) : (
+                      <p className="text-[12px] text-[#8a8477]">
+                        Locked within {CANCEL_WINDOW_HOURS} hours of start
+                      </p>
+                    )}
+                  </div>
+                ) : seatsLeft <= 0 ? (
                   <p className="rounded-xl bg-[#faf9f7] px-3 py-3 text-center text-[13px] text-[#8a8477]">Full</p>
-                ) : alreadyIn ? (
-                  <p className="rounded-xl bg-[#faf9f7] px-3 py-3 text-center text-[13px] text-[#8a8477]">
-                    You’re signed up
-                  </p>
                 ) : (
                   <PayChooser
                     amount={price}
