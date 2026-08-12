@@ -82,7 +82,7 @@ export const s27Clinics: ClinicDef[] = [
     memberPrice: 80,
     guestPrice: 100,
     description:
-      "Match-tempo point construction, serve + 1 patterns, and competitive games. Intended for 4.0+ players, or by invitation from Derek.",
+      "Match-tempo point construction, serve + 1 patterns, and competitive games. Intended for 4.0+ players.",
     blockCourts: ["court-1", "court-2"],
   },
   {
