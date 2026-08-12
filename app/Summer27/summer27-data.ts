@@ -106,15 +106,15 @@ export const s27Pros: ProDef[] = [
   {
     id: "jonah-berkowitz",
     name: "Jonah Berkowitz",
-    title: "Teaching Professional",
+    title: "Junior Development Coach",
     focus: "Juniors & technique",
     bio: "Hudson Valley native. Clean mechanics, measurable progress, and junior development.",
     longBio:
       "Hudson Valley native with years of experience coaching players of all ages. Jonah went undefeated in match play at FDR High School and competed at Brown University. His coaching is technique-first — clear cues, repeatable strokes, and steady progress for juniors and adults who want cleaner mechanics.",
     quote: "Clean mechanics. Repeatable strokes.",
     courtId: "court-2",
-    memberRate: 160,
-    guestRate: 175,
+    memberRate: 140,
+    guestRate: 155,
     days: [2, 4, 6],
     windows: [
       { start: 9, end: 12 },
