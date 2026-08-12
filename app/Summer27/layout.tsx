@@ -35,16 +35,19 @@ export default function Summer27Layout({ children }: { children: React.ReactNode
         {!isAdmin && (
           <div className="mx-auto w-full max-w-6xl px-3 pb-3 sm:px-6">
             <nav className="-mx-0.5 flex gap-1 overflow-x-auto px-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {nav.map((item) => {
+              {nav.map((item, index) => {
                 const active =
                   item.href === "/Summer27"
                     ? pathname === "/Summer27"
                     : pathname === item.href || pathname?.startsWith(`${item.href}/`);
+                const pushEnd = item.end && !nav.slice(0, index).some((n) => n.end);
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
                     className={`shrink-0 rounded-full px-3.5 py-2 text-[12px] font-medium transition-colors ${
+                      pushEnd ? "ml-auto" : ""
+                    } ${
                       active
                         ? "bg-[#1a1a1a] text-white"
                         : "bg-white text-[#6f695f] ring-1 ring-[#e8e5df] hover:text-[#1a1a1a]"
