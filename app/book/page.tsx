@@ -116,6 +116,12 @@ function BookPageContent() {
                   >
                     Bio
                   </Link>
+                  <Link
+                    href="/Summer27"
+                    className="text-[#8a8477] hover:text-[#1a1a1a] text-[12px] font-medium transition-colors"
+                  >
+                    Summer ’27
+                  </Link>
                 </>
               )}
               {isAdminMode && (

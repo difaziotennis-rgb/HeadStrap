@@ -37,6 +37,14 @@ const nextConfig = {
           source: '/rtc/:path*',
           destination: '/RTC/:path*',
         },
+        {
+          source: '/summer27',
+          destination: '/Summer27',
+        },
+        {
+          source: '/summer27/:path*',
+          destination: '/Summer27/:path*',
+        },
       ],
     }
   },
