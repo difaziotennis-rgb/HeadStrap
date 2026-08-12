@@ -365,9 +365,9 @@ export const STRING_OPTIONS = [
   { id: "synthetic", name: "Synthetic gut", extra: 18 },
   { id: "multifilament", name: "Multifilament", extra: 28 },
   { id: "poly", name: "Polyester", extra: 32 },
-  { id: "hybrid", name: "Hybrid (poly + multi)", extra: 38 },
+  { id: "hybrid", name: "Hybrid (poly + multi)", extra: 34 },
   { id: "hybrid-gut", name: "Hybrid (poly + natural)", extra: 50 },
-  { id: "gut", name: "Natural gut", extra: 60 },
+  { id: "gut", name: "Natural gut", extra: 65 },
   { id: "own", name: "Own string", extra: 0 },
 ];
 
