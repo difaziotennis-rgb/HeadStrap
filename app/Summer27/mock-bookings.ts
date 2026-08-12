@@ -27,7 +27,7 @@ import {
   type S27StringingOrder,
 } from "./storage";
 
-const MOCK_FLAG = "s27_mock_bookings_v4";
+const MOCK_FLAG = "s27_mock_bookings_v5";
 
 type Person = {
   name: string;
@@ -84,6 +84,16 @@ function nextDatesForDays(days: number[], count: number) {
   const dates: string[] = [];
   for (let i = 0; i < 60 && dates.length < count; i++) {
     const d = dayOffset(i);
+    if (days.includes(d.getDay())) dates.push(formatDateInput(d));
+  }
+  return dates;
+}
+
+/** Past occurrences so admin week nav can refer back to prior signups. */
+function pastDatesForDays(days: number[], count: number) {
+  const dates: string[] = [];
+  for (let i = 1; i < 60 && dates.length < count; i++) {
+    const d = dayOffset(-i);
     if (days.includes(d.getDay())) dates.push(formatDateInput(d));
   }
   return dates;
@@ -178,7 +188,7 @@ function seedCourts(): S27CourtBooking[] {
     });
   }
 
-  for (let offset = -1; offset <= 8; offset++) {
+  for (let offset = -21; offset <= 14; offset++) {
     const d = dayOffset(offset);
     const date = formatDateInput(d);
     const dow = d.getDay();
@@ -231,7 +241,7 @@ function seedLessons(): S27LessonBooking[] {
   const derek = s27Pros.find((p) => p.id === "derek") || s27Pros[0];
   const maya = s27Pros.find((p) => p.id === "maya-ellison");
   const jonah = s27Pros.find((p) => p.id === "jonah-berkowitz");
-  for (let offset = -1; offset <= 8; offset++) {
+  for (let offset = -21; offset <= 14; offset++) {
     const d = dayOffset(offset);
     const day = d.getDay();
     const date = formatDateInput(d);
@@ -338,7 +348,10 @@ function seedClinics(): S27ClinicBooking[] {
   const out: S27ClinicBooking[] = [];
   let n = 0;
   for (const clinic of s27Clinics) {
-    const dates = nextDatesForDays(clinic.days, 3);
+    const dates = [
+      ...pastDatesForDays(clinic.days, 4).reverse(),
+      ...nextDatesForDays(clinic.days, 3),
+    ];
     dates.forEach((date, di) => {
       const rosterSize = clinic.kind === "junior" ? 5 + (di % 2) : 6 + ((di + clinic.startHour) % 3);
       for (let i = 0; i < rosterSize; i++) {

@@ -225,12 +225,12 @@ export default function TodayBoard({
 
     const clinicKeys = new Set<string>();
     for (const b of clinics) {
-      if (!map[b.date] || b.paymentStatus !== "paid") continue;
+      if (!map[b.date]) continue;
       const key = `${b.clinicId}|${b.date}`;
       if (clinicKeys.has(key)) continue;
       clinicKeys.add(key);
       const def = catalog.clinics.find((c) => c.id === b.clinicId);
-      const count = clinics.filter((x) => x.clinicId === b.clinicId && x.date === b.date && x.paymentStatus === "paid").length;
+      const count = clinics.filter((x) => x.clinicId === b.clinicId && x.date === b.date).length;
       const courtsForClinic = (def?.blockCourts || ["court-1", "court-2"]).filter(
         (c): c is CourtLane => c === "court-1" || c === "court-2"
       );
@@ -244,7 +244,9 @@ export default function TodayBoard({
       });
     }
 
+    // Upcoming schedule only — past weeks keep real signups, not empty shells.
     for (const iso of days) {
+      if (iso < today) continue;
       const jsDay = parseDateInput(iso).getDay();
       for (const def of catalog.clinics) {
         if (!def.days.includes(jsDay)) continue;
@@ -311,7 +313,7 @@ export default function TodayBoard({
       map[iso].sort((a, b) => a.time - b.time || a.label.localeCompare(b.label));
     }
     return map;
-  }, [days, courts, lessons, clinics, events, blocks, catalog]);
+  }, [days, today, courts, lessons, clinics, events, blocks, catalog]);
 
   const courtItems: GlanceItem[] = courts
     .filter((b) => b.date === selectedDate)
@@ -340,7 +342,7 @@ export default function TodayBoard({
       onToggle: () => onToggleLesson(b.id),
     }));
   const lessonRequests = lessons
-    .filter((b) => b.requestStatus === "requested")
+    .filter((b) => b.requestStatus === "requested" && days.includes(b.date))
     .slice()
     .sort((a, b) =>
       `${a.date}${String(a.hour).padStart(2, "0")}`.localeCompare(`${b.date}${String(b.hour).padStart(2, "0")}`)
