@@ -80,6 +80,7 @@ function shortClinicName(name: string): string {
     .replace(/^Weekend\s+/i, "")
     .replace(/^Weeknight\s+/i, "")
     .replace(/^Wednesday Morning\s+/i, "Wed AM ")
+    .replace(/^Tuesday Morning\s+/i, "Tue AM ")
     .replace(/^Saturday\s+/i, "")
     .replace(/^Wednesday\s+/i, "Wed ")
     .replace(/\s+Juniors$/i, "")
@@ -340,7 +341,7 @@ function Summer27ClinicsInner() {
       <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Clinics</p>
       <h2 className="mt-1 text-2xl font-semibold tracking-tight">Weekly group play</h2>
       <p className="mt-2 max-w-xl text-[14px] leading-relaxed text-[#6b665e]">
-        Adult and junior sessions. Tap one to book. One hour $50 · 90 minutes $80.
+        Adult and junior sessions. Tap one to book. Half hour $30 · one hour $50 · 90 minutes $80.
       </p>
 
       <div className="mt-6 flex items-center justify-between gap-3">

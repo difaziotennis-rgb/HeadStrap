@@ -41,7 +41,7 @@ const CATEGORIES: { id: Category; label: string; hint: string }[] = [
 ];
 
 const START_HOURS = Array.from({ length: 25 }, (_, i) => 8 + i * 0.5);
-const DURATIONS = [1, 1.5, 2];
+const DURATIONS = [0.5, 1, 1.5, 2];
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const PRO_TITLES = ["Director of Tennis", "Teaching Professional", "Junior Development Coach", "Junior Development", "Associate Pro"];
 const EVENT_CATEGORIES = ["Social", "Competitive", "Junior", "Member"];

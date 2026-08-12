@@ -236,17 +236,45 @@ export const s27Clinics: ClinicDef[] = [
     blockCourts: ["court-2"],
   },
   {
-    id: "wed-junior-afterschool",
-    name: "Wednesday After-School Juniors",
+    id: "tue-am-juniors",
+    name: "Tuesday Morning Juniors",
     kind: "junior",
-    level: "Ages 10–14 · developing players",
-    days: [3],
-    startHour: 16,
+    level: "Ages 8–11 · developing players",
+    days: [2],
+    startHour: 9,
     durationHours: 1,
     capacity: 8,
     memberPrice: 50,
     guestPrice: 65,
-    description: "After-school movement, consistency, and point play.",
+    description: "Morning movement, consistency, and point play.",
+    blockCourts: ["court-2"],
+  },
+  {
+    id: "wed-am-tots",
+    name: "Wednesday Morning Tots",
+    kind: "junior",
+    level: "Ages 3–5",
+    days: [3],
+    startHour: 8,
+    durationHours: 0.5,
+    capacity: 6,
+    memberPrice: 30,
+    guestPrice: 40,
+    description: "First racquets, games, and fun on court — before ladies.",
+    blockCourts: ["court-2"],
+  },
+  {
+    id: "wed-am-toddlers",
+    name: "Wednesday Morning Toddlers",
+    kind: "junior",
+    level: "Ages 6–8",
+    days: [3],
+    startHour: 8.5,
+    durationHours: 0.5,
+    capacity: 6,
+    memberPrice: 30,
+    guestPrice: 40,
+    description: "Rally games and basics — before ladies.",
     blockCourts: ["court-2"],
   },
 ];
@@ -435,7 +463,10 @@ export type SlotBlockReason =
   | { type: "hold"; label: string }
   | { type: "booked"; label: string };
 
+/** True if a 1-hour court slot starting at `hour` overlaps [startA, startA + durA). */
 export function hoursOverlap(startA: number, durA: number, hour: number): boolean {
-  return hour >= startA && hour < startA + durA;
+  const slotEnd = hour + 1;
+  const endA = startA + durA;
+  return startA < slotEnd && hour < endA;
 }
 
