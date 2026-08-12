@@ -595,21 +595,24 @@ export default function TodayBoard({
         </div>
       </div>
 
-      <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[#8a8477]">
+      <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] font-medium text-[#334155]">
         <span className="inline-flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-sm bg-[#f7f7f5] ring-1 ring-[#e8e5df]" /> Court
+          <span className="h-2.5 w-2.5 rounded-sm bg-[#eab308] ring-1 ring-[#ca8a04]" /> Court
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-sm bg-[#f4f7fb] ring-1 ring-[#d7e0ef]" /> Lesson
+          <span className="h-2.5 w-2.5 rounded-sm bg-[#3b82f6]" /> Lesson
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-sm bg-[#f3f7f1] ring-1 ring-[#d8e3d4]" /> Clinic
+          <span className="h-2.5 w-2.5 rounded-sm bg-[#16a34a]" /> Clinic
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-sm bg-[#eaf0f8] ring-1 ring-[#c9d6eb]" /> Request
+          <span className="h-2.5 w-2.5 rounded-sm bg-[#ea580c]" /> Request
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-sm bg-[#f8f5f0] ring-1 ring-[#e4ddd2]" /> Event
+          <span className="h-2.5 w-2.5 rounded-sm bg-[#a855f7]" /> Event
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-sm bg-[#64748b]" /> Hold
         </span>
       </p>
 
