@@ -51,7 +51,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "book", label: "Book" },
   { id: "members", label: "Members" },
   { id: "stats", label: "Stats" },
-  { id: "money", label: "Money" },
+  { id: "money", label: "Finances" },
   { id: "settings", label: "Settings" },
 ];
 
@@ -195,21 +195,6 @@ export default function Summer27DirectorPage() {
   }
 
   const today = formatDateInput(new Date());
-  const paidItems = [...courts, ...clinics, ...lessons, ...events, ...stringing, ...charges];
-  const revenue = paidItems.filter((b) => b.paymentStatus === "paid").reduce((sum, b) => sum + b.amount, 0);
-  const pending = paidItems.filter((b) => b.paymentStatus === "pending").reduce((sum, b) => sum + b.amount, 0);
-  const todayCount =
-    courts.filter((b) => b.date === today).length +
-    lessons.filter((b) => b.date === today).length +
-    clinics.filter((b) => b.date === today).length +
-    events.filter((b) => b.eventDate === today).length +
-    stringing.filter((b) => (b.shopStatus || "in_shop") === "in_shop" || b.pickupDate === today).length +
-    charges.filter((b) => b.date === today).length +
-    blocks.filter((b) => b.date === today).length;
-  const unpaidToday = paidItems.filter((b) => {
-    const date = "eventDate" in b ? b.eventDate : "pickupDate" in b && b.pickupDate ? b.pickupDate : "date" in b ? b.date : "";
-    return date === today && b.paymentStatus === "pending";
-  }).length;
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6">
@@ -218,7 +203,7 @@ export default function Summer27DirectorPage() {
           <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Director desk</p>
           <h2 className="text-2xl font-semibold tracking-tight">Run the club</h2>
           <p className="mt-1 text-[13px] text-[#6b665e]">
-            Week view, charge the shop, stringing queue — Stats for week and month numbers.
+            Week view, charge desk, stringing — Stats for activity, Finances for paid vs owed.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -380,29 +365,21 @@ export default function Summer27DirectorPage() {
       )}
 
       {tab === "money" && (
-        <div className="mt-4 space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Stat label="Today" value={String(todayCount)} />
-            <Stat label="Unpaid today" value={String(unpaidToday)} />
-            <Stat label="Paid (all)" value={`$${revenue}`} />
-            <Stat label="Pending (all)" value={`$${pending}`} />
-          </div>
-          <Ledger
-            today={today}
-            courts={courts}
-            clinics={clinics}
-            lessons={lessons}
-            events={events}
-            stringing={stringing}
-            charges={charges}
-            onCourts={saveCourts}
-            onClinics={saveClinics}
-            onLessons={saveLessons}
-            onEvents={saveEvents}
-            onStringing={saveStringing}
-            onCharges={saveCharges}
-          />
-        </div>
+        <Ledger
+          today={today}
+          courts={courts}
+          clinics={clinics}
+          lessons={lessons}
+          events={events}
+          stringing={stringing}
+          charges={charges}
+          onCourts={saveCourts}
+          onClinics={saveClinics}
+          onLessons={saveLessons}
+          onEvents={saveEvents}
+          onStringing={saveStringing}
+          onCharges={saveCharges}
+        />
       )}
 
       {tab === "settings" && (
@@ -422,14 +399,5 @@ export default function Summer27DirectorPage() {
         />
       )}
     </main>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-[#e8e5df] bg-white p-4">
-      <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">{label}</p>
-      <p className="mt-1 text-xl font-medium">{value}</p>
-    </div>
   );
 }

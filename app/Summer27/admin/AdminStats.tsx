@@ -104,15 +104,6 @@ function money(n: number) {
   return `$${Math.round(n).toLocaleString("en-US")}`;
 }
 
-function Bar({ value, max }: { value: number; max: number }) {
-  const pct = max <= 0 ? 0 : Math.min(100, Math.round((value / max) * 100));
-  return (
-    <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#ece8e2]">
-      <div className="h-full rounded-full bg-[#1a1a1a]" style={{ width: `${pct}%` }} />
-    </div>
-  );
-}
-
 export default function AdminStats({
   today,
   clinicsCatalog,
@@ -127,9 +118,9 @@ export default function AdminStats({
   const [period, setPeriod] = useState<Period>("this-week");
   const { start, end, label } = useMemo(() => rangeForPeriod(today, period), [today, period]);
 
-  const overview = useMemo(() => {
+  const summary = useMemo(() => {
     const courtRows = courts.filter((b) => inRange(b.date, start, end));
-    const clinicRows = clinics.filter((b) => inRange(b.date, start, end) && b.paymentStatus === "paid");
+    const clinicRows = clinics.filter((b) => inRange(b.date, start, end));
     const lessonRows = lessons.filter(
       (b) =>
         inRange(b.date, start, end) &&
@@ -140,102 +131,71 @@ export default function AdminStats({
     const stringRows = stringing.filter((b) => inRange(b.pickupDate || b.createdAt.slice(0, 10), start, end));
     const chargeRows = charges.filter((b) => inRange(b.date, start, end));
 
-    const allMoney = [...courtRows, ...clinicRows, ...lessonRows, ...eventRows, ...stringRows, ...chargeRows];
-    const paid = allMoney.filter((b) => b.paymentStatus === "paid").reduce((s, b) => s + b.amount, 0);
-    const unpaid = allMoney.filter((b) => b.paymentStatus === "pending").reduce((s, b) => s + b.amount, 0);
+    const buckets = [
+      { key: "courts", label: "Courts", rows: courtRows },
+      { key: "clinics", label: "Clinics", rows: clinicRows },
+      { key: "lessons", label: "Lessons", rows: lessonRows },
+      { key: "events", label: "Events", rows: eventRows },
+      { key: "stringing", label: "Stringing", rows: stringRows },
+      { key: "charges", label: "Shop / misc", rows: chargeRows },
+    ].map((b) => {
+      const paid = b.rows.filter((r) => r.paymentStatus === "paid").reduce((s, r) => s + r.amount, 0);
+      const owed = b.rows.filter((r) => r.paymentStatus === "pending").reduce((s, r) => s + r.amount, 0);
+      return { ...b, count: b.rows.length, paid, owed };
+    });
+
+    const paid = buckets.reduce((s, b) => s + b.paid, 0);
+    const owed = buckets.reduce((s, b) => s + b.owed, 0);
     const courtHours = courtRows.reduce((s, b) => s + (Number(b.durationHours) || 1), 0);
     const lessonHours = lessonRows.reduce((s, b) => s + lessonSpan(b.duration), 0);
 
-    return {
-      paid,
-      unpaid,
-      courtBookings: courtRows.length,
-      courtHours,
-      clinicSignups: clinicRows.length,
-      lessons: lessonRows.length,
-      lessonHours,
-      events: eventRows.length,
-      stringing: stringRows.length,
-      charges: chargeRows.length,
-      chargeRevenue: chargeRows.filter((b) => b.paymentStatus === "paid").reduce((s, b) => s + b.amount, 0),
-    };
+    return { buckets, paid, owed, courtHours, lessonHours, lessonCount: lessonRows.length };
   }, [courts, clinics, lessons, events, stringing, charges, start, end]);
 
-  const clinicStats = useMemo(() => {
-    const paidInRange = clinics.filter((b) => inRange(b.date, start, end) && b.paymentStatus === "paid");
-    const rows = clinicsCatalog.map((def) => {
-      const signups = paidInRange.filter((b) => b.clinicId === def.id);
-      const dates = new Set(signups.map((b) => b.date));
-      // Also count scheduled sessions in range even with 0 signups
-      const scheduledDates = new Set<string>();
-      const cursor = parseDateInput(start);
-      const last = parseDateInput(end);
-      for (let d = new Date(cursor); d <= last; d.setDate(d.getDate() + 1)) {
-        if (def.days.includes(d.getDay())) scheduledDates.add(formatDateInput(d));
-      }
-      const sessions = Math.max(dates.size, 0);
-      const scheduled = scheduledDates.size;
-      const capacityTotal = scheduled * def.capacity;
-      const fill = capacityTotal > 0 ? signups.length / capacityTotal : 0;
-      const revenue = signups.reduce((s, b) => s + b.amount, 0);
-      const avgPerSession = sessions > 0 ? signups.length / sessions : 0;
-      return {
-        id: def.id,
-        name: def.name,
-        kind: def.kind,
-        capacity: def.capacity,
-        signups: signups.length,
-        sessions: sessions || (signups.length ? 1 : 0),
-        scheduled,
-        fill,
-        revenue,
-        avgPerSession,
-      };
-    });
-    return rows.sort((a, b) => b.signups - a.signups || b.revenue - a.revenue);
+  const clinicRanks = useMemo(() => {
+    return clinicsCatalog
+      .map((def) => {
+        const signups = clinics.filter(
+          (b) => b.clinicId === def.id && inRange(b.date, start, end) && b.paymentStatus === "paid"
+        );
+        return {
+          id: def.id,
+          name: def.name,
+          signups: signups.length,
+          revenue: signups.reduce((s, b) => s + b.amount, 0),
+        };
+      })
+      .filter((r) => r.signups > 0)
+      .sort((a, b) => b.signups - a.signups || b.revenue - a.revenue);
   }, [clinics, clinicsCatalog, start, end]);
 
-  const maxClinicSignups = Math.max(1, ...clinicStats.map((c) => c.signups));
-
-  const proStats = useMemo(() => {
-    const inWindow = lessons.filter((b) => inRange(b.date, start, end));
-    const rows = pros.map((pro) => {
-      const mine = inWindow.filter((b) => bookingProId(b) === pro.id);
-      const taught = mine.filter((b) => b.requestStatus !== "declined" && b.requestStatus !== "requested");
-      const requested = mine.filter((b) => b.requestStatus === "requested").length;
-      const accepted = mine.filter((b) => b.requestStatus === "accepted").length;
-      const declined = mine.filter((b) => b.requestStatus === "declined").length;
-      const hours = taught.reduce((s, b) => s + lessonSpan(b.duration), 0);
-      const revenue = taught.filter((b) => b.paymentStatus === "paid").reduce((s, b) => s + b.amount, 0);
-      const unpaid = taught.filter((b) => b.paymentStatus === "pending").reduce((s, b) => s + b.amount, 0);
-      const decided = accepted + declined;
-      const acceptRate = decided > 0 ? accepted / decided : null;
-      return {
-        id: pro.id,
-        name: pro.name,
-        title: pro.title,
-        lessons: taught.length,
-        hours,
-        revenue,
-        unpaid,
-        requested,
-        accepted,
-        declined,
-        acceptRate,
-        requestMode: pro.lessonMode === "request",
-      };
-    });
-    return rows.sort((a, b) => b.revenue - a.revenue || b.lessons - a.lessons);
+  const proRanks = useMemo(() => {
+    return pros
+      .map((pro) => {
+        const taught = lessons.filter(
+          (b) =>
+            bookingProId(b) === pro.id &&
+            inRange(b.date, start, end) &&
+            b.requestStatus !== "declined" &&
+            b.requestStatus !== "requested"
+        );
+        return {
+          id: pro.id,
+          name: pro.name,
+          lessons: taught.length,
+          hours: taught.reduce((s, b) => s + lessonSpan(b.duration), 0),
+          revenue: taught.filter((b) => b.paymentStatus === "paid").reduce((s, b) => s + b.amount, 0),
+        };
+      })
+      .filter((r) => r.lessons > 0)
+      .sort((a, b) => b.lessons - a.lessons || b.revenue - a.revenue);
   }, [lessons, pros, start, end]);
-
-  const maxProLessons = Math.max(1, ...proStats.map((p) => p.lessons));
 
   return (
     <div className="mt-4 space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Tracking</p>
-          <h3 className="mt-0.5 text-xl font-semibold tracking-tight">Club numbers</h3>
+          <h3 className="text-xl font-semibold tracking-tight">Stats</h3>
           <p className="mt-1 text-[13px] text-[#6b665e]">{label}</p>
         </div>
         <div className="w-full overflow-x-auto sm:w-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -252,53 +212,55 @@ export default function AdminStats({
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Paid" value={money(overview.paid)} note={`${money(overview.unpaid)} unpaid`} />
-        <StatCard
-          label="Court time"
-          value={`${overview.courtHours}h`}
-          note={`${overview.courtBookings} booking${overview.courtBookings === 1 ? "" : "s"}`}
-        />
-        <StatCard
-          label="Clinic signups"
-          value={String(overview.clinicSignups)}
-          note={`${overview.lessons} lessons · ${overview.lessonHours}h`}
-        />
-        <StatCard
-          label="Shop & stringing"
-          value={money(overview.chargeRevenue)}
-          note={`${overview.charges} charges · ${overview.stringing} string`}
-        />
+      <div className="grid gap-3 sm:grid-cols-2">
+        <BigStat label="Brought in" value={money(summary.paid)} tone="good" />
+        <BigStat label="Still owed" value={money(summary.owed)} tone="warn" />
       </div>
 
       <section className="overflow-hidden rounded-2xl border border-[#e8e5df] bg-white">
         <div className="border-b border-[#f0ede8] px-4 py-3">
-          <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Clinic popularity</p>
-          <p className="mt-0.5 text-[13px] text-[#6b665e]">Signups, fill rate vs capacity, and revenue in this period.</p>
+          <p className="text-[15px] font-medium">By type</p>
+          <p className="mt-0.5 text-[12px] text-[#6b665e]">
+            {summary.courtHours}h courts · {summary.lessonCount} lessons ({summary.lessonHours}h)
+          </p>
         </div>
-        {clinicStats.every((c) => c.signups === 0) ? (
-          <p className="px-4 py-5 text-[15px] text-[#8a8477]">No clinic signups in this period.</p>
+        <ul className="divide-y divide-[#f0ede8]">
+          {summary.buckets.map((b) => (
+            <li key={b.key} className="flex items-center justify-between gap-3 px-4 py-3">
+              <div>
+                <p className="text-[15px] font-medium">{b.label}</p>
+                <p className="text-[12px] text-[#6b665e]">
+                  {b.count === 0 ? "None" : `${b.count} booking${b.count === 1 ? "" : "s"}`}
+                </p>
+              </div>
+              <div className="text-right tabular-nums">
+                <p className="text-[15px] font-medium">{money(b.paid)}</p>
+                {b.owed > 0 ? <p className="text-[12px] text-[#b45309]">{money(b.owed)} owed</p> : null}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="overflow-hidden rounded-2xl border border-[#e8e5df] bg-white">
+        <div className="border-b border-[#f0ede8] px-4 py-3">
+          <p className="text-[15px] font-medium">Clinics</p>
+          <p className="mt-0.5 text-[12px] text-[#6b665e]">Most popular this period</p>
+        </div>
+        {clinicRanks.length === 0 ? (
+          <p className="px-4 py-5 text-[14px] text-[#8a8477]">No clinic signups yet.</p>
         ) : (
           <ul className="divide-y divide-[#f0ede8]">
-            {clinicStats.map((row, i) => (
-              <li key={row.id} className="px-4 py-3">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="text-[15px] font-medium">
-                      <span className="mr-2 text-[12px] text-[#8a8477]">#{i + 1}</span>
-                      {row.name}
-                    </p>
-                    <p className="mt-0.5 text-[12px] capitalize text-[#6b665e]">
-                      {row.kind} · {row.signups} signup{row.signups === 1 ? "" : "s"}
-                      {row.scheduled > 0 ? ` · ${Math.round(row.fill * 100)}% of ${row.scheduled} session capacity` : ""}
-                      {row.sessions > 0 ? ` · avg ${row.avgPerSession.toFixed(1)} / session` : ""}
-                    </p>
-                  </div>
-                  <p className="text-[15px] font-medium tabular-nums">{money(row.revenue)}</p>
-                </div>
-                <div className="mt-2">
-                  <Bar value={row.signups} max={maxClinicSignups} />
-                </div>
+            {clinicRanks.map((row, i) => (
+              <li key={row.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                <p className="min-w-0 text-[15px]">
+                  <span className="mr-2 text-[12px] text-[#8a8477]">{i + 1}.</span>
+                  {row.name}
+                  <span className="ml-2 text-[12px] text-[#6b665e]">
+                    {row.signups} signup{row.signups === 1 ? "" : "s"}
+                  </span>
+                </p>
+                <p className="shrink-0 text-[15px] font-medium tabular-nums">{money(row.revenue)}</p>
               </li>
             ))}
           </ul>
@@ -307,46 +269,40 @@ export default function AdminStats({
 
       <section className="overflow-hidden rounded-2xl border border-[#e8e5df] bg-white">
         <div className="border-b border-[#f0ede8] px-4 py-3">
-          <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Pro performance</p>
-          <p className="mt-0.5 text-[13px] text-[#6b665e]">Lessons taught, hours, revenue — plus request accept rate for Derek.</p>
+          <p className="text-[15px] font-medium">Pros</p>
+          <p className="mt-0.5 text-[12px] text-[#6b665e]">Lessons taught this period</p>
         </div>
-        <ul className="divide-y divide-[#f0ede8]">
-          {proStats.map((row) => (
-            <li key={row.id} className="px-4 py-3">
-              <div className="flex flex-wrap items-start justify-between gap-2">
+        {proRanks.length === 0 ? (
+          <p className="px-4 py-5 text-[14px] text-[#8a8477]">No lessons yet.</p>
+        ) : (
+          <ul className="divide-y divide-[#f0ede8]">
+            {proRanks.map((row) => (
+              <li key={row.id} className="flex items-center justify-between gap-3 px-4 py-3">
                 <div className="min-w-0">
                   <p className="text-[15px] font-medium">{row.name}</p>
-                  <p className="mt-0.5 text-[12px] text-[#6b665e]">
-                    {row.title} · {row.lessons} lesson{row.lessons === 1 ? "" : "s"} · {row.hours}h taught
-                    {row.unpaid > 0 ? ` · ${money(row.unpaid)} unpaid` : ""}
+                  <p className="text-[12px] text-[#6b665e]">
+                    {row.lessons} lesson{row.lessons === 1 ? "" : "s"} · {row.hours}h
                   </p>
-                  {row.requestMode && (row.accepted > 0 || row.declined > 0 || row.requested > 0) && (
-                    <p className="mt-1 text-[12px] text-[#6b665e]">
-                      Requests: {row.accepted} accepted · {row.declined} declined
-                      {row.requested > 0 ? ` · ${row.requested} open` : ""}
-                      {row.acceptRate != null ? ` · ${Math.round(row.acceptRate * 100)}% accept` : ""}
-                    </p>
-                  )}
                 </div>
-                <p className="text-[15px] font-medium tabular-nums">{money(row.revenue)}</p>
-              </div>
-              <div className="mt-2">
-                <Bar value={row.lessons} max={maxProLessons} />
-              </div>
-            </li>
-          ))}
-        </ul>
+                <p className="shrink-0 text-[15px] font-medium tabular-nums">{money(row.revenue)}</p>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     </div>
   );
 }
 
-function StatCard({ label, value, note }: { label: string; value: string; note?: string }) {
+function BigStat({ label, value, tone }: { label: string; value: string; tone: "good" | "warn" }) {
   return (
-    <div className="rounded-2xl border border-[#e8e5df] bg-white px-4 py-3">
-      <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">{label}</p>
-      <p className="mt-1 text-2xl font-semibold tracking-tight tabular-nums">{value}</p>
-      {note ? <p className="mt-0.5 text-[12px] text-[#6b665e]">{note}</p> : null}
+    <div
+      className={`rounded-2xl border px-4 py-4 ${
+        tone === "good" ? "border-[#bbf7d0] bg-[#f0fdf4]" : "border-[#fde68a] bg-[#fffbeb]"
+      }`}
+    >
+      <p className="text-[12px] font-medium text-[#6b665e]">{label}</p>
+      <p className="mt-1 text-3xl font-semibold tracking-tight tabular-nums text-[#1a1a1a]">{value}</p>
     </div>
   );
 }
