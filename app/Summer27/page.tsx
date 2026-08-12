@@ -41,15 +41,15 @@ export default function Summer27Home() {
 
           <div className="grid gap-3 bg-[#faf9f7] p-4 sm:grid-cols-3 sm:p-6">
             {[
-              { label: "Courts", value: "Court 1 & Court 2", note: "Hourly member play · clinics blocked" },
-              { label: "Lessons", value: "Derek DiFazio", note: "Court 1 · weekday mornings & late afternoons" },
-              { label: "Pro shop", value: "Stringing", note: "$50 labor + cost of string" },
+              { label: "Courts", value: "Court 1 & Court 2", note: "Hourly member play · clinics blocked", href: "/Summer27/book" },
+              { label: "Lessons", value: "Choose a pro", note: "Derek and the teaching staff · Court 1 & 2", href: "/Summer27/lessons" },
+              { label: "Pro shop", value: "Stringing", note: "$50 labor + cost of string", href: "/Summer27/stringing" },
             ].map((item) => (
-              <div key={item.label} className="rounded-xl border border-[#e8e5df] bg-white p-4">
+              <Link key={item.label} href={item.href} className="rounded-xl border border-[#e8e5df] bg-white p-4 hover:bg-[#faf9f7]">
                 <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">{item.label}</p>
                 <p className="mt-1 text-[16px] font-medium">{item.value}</p>
                 <p className="mt-1 text-[12px] text-[#6b665e]">{item.note}</p>
-              </div>
+              </Link>
             ))}
           </div>
         </div>
@@ -108,7 +108,7 @@ export default function Summer27Home() {
               "Join as a member and save a card for one-click booking.",
               "Pay in advance for courts, clinics, lessons, and events.",
               "Change or cancel from My Account until 24 hours before start.",
-              "Court 1 is reserved for private instruction weekday mornings and late afternoons. Clinics use both courts.",
+              "Choose a pro, then book their court. Court 1 stays held for weekday teaching hours. Clinics use both courts.",
             ].map((step, i) => (
               <p key={step} className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3 text-[13px] text-[#4a4a4a]">
                 <span className="font-medium">{i + 1}.</span> {step}

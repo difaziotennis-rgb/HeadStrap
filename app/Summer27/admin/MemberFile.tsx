@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { formatHour, formatPrettyDate } from "../summer27-data";
+import { formatHour, formatPrettyDate, lessonProLabel } from "../summer27-data";
 import { getPaymentProfile } from "../payments";
 import { getLiveClinics } from "../schedule";
 import {
@@ -91,7 +91,7 @@ export default function MemberFile({
       ...lessonItems.map((b) => ({
         id: b.id,
         when: `${b.date} ${String(b.hour).padStart(2, "0")}`,
-        label: `Lesson · ${formatPrettyDate(b.date)} ${formatHour(b.hour)}`,
+        label: `${lessonProLabel(b)} · ${formatPrettyDate(b.date)} ${formatHour(b.hour)}`,
         amount: b.amount,
         status: b.paymentStatus,
         method: b.paymentMethod,

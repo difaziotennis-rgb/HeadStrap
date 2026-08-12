@@ -37,6 +37,61 @@ export const PRIME_TEACHING = {
   afternoon: { start: 15, end: 17 },
 };
 
+export type ProWindow = { start: number; end: number };
+
+export type ProDef = {
+  id: string;
+  name: string;
+  title: string;
+  bio: string;
+  focus: string;
+  courtId: CourtId;
+  days: number[];
+  windows: ProWindow[];
+};
+
+export const s27Pros: ProDef[] = [
+  {
+    id: "derek",
+    name: "Derek DiFazio",
+    title: "Director of Tennis",
+    focus: "High-performance adults & match play",
+    bio: "Private instruction on Court 1 during weekday prime teaching hours — adults, college-bound juniors, and serious club players.",
+    courtId: "court-1",
+    days: [1, 2, 3, 4, 5],
+    windows: [
+      { start: 8, end: 12 },
+      { start: 15, end: 17 },
+    ],
+  },
+  {
+    id: "maya-ellison",
+    name: "Maya Ellison",
+    title: "Teaching Professional",
+    focus: "Recreational adults & doubles",
+    bio: "A measured technical hour for club players — rally consistency, doubles patterns, and returning to the game.",
+    courtId: "court-2",
+    days: [1, 2, 3, 4],
+    windows: [
+      { start: 9, end: 12 },
+      { start: 16, end: 19 },
+    ],
+  },
+  {
+    id: "cole-brennan",
+    name: "Cole Brennan",
+    title: "Junior Development",
+    focus: "Juniors 8–16",
+    bio: "After-school and Saturday private hours for developing juniors. Fundamentals through live-ball point play.",
+    courtId: "court-2",
+    days: [2, 4, 6],
+    windows: [
+      { start: 9, end: 12 },
+      { start: 15, end: 18 },
+    ],
+  },
+];
+
 export type ClinicKind = "adult" | "junior";
 
 export type ClinicDef = {
@@ -303,6 +358,30 @@ export function clinicTimeLabel(clinic: Pick<ClinicDef, "startHour" | "durationH
   const start = Number(clinic.startHour) || 0;
   const duration = Number(clinic.durationHours) || 1;
   return `${formatHour(start)}–${formatHour(start + duration)}`;
+}
+
+export function proHoursOnDate(pro: ProDef, dateStr: string): number[] {
+  const day = parseDateInput(dateStr).getDay();
+  if (!Array.isArray(pro.days) || !pro.days.includes(day)) return [];
+  const hours: number[] = [];
+  for (const window of pro.windows || []) {
+    const start = Number(window.start);
+    const end = Number(window.end);
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) continue;
+    for (let h = start; h < end; h += 1) hours.push(h);
+  }
+  return hours;
+}
+
+export function proScheduleLabel(pro: ProDef): string {
+  const times = (pro.windows || [])
+    .map((w) => `${formatHour(Number(w.start) || 0)}–${formatHour(Number(w.end) || 0)}`)
+    .join(" & ");
+  return `${clinicDayLabel(pro.days)}${times ? ` · ${times}` : ""}`;
+}
+
+export function lessonProLabel(booking: { proName?: string }) {
+  return booking.proName || "Derek DiFazio";
 }
 
 export type SlotBlockReason =

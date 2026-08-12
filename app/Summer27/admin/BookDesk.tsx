@@ -8,9 +8,10 @@ import {
   formatDateInput,
   formatHour,
   formatPrettyDate,
+  lessonProLabel,
   type CourtId,
 } from "../summer27-data";
-import { getLiveClinics, getLiveEvents, getLiveCourtRates, getLiveLessonRates, getLiveStringingLabor, getProgramBlock } from "../schedule";
+import { getLiveClinics, getLiveEvents, getLiveCourtRates, getLiveLessonRates, getLiveStringingLabor, getLivePros, getProgramBlock } from "../schedule";
 import {
   type S27ClinicBooking,
   type S27CourtBooking,
@@ -258,12 +259,15 @@ function LessonsBlock({
   range,
   member,
 }: Pick<Props, "lessons" | "onLessons"> & { range: Range; member: S27MemberAccount | null }) {
+  const pros = getLivePros();
+  const [proId, setProId] = useState(pros[0]?.id || "derek");
   const [date, setDate] = useState(today());
   const [hour, setHour] = useState("8");
   const [duration, setDuration] = useState<"60" | "90">("60");
   const [guestName, setGuestName] = useState("");
   const [focus, setFocus] = useState("");
   const [status, setStatus] = useState<"paid" | "pending">("paid");
+  const pro = pros.find((p) => p.id === proId) || pros[0];
   const list = lessons
     .filter((b) => inRangeDate(b.date, range, b.paymentStatus === "pending"))
     .slice()
@@ -272,7 +276,7 @@ function LessonsBlock({
   function add(e: React.FormEvent) {
     e.preventDefault();
     const name = member?.name || guestName.trim();
-    if (!name) return;
+    if (!name || !pro) return;
     const rates = getLiveLessonRates();
     const hourly = member ? rates.member : rates.guest;
     onLessons([
@@ -286,6 +290,9 @@ function LessonsBlock({
         clientEmail: member?.email || "",
         clientPhone: member?.phone || "",
         memberNumber: member?.memberNumber,
+        proId: pro.id,
+        proName: pro.name,
+        courtId: pro.courtId,
         focus,
         amount: duration === "90" ? Math.round(hourly * 1.5) : hourly,
         paymentStatus: status,
@@ -300,6 +307,9 @@ function LessonsBlock({
   return (
     <>
       <form onSubmit={add} className="grid gap-2 rounded-2xl border border-[#e8e5df] bg-white p-4 sm:grid-cols-3">
+        <select className={inputClass} value={proId} onChange={(e) => setProId(e.target.value)}>
+          {pros.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+        </select>
         <input type="date" className={inputClass} value={date} onChange={(e) => setDate(e.target.value)} />
         <select className={inputClass} value={hour} onChange={(e) => setHour(e.target.value)}>
           {BOOKING_HOURS.map((h) => <option key={h} value={h}>{formatHour(h)}</option>)}
@@ -320,8 +330,8 @@ function LessonsBlock({
         empty="No lessons in this view."
         rows={list.map((b) => ({
           id: b.id,
-          title: `${formatPrettyDate(b.date)} ${formatHour(b.hour)} · ${b.duration} min`,
-          detail: `${b.clientName}${b.focus ? ` · ${b.focus}` : ""} · $${b.amount}`,
+          title: `${lessonProLabel(b)} · ${formatPrettyDate(b.date)} ${formatHour(b.hour)}`,
+          detail: `${b.clientName} · ${b.duration} min${b.focus ? ` · ${b.focus}` : ""} · $${b.amount}`,
           status: b.paymentStatus,
           onPaid: () => onLessons(lessons.map((x) => (x.id === b.id ? { ...x, paymentStatus: x.paymentStatus === "paid" ? "pending" : "paid" } : x))),
           onDelete: () => onLessons(lessons.filter((x) => x.id !== b.id)),

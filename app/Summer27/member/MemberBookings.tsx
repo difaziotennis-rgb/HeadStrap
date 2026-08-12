@@ -8,9 +8,11 @@ import {
   formatDateInput,
   formatHour,
   formatPrettyDate,
+  lessonProLabel,
   type CourtId,
 } from "../summer27-data";
-import { getLiveClinics, getLiveCourtRates, getLiveEvents, getLiveLessonRates, getProgramBlock } from "../schedule";
+import { getLiveClinics, getLiveCourtRates, getLiveEvents, getLiveLessonRates, getLivePros, getProgramBlock } from "../schedule";
+import { lessonConflict } from "../lesson-slots";
 import { canChangeBooking, CANCEL_WINDOW_HOURS, eventStartHour } from "../booking-policy";
 import {
   KEYS,
@@ -98,7 +100,7 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
         kind: "lesson" as const,
         date: b.date,
         hour: b.hour,
-        label: `Lesson · ${formatPrettyDate(b.date)} ${formatHour(b.hour)}`,
+        label: `${lessonProLabel(b)} · ${formatPrettyDate(b.date)} ${formatHour(b.hour)}`,
         detail: `${b.duration} min${b.focus ? ` · ${b.focus}` : ""}`,
         amount: b.amount,
         status: b.paymentStatus,
@@ -232,16 +234,26 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
       setMsg(`New lesson time must also be at least ${CANCEL_WINDOW_HOURS} hours out.`);
       return;
     }
-    const program = getProgramBlock(lessonDraft.date, "court-1", hour);
-    if (program?.type === "clinic" || program?.type === "event") {
-      setMsg("That hour is reserved for a clinic or event.");
+    const booking = row.booking as S27LessonBooking;
+    const pro = getLivePros().find((p) => p.id === (booking.proId || "derek")) || getLivePros()[0];
+    if (!pro) {
+      setMsg("That professional isn’t on the schedule.");
+      return;
+    }
+    const conflict = lessonConflict({
+      pro,
+      date: lessonDraft.date,
+      hour,
+      duration: lessonDraft.duration,
+      lessons: loadList<S27LessonBooking>(KEYS.lessons),
+      courts: uniqueCourts(loadRecord<S27CourtBooking>(KEYS.courts)),
+      ignoreId: row.id,
+    });
+    if (conflict) {
+      setMsg(conflict);
       return;
     }
     const all = loadList<S27LessonBooking>(KEYS.lessons);
-    if (all.some((b) => b.id !== row.id && b.date === lessonDraft.date && b.hour === hour)) {
-      setMsg("That lesson hour is already taken.");
-      return;
-    }
     const hours = lessonDraft.duration === "90" ? 1.5 : 1;
     saveList(
       KEYS.lessons,
@@ -253,6 +265,9 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
               hour,
               duration: lessonDraft.duration,
               focus: lessonDraft.focus.trim(),
+              proId: pro.id,
+              proName: pro.name,
+              courtId: pro.courtId,
               amount: Math.round(lessonRates.member * hours),
             }
           : b

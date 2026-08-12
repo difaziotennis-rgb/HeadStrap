@@ -3,14 +3,18 @@
 import { useEffect, useState } from "react";
 import {
   BOOKING_HOURS,
+  COURTS,
   clinicDayLabel,
   clinicTimeLabel,
   formatHour,
+  proScheduleLabel,
   type ClinicDef,
+  type CourtId,
   type EventDef,
+  type ProDef,
 } from "../summer27-data";
 import type { S27Catalog } from "../schedule";
-import { Field, inputClass } from "./ui";
+import { Field, inputClass, uid } from "./ui";
 
 type Props = {
   catalog: S27Catalog;
@@ -20,6 +24,7 @@ type Props = {
 
 const START_HOURS = Array.from({ length: 25 }, (_, i) => 8 + i * 0.5);
 const DURATIONS = [1, 1.5, 2];
+const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export default function ProgramSettings({ catalog, onSave, onReset }: Props) {
   const [draft, setDraft] = useState(catalog);
@@ -39,10 +44,34 @@ export default function ProgramSettings({ catalog, onSave, onReset }: Props) {
     });
   }
 
+  function updatePro(id: string, patch: Partial<ProDef>) {
+    setDraft({
+      ...draft,
+      pros: (draft.pros || []).map((p) => (p.id === id ? { ...p, ...patch } : p)),
+    });
+  }
+
+  function addPro() {
+    const next: ProDef = {
+      id: uid("pro"),
+      name: "New professional",
+      title: "Teaching Professional",
+      focus: "",
+      bio: "",
+      courtId: "court-2",
+      days: [1, 2, 3, 4, 5],
+      windows: [
+        { start: 9, end: 12 },
+        { start: 16, end: 18 },
+      ],
+    };
+    setDraft({ ...draft, pros: [...(draft.pros || []), next] });
+  }
+
   return (
     <div className="mt-4 space-y-4">
       <p className="text-[13px] text-[#6b665e]">
-        Night settings — rates, clinic times, and event copy. Public pages use whatever you save here.
+        Night settings — staff, rates, clinic times, and event copy. Public pages use whatever you save here.
       </p>
       <section className="rounded-2xl border border-[#e8e5df] bg-white p-5">
         <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Rates</p>
@@ -62,6 +91,107 @@ export default function ProgramSettings({ catalog, onSave, onReset }: Props) {
           <Field label="Stringing labor $">
             <input className={inputClass} value={draft.stringingLabor} onChange={(e) => setDraft({ ...draft, stringingLabor: Number(e.target.value) || 0 })} />
           </Field>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-[#e8e5df] bg-white p-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Teaching staff</p>
+          <button type="button" onClick={addPro} className="text-[12px] text-[#6b665e]">
+            Add professional
+          </button>
+        </div>
+        <div className="mt-3 space-y-4">
+          {(draft.pros || []).map((pro) => (
+            <div key={pro.id} className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-3">
+              <p className="text-[12px] text-[#8a8477]">{proScheduleLabel(pro)}</p>
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                <input className={inputClass} value={pro.name} onChange={(e) => updatePro(pro.id, { name: e.target.value })} />
+                <select className={inputClass} value={pro.title} onChange={(e) => updatePro(pro.id, { title: e.target.value })}>
+                  {["Director of Tennis", "Teaching Professional", "Junior Development", "Associate Pro", pro.title]
+                    .filter((v, i, arr) => arr.indexOf(v) === i)
+                    .map((title) => (
+                      <option key={title} value={title}>{title}</option>
+                    ))}
+                </select>
+                <input className={inputClass} value={pro.focus} onChange={(e) => updatePro(pro.id, { focus: e.target.value })} placeholder="Specialty" />
+                <select className={inputClass} value={pro.courtId} onChange={(e) => updatePro(pro.id, { courtId: e.target.value as CourtId })}>
+                  {COURTS.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+                <div className="sm:col-span-2">
+                  <p className="mb-1 text-[11px] text-[#8a8477]">Days</p>
+                  <div className="flex flex-wrap gap-1">
+                    {DAY_NAMES.map((label, day) => {
+                      const on = pro.days.includes(day);
+                      return (
+                        <button
+                          key={label}
+                          type="button"
+                          onClick={() =>
+                            updatePro(pro.id, {
+                              days: on ? pro.days.filter((d) => d !== day) : [...pro.days, day].sort((a, b) => a - b),
+                            })
+                          }
+                          className={`rounded-lg px-2 py-1 text-[11px] ${on ? "bg-[#1a1a1a] text-white" : "border border-[#e8e5df] bg-white text-[#6b665e]"}`}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                {(pro.windows[0] ? [0, 1] : [0]).map((index) => {
+                  const window = pro.windows[index] || { start: 9, end: 12 };
+                  return (
+                    <div key={index} className="grid grid-cols-2 gap-2">
+                      <Field label={index === 0 ? "Window 1 start" : "Window 2 start"}>
+                        <select
+                          className={inputClass}
+                          value={window.start}
+                          onChange={(e) => {
+                            const next = [...pro.windows];
+                            next[index] = { ...(next[index] || window), start: Number(e.target.value) };
+                            updatePro(pro.id, { windows: next });
+                          }}
+                        >
+                          {BOOKING_HOURS.map((h) => (
+                            <option key={h} value={h}>{formatHour(h)}</option>
+                          ))}
+                        </select>
+                      </Field>
+                      <Field label="End">
+                        <select
+                          className={inputClass}
+                          value={window.end}
+                          onChange={(e) => {
+                            const next = [...pro.windows];
+                            next[index] = { ...(next[index] || window), end: Number(e.target.value) };
+                            updatePro(pro.id, { windows: next });
+                          }}
+                        >
+                          {BOOKING_HOURS.map((h) => (
+                            <option key={h} value={h}>{formatHour(h)}</option>
+                          ))}
+                        </select>
+                      </Field>
+                    </div>
+                  );
+                })}
+                <textarea className={`${inputClass} sm:col-span-2`} rows={2} value={pro.bio} onChange={(e) => updatePro(pro.id, { bio: e.target.value })} />
+              </div>
+              {(draft.pros || []).length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => setDraft({ ...draft, pros: (draft.pros || []).filter((p) => p.id !== pro.id) })}
+                  className="mt-2 text-[12px] text-[#991b1b]"
+                >
+                  Remove {pro.name}
+                </button>
+              )}
+            </div>
+          ))}
         </div>
       </section>
 

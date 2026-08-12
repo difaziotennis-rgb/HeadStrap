@@ -70,6 +70,9 @@ export type S27LessonBooking = {
   clientEmail: string;
   clientPhone: string;
   memberNumber?: string;
+  proId?: string;
+  proName?: string;
+  courtId?: CourtId;
   focus: string;
   amount: number;
   paymentStatus: "pending" | "paid";

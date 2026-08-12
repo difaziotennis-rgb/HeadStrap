@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { formatPrettyDate } from "../summer27-data";
+import { formatPrettyDate, lessonProLabel } from "../summer27-data";
 import {
   type S27ClinicBooking,
   type S27CourtBooking,
@@ -104,7 +104,7 @@ export default function Ledger({
         kind: "lesson" as const,
         date: b.date,
         name: b.clientName,
-        label: `Lesson · ${b.duration} min`,
+        label: `${lessonProLabel(b)} · ${b.duration} min`,
         amount: b.amount,
         status: b.paymentStatus,
         method: b.paymentMethod,

@@ -5,6 +5,7 @@ import {
   formatDateInput,
   s27Clinics,
   s27Events,
+  s27Pros,
   type CourtId,
 } from "./summer27-data";
 import {
@@ -224,33 +225,83 @@ function seedCourts(): S27CourtBooking[] {
 function seedLessons(): S27LessonBooking[] {
   const out: S27LessonBooking[] = [];
   let n = 0;
+  const derek = s27Pros.find((p) => p.id === "derek") || s27Pros[0];
+  const maya = s27Pros.find((p) => p.id === "maya-ellison");
+  const cole = s27Pros.find((p) => p.id === "cole-brennan");
   for (let offset = -1; offset <= 8; offset++) {
     const d = dayOffset(offset);
-    if (d.getDay() === 0 || d.getDay() === 6) continue;
+    const day = d.getDay();
     const date = formatDateInput(d);
-    const hours = [8, 9, 10, 11, 15, 16];
-    hours.forEach((hour, hi) => {
-      const who = personAt(offset * 6 + hi + 3);
-      const duration: "60" | "90" =
-        (hour === 8 && offset % 3 === 0) || (hour === 15 && offset % 3 === 1) ? "90" : "60";
-      if ((hour === 9 && offset % 3 === 0) || (hour === 16 && offset % 3 === 1)) return;
-      const hoursCount = duration === "90" ? 1.5 : 1;
+    if (day >= 1 && day <= 5) {
+      const hours = [8, 9, 10, 11, 15, 16];
+      hours.forEach((hour, hi) => {
+        const who = personAt(offset * 6 + hi + 3);
+        const duration: "60" | "90" =
+          (hour === 8 && offset % 3 === 0) || (hour === 15 && offset % 3 === 1) ? "90" : "60";
+        if ((hour === 9 && offset % 3 === 0) || (hour === 16 && offset % 3 === 1)) return;
+        const hoursCount = duration === "90" ? 1.5 : 1;
+        out.push({
+          id: `mock-lesson-${++n}`,
+          date,
+          hour,
+          duration,
+          clientName: who.name,
+          clientEmail: who.email,
+          clientPhone: who.phone,
+          memberNumber: who.memberNumber,
+          proId: derek.id,
+          proName: derek.name,
+          courtId: derek.courtId,
+          focus: FOCUS[(offset + hi) % FOCUS.length],
+          amount: Math.round(LESSON_RATES.member * hoursCount),
+          paymentStatus: paid(offset + hi),
+          paymentMethod: method(offset + hi),
+          createdAt: new Date().toISOString(),
+        });
+      });
+    }
+    if (maya && [1, 2, 3, 4].includes(day) && offset % 2 === 0) {
+      const who = personAt(offset + 11);
       out.push({
         id: `mock-lesson-${++n}`,
         date,
-        hour,
-        duration,
+        hour: 16,
+        duration: "60",
         clientName: who.name,
         clientEmail: who.email,
         clientPhone: who.phone,
         memberNumber: who.memberNumber,
-        focus: FOCUS[(offset + hi) % FOCUS.length],
-        amount: Math.round(LESSON_RATES.member * hoursCount),
-        paymentStatus: paid(offset + hi),
-        paymentMethod: method(offset + hi),
+        proId: maya.id,
+        proName: maya.name,
+        courtId: maya.courtId,
+        focus: "Doubles patterns",
+        amount: LESSON_RATES.member,
+        paymentStatus: paid(offset + 2),
+        paymentMethod: method(offset + 2),
         createdAt: new Date().toISOString(),
       });
-    });
+    }
+    if (cole && [2, 4, 6].includes(day) && offset % 2 === 1) {
+      const kid = JUNIORS[Math.abs(offset) % JUNIORS.length];
+      out.push({
+        id: `mock-lesson-${++n}`,
+        date,
+        hour: 15,
+        duration: "60",
+        clientName: kid.name,
+        clientEmail: kid.email,
+        clientPhone: "",
+        memberNumber: kid.memberNumber,
+        proId: cole.id,
+        proName: cole.name,
+        courtId: cole.courtId,
+        focus: "Junior fundamentals",
+        amount: LESSON_RATES.member,
+        paymentStatus: paid(offset + 4),
+        paymentMethod: method(offset + 4),
+        createdAt: new Date().toISOString(),
+      });
+    }
   }
   return out;
 }

@@ -7,13 +7,15 @@ import {
   parseDateInput,
   s27Clinics,
   s27Events,
+  s27Pros,
   type ClinicDef,
   type CourtId,
   type EventDef,
+  type ProDef,
   type SlotBlockReason,
 } from "./summer27-data";
 
-export const S27_CATALOG_KEY = "s27_catalog_v5";
+export const S27_CATALOG_KEY = "s27_catalog_v6";
 export const S27_BLOCKS_KEY = "s27_admin_blocks_v1";
 export const S27_NOTES_KEY = "s27_member_notes_v1";
 
@@ -36,6 +38,7 @@ export type S27MemberNote = {
 export type S27Catalog = {
   clinics: ClinicDef[];
   events: EventDef[];
+  pros: ProDef[];
   courtRates: { member: number; guest: number };
   lessonRates: { member: number; guest: number };
   stringingLabor: number;
@@ -60,6 +63,7 @@ export function defaultCatalog(): S27Catalog {
   return {
     clinics: s27Clinics,
     events: s27Events,
+    pros: s27Pros,
     courtRates: { ...COURT_RATES },
     lessonRates: { ...LESSON_RATES },
     stringingLabor: STRINGING_LABOR,
@@ -91,6 +95,20 @@ function usableEvents(events: unknown, fallback: EventDef[]): EventDef[] {
   return ok.length ? ok : fallback;
 }
 
+function usablePros(pros: unknown, fallback: ProDef[]): ProDef[] {
+  if (!Array.isArray(pros) || pros.length === 0) return fallback;
+  const ok = pros.filter(
+    (p): p is ProDef =>
+      !!p &&
+      typeof p === "object" &&
+      typeof (p as ProDef).id === "string" &&
+      typeof (p as ProDef).name === "string" &&
+      Array.isArray((p as ProDef).days) &&
+      Array.isArray((p as ProDef).windows)
+  );
+  return ok.length ? ok : fallback;
+}
+
 export function getCatalog(): S27Catalog {
   const saved = readJson<Partial<S27Catalog> | null>(S27_CATALOG_KEY, null);
   const defaults = defaultCatalog();
@@ -98,6 +116,7 @@ export function getCatalog(): S27Catalog {
   return {
     clinics: usableClinics(saved.clinics, defaults.clinics),
     events: usableEvents(saved.events, defaults.events),
+    pros: usablePros(saved.pros, defaults.pros),
     courtRates: saved.courtRates || defaults.courtRates,
     lessonRates: saved.lessonRates || defaults.lessonRates,
     stringingLabor: typeof saved.stringingLabor === "number" ? saved.stringingLabor : defaults.stringingLabor,
@@ -125,6 +144,15 @@ export function getLiveEvents(): EventDef[] {
     return Array.isArray(events) && events.length ? events : s27Events;
   } catch {
     return s27Events;
+  }
+}
+
+export function getLivePros(): ProDef[] {
+  try {
+    const pros = getCatalog().pros;
+    return Array.isArray(pros) && pros.length ? pros : s27Pros;
+  } catch {
+    return s27Pros;
   }
 }
 

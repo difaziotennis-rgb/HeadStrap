@@ -1,6 +1,6 @@
 "use client";
 
-import { formatHour, formatPrettyDate } from "../summer27-data";
+import { formatHour, formatPrettyDate, lessonProLabel } from "../summer27-data";
 import type { S27Catalog } from "../schedule";
 import type { S27AdminBlock } from "../schedule";
 import {
@@ -90,7 +90,7 @@ export default function TodayBoard({
       id: b.id,
       time: b.hour,
       kind: "Lesson",
-      title: `Lesson · ${b.duration} min`,
+      title: `${lessonProLabel(b)} · ${b.duration} min`,
       name: b.clientName,
       extra: b.focus || `$${b.amount}`,
       status: b.paymentStatus,
@@ -142,7 +142,7 @@ export default function TodayBoard({
   const pendingRows = [
     ...courts.filter((b) => b.date === today && b.paymentStatus === "pending").map((b) => ({ id: b.id, name: b.clientName, label: b.courtName, amount: b.amount, onToggle: () => onToggleCourt(b.id) })),
     ...clinics.filter((b) => b.date === today && b.paymentStatus === "pending").map((b) => ({ id: b.id, name: b.clientName, label: b.clinicName, amount: b.amount, onToggle: () => onToggleClinic(b.id) })),
-    ...lessons.filter((b) => b.date === today && b.paymentStatus === "pending").map((b) => ({ id: b.id, name: b.clientName, label: "Lesson", amount: b.amount, onToggle: () => onToggleLesson(b.id) })),
+    ...lessons.filter((b) => b.date === today && b.paymentStatus === "pending").map((b) => ({ id: b.id, name: b.clientName, label: lessonProLabel(b), amount: b.amount, onToggle: () => onToggleLesson(b.id) })),
     ...events.filter((b) => b.eventDate === today && b.paymentStatus === "pending").map((b) => ({ id: b.id, name: b.attendeeName, label: b.eventTitle, amount: b.amount, onToggle: () => onToggleEvent(b.id) })),
     ...stringing.filter((b) => b.pickupDate === today && b.paymentStatus === "pending").map((b) => ({ id: b.id, name: b.clientName, label: "Stringing", amount: b.amount, onToggle: () => onToggleStringing(b.id) })),
   ];
