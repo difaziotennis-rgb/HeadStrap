@@ -49,8 +49,7 @@ export default function Summer27Home() {
               <span className="block font-medium text-white/85 sm:mt-1">A first season.</span>
             </h2>
             <p className="mt-3 max-w-xl text-[14px] leading-relaxed text-white/90 sm:text-[15px]">
-              Private instruction, weekly clinics, court time, and a handful of gatherings in the clubhouse —
-              Hudson Valley, unhurried.
+              Private lessons, weekly clinics, court time, and a handful of social events — Hudson Valley tennis at the club.
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
               <Link
