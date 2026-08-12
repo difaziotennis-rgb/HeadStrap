@@ -63,7 +63,7 @@ export default function Summer27Layout({ children }: { children: React.ReactNode
         <div className="mx-auto grid w-full max-w-6xl gap-4 px-4 py-7 sm:grid-cols-2 sm:px-6 sm:py-8">
           <div>
             <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">DiFazio Tennis at RTC</p>
-            <p className="mt-2 text-[13px] text-[#4a4a4a]">Courts 1 &amp; 2 · Pro shop · 2 Salisbury Ct, Rhinebeck, NY</p>
+            <p className="mt-2 text-[13px] text-[#4a4a4a]">Courts 1 &amp; 2 · Pro shop · 2 Salisbury Ct</p>
             <a href="tel:+16319015220" className="mt-1 block text-[12px] text-[#6b665e] hover:text-[#1a1a1a]">
               (631) 901-5220
             </a>
@@ -72,15 +72,15 @@ export default function Summer27Layout({ children }: { children: React.ReactNode
             </a>
           </div>
           <div className="sm:text-right">
-            <p className="text-[13px] text-[#6b665e]">Rhinebeck, New York</p>
             <a
               href={S27_INSTAGRAM_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-2 inline-block text-[12px] text-[#6b665e] hover:text-[#1a1a1a]"
+              className="inline-block text-[13px] font-medium text-[#1a1a1a] hover:underline"
             >
               Instagram {S27_INSTAGRAM_HANDLE}
             </a>
+            <p className="mt-1 text-[12px] text-[#8a8477]">Club photos, clinics &amp; updates</p>
           </div>
         </div>
         <div className="border-t border-[#e8e5df]">

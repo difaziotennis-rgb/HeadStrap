@@ -10,6 +10,8 @@ import {
   parseDateInput,
   s27Clinics,
   s27Events,
+  S27_INSTAGRAM_HANDLE,
+  S27_INSTAGRAM_URL,
 } from "./summer27-data";
 
 function upcomingClinicSessions(count = 6) {
