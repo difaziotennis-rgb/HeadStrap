@@ -6,7 +6,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import { useS27Session } from "../../use-s27-session";
 import { canOneClick, startMemberPayment, storageMethodFor, type S27PayMethod } from "../../payments";
 import { PayChooser } from "../../PayChooser";
-import { formatPrettyDate, s27Events, type EventDef } from "../../summer27-data";
+import { formatPrettyDate, parseDateInput, s27Events, type EventDef } from "../../summer27-data";
 import { getLiveEvents } from "../../schedule";
 import { KEYS, loadList, saveList, type S27EventBooking } from "../../storage";
 
@@ -148,61 +148,130 @@ function Summer27EventDetailInner() {
     );
   }
 
-  return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6">
-      <Link href="/Summer27/events" className="text-[12px] text-[#8a8477] hover:text-[#1a1a1a]">
-        ← Events
-      </Link>
-      <p className="mt-4 text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">{event.category}</p>
-      <h2 className="mt-1 text-2xl font-semibold tracking-tight">{event.title}</h2>
-      <p className="mt-1 text-[14px] text-[#6b665e]">
-        {formatPrettyDate(event.date)} · {event.timeLabel}
-      </p>
-      <p className="mt-3 text-[14px] text-[#4a4a4a]">{event.description}</p>
+  const theme = event.theme || s27Events[0].theme;
+  const d = parseDateInput(event.date);
+  const dateBadge = {
+    month: d.toLocaleDateString("en-US", { month: "short" }),
+    day: String(d.getDate()),
+    weekday: d.toLocaleDateString("en-US", { weekday: "long" }),
+  };
 
-      <div className="mt-6 rounded-2xl border border-[#e8e5df] bg-white p-5">
-        <p className="text-[12px] uppercase tracking-[0.12em] text-[#8a8477]">Signed up</p>
-        <p className="mt-1 text-[13px] text-[#6b665e]">
-          {taken}/{event.capacity} · {seatsLeft} open
-        </p>
-        {paid.length > 0 && (
-          <ul className="mt-2 space-y-1 text-[13px]">
-            {paid.map((b) => (
-              <li key={b.id}>
-                {b.attendeeName}
-                {b.guestCount > 1 ? ` +${b.guestCount - 1}` : ""}
-              </li>
-            ))}
-          </ul>
-        )}
+  return (
+    <main className="pb-10">
+      <div className="relative overflow-hidden" style={{ background: theme.wash }}>
+        <div className="absolute inset-0">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={event.image} alt="" className="h-full w-full object-cover opacity-55" />
+          <div
+            className="absolute inset-0"
+            style={{
+              background: `linear-gradient(105deg, ${theme.wash}f2 12%, ${theme.wash}88 55%, ${theme.wash}55 100%)`,
+            }}
+          />
+        </div>
+
+        <div className="relative mx-auto w-full max-w-4xl px-4 pb-10 pt-6 sm:px-6 sm:pb-12 sm:pt-8">
+          <Link href="/Summer27/events" className="text-[12px] text-white/75 hover:text-white">
+            ← Events
+          </Link>
+          <div className="mt-6 flex flex-wrap items-end justify-between gap-4">
+            <div className="min-w-0 max-w-2xl text-white">
+              <p className="text-[10px] uppercase tracking-[0.16em] text-white/70">{event.category}</p>
+              <h2 className="mt-2 text-[28px] font-semibold tracking-tight sm:text-4xl">{event.title}</h2>
+              <p className="mt-3 text-[14px] text-white/85 sm:text-[15px]">
+                {formatPrettyDate(event.date)} · {event.timeLabel}
+              </p>
+              <p className="mt-2 text-[13px] text-white/70">Courts 1 &amp; 2 · Clubhouse</p>
+            </div>
+            <div className="rounded-2xl bg-white px-4 py-3 text-center shadow-sm">
+              <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">{dateBadge.month}</p>
+              <p className="text-[32px] font-semibold leading-none text-[#1a1a1a]">{dateBadge.day}</p>
+              <p className="mt-1 text-[12px] text-[#6b665e]">{dateBadge.weekday}</p>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="mt-4 space-y-3 rounded-2xl border border-[#e8e5df] bg-white p-5">
-        {!isMember && (
-          <>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" className="w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]" />
-            <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className="w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]" />
-          </>
-        )}
-        <label className="block text-[12px] text-[#6b665e]">
-          Players
-          <select value={guestCount} onChange={(e) => setGuestCount(Number(e.target.value))} className="mt-1 w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]">
-            {[1, 2, 3, 4].map((n) => (
-              <option key={n} value={n}>
-                {n}
-              </option>
-            ))}
-          </select>
-        </label>
-        <p className="text-[13px] text-[#6b665e]">
-          ${per} each · total ${total}
-        </p>
-        {msg && <p className="text-[13px]">{msg}</p>}
-        {seatsLeft <= 0 ? (
-          <p className="rounded-xl bg-[#faf9f7] px-3 py-3 text-center text-[13px] text-[#8a8477]">Sold out</p>
-        ) : (
-          <PayChooser amount={total} savedCard={savedCard} paying={paying} primaryLabel="Reserve" onPay={reserve} />
-        )}
+      <div className="mx-auto grid w-full max-w-4xl gap-5 px-4 pt-6 sm:px-6 lg:grid-cols-5">
+        <section className="lg:col-span-3">
+          <div className="rounded-2xl border border-[#e8e5df] bg-white p-5 sm:p-6">
+            <p className="text-[15px] leading-relaxed text-[#4a4a4a]">{event.description}</p>
+            {event.highlights?.length ? (
+              <ul className="mt-5 space-y-2">
+                {event.highlights.map((item) => (
+                  <li key={item} className="flex items-start gap-2 text-[13px] text-[#4a4a4a]">
+                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: theme.accent }} />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-[#e8e5df] bg-white p-5" style={{ background: theme.soft }}>
+            <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Signed up</p>
+            <p className="mt-1 text-[13px] text-[#6b665e]">
+              {taken}/{event.capacity} · {seatsLeft} open
+            </p>
+            {paid.length > 0 ? (
+              <ul className="mt-3 grid gap-1 sm:grid-cols-2">
+                {paid.map((b) => (
+                  <li key={b.id} className="text-[13px] text-[#4a4a4a]">
+                    {b.attendeeName}
+                    {b.guestCount > 1 ? ` +${b.guestCount - 1}` : ""}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-2 text-[13px] text-[#8a8477]">Be the first on the list.</p>
+            )}
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-[#e8e5df] bg-white p-5 lg:col-span-2">
+          <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Reserve</p>
+          <p className="mt-1 text-[14px] font-medium text-[#1a1a1a]">
+            ${per} {isMember ? "member" : "guest"} · each
+          </p>
+          <div className="mt-4 space-y-3">
+            {!isMember && (
+              <>
+                <input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Name"
+                  className="w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]"
+                />
+                <input
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Email"
+                  className="w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]"
+                />
+              </>
+            )}
+            <label className="block text-[12px] text-[#6b665e]">
+              Players
+              <select
+                value={guestCount}
+                onChange={(e) => setGuestCount(Number(e.target.value))}
+                className="mt-1 w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]"
+              >
+                {[1, 2, 3, 4].map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {msg && <p className="text-[13px] text-[#4a4a4a]">{msg}</p>}
+            {seatsLeft <= 0 ? (
+              <p className="rounded-xl bg-[#faf9f7] px-3 py-3 text-center text-[13px] text-[#8a8477]">Sold out</p>
+            ) : (
+              <PayChooser amount={total} savedCard={savedCard} paying={paying} primaryLabel="Reserve" onPay={reserve} />
+            )}
+          </div>
+        </section>
       </div>
     </main>
   );

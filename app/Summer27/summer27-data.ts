@@ -237,6 +237,14 @@ export type EventDef = {
   guestPrice: number;
   description: string;
   highlights: string[];
+  /** Unsplash (or similar) hero for event cards / detail. */
+  image: string;
+  /** Soft wash used behind cards and detail chrome. */
+  theme: {
+    wash: string;
+    soft: string;
+    accent: string;
+  };
 };
 
 export const s27Events: EventDef[] = [
@@ -249,8 +257,11 @@ export const s27Events: EventDef[] = [
     capacity: 16,
     memberPrice: 45,
     guestPrice: 60,
-    description: "Rotating mixed doubles. Partner optional — we’ll pair you.",
-    highlights: ["Rotating partners", "Social scoring", "Light bites after"],
+    description:
+      "Rotating mixed doubles on Courts 1 & 2. Partner optional — we’ll pair you. Water and a quick gathering in the clubhouse after.",
+    highlights: ["Rotating partners", "Both courts", "Clubhouse after"],
+    image: "https://images.unsplash.com/photo-1554068865-24cecd4e343f?auto=format&fit=crop&w=1400&q=80",
+    theme: { wash: "#1e3a5f", soft: "#eef2f6", accent: "#2f5a8a" },
   },
   {
     id: "ladies-morning-rr",
@@ -261,8 +272,10 @@ export const s27Events: EventDef[] = [
     capacity: 12,
     memberPrice: 40,
     guestPrice: 55,
-    description: "Ladies doubles, then coffee.",
-    highlights: ["Doubles only", "Coffee social", "Members + guests"],
+    description: "Ladies doubles on both courts, then coffee in the clubhouse. Members and guests welcome.",
+    highlights: ["Doubles only", "Coffee in the clubhouse", "Members + guests"],
+    image: "https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?auto=format&fit=crop&w=1400&q=80",
+    theme: { wash: "#4a5d3f", soft: "#eef1ea", accent: "#5f734f" },
   },
   {
     id: "member-guest-mixer",
@@ -273,8 +286,10 @@ export const s27Events: EventDef[] = [
     capacity: 16,
     memberPrice: 55,
     guestPrice: 70,
-    description: "Bring a guest for doubles, then a clubhouse toast.",
-    highlights: ["One guest included in pair", "Round-robin draw", "Post-play toast"],
+    description: "Bring a guest for doubles on Courts 1 & 2, then a toast in the clubhouse.",
+    highlights: ["One guest with each member", "Round-robin draw", "Clubhouse toast"],
+    image: "https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?auto=format&fit=crop&w=1400&q=80",
+    theme: { wash: "#3d2f28", soft: "#f3efe9", accent: "#7a5c45" },
   },
   {
     id: "family-play-afternoon",
@@ -282,11 +297,13 @@ export const s27Events: EventDef[] = [
     date: "2027-07-25",
     timeLabel: "Sunday · 11:00 AM–1:00 PM",
     category: "Family",
-    capacity: 20,
+    capacity: 16,
     memberPrice: 30,
     guestPrice: 40,
-    description: "Parent–child games and easy round robins.",
-    highlights: ["Parent–child games", "All ages welcome"],
+    description: "Parent–child games and easy round robins across both courts. Casual and welcoming.",
+    highlights: ["Parent–child games", "Both courts", "All ages welcome"],
+    image: "https://images.unsplash.com/photo-1534158914592-062992fbe900?auto=format&fit=crop&w=1400&q=80",
+    theme: { wash: "#2f4a5a", soft: "#eaf1f4", accent: "#3f6a7d" },
   },
   {
     id: "mixed-rr-august",
@@ -297,8 +314,10 @@ export const s27Events: EventDef[] = [
     capacity: 16,
     memberPrice: 45,
     guestPrice: 60,
-    description: "Mid-summer mixed doubles with rotating partners.",
-    highlights: ["Rotating mixed doubles", "Fun leaderboard", "Courtside water & fruit"],
+    description: "Mid-summer mixed doubles with rotating partners on Courts 1 & 2. Courtside water and fruit.",
+    highlights: ["Rotating mixed doubles", "Both courts", "Water & fruit"],
+    image: "https://images.unsplash.com/photo-1587280501635-68a0e82cd5ff?auto=format&fit=crop&w=1400&q=80",
+    theme: { wash: "#1e3a5f", soft: "#eef2f6", accent: "#2f5a8a" },
   },
   {
     id: "season-close-social",
@@ -306,11 +325,14 @@ export const s27Events: EventDef[] = [
     date: "2027-09-11",
     timeLabel: "Saturday · 5:00–8:00 PM",
     category: "Social",
-    capacity: 40,
+    capacity: 20,
     memberPrice: 55,
     guestPrice: 75,
-    description: "Optional mixed round robin, then dinner on the terrace.",
-    highlights: ["Optional tennis block", "Terrace dinner", "Member awards toast"],
+    description:
+      "Optional mixed play on both courts, then a simple season-end gathering in the clubhouse — not a banquet, just the club.",
+    highlights: ["Optional tennis block", "Clubhouse gathering", "Season toast"],
+    image: "https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=1400&q=80",
+    theme: { wash: "#4a3428", soft: "#f4eee8", accent: "#8a6348" },
   },
 ];
 

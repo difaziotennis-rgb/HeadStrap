@@ -332,7 +332,7 @@ export default function ProgramSettings({ catalog, onSave, onReset }: Props) {
                 <input className={inputClass} value={event.guestPrice} onChange={(e) => updateEvent(event.id, { guestPrice: Number(e.target.value) || 0 })} />
                 <Field label="Capacity">
                   <select className={inputClass} value={event.capacity} onChange={(e) => updateEvent(event.id, { capacity: Number(e.target.value) || 0 })}>
-                    {[8, 12, 16, 20, 24, 32, event.capacity].filter((n, i, arr) => arr.indexOf(n) === i).map((n) => (
+                    {[8, 12, 16, 20, 24, event.capacity].filter((n, i, arr) => arr.indexOf(n) === i).map((n) => (
                       <option key={n} value={n}>{n}</option>
                     ))}
                   </select>

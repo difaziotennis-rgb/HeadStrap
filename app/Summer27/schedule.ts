@@ -15,7 +15,7 @@ import {
   type SlotBlockReason,
 } from "./summer27-data";
 
-export const S27_CATALOG_KEY = "s27_catalog_v11";
+export const S27_CATALOG_KEY = "s27_catalog_v12";
 export const S27_BLOCKS_KEY = "s27_admin_blocks_v1";
 export const S27_NOTES_KEY = "s27_member_notes_v1";
 
@@ -89,9 +89,18 @@ function usableClinics(clinics: unknown, fallback: ClinicDef[]): ClinicDef[] {
 
 function usableEvents(events: unknown, fallback: EventDef[]): EventDef[] {
   if (!Array.isArray(events) || events.length === 0) return fallback;
-  const ok = events.filter(
-    (e): e is EventDef => !!e && typeof e === "object" && typeof (e as EventDef).id === "string"
-  );
+  const ok = events
+    .filter((e): e is EventDef => !!e && typeof e === "object" && typeof (e as EventDef).id === "string")
+    .map((e) => {
+      const base = fallback.find((f) => f.id === e.id);
+      return {
+        ...base,
+        ...e,
+        image: e.image || base?.image || fallback[0]?.image || "",
+        theme: e.theme || base?.theme || fallback[0]?.theme,
+        highlights: Array.isArray(e.highlights) && e.highlights.length ? e.highlights : base?.highlights || [],
+      } as EventDef;
+    });
   return ok.length ? ok : fallback;
 }
 
