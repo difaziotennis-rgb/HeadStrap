@@ -15,7 +15,7 @@ import {
   type SlotBlockReason,
 } from "./summer27-data";
 
-export const S27_CATALOG_KEY = "s27_catalog_v18";
+export const S27_CATALOG_KEY = "s27_catalog_v19";
 export const S27_BLOCKS_KEY = "s27_admin_blocks_v1";
 export const S27_NOTES_KEY = "s27_member_notes_v1";
 
@@ -118,14 +118,20 @@ export function normalizePrimeTeaching(raw: unknown): S27Catalog["primeTeaching"
 
 function usableClinics(clinics: unknown, fallback: ClinicDef[]): ClinicDef[] {
   if (!Array.isArray(clinics) || clinics.length === 0) return fallback;
+  const fallbackIds = new Set(fallback.map((f) => f.id));
   const ok = clinics.filter(
     (c): c is ClinicDef =>
       !!c &&
       typeof c === "object" &&
       typeof (c as ClinicDef).id === "string" &&
+      fallbackIds.has((c as ClinicDef).id) &&
       typeof (c as ClinicDef).name === "string" &&
       Array.isArray((c as ClinicDef).days)
   );
+  const ids = new Set(ok.map((c) => c.id));
+  for (const clinic of fallback) {
+    if (!ids.has(clinic.id)) ok.push(clinic);
+  }
   return ok.length ? ok : fallback;
 }
 

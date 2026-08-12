@@ -15,16 +15,16 @@ import {
 } from "./summer27-data";
 
 function upcomingClinicSessions(count = 6) {
-  const adult = s27Clinics.filter((c) => c.kind === "adult");
+  const clinics = s27Clinics;
   const start = new Date();
   start.setHours(0, 0, 0, 0);
-  const out: { date: string; clinic: (typeof adult)[number] }[] = [];
+  const out: { date: string; clinic: (typeof clinics)[number] }[] = [];
   for (let i = 0; i < 21 && out.length < count; i++) {
     const d = new Date(start);
     d.setDate(start.getDate() + i);
     const day = d.getDay();
     const iso = formatDateInput(d);
-    for (const clinic of adult) {
+    for (const clinic of clinics) {
       if (!clinic.days.includes(day)) continue;
       out.push({ date: iso, clinic });
       if (out.length >= count) break;

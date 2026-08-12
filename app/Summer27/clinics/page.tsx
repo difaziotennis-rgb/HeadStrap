@@ -15,7 +15,7 @@ import {
   type ClinicDef,
 } from "../summer27-data";
 import { getLiveClinics } from "../schedule";
-import { KEYS, loadList, saveList, type S27ClinicBooking } from "../storage";
+import { KEYS, findMemberAccount, loadList, saveList, type S27ClinicBooking, type S27MemberChild } from "../storage";
 import { DateChips, dateChipFromIso } from "../DateChips";
 import { canChangeBooking, CANCEL_WINDOW_HOURS } from "../booking-policy";
 
@@ -79,7 +79,11 @@ function shortClinicName(name: string): string {
     .replace(/\s+Clinic$/i, "")
     .replace(/^Weekend\s+/i, "")
     .replace(/^Weeknight\s+/i, "")
-    .replace(/^Midweek\s+/i, "");
+    .replace(/^Wednesday Morning\s+/i, "Wed AM ")
+    .replace(/^Saturday\s+/i, "")
+    .replace(/^Wednesday\s+/i, "Wed ")
+    .replace(/\s+Juniors$/i, "")
+    .replace(/\s+Junior\s+/i, " ");
 }
 
 function occurrencesForWeek(clinics: ClinicDef[], weekStart: Date): Occurrence[] {
@@ -110,20 +114,19 @@ function Summer27ClinicsInner() {
   const queryDate = searchParams.get("date") || "";
 
   const [bookings, setBookings] = useState<S27ClinicBooking[]>([]);
-  const [clinics, setClinics] = useState<ClinicDef[]>(s27Clinics.filter((c) => c.kind === "adult"));
+  const [clinics, setClinics] = useState<ClinicDef[]>(s27Clinics);
   const [weekStart, setWeekStart] = useState(() =>
     startOfWeekMonday(queryDate ? parseDateInput(queryDate) : new Date())
   );
   const [selectedId, setSelectedId] = useState(
-    () =>
-      (queryClinic && s27Clinics.some((c) => c.id === queryClinic && c.kind === "adult")
-        ? queryClinic
-        : "") || ""
+    () => (queryClinic && s27Clinics.some((c) => c.id === queryClinic) ? queryClinic : "") || ""
   );
   const [sheetOpen, setSheetOpen] = useState(() => Boolean(queryClinic));
   const [date, setDate] = useState(queryDate);
   const [guestName, setGuestName] = useState("");
   const [guestEmail, setGuestEmail] = useState("");
+  const [childName, setChildName] = useState("");
+  const [familyChildren, setFamilyChildren] = useState<S27MemberChild[]>([]);
   const [msg, setMsg] = useState<string | null>(null);
   const [paying, setPaying] = useState(false);
 
@@ -138,8 +141,19 @@ function Summer27ClinicsInner() {
   const occurrences = useMemo(() => occurrencesForWeek(clinics, weekStart), [clinics, weekStart]);
 
   useEffect(() => {
+    if (!session) {
+      setFamilyChildren([]);
+      return;
+    }
+    const account = findMemberAccount(session.memberNumber);
+    const kids = Array.isArray(account?.children) ? account!.children! : [];
+    setFamilyChildren(kids);
+    if (kids.length && !childName) setChildName(kids[0].name);
+  }, [session]); // eslint-disable-line react-hooks/exhaustive-deps — refresh kids when session changes
+
+  useEffect(() => {
     try {
-      const live = getLiveClinics().filter((c) => c.kind === "adult");
+      const live = getLiveClinics();
       if (live.length) {
         setClinics(live);
         setSelectedId((id) => {
@@ -204,11 +218,18 @@ function Summer27ClinicsInner() {
 
   const roster = clinic && date ? rosterByClinicDate[`${clinic.id}|${date}`] || [] : [];
   const seatsLeft = clinic ? Math.max(0, clinic.capacity - roster.length) : 0;
-  const myBooking =
-    session &&
-    roster.find((b) => b.memberNumber === session.memberNumber || b.clientEmail === session.memberEmail);
-  const alreadyIn = !!myBooking;
-  const cancellable = !!(myBooking && clinic && canChangeBooking(date, clinic.startHour));
+  const isJunior = clinic?.kind === "junior";
+  const myBookings =
+    session && clinic
+      ? roster.filter((b) => b.memberNumber === session.memberNumber || b.clientEmail === session.memberEmail)
+      : [];
+  const myBooking = !isJunior ? myBookings[0] : undefined;
+  const childAlreadyIn =
+    isJunior &&
+    !!childName.trim() &&
+    roster.some((b) => b.clientName.trim().toLowerCase() === childName.trim().toLowerCase());
+  const alreadyIn = isJunior ? childAlreadyIn : !!myBooking;
+  const cancellable = !!(clinic && canChangeBooking(date, clinic.startHour));
 
   const dateChips = useMemo(
     () =>
@@ -233,19 +254,21 @@ function Summer27ClinicsInner() {
     setMsg(null);
   }
 
-  function cancelSignup() {
-    if (!myBooking || !clinic) return;
+  function cancelSignup(booking?: S27ClinicBooking) {
+    const target = booking || myBooking;
+    if (!target || !clinic) return;
     if (!canChangeBooking(date, clinic.startHour)) {
       setMsg(`Cancellations need at least ${CANCEL_WINDOW_HOURS} hours’ notice.`);
       return;
     }
-    const next = loadList<S27ClinicBooking>(KEYS.clinics).filter((b) => b.id !== myBooking.id);
+    const next = loadList<S27ClinicBooking>(KEYS.clinics).filter((b) => b.id !== target.id);
     saveList(KEYS.clinics, next);
     setBookings(next);
-    setMsg("Signup cancelled.");
+    setMsg(isJunior ? `Cancelled ${target.clientName}.` : "Signup cancelled.");
   }
 
   async function signUp(method: S27PayMethod) {
+    if (!clinic) return;
     if (!isMember || !session) {
       setMsg("Sign in as a member to book.");
       return;
@@ -259,18 +282,25 @@ function Summer27ClinicsInner() {
       return;
     }
     if (alreadyIn) {
-      setMsg("You’re already on this roster.");
+      setMsg(isJunior ? "That junior is already enrolled." : "You’re already on this roster.");
       return;
     }
 
-    if (!clinic) return;
-    const id = `clinic-${Date.now()}`;
+    const clientName = isJunior
+      ? childName.trim() || `${session.memberName}'s junior`
+      : session.memberName;
+    if (isJunior && !clientName.trim()) {
+      setMsg("Please add the junior’s name.");
+      return;
+    }
+
+    const id = `${isJunior ? "junior" : "clinic"}-${Date.now()}`;
     const booking: S27ClinicBooking = {
       id,
       clinicId: clinic.id,
       clinicName: clinic.name,
       date,
-      clientName: session.memberName,
+      clientName,
       clientEmail: session.memberEmail,
       memberNumber: session.memberNumber,
       amount: price,
@@ -284,10 +314,10 @@ function Summer27ClinicsInner() {
       method,
       amount: price,
       email: session.memberEmail,
-      description: `${clinic.name} · ${date}`,
+      description: isJunior ? `${clinic.name} · ${clientName} · ${date}` : `${clinic.name} · ${date}`,
       successPath: "/Summer27/clinics",
       bookingId: id,
-      metadata: { type: "clinic", clinicId: clinic.id, date },
+      metadata: { type: isJunior ? "junior" : "clinic", clinicId: clinic.id, date },
     });
 
     if (result.kind === "error") {
@@ -300,7 +330,7 @@ function Summer27ClinicsInner() {
     saveList(KEYS.clinics, next);
     setBookings(next);
     setPaying(false);
-    setMsg(`You’re in. $${price} charged.`);
+    setMsg(isJunior ? `Enrolled. $${price} charged.` : `You’re in. $${price} charged.`);
   }
 
   const isThisWeek = formatDateInput(weekStart) === formatDateInput(thisWeekStart);
@@ -310,7 +340,7 @@ function Summer27ClinicsInner() {
       <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Clinics</p>
       <h2 className="mt-1 text-2xl font-semibold tracking-tight">Weekly group play</h2>
       <p className="mt-2 max-w-xl text-[14px] leading-relaxed text-[#6b665e]">
-        Tap a session to book. One hour $50 · 90 minutes $80.
+        Adult and junior sessions. Tap one to book. One hour $50 · 90 minutes $80.
       </p>
 
       <div className="mt-6 flex items-center justify-between gap-3">
@@ -418,6 +448,7 @@ function Summer27ClinicsInner() {
                                   mine ? "text-white" : "text-[#1a1a1a]"
                                 }`}
                               >
+                                {o.clinic.kind === "junior" ? "Jr · " : ""}
                                 {shortClinicName(o.clinic.name)}
                               </span>
                               <span
@@ -440,12 +471,6 @@ function Summer27ClinicsInner() {
         </div>
       </div>
 
-      <p className="mt-6 text-center text-[12px] text-[#8a8477]">
-        <Link href="/Summer27/juniors" className="hover:text-[#1a1a1a]">
-          Junior hours →
-        </Link>
-      </p>
-
       {sheetOpen && clinic && (
         <div className="fixed inset-0 z-50 flex items-end justify-center p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:items-center sm:p-4">
           <button
@@ -462,7 +487,9 @@ function Summer27ClinicsInner() {
           >
             <div className="flex items-start justify-between gap-3 border-b border-[#ece8e2] px-4 pb-3 pt-3.5 sm:px-5 sm:pb-4 sm:pt-5">
               <div className="min-w-0">
-                <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Book clinic</p>
+                <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">
+                  {isJunior ? "Enroll" : "Book clinic"}
+                </p>
                 <h3 id="clinic-sheet-title" className="mt-0.5 text-lg font-semibold tracking-tight text-[#1a1a1a] sm:mt-1 sm:text-xl">
                   {clinic.name}
                 </h3>
@@ -508,7 +535,52 @@ function Summer27ClinicsInner() {
               </div>
 
               <div className="mt-4 space-y-3 pb-2">
-                {!isMember && (
+                {isJunior && isMember && familyChildren.length > 0 ? (
+                  <div>
+                    <label className="block text-[11px] text-[#8a8477]">
+                      Child on your account
+                      <select
+                        value={familyChildren.some((c) => c.name === childName) ? childName : "__other"}
+                        onChange={(e) => {
+                          if (e.target.value === "__other") setChildName("");
+                          else setChildName(e.target.value);
+                        }}
+                        className="mt-1 w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]"
+                      >
+                        {familyChildren.map((c) => (
+                          <option key={c.id} value={c.name}>
+                            {c.name}
+                            {c.birthYear ? ` (${c.birthYear})` : ""}
+                          </option>
+                        ))}
+                        <option value="__other">Someone else…</option>
+                      </select>
+                    </label>
+                    {!familyChildren.some((c) => c.name === childName) && (
+                      <input
+                        value={childName}
+                        onChange={(e) => setChildName(e.target.value)}
+                        placeholder="Junior’s full name"
+                        className="mt-2 w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]"
+                      />
+                    )}
+                    <p className="mt-1.5 text-[12px] text-[#8a8477]">
+                      Manage kids in{" "}
+                      <Link href="/Summer27/member/portal" className="text-[#1a1a1a] underline-offset-2 hover:underline">
+                        My Account → Family
+                      </Link>
+                      .
+                    </p>
+                  </div>
+                ) : isJunior ? (
+                  <input
+                    value={childName}
+                    onChange={(e) => setChildName(e.target.value)}
+                    placeholder="Junior’s name"
+                    className="w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]"
+                  />
+                ) : null}
+                {!isMember && !isJunior && (
                   <>
                     <input
                       value={guestName}
@@ -525,13 +597,41 @@ function Summer27ClinicsInner() {
                   </>
                 )}
                 {msg && <p className="text-[13px] text-[#4a4a4a]">{msg}</p>}
-                {alreadyIn ? (
+                {isJunior && myBookings.length > 0 && (
+                  <div className="space-y-2 rounded-xl bg-[#faf9f7] px-3 py-3">
+                    <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Your enrollments</p>
+                    <ul className="space-y-2">
+                      {myBookings.map((b) => (
+                        <li key={b.id} className="flex items-center justify-between gap-2">
+                          <span className="text-[13px] text-[#4a4a4a]">{b.clientName}</span>
+                          {cancellable ? (
+                            <button
+                              type="button"
+                              onClick={() => cancelSignup(b)}
+                              className="shrink-0 text-[12px] font-medium text-[#991b1b] hover:underline"
+                            >
+                              Cancel
+                            </button>
+                          ) : (
+                            <span className="text-[11px] text-[#8a8477]">Locked</span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                    {!cancellable && (
+                      <p className="text-[12px] text-[#8a8477]">
+                        Locked within {CANCEL_WINDOW_HOURS} hours of start
+                      </p>
+                    )}
+                  </div>
+                )}
+                {!isJunior && alreadyIn ? (
                   <div className="space-y-2 rounded-xl bg-[#faf9f7] px-3 py-3 text-center">
                     <p className="text-[13px] text-[#4a4a4a]">You’re signed up</p>
                     {cancellable ? (
                       <button
                         type="button"
-                        onClick={cancelSignup}
+                        onClick={() => cancelSignup()}
                         className="text-[13px] font-medium text-[#991b1b] hover:underline"
                       >
                         Cancel signup
@@ -544,12 +644,12 @@ function Summer27ClinicsInner() {
                   </div>
                 ) : seatsLeft <= 0 ? (
                   <p className="rounded-xl bg-[#faf9f7] px-3 py-3 text-center text-[13px] text-[#8a8477]">Full</p>
-                ) : (
+                ) : alreadyIn && isJunior ? null : (
                   <PayChooser
                     amount={price}
                     savedCard={savedCard}
                     paying={paying}
-                    primaryLabel="Join"
+                    primaryLabel={isJunior ? "Enroll" : "Join"}
                     onPay={signUp}
                   />
                 )}

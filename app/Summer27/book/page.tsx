@@ -323,7 +323,7 @@ function Summer27BookInner() {
       if (occ.type === "clinic") {
         return (
           <Link
-            href={`${occ.kind === "junior" ? "/Summer27/juniors" : "/Summer27/clinics"}?clinic=${encodeURIComponent(occ.clinicId)}&date=${date}`}
+            href={`/Summer27/clinics?clinic=${encodeURIComponent(occ.clinicId)}&date=${date}`}
             className={`block truncate rounded-md px-1.5 py-2 text-center text-[10px] font-medium leading-tight sm:px-2 sm:text-[11px] ${slotClass(occ.type)}`}
           >
             {shortOccLabel(occ.label, occ.type)}
