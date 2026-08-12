@@ -65,7 +65,7 @@ export default function Summer27EventsPage() {
       <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Events</p>
       <h2 className="mt-1 text-2xl font-semibold tracking-tight">Club calendar</h2>
       <p className="mt-2 max-w-xl text-[14px] leading-relaxed text-[#6b665e]">
-        Round robins, mixers, and a season close on Courts 1 &amp; 2 — with the clubhouse for a simple gathering after.
+        Round robins, mixers, and a season close on Courts 3 &amp; 4 — with the clubhouse for a simple gathering after.
       </p>
 
       <div className="mt-8 space-y-10">

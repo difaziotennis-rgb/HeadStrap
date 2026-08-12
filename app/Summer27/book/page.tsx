@@ -379,9 +379,9 @@ function Summer27BookInner() {
   return (
     <main className="mx-auto w-full max-w-3xl px-4 pb-10 pt-6 sm:max-w-6xl sm:px-6 sm:pt-8">
       <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Courts</p>
-      <h2 className="mt-1 text-2xl font-semibold tracking-tight">Court 1 &amp; Court 2</h2>
+      <h2 className="mt-1 text-2xl font-semibold tracking-tight">Court 3 &amp; Court 4</h2>
       <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-[#6b665e]">
-        ${rates.member}/hour members · ${rates.guest} guests. Court 1 may be held on weekdays for private lessons —
+        ${rates.member}/hour members · ${rates.guest} guests. Court 3 may be held on weekdays for private lessons —
         open times show on the grid.
       </p>
       <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-[#6b665e]">

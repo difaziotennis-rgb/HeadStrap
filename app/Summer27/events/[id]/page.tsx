@@ -162,7 +162,7 @@ function Summer27EventDetailInner() {
               <p className="mt-3 text-[14px] text-white/85 sm:text-[15px]">
                 {formatPrettyDate(event.date)} · {event.timeLabel}
               </p>
-              <p className="mt-2 text-[13px] text-white/70">Courts 1 &amp; 2 · Clubhouse</p>
+              <p className="mt-2 text-[13px] text-white/70">Courts 3 &amp; 4 · Clubhouse</p>
             </div>
             <div className="rounded-2xl bg-white px-4 py-3 text-center shadow-sm">
               <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">{dateBadge.month}</p>

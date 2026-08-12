@@ -238,7 +238,7 @@ function seedCourts(): S27CourtBooking[] {
       hour,
       durationHours,
       courtId,
-      courtName: courtId === "court-1" ? "Court 1" : "Court 2",
+      courtName: courtId === "court-1" ? "Court 3" : "Court 4",
       clientName: who.name,
       clientEmail: who.email,
       clientPhone: who.phone,

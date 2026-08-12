@@ -442,7 +442,7 @@ export default function TodayBoard({
       id: b.id,
       time: b.startHour,
       kind: "Hold",
-      title: `${b.courtId === "both" ? "Both courts" : b.courtId === "court-1" ? "Court 1" : "Court 2"} · ${b.durationHours}h`,
+      title: `${b.courtId === "both" ? "Both courts" : b.courtId === "court-1" ? "Court 3" : "Court 4"} · ${b.durationHours}h`,
       name: b.reason,
     }));
 
@@ -1170,7 +1170,7 @@ function CalendarDetailSheet({
         <DetailRow label="When" value={`${formatPrettyDate(hold.date)} · ${formatHour(hold.startHour)}–${formatHour(hold.startHour + hold.durationHours)}`} />
         <DetailRow
           label="Courts"
-          value={hold.courtId === "both" ? "Both courts" : hold.courtId === "court-2" ? "Court 2" : "Court 1"}
+          value={hold.courtId === "both" ? "Both courts" : hold.courtId === "court-2" ? "Court 4" : "Court 3"}
         />
         <DetailRow label="Type" value={hold.kind === "open" ? "Open (releases recurring hold)" : "Hold (blocks booking)"} />
       </div>

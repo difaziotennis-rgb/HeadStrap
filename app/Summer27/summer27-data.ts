@@ -15,8 +15,8 @@ export const S27_INSTAGRAM_URL = "https://www.instagram.com/difaziotennis";
 export const S27_INSTAGRAM_HANDLE = "@difaziotennis";
 
 export const COURTS = [
-  { id: "court-1", name: "Court 1" },
-  { id: "court-2", name: "Court 2" },
+  { id: "court-1", name: "Court 3" },
+  { id: "court-2", name: "Court 4" },
 ] as const;
 
 export type CourtId = (typeof COURTS)[number]["id"];
@@ -81,7 +81,7 @@ export const s27Pros: ProDef[] = [
     name: "Derek DiFazio",
     title: "Director of Tennis",
     focus: "Advanced adults and juniors",
-    bio: "Private instruction on Court 1. Advanced adults, college-bound juniors, and serious club players.",
+    bio: "Private instruction on Court 3. Advanced adults, college-bound juniors, and serious club players.",
     longBio:
       "A native New Yorker, Derek has over 15 years of coaching experience from the beginner to Division I and professional levels and loves working with players of all ages and abilities. A national doubles champion as both a junior and an adult, Derek was ranked as high as #1 in New York and the Eastern Section, before playing #1 singles and doubles at Division I Clemson University where he achieved a top 25 ITA ranking and an ATP singles ranking while competing professionally.",
     quote: "Movement is medicine. Play is essential.",
@@ -284,7 +284,7 @@ export const s27Events: EventDef[] = [
     memberPrice: 45,
     guestPrice: 60,
     description:
-      "Rotating mixed doubles on Courts 1 & 2. Partner optional — we’ll pair you. Water and a quick gathering in the clubhouse after.",
+      "Rotating mixed doubles on Courts 3 & 4. Partner optional — we’ll pair you. Water and a quick gathering in the clubhouse after.",
     highlights: ["Rotating partners", "Both courts", "Clubhouse after"],
     image: "/s27/events/opening-mixed.jpg",
     theme: { wash: "#2f4a3a", soft: "#eef2ea", accent: "#4a6b52" },
@@ -312,7 +312,7 @@ export const s27Events: EventDef[] = [
     capacity: 16,
     memberPrice: 55,
     guestPrice: 70,
-    description: "Bring a guest for doubles on Courts 1 & 2, then a toast in the clubhouse.",
+    description: "Bring a guest for doubles on Courts 3 & 4, then a toast in the clubhouse.",
     highlights: ["One guest with each member", "Round-robin draw", "Clubhouse toast"],
     image: "/s27/events/member-guest.jpg",
     theme: { wash: "#3d4a38", soft: "#f0f2ec", accent: "#5a6b4a" },
@@ -340,7 +340,7 @@ export const s27Events: EventDef[] = [
     capacity: 16,
     memberPrice: 45,
     guestPrice: 60,
-    description: "Mid-summer mixed doubles with rotating partners on Courts 1 & 2. Courtside water and fruit.",
+    description: "Mid-summer mixed doubles with rotating partners on Courts 3 & 4. Courtside water and fruit.",
     highlights: ["Rotating mixed doubles", "Both courts", "Water & fruit"],
     image: "/s27/events/august-mixed.jpg",
     theme: { wash: "#2f4a3a", soft: "#eef2ea", accent: "#4a6b52" },

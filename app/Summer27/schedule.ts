@@ -311,7 +311,7 @@ export function getProgramBlock(
     return hoursOverlap(block.startHour, block.durationHours, hour);
   });
   if (matchingBlocks.some((b) => b.kind === "open")) {
-    // Explicitly release this slot (e.g. open Court 1 during a recurring lesson hold).
+    // Explicitly release this slot (e.g. open Court 3 during a recurring lesson hold).
     return null;
   }
   const hold = matchingBlocks.find((b) => b.kind !== "open");

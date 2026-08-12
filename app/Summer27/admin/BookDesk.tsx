@@ -560,8 +560,8 @@ function HoldsBlock({
           <input type="date" className={inputClass} value={date} onChange={(e) => setDate(e.target.value)} />
           <select className={inputClass} value={courtId} onChange={(e) => setCourtId(e.target.value as CourtId | "both")}>
             <option value="both">Both courts</option>
-            <option value="court-1">Court 1</option>
-            <option value="court-2">Court 2</option>
+            <option value="court-1">Court 3</option>
+            <option value="court-2">Court 4</option>
           </select>
           <div className="grid grid-cols-2 gap-2">
             <select
@@ -591,7 +591,7 @@ function HoldsBlock({
             className={`${inputClass} sm:col-span-2`}
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            placeholder={kind === "open" ? "Reason (optional) — e.g. Open Court 1 for members" : "Reason — e.g. Resurface, private event, rain…"}
+            placeholder={kind === "open" ? "Reason (optional) — e.g. Open Court 3 for members" : "Reason — e.g. Resurface, private event, rain…"}
           />
         </div>
         <button type="submit" className="w-full rounded-xl bg-[#1a1a1a] py-2.5 text-[13px] font-medium text-white">
@@ -613,7 +613,7 @@ function HoldsBlock({
                   {formatPrettyDate(b.date)} {formatHour(b.startHour)}–{formatHour(b.startHour + b.durationHours)}
                 </p>
                 <p className="text-[12px] text-[#6b665e]">
-                  {b.courtId === "both" ? "Both courts" : b.courtId === "court-1" ? "Court 1" : "Court 2"}
+                  {b.courtId === "both" ? "Both courts" : b.courtId === "court-1" ? "Court 3" : "Court 4"}
                   {b.reason ? ` · ${b.reason}` : ""}
                 </p>
               </div>

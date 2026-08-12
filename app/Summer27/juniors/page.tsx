@@ -322,7 +322,7 @@ function Summer27JuniorsInner() {
       <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Juniors</p>
       <h2 className="mt-1 text-2xl font-semibold tracking-tight">Junior hours</h2>
       <p className="mt-2 max-w-xl text-[14px] leading-relaxed text-[#6b665e]">
-        Tap a session to enroll. Court 2 · $50 members · $65 guests.
+        Tap a session to enroll. Court 4 · $50 members · $65 guests.
       </p>
 
       <div className="mt-6 flex items-center justify-between gap-3">

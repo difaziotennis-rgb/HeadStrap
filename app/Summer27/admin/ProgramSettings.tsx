@@ -226,14 +226,14 @@ export default function ProgramSettings({ catalog, onSave, onReset }: Props) {
       {category === "holds" && (
         <section className="space-y-3">
           <div className="rounded-2xl border border-[#e8e5df] bg-white p-4 sm:p-5">
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Recurring Court 1 holds</p>
+            <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Recurring Court 3 holds</p>
             <p className="mt-1 text-[13px] text-[#6b665e]">
               Weekday windows held for lessons — add any start/end, not just morning and evening. Remove a window to open
               that time. One-off holds and opens are under Book → Holds.
             </p>
             <ul className="mt-4 divide-y divide-[#f0ede8] overflow-hidden rounded-xl border border-[#ece8e2]">
               {draft.primeTeaching.windows.length === 0 ? (
-                <li className="px-3 py-4 text-[13px] text-[#8a8477]">No recurring holds — Court 1 stays open on weekdays.</li>
+                <li className="px-3 py-4 text-[13px] text-[#8a8477]">No recurring holds — Court 3 stays open on weekdays.</li>
               ) : (
                 draft.primeTeaching.windows.map((w, i) => (
                   <li key={`${w.label}-${i}`} className="grid gap-2 bg-[#faf9f7] p-3 sm:grid-cols-[1fr_7rem_7rem_auto]">
