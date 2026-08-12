@@ -8,6 +8,7 @@ import {
   nextMemberNumber,
   saveStringPref,
   stringPrefForMember,
+  type S27Charge,
   type S27ClinicBooking,
   type S27CourtBooking,
   type S27EventBooking,
@@ -26,10 +27,34 @@ type Props = {
   lessons: S27LessonBooking[];
   events: S27EventBooking[];
   stringing: S27StringingOrder[];
+  charges: S27Charge[];
   selectedNumber: string | null;
   onSelect: (memberNumber: string | null) => void;
   onSave: (members: S27MemberAccount[], notes: S27MemberNote[]) => void;
 };
+
+type HistoryRow = {
+  id: string;
+  date: string;
+  when: string;
+  title: string;
+  detail: string;
+  amount: number;
+  status: "paid" | "pending";
+  method: string;
+  kind: string;
+};
+
+function monthHeading(ym: string) {
+  const [y, m] = ym.split("-").map(Number);
+  if (!y || !m) return ym;
+  return new Date(y, m - 1, 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+}
+
+function shortDate(iso: string) {
+  const d = new Date(`${iso}T12:00:00`);
+  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+}
 
 export default function MemberFile({
   members,
@@ -39,6 +64,7 @@ export default function MemberFile({
   lessons,
   events,
   stringing,
+  charges,
   selectedNumber,
   onSelect,
   onSave,
@@ -49,6 +75,7 @@ export default function MemberFile({
   const [editing, setEditing] = useState(false);
   const [edit, setEdit] = useState({ name: "", email: "", phone: "" });
   const [prefDraft, setPrefDraft] = useState({ racket: "", stringId: STRING_OPTIONS[0].id, tension: "52" });
+  const [openMonth, setOpenMonth] = useState<string | null>(null);
   const q = query.trim().toLowerCase();
   const filtered = members
     .filter((m) => !q || `${m.name} ${m.email} ${m.memberNumber} ${m.phone}`.toLowerCase().includes(q))
@@ -59,6 +86,7 @@ export default function MemberFile({
   useEffect(() => {
     setNoteDraft(notes.find((n) => n.memberNumber === selectedNumber)?.note || "");
     setEditing(false);
+    setOpenMonth(null);
     const pref = stringPrefForMember(selectedNumber || undefined, stringing);
     if (pref) {
       const match = STRING_OPTIONS.find((s) => s.id === pref.stringId) || STRING_OPTIONS.find((s) => s.name === pref.stringName);
@@ -80,11 +108,15 @@ export default function MemberFile({
     const lessonItems = lessons.filter((b) => belongsToMember(member, b));
     const eventItems = events.filter((b) => belongsToMember(member, { ...b, clientEmail: b.attendeeEmail }));
     const stringItems = stringing.filter((b) => belongsToMember(member, b));
-    const history = [
+    const chargeItems = charges.filter((b) => belongsToMember(member, b));
+
+    const history: HistoryRow[] = [
       ...courtItems.map((b) => ({
         id: b.id,
+        date: b.date,
         when: `${b.date} ${String(b.hour).padStart(2, "0")}`,
-        label: `${b.courtName} · ${formatPrettyDate(b.date)} ${formatHour(b.hour)}`,
+        title: b.courtName,
+        detail: `${formatPrettyDate(b.date)} · ${formatHour(b.hour)} · ${b.durationHours}h`,
         amount: b.amount,
         status: b.paymentStatus,
         method: b.paymentMethod,
@@ -94,27 +126,37 @@ export default function MemberFile({
         const start = liveClinics.find((c) => c.id === b.clinicId)?.startHour ?? 8;
         return {
           id: b.id,
+          date: b.date,
           when: `${b.date} ${String(Math.floor(start)).padStart(2, "0")}`,
-          label: `${b.clinicName} · ${formatPrettyDate(b.date)} ${formatHour(start)}`,
+          title: b.clinicName,
+          detail: `${formatPrettyDate(b.date)} · ${formatHour(start)}`,
           amount: b.amount,
           status: b.paymentStatus,
           method: b.paymentMethod,
           kind: "Clinic",
         };
       }),
-      ...lessonItems.map((b) => ({
-        id: b.id,
-        when: `${b.date} ${String(b.hour).padStart(2, "0")}`,
-        label: `${lessonProLabel(b)} · ${formatPrettyDate(b.date)} ${formatHour(b.hour)}`,
-        amount: b.amount,
-        status: b.paymentStatus,
-        method: b.paymentMethod,
-        kind: "Lesson",
-      })),
+      ...lessonItems
+        .filter((b) => b.requestStatus !== "declined")
+        .map((b) => ({
+          id: b.id,
+          date: b.date,
+          when: `${b.date} ${String(b.hour).padStart(2, "0")}`,
+          title: lessonProLabel(b),
+          detail: `${formatPrettyDate(b.date)} · ${formatHour(b.hour)} · ${b.duration} min${
+            b.requestStatus === "requested" ? " · requested" : ""
+          }`,
+          amount: b.amount,
+          status: b.paymentStatus,
+          method: b.paymentMethod,
+          kind: "Lesson",
+        })),
       ...eventItems.map((b) => ({
         id: b.id,
+        date: b.eventDate,
         when: `${b.eventDate} 16`,
-        label: `${b.eventTitle} · ${b.guestCount} spot(s)`,
+        title: b.eventTitle,
+        detail: `${formatPrettyDate(b.eventDate)} · ${b.guestCount} spot${b.guestCount === 1 ? "" : "s"}`,
         amount: b.amount,
         status: b.paymentStatus,
         method: b.paymentMethod,
@@ -122,16 +164,49 @@ export default function MemberFile({
       })),
       ...stringItems.map((b) => ({
         id: b.id,
+        date: b.pickupDate || b.createdAt.slice(0, 10),
         when: b.pickupDate || b.createdAt.slice(0, 10),
-        label: `Stringing · ${b.racket}`,
+        title: `Stringing · ${b.racket}`,
+        detail: `${b.stringName} @ ${b.tension}`,
         amount: b.amount,
         status: b.paymentStatus,
         method: b.paymentMethod,
         kind: "Stringing",
       })),
+      ...chargeItems.map((b) => ({
+        id: b.id,
+        date: b.date,
+        when: `${b.date} 12`,
+        title: b.description,
+        detail: "Pro shop / misc",
+        amount: b.amount,
+        status: b.paymentStatus,
+        method: b.paymentMethod,
+        kind: "Charge",
+      })),
     ].sort((a, b) => b.when.localeCompare(a.when));
+
     const today = new Date().toISOString().slice(0, 10);
-    const upcoming = history.filter((row) => row.when.slice(0, 10) >= today).reverse();
+    const upcoming = history.filter((row) => row.date >= today || row.status === "pending").reverse();
+    const past = history.filter((row) => row.date < today && row.status !== "pending");
+
+    const pastByMonth = (() => {
+      const map = new Map<string, HistoryRow[]>();
+      for (const row of past) {
+        const key = row.date.slice(0, 7);
+        const list = map.get(key);
+        if (list) list.push(row);
+        else map.set(key, [row]);
+      }
+      return Array.from(map.entries()).map(([key, items]) => ({
+        key,
+        label: monthHeading(key),
+        items,
+        total: items.reduce((s, r) => s + r.amount, 0),
+        count: items.length,
+      }));
+    })();
+
     const paid = history.filter((r) => r.status === "paid").reduce((s, r) => s + r.amount, 0);
     const pending = history.filter((r) => r.status === "pending").reduce((s, r) => s + r.amount, 0);
     const card = getPaymentProfile(member.memberNumber);
@@ -143,9 +218,13 @@ export default function MemberFile({
       lessons: lessonItems.length,
       events: eventItems.length,
       stringing: stringItems.length,
+      charges: chargeItems.length,
     };
-    return { history, upcoming, paid, pending, card, stringPref, note, counts };
-  }, [member, courts, clinics, lessons, events, stringing, notes]);
+    return { history, upcoming, pastByMonth, pastCount: past.length, paid, pending, card, stringPref, note, counts };
+  }, [member, courts, clinics, lessons, events, stringing, charges, notes]);
+
+  const activeMonth =
+    openMonth && file?.pastByMonth.some((m) => m.key === openMonth) ? openMonth : file?.pastByMonth[0]?.key || null;
 
   function addMember(e: React.FormEvent) {
     e.preventDefault();
@@ -322,7 +401,8 @@ export default function MemberFile({
                 )}
               </div>
               <p className="mt-3 text-[13px] text-[#6b665e]">
-                {file.counts.courts} court · {file.counts.clinics} clinic · {file.counts.lessons} lesson · {file.counts.events} event · {file.counts.stringing} stringing
+                {file.counts.courts} court · {file.counts.clinics} clinic · {file.counts.lessons} lesson ·{" "}
+                {file.counts.events} event · {file.counts.stringing} stringing · {file.counts.charges} charge
               </p>
               <textarea
                 className={`${inputClass} mt-3`}
@@ -364,19 +444,20 @@ export default function MemberFile({
             </section>
 
             <section className="rounded-2xl border border-[#e8e5df] bg-white p-5">
-              <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Signed up</p>
+              <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Upcoming</p>
               {file.upcoming.length === 0 ? (
                 <p className="mt-2 text-[13px] text-[#8a8477]">Nothing upcoming.</p>
               ) : (
-                <ul className="mt-2 divide-y divide-[#f0ede8]">
+                <ul className="mt-3 divide-y divide-[#f0ede8]">
                   {file.upcoming.map((row) => (
-                    <li key={row.id} className="flex flex-wrap items-baseline justify-between gap-2 py-2">
-                      <div>
-                        <p className="text-[11px] uppercase tracking-[0.1em] text-[#8a8477]">{row.kind}</p>
-                        <p className="text-[14px] font-medium">{row.label}</p>
+                    <li key={row.id} className="flex flex-wrap items-start justify-between gap-2 py-2.5">
+                      <div className="min-w-0">
+                        <p className="text-[10px] uppercase tracking-[0.1em] text-[#8a8477]">{row.kind}</p>
+                        <p className="text-[14px] font-medium">{row.title}</p>
+                        <p className="mt-0.5 text-[12px] text-[#6b665e]">{row.detail}</p>
                       </div>
-                      <div className="flex items-center gap-2 text-[13px] text-[#6b665e]">
-                        ${row.amount}
+                      <div className="flex shrink-0 items-center gap-2 text-[13px] text-[#6b665e]">
+                        <span className="tabular-nums">${row.amount}</span>
                         <PaidPill status={row.status} />
                       </div>
                     </li>
@@ -385,27 +466,75 @@ export default function MemberFile({
               )}
             </section>
 
-            <section className="rounded-2xl border border-[#e8e5df] bg-white p-5">
-              <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Payment history</p>
-              {file.history.length === 0 ? (
-                <p className="mt-2 text-[13px] text-[#8a8477]">No charges yet.</p>
+            <section className="overflow-hidden rounded-2xl border border-[#e8e5df] bg-white">
+              <div className="flex flex-wrap items-end justify-between gap-2 border-b border-[#f0ede8] px-4 py-3 sm:px-5">
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Past charges</p>
+                  <p className="mt-0.5 text-[13px] text-[#6b665e]">
+                    {file.pastCount === 0
+                      ? "No settled charges yet"
+                      : `${file.pastCount} charge${file.pastCount === 1 ? "" : "s"} by month`}
+                  </p>
+                </div>
+              </div>
+              {file.pastByMonth.length === 0 ? (
+                <p className="px-4 py-5 text-[13px] text-[#8a8477] sm:px-5">Nothing past yet.</p>
               ) : (
-                <ul className="mt-2 divide-y divide-[#f0ede8]">
-                  {file.history.map((row) => (
-                    <li key={row.id} className="flex flex-wrap items-baseline justify-between gap-2 py-2">
-                      <div>
-                        <p className="text-[14px] font-medium">{row.label}</p>
-                        <p className="text-[12px] text-[#8a8477]">
-                          {row.kind} · {row.method}
-                        </p>
+                <div>
+                  {file.pastByMonth.map((month) => {
+                    const open = month.key === activeMonth;
+                    return (
+                      <div key={month.key} className="border-b border-[#f0ede8] last:border-b-0">
+                        <button
+                          type="button"
+                          onClick={() => setOpenMonth(open ? "" : month.key)}
+                          className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left hover:bg-[#faf9f7] sm:px-5"
+                          aria-expanded={open}
+                        >
+                          <div className="min-w-0">
+                            <p className="text-[15px] font-medium tracking-tight text-[#1a1a1a]">{month.label}</p>
+                            <p className="mt-0.5 text-[12px] text-[#8a8477]">
+                              {month.count} charge{month.count === 1 ? "" : "s"}
+                            </p>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-3">
+                            <span className="text-[14px] font-medium tabular-nums text-[#1a1a1a]">${month.total}</span>
+                            <span className="text-[16px] leading-none text-[#8a8477]" aria-hidden>
+                              {open ? "−" : "+"}
+                            </span>
+                          </div>
+                        </button>
+                        {open && (
+                          <ul className="divide-y divide-[#f0ede8] border-t border-[#f0ede8] bg-[#faf9f7]/50">
+                            {month.items.map((row) => (
+                              <li
+                                key={row.id}
+                                className="flex flex-wrap items-start justify-between gap-3 px-4 py-2.5 sm:px-5"
+                              >
+                                <div className="min-w-0">
+                                  <p className="text-[13px] font-medium text-[#1a1a1a]">
+                                    <span className="text-[#8a8477]">{shortDate(row.date)}</span>
+                                    <span className="text-[#cfc9bf]"> · </span>
+                                    {row.title}
+                                  </p>
+                                  <p className="mt-0.5 text-[12px] text-[#6b665e]">
+                                    {row.kind}
+                                    {row.detail ? ` · ${row.detail}` : ""}
+                                    <span className="text-[#8a8477]"> · {row.method}</span>
+                                  </p>
+                                </div>
+                                <div className="flex shrink-0 items-center gap-2">
+                                  <span className="text-[13px] tabular-nums text-[#4a4a4a]">${row.amount}</span>
+                                  <PaidPill status={row.status} />
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
                       </div>
-                      <div className="flex items-center gap-2 text-[13px] text-[#6b665e]">
-                        ${row.amount}
-                        <PaidPill status={row.status} />
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+                    );
+                  })}
+                </div>
               )}
             </section>
           </div>

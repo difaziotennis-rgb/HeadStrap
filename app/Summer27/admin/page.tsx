@@ -352,6 +352,7 @@ export default function Summer27DirectorPage() {
           lessons={lessons}
           events={events}
           stringing={stringing}
+          charges={charges}
           selectedNumber={selectedMember}
           onSelect={setSelectedMember}
           onSave={(next, nextNotes) => {
