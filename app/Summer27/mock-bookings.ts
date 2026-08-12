@@ -106,8 +106,10 @@ function paid(i: number): "paid" | "pending" {
   return i % 6 === 0 ? "pending" : "paid";
 }
 
-function method(i: number): "stripe" | "saved-card" | "manual" {
-  return i % 5 === 0 ? "stripe" : i % 3 === 0 ? "manual" : "saved-card";
+function method(i: number): "stripe" | "saved-card" | "manual" | "paypal" | "venmo" {
+  if (i % 7 === 0) return "venmo";
+  if (i % 5 === 0) return "paypal";
+  return i % 3 === 0 ? "manual" : "saved-card";
 }
 
 function keepReal<T extends { id: string }>(existing: T[], mock: T[]) {

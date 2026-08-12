@@ -4,7 +4,8 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useS27Session } from "../use-s27-session";
-import { canOneClick, startStripeCheckout } from "../payments";
+import { canOneClick, startMemberPayment, storageMethodFor, type S27PayMethod } from "../payments";
+import { PayChooser } from "../PayChooser";
 import {
   COURTS,
   formatDateInput,
@@ -96,8 +97,7 @@ function Summer27LessonsInner() {
     if (openHours.length && !openHours.includes(hour)) setHour(openHours[0]);
   }, [openHours, hour]);
 
-  async function bookLesson(e: React.FormEvent) {
-    e.preventDefault();
+  async function bookLesson(method: S27PayMethod) {
     if (!pro) return;
     const name = isMember ? session!.memberName : guestName.trim();
     const email = isMember ? session!.memberEmail : guestEmail.trim();
@@ -127,24 +127,13 @@ function Summer27LessonsInner() {
       focus: focus.trim(),
       amount,
       paymentStatus: "pending",
-      paymentMethod: savedCard ? "saved-card" : "stripe",
+      paymentMethod: storageMethodFor(method),
       createdAt: new Date().toISOString(),
     };
 
-    if (savedCard) {
-      booking.paymentStatus = "paid";
-      const next = [...lessons, booking];
-      saveList(KEYS.lessons, next);
-      setLessons(next);
-      setMsg(`Lesson booked · ${formatPrettyDate(date)} ${formatHour(hour)}. $${amount} charged.`);
-      return;
-    }
-
-    const next = [...lessons, booking];
-    saveList(KEYS.lessons, next);
-    setLessons(next);
     setPaying(true);
-    const checkout = await startStripeCheckout({
+    const result = await startMemberPayment({
+      method,
       amount,
       email,
       description: `Private lesson · ${pro.name} · ${formatPrettyDate(date)} ${formatHour(hour)}`,
@@ -152,9 +141,39 @@ function Summer27LessonsInner() {
       bookingId: id,
       metadata: { type: "lesson", proId: pro.id, date, hour: String(hour) },
     });
+
+    if (result.kind === "error") {
+      setPaying(false);
+      setMsg(result.error);
+      return;
+    }
+
+    if (result.kind === "saved-card") {
+      booking.paymentStatus = "paid";
+      booking.paymentMethod = "saved-card";
+      const next = [...lessons, booking];
+      saveList(KEYS.lessons, next);
+      setLessons(next);
+      setPaying(false);
+      setMsg(`Lesson booked · ${formatPrettyDate(date)} ${formatHour(hour)}. $${amount} charged.`);
+      return;
+    }
+
+    const next = [...lessons, booking];
+    saveList(KEYS.lessons, next);
+    setLessons(next);
     setPaying(false);
-    if (checkout.url) window.location.href = checkout.url;
-    else setMsg(checkout.error || "Checkout failed.");
+
+    if (result.kind === "redirect") {
+      window.location.href = result.url;
+      return;
+    }
+
+    setMsg(
+      result.method === "venmo"
+        ? "Lesson held. Finish in Venmo — we’ll confirm once it arrives."
+        : "Lesson held. Finish in PayPal — we’ll confirm once it arrives."
+    );
   }
 
   if (!pro) {
@@ -201,7 +220,7 @@ function Summer27LessonsInner() {
         {courtName} · {proScheduleLabel(pro)} · ${hourly}/hour
       </p>
 
-      <form onSubmit={bookLesson} className="mt-6 space-y-4 rounded-2xl border border-[#e8e5df] bg-white p-4 sm:p-5">
+      <div className="mt-6 space-y-4 rounded-2xl border border-[#e8e5df] bg-white p-4 sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <label className="text-[12px] text-[#6b665e]">
             Date
@@ -262,10 +281,12 @@ function Summer27LessonsInner() {
           {savedCard ? ` · ${savedCard.brand} •••• ${savedCard.last4}` : ""}
         </p>
         {msg && <p className="text-[13px]">{msg}</p>}
-        <button disabled={paying || openHours.length === 0} className="w-full rounded-xl bg-[#1a1a1a] py-3.5 text-[14px] font-medium text-white disabled:opacity-40">
-          {openHours.length === 0 ? "No open times this day" : `Book · $${amount}`}
-        </button>
-      </form>
+        {openHours.length === 0 ? (
+          <p className="rounded-xl bg-[#faf9f7] px-3 py-3 text-center text-[13px] text-[#8a8477]">No open times this day</p>
+        ) : (
+          <PayChooser amount={amount} savedCard={savedCard} paying={paying} primaryLabel={`Book · $${amount}`} onPay={bookLesson} />
+        )}
+      </div>
     </main>
   );
 }

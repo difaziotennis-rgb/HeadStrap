@@ -4,7 +4,8 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useS27Session } from "../use-s27-session";
-import { canOneClick, startStripeCheckout } from "../payments";
+import { canOneClick, startMemberPayment, storageMethodFor, type S27PayMethod } from "../payments";
+import { PayChooser } from "../PayChooser";
 import {
   BOOKING_HOURS,
   COURTS,
@@ -48,6 +49,7 @@ function Summer27BookInner() {
   const [guestEmail, setGuestEmail] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
   const [paying, setPaying] = useState(false);
+  const [pendingSlot, setPendingSlot] = useState<{ courtId: CourtId; hour: number } | null>(null);
   const isMember = !!session;
   const rates = getLiveCourtRates();
   const rate = isMember ? rates.member : rates.guest;
@@ -104,7 +106,7 @@ function Summer27BookInner() {
     return true;
   }
 
-  async function bookSlot(courtId: CourtId, hour: number) {
+  async function bookSlot(courtId: CourtId, hour: number, method: S27PayMethod) {
     const name = isMember ? session!.memberName : guestName.trim();
     const email = isMember ? session!.memberEmail : guestEmail.trim();
     const phone = isMember ? session!.memberPhone || "" : "";
@@ -133,7 +135,7 @@ function Summer27BookInner() {
       memberNumber: session?.memberNumber,
       amount,
       paymentStatus: "pending",
-      paymentMethod: savedCard ? "saved-card" : "stripe",
+      paymentMethod: storageMethodFor(method),
       createdAt: new Date().toISOString(),
     };
 
@@ -142,31 +144,62 @@ function Summer27BookInner() {
       next[courtBookingKey(date, courtId, hour + i)] = booking;
     }
 
-    if (savedCard) {
-      booking.paymentStatus = "paid";
-      saveRecord(KEYS.courts, next);
-      setBookings(next);
-      setMsg(`Booked ${courtName} ${formatHour(hour)}. $${amount} charged.`);
-      return;
-    }
-
     setPaying(true);
-    saveRecord(KEYS.courts, next);
-    setBookings(next);
-    const checkout = await startStripeCheckout({
+    const result = await startMemberPayment({
+      method,
       amount,
       email,
-      description: `${courtName} · ${formatPrettyDate(date)} · ${formatHour(hour)} (${duration} hr)`,
+      description: `${courtName} · ${formatPrettyDate(date)} · ${formatHour(hour)}`,
       successPath: "/Summer27/book",
       bookingId: id,
       metadata: { type: "court", courtId, date, hour: String(hour) },
     });
-    setPaying(false);
-    if (checkout.url) {
-      window.location.href = checkout.url;
+
+    if (result.kind === "error") {
+      setPaying(false);
+      setMsg(result.error);
       return;
     }
-    setMsg(checkout.error || "Could not start checkout. Try again.");
+
+    if (result.kind === "saved-card") {
+      booking.paymentStatus = "paid";
+      booking.paymentMethod = "saved-card";
+      saveRecord(KEYS.courts, next);
+      setBookings(next);
+      setPendingSlot(null);
+      setPaying(false);
+      setMsg(`Booked ${courtName} ${formatHour(hour)}. $${amount} charged.`);
+      return;
+    }
+
+    saveRecord(KEYS.courts, next);
+    setBookings(next);
+    setPendingSlot(null);
+    setPaying(false);
+
+    if (result.kind === "redirect") {
+      window.location.href = result.url;
+      return;
+    }
+
+    setMsg(
+      result.method === "venmo"
+        ? `Court held for ${formatHour(hour)}. Finish in Venmo — we’ll confirm once it arrives.`
+        : `Court held for ${formatHour(hour)}. Finish in PayPal — we’ll confirm once it arrives.`
+    );
+  }
+
+  function requestSlot(courtId: CourtId, hour: number) {
+    if (!isMember && (!guestName.trim() || !guestEmail.trim())) {
+      setMsg("Add your name and email first.");
+      return;
+    }
+    if (savedCard) {
+      void bookSlot(courtId, hour, "saved-card");
+      return;
+    }
+    setPendingSlot({ courtId, hour });
+    setMsg(null);
   }
 
   function slotClass(type: string) {
@@ -272,7 +305,7 @@ function Summer27BookInner() {
                         <button
                           type="button"
                           disabled={!open || paying}
-                          onClick={() => bookSlot(court.id, hour)}
+                          onClick={() => requestSlot(court.id, hour)}
                           className="w-full rounded-lg border border-[#e8e5df] bg-[#faf9f7] px-3 py-2 text-left text-[12px] font-medium text-[#1a1a1a] hover:bg-white disabled:opacity-35"
                         >
                           Book · ${rate * duration}
@@ -325,7 +358,7 @@ function Summer27BookInner() {
                         <button
                           type="button"
                           disabled={!open || paying}
-                          onClick={() => bookSlot(court.id, hour)}
+                          onClick={() => requestSlot(court.id, hour)}
                           className="w-full rounded-md border border-[#e8e5df] bg-[#faf9f7] px-2 py-1.5 text-[11px] font-medium text-[#1a1a1a] hover:bg-white disabled:opacity-40"
                         >
                           ${rate * duration}
@@ -339,6 +372,29 @@ function Summer27BookInner() {
           </tbody>
         </table>
       </div>
+
+      {pendingSlot && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[#e8e5df] bg-[#faf9f7]/98 p-4 backdrop-blur sm:inset-x-auto sm:bottom-6 sm:left-1/2 sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:rounded-2xl sm:border sm:shadow-lg">
+          <div className="mb-3 flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Pay to book</p>
+              <p className="mt-1 text-[14px] font-medium">
+                {COURTS.find((c) => c.id === pendingSlot.courtId)?.name} · {formatHour(pendingSlot.hour)} · ${rate * duration}
+              </p>
+            </div>
+            <button type="button" onClick={() => setPendingSlot(null)} className="text-[12px] text-[#8a8477]">
+              Close
+            </button>
+          </div>
+          <PayChooser
+            amount={rate * duration}
+            savedCard={savedCard}
+            paying={paying}
+            primaryLabel={`Book · $${rate * duration}`}
+            onPay={(method) => bookSlot(pendingSlot.courtId, pendingSlot.hour, method)}
+          />
+        </div>
+      )}
     </main>
   );
 }

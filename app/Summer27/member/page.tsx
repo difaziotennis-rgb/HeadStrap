@@ -84,7 +84,7 @@ export default function Summer27JoinPage() {
       <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Membership</p>
       <h2 className="mt-1 text-2xl font-semibold tracking-tight">Join</h2>
       <p className="mt-2 text-[14px] text-[#6b665e]">
-        Member court time $50/hour, clinic and event rates, and a simple account for everything you book.
+        Member court time $50/hour, clinic and event rates, and a simple account for everything you book. A saved card is optional — you can also pay by Venmo, PayPal, or card when you book.
       </p>
 
       <form onSubmit={join} className="mt-6 space-y-3 rounded-2xl border border-[#e8e5df] bg-white p-5">
@@ -95,7 +95,7 @@ export default function Summer27JoinPage() {
 
         <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-4">
           <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Save a card (optional)</p>
-          <p className="mt-1 text-[12px] text-[#6b665e]">Use it to book without re-entering details.</p>
+          <p className="mt-1 text-[12px] text-[#6b665e]">Skip this if you prefer Venmo, PayPal, or card at checkout.</p>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             <select value={brand} onChange={(e) => setBrand(e.target.value as S27PaymentProfile["brand"])} className="rounded-lg border border-[#e8e5df] bg-white px-3 py-2 text-[13px]">
               <option>Visa</option>

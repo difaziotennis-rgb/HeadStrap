@@ -133,7 +133,9 @@ export default function Summer27PortalPage() {
               {payment.brand} •••• {payment.last4}
             </p>
           ) : (
-            <p className="mt-2 text-[13px] text-[#8a8477]">No card on file yet.</p>
+            <p className="mt-2 text-[13px] text-[#8a8477]">
+              No card on file. Pay by Venmo, PayPal, or card when you book.
+            </p>
           )}
           <form onSubmit={saveCard} className="mt-3 space-y-2">
             <select value={brand} onChange={(e) => setBrand(e.target.value as S27PaymentProfile["brand"])} className="w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]">

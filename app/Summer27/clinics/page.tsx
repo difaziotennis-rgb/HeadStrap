@@ -4,7 +4,8 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useS27Session } from "../use-s27-session";
-import { canOneClick, startStripeCheckout } from "../payments";
+import { canOneClick, startMemberPayment, storageMethodFor, type S27PayMethod } from "../payments";
+import { PayChooser } from "../PayChooser";
 import {
   clinicDayLabel,
   clinicTimeLabel,
@@ -129,8 +130,7 @@ function Summer27ClinicsInner() {
     [dates, rosterByDate, clinic]
   );
 
-  async function signUp(e: React.FormEvent) {
-    e.preventDefault();
+  async function signUp(method: S27PayMethod) {
     const name = isMember ? session!.memberName : guestName.trim();
     const email = isMember ? session!.memberEmail : guestEmail.trim();
     if (!name || !email) {
@@ -158,24 +158,13 @@ function Summer27ClinicsInner() {
       memberNumber: session?.memberNumber,
       amount: price,
       paymentStatus: "pending",
-      paymentMethod: savedCard ? "saved-card" : "stripe",
+      paymentMethod: storageMethodFor(method),
       createdAt: new Date().toISOString(),
     };
 
-    if (savedCard) {
-      booking.paymentStatus = "paid";
-      const next = [...bookings, booking];
-      saveList(KEYS.clinics, next);
-      setBookings(next);
-      setMsg(`You’re in. $${price} charged.`);
-      return;
-    }
-
-    const next = [...bookings, booking];
-    saveList(KEYS.clinics, next);
-    setBookings(next);
     setPaying(true);
-    const checkout = await startStripeCheckout({
+    const result = await startMemberPayment({
+      method,
       amount: price,
       email,
       description: `${clinic.name} · ${date}`,
@@ -183,18 +172,45 @@ function Summer27ClinicsInner() {
       bookingId: id,
       metadata: { type: "clinic", clinicId: clinic.id, date },
     });
-    setPaying(false);
-    if (checkout.url) {
-      window.location.href = checkout.url;
+
+    if (result.kind === "error") {
+      setPaying(false);
+      setMsg(result.error);
       return;
     }
-    setMsg(checkout.error || "Checkout failed.");
+
+    if (result.kind === "saved-card") {
+      booking.paymentStatus = "paid";
+      booking.paymentMethod = "saved-card";
+      const next = [...bookings, booking];
+      saveList(KEYS.clinics, next);
+      setBookings(next);
+      setPaying(false);
+      setMsg(`You’re in. $${price} charged.`);
+      return;
+    }
+
+    const next = [...bookings, booking];
+    saveList(KEYS.clinics, next);
+    setBookings(next);
+    setPaying(false);
+
+    if (result.kind === "redirect") {
+      window.location.href = result.url;
+      return;
+    }
+
+    setMsg(
+      result.method === "venmo"
+        ? "Booking held. Finish in Venmo — we’ll confirm once it arrives."
+        : "Booking held. Finish in PayPal — we’ll confirm once it arrives."
+    );
   }
 
   if (!clinic) return null;
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 pb-28 pt-6 sm:px-6 sm:pb-10 sm:pt-8">
+    <main className="mx-auto w-full max-w-3xl px-4 pb-10 pt-6 sm:px-6 sm:pt-8">
       <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Clinics</p>
       <h2 className="mt-1 text-2xl font-semibold tracking-tight">Weekly group play</h2>
       <p className="mt-2 text-[14px] leading-relaxed text-[#6b665e]">
@@ -271,7 +287,7 @@ function Summer27ClinicsInner() {
           )}
         </div>
 
-        <form onSubmit={signUp} className="mt-4 space-y-2">
+        <div className="mt-4 space-y-3">
           {!isMember && (
             <>
               <input
@@ -289,14 +305,20 @@ function Summer27ClinicsInner() {
             </>
           )}
           {msg && <p className="text-[13px] text-[#4a4a4a]">{msg}</p>}
-          <button
-            type="submit"
-            disabled={paying || seatsLeft <= 0 || alreadyIn}
-            className="hidden w-full rounded-xl bg-[#1a1a1a] py-3.5 text-[14px] font-medium text-white disabled:opacity-40 sm:block"
-          >
-            {seatsLeft <= 0 ? "Full" : alreadyIn ? "You’re signed up" : `Join · $${price}`}
-          </button>
-        </form>
+          {seatsLeft <= 0 ? (
+            <p className="rounded-xl bg-[#faf9f7] px-3 py-3 text-center text-[13px] text-[#8a8477]">Full</p>
+          ) : alreadyIn ? (
+            <p className="rounded-xl bg-[#faf9f7] px-3 py-3 text-center text-[13px] text-[#8a8477]">You’re signed up</p>
+          ) : (
+            <PayChooser
+              amount={price}
+              savedCard={savedCard}
+              paying={paying}
+              primaryLabel={`Join · $${price}`}
+              onPay={signUp}
+            />
+          )}
+        </div>
       </section>
 
       <p className="mt-4 text-center text-[12px] text-[#8a8477]">
@@ -304,20 +326,6 @@ function Summer27ClinicsInner() {
           Junior hours →
         </Link>
       </p>
-
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[#e8e5df] bg-[#faf9f7]/95 p-3 backdrop-blur sm:hidden">
-        <button
-          type="button"
-          disabled={paying || seatsLeft <= 0 || alreadyIn}
-          onClick={() => {
-            const form = document.querySelector("main form");
-            if (form instanceof HTMLFormElement) form.requestSubmit();
-          }}
-          className="w-full rounded-xl bg-[#1a1a1a] py-3.5 text-[14px] font-medium text-white disabled:opacity-40"
-        >
-          {seatsLeft <= 0 ? "Full" : alreadyIn ? "You’re signed up" : `Join · $${price}`}
-        </button>
-      </div>
     </main>
   );
 }

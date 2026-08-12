@@ -4,7 +4,8 @@ import Link from "next/link";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { useS27Session } from "../../use-s27-session";
-import { canOneClick, startStripeCheckout } from "../../payments";
+import { canOneClick, startMemberPayment, storageMethodFor, type S27PayMethod } from "../../payments";
+import { PayChooser } from "../../PayChooser";
 import { formatPrettyDate, s27Events, type EventDef } from "../../summer27-data";
 import { getLiveEvents } from "../../schedule";
 import { KEYS, loadList, saveList, type S27EventBooking } from "../../storage";
@@ -63,8 +64,7 @@ function Summer27EventDetailInner() {
   const total = per * guestCount;
   const seatsLeft = event ? Math.max(0, event.capacity - taken) : 0;
 
-  async function reserve(e: React.FormEvent) {
-    e.preventDefault();
+  async function reserve(method: S27PayMethod) {
     if (!event) return;
     const attendeeName = isMember ? session!.memberName : name.trim();
     const attendeeEmail = isMember ? session!.memberEmail : email.trim();
@@ -88,32 +88,53 @@ function Summer27EventDetailInner() {
       memberNumber: session?.memberNumber,
       amount: total,
       paymentStatus: "pending",
-      paymentMethod: savedCard ? "saved-card" : "stripe",
+      paymentMethod: storageMethodFor(method),
       createdAt: new Date().toISOString(),
     };
-    if (savedCard) {
-      booking.paymentStatus = "paid";
-      const next = [...bookings, booking];
-      saveList(KEYS.events, next);
-      setBookings(next);
-      setMsg(`Reserved. $${total} charged.`);
-      return;
-    }
-    const next = [...bookings, booking];
-    saveList(KEYS.events, next);
-    setBookings(next);
+
     setPaying(true);
-    const checkout = await startStripeCheckout({
+    const result = await startMemberPayment({
+      method,
       amount: total,
       email: attendeeEmail,
-      description: `${event.title} · ${guestCount} spot(s)`,
+      description: `${event.title} · ${guestCount} player(s)`,
       successPath: `/Summer27/events/${event.id}`,
       bookingId: id,
       metadata: { type: "event", eventId: event.id },
     });
+
+    if (result.kind === "error") {
+      setPaying(false);
+      setMsg(result.error);
+      return;
+    }
+
+    if (result.kind === "saved-card") {
+      booking.paymentStatus = "paid";
+      booking.paymentMethod = "saved-card";
+      const next = [...bookings, booking];
+      saveList(KEYS.events, next);
+      setBookings(next);
+      setPaying(false);
+      setMsg(`Reserved. $${total} charged.`);
+      return;
+    }
+
+    const next = [...bookings, booking];
+    saveList(KEYS.events, next);
+    setBookings(next);
     setPaying(false);
-    if (checkout.url) window.location.href = checkout.url;
-    else setMsg(checkout.error || "Checkout failed.");
+
+    if (result.kind === "redirect") {
+      window.location.href = result.url;
+      return;
+    }
+
+    setMsg(
+      result.method === "venmo"
+        ? "Reservation held. Finish in Venmo — we’ll confirm once it arrives."
+        : "Reservation held. Finish in PayPal — we’ll confirm once it arrives."
+    );
   }
 
   if (!event) {
@@ -156,16 +177,16 @@ function Summer27EventDetailInner() {
         )}
       </div>
 
-      <form onSubmit={reserve} className="mt-4 space-y-3 rounded-2xl border border-[#e8e5df] bg-white p-5">
+      <div className="mt-4 space-y-3 rounded-2xl border border-[#e8e5df] bg-white p-5">
         {!isMember && (
           <>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" className="w-full rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]" />
-            <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className="w-full rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]" />
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" className="w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]" />
+            <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className="w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]" />
           </>
         )}
         <label className="block text-[12px] text-[#6b665e]">
           Players
-          <select value={guestCount} onChange={(e) => setGuestCount(Number(e.target.value))} className="mt-1 w-full rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]">
+          <select value={guestCount} onChange={(e) => setGuestCount(Number(e.target.value))} className="mt-1 w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]">
             {[1, 2, 3, 4].map((n) => (
               <option key={n} value={n}>
                 {n}
@@ -177,10 +198,12 @@ function Summer27EventDetailInner() {
           ${per} each · total ${total}
         </p>
         {msg && <p className="text-[13px]">{msg}</p>}
-        <button disabled={paying || seatsLeft <= 0} className="w-full rounded-lg bg-[#1a1a1a] py-2.5 text-[13px] font-medium text-white disabled:opacity-40">
-          {seatsLeft <= 0 ? "Sold out" : `Reserve · $${total}`}
-        </button>
-      </form>
+        {seatsLeft <= 0 ? (
+          <p className="rounded-xl bg-[#faf9f7] px-3 py-3 text-center text-[13px] text-[#8a8477]">Sold out</p>
+        ) : (
+          <PayChooser amount={total} savedCard={savedCard} paying={paying} primaryLabel={`Reserve · $${total}`} onPay={reserve} />
+        )}
+      </div>
     </main>
   );
 }

@@ -3,7 +3,8 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useS27Session } from "../use-s27-session";
-import { canOneClick, startStripeCheckout } from "../payments";
+import { canOneClick, startMemberPayment, storageMethodFor, type S27PayMethod } from "../payments";
+import { PayChooser } from "../PayChooser";
 import {
   clinicDayLabel,
   clinicTimeLabel,
@@ -125,8 +126,7 @@ function Summer27JuniorsInner() {
     [dates, rosterByDate, clinic]
   );
 
-  async function signUp(e: React.FormEvent) {
-    e.preventDefault();
+  async function signUp(method: S27PayMethod) {
     if (!clinic) return;
     const name = childName.trim() || (isMember ? `${session!.memberName}'s junior` : "");
     const email = isMember ? session!.memberEmail : parentEmail.trim();
@@ -149,22 +149,13 @@ function Summer27JuniorsInner() {
       memberNumber: session?.memberNumber,
       amount: price,
       paymentStatus: "pending",
-      paymentMethod: savedCard ? "saved-card" : "stripe",
+      paymentMethod: storageMethodFor(method),
       createdAt: new Date().toISOString(),
     };
-    if (savedCard) {
-      booking.paymentStatus = "paid";
-      const next = [...bookings, booking];
-      saveList(KEYS.clinics, next);
-      setBookings(next);
-      setMsg(`Enrolled. $${price} charged.`);
-      return;
-    }
-    const next = [...bookings, booking];
-    saveList(KEYS.clinics, next);
-    setBookings(next);
+
     setPaying(true);
-    const checkout = await startStripeCheckout({
+    const result = await startMemberPayment({
+      method,
       amount: price,
       email,
       description: `${clinic.name} · ${name} · ${date}`,
@@ -172,9 +163,39 @@ function Summer27JuniorsInner() {
       bookingId: id,
       metadata: { type: "junior", clinicId: clinic.id },
     });
+
+    if (result.kind === "error") {
+      setPaying(false);
+      setMsg(result.error);
+      return;
+    }
+
+    if (result.kind === "saved-card") {
+      booking.paymentStatus = "paid";
+      booking.paymentMethod = "saved-card";
+      const next = [...bookings, booking];
+      saveList(KEYS.clinics, next);
+      setBookings(next);
+      setPaying(false);
+      setMsg(`Enrolled. $${price} charged.`);
+      return;
+    }
+
+    const next = [...bookings, booking];
+    saveList(KEYS.clinics, next);
+    setBookings(next);
     setPaying(false);
-    if (checkout.url) window.location.href = checkout.url;
-    else setMsg(checkout.error || "Checkout failed.");
+
+    if (result.kind === "redirect") {
+      window.location.href = result.url;
+      return;
+    }
+
+    setMsg(
+      result.method === "venmo"
+        ? "Spot held. Finish in Venmo — we’ll confirm once it arrives."
+        : "Spot held. Finish in PayPal — we’ll confirm once it arrives."
+    );
   }
 
   if (!clinic) return null;
@@ -220,7 +241,7 @@ function Summer27JuniorsInner() {
         <DateChips items={dateChips} value={date} onChange={setDate} ariaLabel="Junior dates" />
       </div>
 
-      <form onSubmit={signUp} className="mt-5 space-y-3 rounded-2xl border border-[#e8e5df] bg-white p-4 sm:p-5">
+      <div className="mt-5 space-y-3 rounded-2xl border border-[#e8e5df] bg-white p-4 sm:p-5">
         <p className="text-[13px] text-[#4a4a4a]">
           {date
             ? parseDateInput(date).toLocaleDateString("en-US", {
@@ -255,26 +276,11 @@ function Summer27JuniorsInner() {
           </ul>
         )}
         {msg && <p className="text-[13px]">{msg}</p>}
-        <button
-          disabled={paying || seatsLeft <= 0}
-          className="hidden w-full rounded-xl bg-[#1a1a1a] py-3.5 text-[14px] font-medium text-white disabled:opacity-40 sm:block"
-        >
-          {seatsLeft <= 0 ? "Full" : `Enroll · $${price}`}
-        </button>
-      </form>
-
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[#e8e5df] bg-[#faf9f7]/95 p-3 backdrop-blur sm:hidden">
-        <button
-          type="button"
-          disabled={paying || seatsLeft <= 0}
-          onClick={() => {
-            const form = document.querySelector("main form");
-            if (form instanceof HTMLFormElement) form.requestSubmit();
-          }}
-          className="w-full rounded-xl bg-[#1a1a1a] py-3.5 text-[14px] font-medium text-white disabled:opacity-40"
-        >
-          {seatsLeft <= 0 ? "Full" : `Enroll · $${price}`}
-        </button>
+        {seatsLeft <= 0 ? (
+          <p className="rounded-xl bg-[#faf9f7] px-3 py-3 text-center text-[13px] text-[#8a8477]">Full</p>
+        ) : (
+          <PayChooser amount={price} savedCard={savedCard} paying={paying} primaryLabel={`Enroll · $${price}`} onPay={signUp} />
+        )}
       </div>
     </main>
   );

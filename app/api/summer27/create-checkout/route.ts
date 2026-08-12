@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     const stripe = new Stripe(stripeSecretKey, { apiVersion: "2025-12-15.clover" });
 
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"],
+      payment_method_types: ["card", "link"],
       line_items: [
         {
           price_data: {

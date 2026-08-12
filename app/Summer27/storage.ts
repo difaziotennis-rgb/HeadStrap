@@ -44,7 +44,7 @@ export type S27CourtBooking = {
   memberNumber?: string;
   amount: number;
   paymentStatus: "pending" | "paid";
-  paymentMethod: "stripe" | "saved-card" | "manual";
+  paymentMethod: "stripe" | "saved-card" | "manual" | "paypal" | "venmo";
   createdAt: string;
 };
 
@@ -58,7 +58,7 @@ export type S27ClinicBooking = {
   memberNumber?: string;
   amount: number;
   paymentStatus: "pending" | "paid";
-  paymentMethod: "stripe" | "saved-card" | "manual";
+  paymentMethod: "stripe" | "saved-card" | "manual" | "paypal" | "venmo";
   createdAt: string;
 };
 
@@ -77,7 +77,7 @@ export type S27LessonBooking = {
   focus: string;
   amount: number;
   paymentStatus: "pending" | "paid";
-  paymentMethod: "stripe" | "saved-card" | "manual";
+  paymentMethod: "stripe" | "saved-card" | "manual" | "paypal" | "venmo";
   createdAt: string;
 };
 
@@ -92,7 +92,7 @@ export type S27EventBooking = {
   memberNumber?: string;
   amount: number;
   paymentStatus: "pending" | "paid";
-  paymentMethod: "stripe" | "saved-card" | "manual";
+  paymentMethod: "stripe" | "saved-card" | "manual" | "paypal" | "venmo";
   createdAt: string;
 };
 
@@ -108,7 +108,7 @@ export type S27StringingOrder = {
   memberNumber?: string;
   amount: number;
   paymentStatus: "pending" | "paid";
-  paymentMethod: "stripe" | "saved-card" | "manual";
+  paymentMethod: "stripe" | "saved-card" | "manual" | "paypal" | "venmo";
   createdAt: string;
 };
 

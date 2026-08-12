@@ -3,7 +3,8 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useS27Session } from "../use-s27-session";
-import { canOneClick, startStripeCheckout } from "../payments";
+import { canOneClick, startMemberPayment, storageMethodFor, type S27PayMethod } from "../payments";
+import { PayChooser } from "../PayChooser";
 import { STRING_OPTIONS } from "../summer27-data";
 import { getLiveStringingLabor } from "../schedule";
 import { KEYS, loadList, rememberStringing, saveList, stringPrefForMember, type S27StringingOrder } from "../storage";
@@ -73,8 +74,7 @@ function Summer27StringingInner() {
     [orders, session]
   );
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
+  async function submit(method: S27PayMethod) {
     const clientName = isMember ? session!.memberName : name.trim();
     const clientEmail = isMember ? session!.memberEmail : email.trim();
     if (!clientName || !clientEmail || !racket.trim()) {
@@ -94,23 +94,14 @@ function Summer27StringingInner() {
       memberNumber: session?.memberNumber,
       amount,
       paymentStatus: "pending",
-      paymentMethod: savedCard ? "saved-card" : "stripe",
+      paymentMethod: storageMethodFor(method),
       createdAt: new Date().toISOString(),
     };
     rememberStringing(session?.memberNumber, order);
-    if (savedCard) {
-      order.paymentStatus = "paid";
-      const next = [...orders, order];
-      saveList(KEYS.stringing, next);
-      setOrders(next);
-      setMsg(`Order in. $${amount} charged. Drop the frame at the shop.`);
-      return;
-    }
-    const next = [...orders, order];
-    saveList(KEYS.stringing, next);
-    setOrders(next);
+
     setPaying(true);
-    const checkout = await startStripeCheckout({
+    const result = await startMemberPayment({
+      method,
       amount,
       email: clientEmail,
       description: `Stringing · ${option.name} · ${racket}`,
@@ -118,9 +109,39 @@ function Summer27StringingInner() {
       bookingId: id,
       metadata: { type: "stringing" },
     });
+
+    if (result.kind === "error") {
+      setPaying(false);
+      setMsg(result.error);
+      return;
+    }
+
+    if (result.kind === "saved-card") {
+      order.paymentStatus = "paid";
+      order.paymentMethod = "saved-card";
+      const next = [...orders, order];
+      saveList(KEYS.stringing, next);
+      setOrders(next);
+      setPaying(false);
+      setMsg(`Order in. $${amount} charged. Drop the frame at the shop.`);
+      return;
+    }
+
+    const next = [...orders, order];
+    saveList(KEYS.stringing, next);
+    setOrders(next);
     setPaying(false);
-    if (checkout.url) window.location.href = checkout.url;
-    else setMsg(checkout.error || "Checkout failed.");
+
+    if (result.kind === "redirect") {
+      window.location.href = result.url;
+      return;
+    }
+
+    setMsg(
+      result.method === "venmo"
+        ? "Order held. Finish in Venmo — drop the frame at the shop after."
+        : "Order held. Finish in PayPal — drop the frame at the shop after."
+    );
   }
 
   return (
@@ -131,14 +152,14 @@ function Summer27StringingInner() {
         ${labor} labor plus string. Drop frames at the shop — usually ready in a day or two.
       </p>
 
-      <form onSubmit={submit} className="mt-6 space-y-3 rounded-2xl border border-[#e8e5df] bg-white p-5">
+      <div className="mt-6 space-y-3 rounded-2xl border border-[#e8e5df] bg-white p-5">
         <label className="block text-[12px] text-[#6b665e]">
           Racket
-          <input value={racket} onChange={(e) => setRacket(e.target.value)} placeholder="Model" className="mt-1 w-full rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]" />
+          <input value={racket} onChange={(e) => setRacket(e.target.value)} placeholder="Model" className="mt-1 w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]" />
         </label>
         <label className="block text-[12px] text-[#6b665e]">
           String
-          <select value={stringId} onChange={(e) => setStringId(e.target.value)} className="mt-1 w-full rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]">
+          <select value={stringId} onChange={(e) => setStringId(e.target.value)} className="mt-1 w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]">
             {STRING_OPTIONS.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}{s.extra ? ` · +$${s.extra}` : ""}
@@ -149,7 +170,7 @@ function Summer27StringingInner() {
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="text-[12px] text-[#6b665e]">
             Tension
-            <select value={tension} onChange={(e) => setTension(e.target.value)} className="mt-1 w-full rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]">
+            <select value={tension} onChange={(e) => setTension(e.target.value)} className="mt-1 w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]">
               {["48", "50", "51", "52", "53", "54", "55", "56", "58"].map((t) => (
                 <option key={t} value={t}>{t} lbs</option>
               ))}
@@ -157,23 +178,21 @@ function Summer27StringingInner() {
           </label>
           <label className="text-[12px] text-[#6b665e]">
             Pickup
-            <input type="date" value={pickupDate} onChange={(e) => setPickupDate(e.target.value)} className="mt-1 w-full rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]" />
+            <input type="date" value={pickupDate} onChange={(e) => setPickupDate(e.target.value)} className="mt-1 w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]" />
           </label>
         </div>
         {!isMember && (
           <>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" className="w-full rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]" />
-            <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className="w-full rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]" />
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" className="w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]" />
+            <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className="w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]" />
           </>
         )}
         <p className="text-[13px] text-[#6b665e]">
           ${amount} total
         </p>
         {msg && <p className="text-[13px]">{msg}</p>}
-        <button disabled={paying} className="w-full rounded-lg bg-[#1a1a1a] py-2.5 text-[13px] font-medium text-white">
-          Order · ${amount}
-        </button>
-      </form>
+        <PayChooser amount={amount} savedCard={savedCard} paying={paying} primaryLabel={`Order · $${amount}`} onPay={submit} />
+      </div>
 
       {mine.length > 0 && (
         <div className="mt-6 rounded-2xl border border-[#e8e5df] bg-white p-5">
