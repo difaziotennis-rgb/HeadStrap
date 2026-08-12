@@ -1,6 +1,13 @@
 "use client";
 
-import { formatHour, formatPrettyDate, lessonProLabel } from "../summer27-data";
+import { useMemo, useState } from "react";
+import {
+  formatDateInput,
+  formatHour,
+  formatPrettyDate,
+  lessonProLabel,
+  parseDateInput,
+} from "../summer27-data";
 import type { S27Catalog } from "../schedule";
 import type { S27AdminBlock } from "../schedule";
 import {
@@ -49,6 +56,42 @@ type GlanceItem = {
   onToggle?: () => void;
 };
 
+type DayChip = {
+  key: string;
+  time: number;
+  kind: "court" | "lesson" | "clinic" | "event" | "hold" | "request";
+  label: string;
+  sub?: string;
+};
+
+const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
+
+function startOfWeekMonday(d: Date): Date {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  const day = x.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  x.setDate(x.getDate() + diff);
+  return x;
+}
+
+function addDays(d: Date, n: number): Date {
+  const x = new Date(d);
+  x.setDate(x.getDate() + n);
+  return x;
+}
+
+function weekRangeLabel(weekStart: Date): string {
+  const end = addDays(weekStart, 6);
+  const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
+  const a = weekStart.toLocaleDateString("en-US", opts);
+  const b = end.toLocaleDateString("en-US", {
+    ...opts,
+    year: weekStart.getFullYear() !== end.getFullYear() ? "numeric" : undefined,
+  });
+  return `${a} – ${b}`;
+}
+
 function memberNumberFor(
   members: S27MemberAccount[],
   memberNumber?: string,
@@ -57,6 +100,32 @@ function memberNumberFor(
   if (memberNumber) return memberNumber;
   if (!email) return undefined;
   return members.find((m) => m.email.trim().toLowerCase() === email.trim().toLowerCase())?.memberNumber;
+}
+
+function shortClinicName(name: string): string {
+  return name
+    .replace(/\s+Clinic$/i, "")
+    .replace(/^Weekend\s+/i, "")
+    .replace(/^Weeknight\s+/i, "")
+    .replace(/^Midweek\s+/i, "")
+    .replace(/^Junior\s+/i, "Jr ");
+}
+
+function chipClass(kind: DayChip["kind"]): string {
+  switch (kind) {
+    case "lesson":
+      return "border-[#d7e0ef] bg-[#f4f7fb]";
+    case "clinic":
+      return "border-[#d8e3d4] bg-[#f3f7f1]";
+    case "event":
+      return "border-[#e4ddd2] bg-[#f8f5f0]";
+    case "hold":
+      return "border-[#e8e5df] bg-[#f0ede8]";
+    case "request":
+      return "border-[#c9d6eb] bg-[#eaf0f8]";
+    default:
+      return "border-[#e8e5df] bg-[#f7f7f5]";
+  }
 }
 
 export default function TodayBoard({
@@ -81,9 +150,135 @@ export default function TodayBoard({
   onMarkStringingReady,
   onMarkStringingPickedUp,
 }: Props) {
+  const thisWeekStart = useMemo(() => startOfWeekMonday(parseDateInput(today)), [today]);
+  const [weekStart, setWeekStart] = useState(thisWeekStart);
+  const [selectedDate, setSelectedDate] = useState(today);
+
+  const days = useMemo(
+    () => Array.from({ length: 7 }, (_, i) => formatDateInput(addDays(weekStart, i))),
+    [weekStart]
+  );
+  const isThisWeek = formatDateInput(weekStart) === formatDateInput(thisWeekStart);
   const nowHour = new Date().getHours();
+  const selectedIsToday = selectedDate === today;
+
+  const chipsByDay = useMemo(() => {
+    const map: Record<string, DayChip[]> = {};
+    for (const iso of days) map[iso] = [];
+
+    for (const b of courts) {
+      if (!map[b.date]) continue;
+      map[b.date].push({
+        key: `court-${b.id}`,
+        time: b.hour,
+        kind: "court",
+        label: b.courtName.replace("Court ", "C"),
+        sub: b.clientName.split(" ")[0],
+      });
+    }
+
+    for (const b of lessons) {
+      if (!map[b.date]) continue;
+      if (b.requestStatus === "declined") continue;
+      if (b.requestStatus === "requested") {
+        map[b.date].push({
+          key: `req-${b.id}`,
+          time: b.hour,
+          kind: "request",
+          label: "Request",
+          sub: b.clientName.split(" ")[0],
+        });
+        continue;
+      }
+      map[b.date].push({
+        key: `lesson-${b.id}`,
+        time: b.hour,
+        kind: "lesson",
+        label: "Lesson",
+        sub: b.clientName.split(" ")[0],
+      });
+    }
+
+    const clinicKeys = new Set<string>();
+    for (const b of clinics) {
+      if (!map[b.date] || b.paymentStatus !== "paid") continue;
+      const key = `${b.clinicId}|${b.date}`;
+      if (clinicKeys.has(key)) continue;
+      clinicKeys.add(key);
+      const def = catalog.clinics.find((c) => c.id === b.clinicId);
+      const count = clinics.filter((x) => x.clinicId === b.clinicId && x.date === b.date && x.paymentStatus === "paid").length;
+      map[b.date].push({
+        key: `clinic-${key}`,
+        time: def?.startHour ?? 8,
+        kind: "clinic",
+        label: shortClinicName(b.clinicName),
+        sub: `${count} in`,
+      });
+    }
+
+    // Scheduled clinics with no signups yet still show from catalog.
+    for (const iso of days) {
+      const jsDay = parseDateInput(iso).getDay();
+      for (const def of catalog.clinics) {
+        if (!def.days.includes(jsDay)) continue;
+        const key = `${def.id}|${iso}`;
+        if (clinicKeys.has(key)) continue;
+        clinicKeys.add(key);
+        map[iso].push({
+          key: `clinic-${key}`,
+          time: def.startHour,
+          kind: "clinic",
+          label: shortClinicName(def.name),
+          sub: "0 in",
+        });
+      }
+    }
+
+    for (const b of events) {
+      if (!map[b.eventDate]) continue;
+      const already = map[b.eventDate].some((c) => c.kind === "event" && c.label === b.eventTitle);
+      if (already) continue;
+      const count = events.filter((x) => x.eventDate === b.eventDate && x.eventTitle === b.eventTitle).length;
+      map[b.eventDate].push({
+        key: `event-${b.eventId}-${b.eventDate}`,
+        time: 16,
+        kind: "event",
+        label: b.eventTitle.length > 18 ? `${b.eventTitle.slice(0, 16)}…` : b.eventTitle,
+        sub: `${count} RSVP`,
+      });
+    }
+
+    for (const def of catalog.events) {
+      if (!map[def.date]) continue;
+      if (map[def.date].some((c) => c.kind === "event" && c.key.includes(def.id))) continue;
+      map[def.date].push({
+        key: `event-${def.id}-${def.date}`,
+        time: 16,
+        kind: "event",
+        label: def.title.length > 18 ? `${def.title.slice(0, 16)}…` : def.title,
+        sub: "Event",
+      });
+    }
+
+    for (const b of blocks) {
+      if (!map[b.date]) continue;
+      map[b.date].push({
+        key: `hold-${b.id}`,
+        time: b.startHour,
+        kind: "hold",
+        label: "Hold",
+        sub: b.reason.slice(0, 12),
+      });
+    }
+
+    for (const iso of days) {
+      map[iso].sort((a, b) => a.time - b.time || a.label.localeCompare(b.label));
+    }
+    return map;
+  }, [days, courts, lessons, clinics, events, blocks, catalog]);
+
   const courtItems: GlanceItem[] = courts
-    .filter((b) => b.date === today)
+    .filter((b) => b.date === selectedDate)
     .map((b) => ({
       id: b.id,
       time: b.hour,
@@ -96,7 +291,7 @@ export default function TodayBoard({
       onToggle: () => onToggleCourt(b.id),
     }));
   const lessonItems: GlanceItem[] = lessons
-    .filter((b) => b.date === today && b.requestStatus !== "declined" && b.requestStatus !== "requested")
+    .filter((b) => b.date === selectedDate && b.requestStatus !== "declined" && b.requestStatus !== "requested")
     .map((b) => ({
       id: b.id,
       time: b.hour,
@@ -115,7 +310,7 @@ export default function TodayBoard({
       `${a.date}${String(a.hour).padStart(2, "0")}`.localeCompare(`${b.date}${String(b.hour).padStart(2, "0")}`)
     );
   const holdItems: GlanceItem[] = blocks
-    .filter((b) => b.date === today)
+    .filter((b) => b.date === selectedDate)
     .map((b) => ({
       id: b.id,
       time: b.startHour,
@@ -126,7 +321,7 @@ export default function TodayBoard({
 
   const clinicGroups = Object.values(
     clinics
-      .filter((b) => b.date === today)
+      .filter((b) => b.date === selectedDate)
       .reduce<Record<string, { clinicId: string; name: string; time: number; rows: S27ClinicBooking[] }>>(
         (acc, b) => {
           const def = catalog.clinics.find((c) => c.id === b.clinicId);
@@ -146,7 +341,7 @@ export default function TodayBoard({
       )
   ).sort((a, b) => a.time - b.time);
 
-  const todayEvents = events.filter((b) => b.eventDate === today);
+  const dayEvents = events.filter((b) => b.eventDate === selectedDate);
   const shopQueue = stringing
     .filter((b) => stringingShopStatus(b) === "in_shop")
     .slice()
@@ -164,19 +359,172 @@ export default function TodayBoard({
   }, []);
 
   const pendingRows = [
-    ...courts.filter((b) => b.date === today && b.paymentStatus === "pending").map((b) => ({ id: b.id, name: b.clientName, label: b.courtName, amount: b.amount, onToggle: () => onToggleCourt(b.id) })),
-    ...clinics.filter((b) => b.date === today && b.paymentStatus === "pending").map((b) => ({ id: b.id, name: b.clientName, label: b.clinicName, amount: b.amount, onToggle: () => onToggleClinic(b.id) })),
+    ...courts
+      .filter((b) => b.date === selectedDate && b.paymentStatus === "pending")
+      .map((b) => ({ id: b.id, name: b.clientName, label: b.courtName, amount: b.amount, onToggle: () => onToggleCourt(b.id) })),
+    ...clinics
+      .filter((b) => b.date === selectedDate && b.paymentStatus === "pending")
+      .map((b) => ({ id: b.id, name: b.clientName, label: b.clinicName, amount: b.amount, onToggle: () => onToggleClinic(b.id) })),
     ...lessons
-      .filter((b) => b.date === today && b.paymentStatus === "pending" && b.requestStatus !== "requested" && b.requestStatus !== "declined")
+      .filter(
+        (b) =>
+          b.date === selectedDate &&
+          b.paymentStatus === "pending" &&
+          b.requestStatus !== "requested" &&
+          b.requestStatus !== "declined"
+      )
       .map((b) => ({ id: b.id, name: b.clientName, label: lessonProLabel(b), amount: b.amount, onToggle: () => onToggleLesson(b.id) })),
-    ...events.filter((b) => b.eventDate === today && b.paymentStatus === "pending").map((b) => ({ id: b.id, name: b.attendeeName, label: b.eventTitle, amount: b.amount, onToggle: () => onToggleEvent(b.id) })),
-    ...stringing.filter((b) => b.pickupDate === today && b.paymentStatus === "pending").map((b) => ({ id: b.id, name: b.clientName, label: "Stringing", amount: b.amount, onToggle: () => onToggleStringing(b.id) })),
+    ...events
+      .filter((b) => b.eventDate === selectedDate && b.paymentStatus === "pending")
+      .map((b) => ({ id: b.id, name: b.attendeeName, label: b.eventTitle, amount: b.amount, onToggle: () => onToggleEvent(b.id) })),
+    ...stringing
+      .filter((b) => b.pickupDate === selectedDate && b.paymentStatus === "pending")
+      .map((b) => ({ id: b.id, name: b.clientName, label: "Stringing", amount: b.amount, onToggle: () => onToggleStringing(b.id) })),
   ];
   const pendingTotal = pendingRows.reduce((sum, row) => sum + row.amount, 0);
 
+  function goWeek(delta: number) {
+    setWeekStart((w) => {
+      const next = addDays(w, delta * 7);
+      const nextDays = Array.from({ length: 7 }, (_, i) => formatDateInput(addDays(next, i)));
+      if (!nextDays.includes(selectedDate)) setSelectedDate(nextDays[0]);
+      return next;
+    });
+  }
+
   return (
     <div className="mt-4 space-y-4">
-      <p className="text-[15px] font-medium text-[#1a1a1a]">{formatPrettyDate(today)}</p>
+      <div className="flex items-center justify-between gap-3">
+        <button
+          type="button"
+          onClick={() => goWeek(-1)}
+          className="rounded-full border border-[#e8e5df] bg-white px-3.5 py-2 text-[13px] text-[#4a4a4a] hover:bg-[#faf9f7]"
+          aria-label="Previous week"
+        >
+          ←
+        </button>
+        <div className="min-w-0 text-center">
+          <p className="text-[15px] font-medium tracking-tight text-[#1a1a1a]">{weekRangeLabel(weekStart)}</p>
+          {!isThisWeek && (
+            <button
+              type="button"
+              onClick={() => {
+                setWeekStart(thisWeekStart);
+                setSelectedDate(today);
+              }}
+              className="mt-0.5 text-[12px] text-[#8a8477] underline-offset-2 hover:text-[#1a1a1a] hover:underline"
+            >
+              This week
+            </button>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={() => goWeek(1)}
+          className="rounded-full border border-[#e8e5df] bg-white px-3.5 py-2 text-[13px] text-[#4a4a4a] hover:bg-[#faf9f7]"
+          aria-label="Next week"
+        >
+          →
+        </button>
+      </div>
+
+      <div className="-mx-4 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:overflow-visible sm:px-0">
+        <div className="min-w-[34rem] overflow-hidden rounded-2xl border border-[#e8e5df] bg-white sm:min-w-0">
+          <div className="grid grid-cols-7 border-b border-[#ece8e2] bg-[#faf9f7]">
+            {days.map((iso, i) => {
+              const d = parseDateInput(iso);
+              const isToday = iso === today;
+              const selected = iso === selectedDate;
+              return (
+                <button
+                  key={iso}
+                  type="button"
+                  onClick={() => setSelectedDate(iso)}
+                  className={`border-r border-[#ece8e2] px-1 py-2 text-center last:border-r-0 sm:px-2 sm:py-2.5 ${
+                    selected ? "bg-[#1a1a1a] text-white" : isToday ? "bg-white" : ""
+                  }`}
+                >
+                  <p
+                    className={`text-[9px] uppercase tracking-[0.1em] sm:text-[10px] sm:tracking-[0.12em] ${
+                      selected ? "text-white/65" : "text-[#8a8477]"
+                    }`}
+                  >
+                    {DAY_LABELS[i]}
+                  </p>
+                  <p
+                    className={`mt-0.5 text-[13px] font-semibold sm:text-[15px] ${
+                      selected ? "text-white" : isToday ? "text-[#1a1a1a]" : "text-[#4a4a4a]"
+                    }`}
+                  >
+                    {d.getDate()}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+          <div className="grid grid-cols-7">
+            {days.map((iso) => {
+              const chips = chipsByDay[iso] || [];
+              const isToday = iso === today;
+              const selected = iso === selectedDate;
+              return (
+                <button
+                  key={iso}
+                  type="button"
+                  onClick={() => setSelectedDate(iso)}
+                  className={`min-h-[12rem] border-r border-[#ece8e2] p-1 text-left last:border-r-0 sm:min-h-[15rem] sm:p-2 ${
+                    selected ? "bg-[#faf9f7]" : isToday ? "bg-[#faf9f7]/40" : "bg-white hover:bg-[#faf9f7]/50"
+                  }`}
+                >
+                  {chips.length === 0 ? (
+                    <p className="px-0.5 py-2 text-center text-[10px] text-[#d0cbc3] sm:text-[11px]">—</p>
+                  ) : (
+                    <ul className="space-y-1 sm:space-y-1.5">
+                      {chips.slice(0, 8).map((chip) => (
+                        <li
+                          key={chip.key}
+                          className={`rounded-md border px-1 py-1 sm:rounded-lg sm:px-1.5 sm:py-1.5 ${chipClass(chip.kind)}`}
+                        >
+                          <span className="block text-[9px] font-medium tabular-nums text-[#6b665e] sm:text-[10px]">
+                            {formatHour(chip.time)}
+                          </span>
+                          <span className="mt-0.5 block truncate text-[10px] font-medium leading-snug text-[#1a1a1a] sm:text-[11px]">
+                            {chip.label}
+                          </span>
+                          {chip.sub ? (
+                            <span className="mt-0.5 block truncate text-[9px] text-[#8a8477] sm:text-[10px]">{chip.sub}</span>
+                          ) : null}
+                        </li>
+                      ))}
+                      {chips.length > 8 ? (
+                        <li className="px-1 text-[9px] text-[#8a8477] sm:text-[10px]">+{chips.length - 8} more</li>
+                      ) : null}
+                    </ul>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[#8a8477]">
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-sm bg-[#f7f7f5] ring-1 ring-[#e8e5df]" /> Court
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-sm bg-[#f4f7fb] ring-1 ring-[#d7e0ef]" /> Lesson
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-sm bg-[#f3f7f1] ring-1 ring-[#d8e3d4]" /> Clinic
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-sm bg-[#eaf0f8] ring-1 ring-[#c9d6eb]" /> Request
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-sm bg-[#f8f5f0] ring-1 ring-[#e4ddd2]" /> Event
+        </span>
+      </p>
 
       {lessonRequests.length > 0 && (
         <section className="rounded-2xl border border-[#d7e0ef] bg-[#f4f7fb] p-4">
@@ -215,10 +563,32 @@ export default function TodayBoard({
         </section>
       )}
 
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Day detail</p>
+          <p className="text-[18px] font-semibold tracking-tight text-[#1a1a1a]">
+            {formatPrettyDate(selectedDate)}
+            {selectedIsToday ? <span className="ml-2 text-[12px] font-medium text-[#3d5c34]">Today</span> : null}
+          </p>
+        </div>
+        {!selectedIsToday && (
+          <button
+            type="button"
+            onClick={() => {
+              setWeekStart(thisWeekStart);
+              setSelectedDate(today);
+            }}
+            className="text-[12px] text-[#8a8477] underline-offset-2 hover:text-[#1a1a1a] hover:underline"
+          >
+            Jump to today
+          </button>
+        )}
+      </div>
+
       {pendingRows.length > 0 && (
         <section className="rounded-2xl border border-[#ead9c2] bg-[#fbf6ee] p-4">
           <p className="text-[12px] font-medium uppercase tracking-[0.12em] text-[#8a6230]">
-            Unpaid today · ${pendingTotal}
+            Unpaid · ${pendingTotal}
           </p>
           <ul className="mt-2 space-y-1.5">
             {pendingRows.map((row) => (
@@ -241,10 +611,10 @@ export default function TodayBoard({
           Courts & lessons
         </p>
         {hourGroups.length === 0 ? (
-          <p className="px-4 py-5 text-[15px] text-[#8a8477]">No court or lesson bookings today.</p>
+          <p className="px-4 py-5 text-[15px] text-[#8a8477]">No court or lesson bookings this day.</p>
         ) : (
           hourGroups.map((group) => {
-            const current = Math.floor(nowHour) === Math.floor(group.hour);
+            const current = selectedIsToday && Math.floor(nowHour) === Math.floor(group.hour);
             return (
               <div key={group.hour} className={`border-b border-[#f0ede8] last:border-0 ${current ? "bg-[#faf9f7]" : ""}`}>
                 <p className="px-4 pt-3 text-[20px] font-semibold tracking-tight">
@@ -309,11 +679,11 @@ export default function TodayBoard({
         </section>
       ))}
 
-      {todayEvents.length > 0 && (
+      {dayEvents.length > 0 && (
         <section className="overflow-hidden rounded-2xl border border-[#e8e5df] bg-white">
           <p className="border-b border-[#f0ede8] px-4 py-3 text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Events</p>
           {Object.values(
-            todayEvents.reduce<Record<string, S27EventBooking[]>>((acc, row) => {
+            dayEvents.reduce<Record<string, S27EventBooking[]>>((acc, row) => {
               acc[row.eventTitle] = acc[row.eventTitle] || [];
               acc[row.eventTitle].push(row);
               return acc;

@@ -40,7 +40,7 @@ import ProgramSettings from "./ProgramSettings";
 type Tab = "today" | "members" | "book" | "ledger" | "program";
 
 const TABS: { id: Tab; label: string; hint: string }[] = [
-  { id: "today", label: "Today", hint: "On court" },
+  { id: "today", label: "Week", hint: "Calendar" },
   { id: "members", label: "Members", hint: "Full file" },
   { id: "book", label: "Book", hint: "Add / edit" },
   { id: "ledger", label: "Ledger", hint: "Night" },
@@ -202,20 +202,13 @@ export default function Summer27DirectorPage() {
         <div>
           <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Director dashboard</p>
           <h2 className="text-2xl font-semibold tracking-tight">Summer ’27</h2>
-          <p className="mt-1 text-[13px] text-[#6b665e]">Today for the court. Members and ledger when you have time.</p>
+          <p className="mt-1 text-[13px] text-[#6b665e]">Week at a glance. Tap a day for the full board.</p>
         </div>
         <div className="flex items-center gap-2">
           <Link href="/Summer27" className="rounded-lg border border-[#e8e5df] bg-white px-3 py-1.5 text-[12px] text-[#6b665e]">
             View site
           </Link>
         </div>
-      </div>
-
-      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Today" value={String(todayCount)} />
-        <Stat label="Unpaid today" value={String(unpaidToday)} />
-        <Stat label="Paid (all)" value={`$${revenue}`} />
-        <Stat label="Pending (all)" value={`$${pending}`} />
       </div>
 
       <div className="mt-4 flex flex-wrap gap-1 rounded-xl border border-[#e8e5df] bg-white p-1">
@@ -278,6 +271,15 @@ export default function Summer27DirectorPage() {
           onMarkStringingReady={markStringingReady}
           onMarkStringingPickedUp={markStringingPickedUp}
         />
+      )}
+
+      {tab !== "today" && (
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <Stat label="Today" value={String(todayCount)} />
+          <Stat label="Unpaid today" value={String(unpaidToday)} />
+          <Stat label="Paid (all)" value={`$${revenue}`} />
+          <Stat label="Pending (all)" value={`$${pending}`} />
+        </div>
       )}
 
       {tab === "members" && (
