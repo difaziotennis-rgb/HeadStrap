@@ -39,8 +39,9 @@ import Ledger from "./Ledger";
 import ProgramSettings from "./ProgramSettings";
 import StringingShop from "./StringingShop";
 import ChargeDesk from "./ChargeDesk";
+import AdminStats from "./AdminStats";
 
-type Tab = "today" | "charge" | "shop" | "book" | "members" | "money" | "settings";
+type Tab = "today" | "charge" | "shop" | "book" | "members" | "stats" | "money" | "settings";
 
 /** Plain labels — no cryptic hints. Order matches how you run a day. */
 const TABS: { id: Tab; label: string }[] = [
@@ -49,6 +50,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "shop", label: "Stringing" },
   { id: "book", label: "Book" },
   { id: "members", label: "Members" },
+  { id: "stats", label: "Stats" },
   { id: "money", label: "Money" },
   { id: "settings", label: "Settings" },
 ];
@@ -216,7 +218,7 @@ export default function Summer27DirectorPage() {
           <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Director desk</p>
           <h2 className="text-2xl font-semibold tracking-tight">Run the club</h2>
           <p className="mt-1 text-[13px] text-[#6b665e]">
-            Week view, charge the shop, stringing queue, then bookings and money.
+            Week view, charge the shop, stringing queue — Stats for week and month numbers.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -359,6 +361,20 @@ export default function Summer27DirectorPage() {
             setNotes(nextNotes);
             ping("Member file saved.");
           }}
+        />
+      )}
+
+      {tab === "stats" && (
+        <AdminStats
+          today={today}
+          clinicsCatalog={catalog.clinics}
+          pros={catalog.pros}
+          courts={courts}
+          clinics={clinics}
+          lessons={lessons}
+          events={events}
+          stringing={stringing}
+          charges={charges}
         />
       )}
 
