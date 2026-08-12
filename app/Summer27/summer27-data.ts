@@ -9,6 +9,10 @@ export const s27Nav: { href: string; label: string; memberOnly?: boolean }[] = [
   { href: "/Summer27/member/portal", label: "My Account", memberOnly: true },
 ];
 
+/** Update when the club Instagram handle is live. */
+export const S27_INSTAGRAM_URL = "https://www.instagram.com/difaziotennis";
+export const S27_INSTAGRAM_HANDLE = "@difaziotennis";
+
 export const COURTS = [
   { id: "court-1", name: "Court 1" },
   { id: "court-2", name: "Court 2" },
