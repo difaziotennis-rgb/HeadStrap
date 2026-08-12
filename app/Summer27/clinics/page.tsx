@@ -35,6 +35,15 @@ function nextDatesForClinic(clinic: ClinicDef | undefined, count = 8, extra?: st
   return dates;
 }
 
+function clinicGroup(clinic: ClinicDef): "Weekend" | "Daytime" | "Evening" {
+  const weekend = clinic.days.every((d) => d === 0 || d === 6);
+  if (weekend) return "Weekend";
+  if (clinic.startHour < 16) return "Daytime";
+  return "Evening";
+}
+
+const CLINIC_GROUPS: Array<"Weekend" | "Daytime" | "Evening"> = ["Weekend", "Daytime", "Evening"];
+
 export default function Summer27ClinicsPage() {
   return (
     <Suspense fallback={<div className="p-8 text-[13px] text-[#7a756d]">Loading clinics…</div>}>
@@ -209,119 +218,128 @@ function Summer27ClinicsInner() {
 
   if (!clinic) return null;
 
+  const grouped = CLINIC_GROUPS.map((group) => ({
+    group,
+    items: clinics.filter((c) => clinicGroup(c) === group),
+  })).filter((g) => g.items.length > 0);
+
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 pb-10 pt-6 sm:px-6 sm:pt-8">
+    <main className="mx-auto w-full max-w-2xl px-4 pb-10 pt-6 sm:px-6 sm:pt-8">
       <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Clinics</p>
       <h2 className="mt-1 text-2xl font-semibold tracking-tight">Weekly group play</h2>
       <p className="mt-2 text-[14px] leading-relaxed text-[#6b665e]">
-        Choose a clinic, then a date. One hour $50 · 90 minutes $80.
+        Choose a clinic below, then a date. One hour $50 · 90 minutes $80.
       </p>
 
-      <div className="mt-5 -mx-4 border-y border-[#ece8e2] bg-white px-4 py-3 sm:mx-0 sm:rounded-2xl sm:border sm:px-4">
-        <p className="mb-2 text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Clinic</p>
-        <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {clinics.map((c) => {
-            const active = c.id === clinic.id;
-            return (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => setSelectedId(c.id)}
-                className={`min-w-[9.5rem] max-w-[11rem] shrink-0 rounded-2xl border px-3 py-3 text-left ${
-                  active ? "border-[#1a1a1a] bg-[#1a1a1a] text-white" : "border-[#e8e5df] bg-[#faf9f7]"
-                }`}
-              >
-                <p className={`text-[10px] uppercase tracking-[0.1em] ${active ? "text-white/70" : "text-[#8a8477]"}`}>
-                  {c.level}
-                </p>
-                <p className="mt-1 text-[13px] font-medium leading-snug">{c.name}</p>
-                <p className={`mt-1 text-[11px] ${active ? "text-white/75" : "text-[#6b665e]"}`}>
-                  {clinicDayLabel(c.days)} · ${c.memberPrice}
-                </p>
-              </button>
-            );
-          })}
-        </div>
+      <div className="mt-6 space-y-6">
+        {grouped.map(({ group, items }) => (
+          <section key={group}>
+            <p className="mb-2 text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">{group}</p>
+            <div className="space-y-2">
+              {items.map((c) => {
+                const active = c.id === clinic.id;
+                return (
+                  <div
+                    key={c.id}
+                    className={`overflow-hidden rounded-2xl border ${
+                      active ? "border-[#1a1a1a] bg-white" : "border-[#e8e5df] bg-[#faf9f7]"
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedId(c.id);
+                        setMsg(null);
+                      }}
+                      className="flex w-full items-start gap-3 px-4 py-3.5 text-left"
+                    >
+                      <span
+                        className={`mt-1 h-3.5 w-3.5 shrink-0 rounded-full border ${
+                          active ? "border-[#1a1a1a] bg-[#1a1a1a]" : "border-[#cfc9bf] bg-white"
+                        }`}
+                        aria-hidden
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[15px] font-medium text-[#1a1a1a]">{c.name}</span>
+                        <span className="mt-0.5 block text-[12px] text-[#6b665e]">
+                          {c.level}
+                        </span>
+                        <span className="mt-1 block text-[12px] text-[#8a8477]">
+                          {clinicDayLabel(c.days)} · {clinicTimeLabel(c)} · ${c.memberPrice}
+                        </span>
+                      </span>
+                    </button>
+
+                    {active && (
+                      <div className="border-t border-[#ece8e2] bg-white px-4 pb-4 pt-3">
+                        <p className="text-[13px] leading-relaxed text-[#6b665e]">{c.description}</p>
+
+                        <p className="mb-2 mt-4 text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Choose a date</p>
+                        <DateChips items={dateChips} value={date} onChange={setDate} ariaLabel="Clinic dates" />
+
+                        <div className="mt-4 rounded-xl bg-[#faf9f7] px-3 py-3">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Roster</p>
+                            <p className="text-[12px] text-[#6b665e]">
+                              {roster.length}/{clinic.capacity} · {seatsLeft} open
+                            </p>
+                          </div>
+                          {roster.length === 0 ? (
+                            <p className="mt-2 text-[13px] text-[#8a8477]">None yet.</p>
+                          ) : (
+                            <ul className="mt-2 grid gap-1 sm:grid-cols-2">
+                              {roster.map((b) => (
+                                <li key={b.id} className="text-[13px] text-[#4a4a4a]">
+                                  {b.clientName}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+
+                        <div className="mt-4 space-y-3">
+                          {!isMember && (
+                            <>
+                              <input
+                                value={guestName}
+                                onChange={(e) => setGuestName(e.target.value)}
+                                placeholder="Name"
+                                className="w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]"
+                              />
+                              <input
+                                value={guestEmail}
+                                onChange={(e) => setGuestEmail(e.target.value)}
+                                placeholder="Email"
+                                className="w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]"
+                              />
+                            </>
+                          )}
+                          {msg && <p className="text-[13px] text-[#4a4a4a]">{msg}</p>}
+                          {seatsLeft <= 0 ? (
+                            <p className="rounded-xl bg-[#faf9f7] px-3 py-3 text-center text-[13px] text-[#8a8477]">Full</p>
+                          ) : alreadyIn ? (
+                            <p className="rounded-xl bg-[#faf9f7] px-3 py-3 text-center text-[13px] text-[#8a8477]">You’re signed up</p>
+                          ) : (
+                            <PayChooser
+                              amount={price}
+                              savedCard={savedCard}
+                              paying={paying}
+                              primaryLabel={`Join · $${price}`}
+                              onPay={signUp}
+                            />
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        ))}
       </div>
 
-      <div className="mt-5">
-        <div className="mb-2 flex items-end justify-between gap-2">
-          <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Date</p>
-          <p className="text-[12px] text-[#6b665e]">{clinicTimeLabel(clinic)}</p>
-        </div>
-        <DateChips items={dateChips} value={date} onChange={setDate} ariaLabel="Clinic dates" />
-      </div>
-
-      <section className="mt-5 rounded-2xl border border-[#e8e5df] bg-white p-4 sm:p-5">
-        <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">{clinic.level}</p>
-        <h3 className="mt-1 text-lg font-medium">{clinic.name}</h3>
-        <p className="mt-1 text-[13px] leading-relaxed text-[#6b665e]">{clinic.description}</p>
-        <p className="mt-3 text-[13px] text-[#4a4a4a]">
-          {date
-            ? parseDateInput(date).toLocaleDateString("en-US", {
-                weekday: "long",
-                month: "short",
-                day: "numeric",
-              })
-            : ""}
-          {" · "}
-          {clinicTimeLabel(clinic)}
-        </p>
-        <p className="mt-1 text-[12px] text-[#8a8477]">
-          {roster.length}/{clinic.capacity} signed up · ${price}
-          {!isMember ? " guest" : ""}
-        </p>
-
-        <div className="mt-4 rounded-xl bg-[#faf9f7] px-3 py-3">
-          <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Roster</p>
-          {roster.length === 0 ? (
-            <p className="mt-2 text-[13px] text-[#8a8477]">None yet.</p>
-          ) : (
-            <ul className="mt-2 grid gap-1 sm:grid-cols-2">
-              {roster.map((b) => (
-                <li key={b.id} className="text-[13px] text-[#4a4a4a]">
-                  {b.clientName}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        <div className="mt-4 space-y-3">
-          {!isMember && (
-            <>
-              <input
-                value={guestName}
-                onChange={(e) => setGuestName(e.target.value)}
-                placeholder="Name"
-                className="w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]"
-              />
-              <input
-                value={guestEmail}
-                onChange={(e) => setGuestEmail(e.target.value)}
-                placeholder="Email"
-                className="w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]"
-              />
-            </>
-          )}
-          {msg && <p className="text-[13px] text-[#4a4a4a]">{msg}</p>}
-          {seatsLeft <= 0 ? (
-            <p className="rounded-xl bg-[#faf9f7] px-3 py-3 text-center text-[13px] text-[#8a8477]">Full</p>
-          ) : alreadyIn ? (
-            <p className="rounded-xl bg-[#faf9f7] px-3 py-3 text-center text-[13px] text-[#8a8477]">You’re signed up</p>
-          ) : (
-            <PayChooser
-              amount={price}
-              savedCard={savedCard}
-              paying={paying}
-              primaryLabel={`Join · $${price}`}
-              onPay={signUp}
-            />
-          )}
-        </div>
-      </section>
-
-      <p className="mt-4 text-center text-[12px] text-[#8a8477]">
+      <p className="mt-6 text-center text-[12px] text-[#8a8477]">
         <Link href="/Summer27/juniors" className="hover:text-[#1a1a1a]">
           Junior hours →
         </Link>

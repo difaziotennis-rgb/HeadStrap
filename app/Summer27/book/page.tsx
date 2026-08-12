@@ -210,6 +210,52 @@ function Summer27BookInner() {
     return "bg-[#f3eee8] text-[#6b665e]";
   }
 
+  function shortOccLabel(label: string, type: string) {
+    if (type === "lesson") return "Lesson";
+    if (type === "event") return "Event";
+    if (type === "hold") return "Held";
+    if (type === "booked") return label.split(" ")[0] || "Booked";
+    return label
+      .replace(/^Weekend\s+/i, "")
+      .replace(/^Midweek\s+/i, "")
+      .replace(/^Weeknight\s+/i, "")
+      .replace(/\s+Clinic$/i, "")
+      .replace(/\s+&\s+Drills$/i, "")
+      .trim() || label;
+  }
+
+  function renderSlot(courtId: CourtId, hour: number) {
+    const occ = occupancy(date, courtId, hour);
+    const open = canBook(date, courtId, hour);
+    if (occ) {
+      if (occ.type === "clinic") {
+        return (
+          <Link
+            href={`${occ.kind === "junior" ? "/Summer27/juniors" : "/Summer27/clinics"}?clinic=${encodeURIComponent(occ.clinicId)}&date=${date}`}
+            className={`block truncate rounded-md px-1.5 py-2 text-center text-[10px] font-medium leading-tight sm:px-2 sm:text-[11px] ${slotClass(occ.type)}`}
+          >
+            {shortOccLabel(occ.label, occ.type)}
+          </Link>
+        );
+      }
+      return (
+        <span className={`block truncate rounded-md px-1.5 py-2 text-center text-[10px] leading-tight sm:px-2 sm:text-[11px] ${slotClass(occ.type)}`}>
+          {shortOccLabel(occ.label, occ.type)}
+        </span>
+      );
+    }
+    return (
+      <button
+        type="button"
+        disabled={!open || paying}
+        onClick={() => requestSlot(courtId, hour)}
+        className="w-full rounded-md border border-[#e8e5df] bg-[#faf9f7] px-1.5 py-2 text-[10px] font-medium text-[#1a1a1a] hover:bg-white disabled:opacity-35 sm:px-2 sm:text-[11px]"
+      >
+        ${rate * duration}
+      </button>
+    );
+  }
+
   return (
     <main className="mx-auto w-full max-w-3xl px-4 pb-10 pt-6 sm:max-w-6xl sm:px-6 sm:pt-8">
       <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Courts</p>
@@ -274,103 +320,32 @@ function Summer27BookInner() {
         <p className="mt-3 rounded-xl border border-[#e8e5df] bg-white px-3 py-2 text-[13px] text-[#4a4a4a]">{msg}</p>
       )}
 
-      <div className="mt-4 space-y-4 lg:hidden">
-        {COURTS.map((court) => (
-          <section key={court.id} className="overflow-hidden rounded-2xl border border-[#e8e5df] bg-white">
-            <div className="border-b border-[#ece8e2] bg-[#faf9f7] px-4 py-3">
-              <p className="text-[13px] font-semibold">{court.name}</p>
+      <div className="mt-4 overflow-hidden rounded-2xl border border-[#e8e5df] bg-white">
+        <div className="grid grid-cols-[3.25rem_1fr_1fr] border-b border-[#ece8e2] bg-[#faf9f7] sm:grid-cols-[4.5rem_1fr_1fr]">
+          <div className="px-2 py-2.5 text-[10px] font-medium uppercase tracking-[0.1em] text-[#8a8477] sm:px-3 sm:text-[11px]">
+            Time
+          </div>
+          {COURTS.map((c) => (
+            <div key={c.id} className="border-l border-[#ece8e2] px-2 py-2.5 text-center text-[11px] font-semibold text-[#1a1a1a] sm:px-3 sm:text-[12px]">
+              {c.name}
             </div>
-            <ul className="divide-y divide-[#f0ede8]">
-              {BOOKING_HOURS.map((hour) => {
-                const occ = occupancy(date, court.id, hour);
-                const open = canBook(date, court.id, hour);
-                return (
-                  <li key={hour} className="flex items-center gap-3 px-3 py-2.5">
-                    <span className="w-16 shrink-0 text-[12px] text-[#6b665e]">{formatHour(hour)}</span>
-                    <div className="min-w-0 flex-1">
-                      {occ ? (
-                        occ.type === "clinic" ? (
-                          <Link
-                            href={`${occ.kind === "junior" ? "/Summer27/juniors" : "/Summer27/clinics"}?clinic=${encodeURIComponent(occ.clinicId)}&date=${date}`}
-                            className={`block truncate rounded-lg px-3 py-2 text-[12px] font-medium ${slotClass(occ.type)}`}
-                          >
-                            {occ.label}
-                          </Link>
-                        ) : (
-                          <span className={`block truncate rounded-lg px-3 py-2 text-[12px] ${slotClass(occ.type)}`}>
-                            {occ.label}
-                          </span>
-                        )
-                      ) : (
-                        <button
-                          type="button"
-                          disabled={!open || paying}
-                          onClick={() => requestSlot(court.id, hour)}
-                          className="w-full rounded-lg border border-[#e8e5df] bg-[#faf9f7] px-3 py-2 text-left text-[12px] font-medium text-[#1a1a1a] hover:bg-white disabled:opacity-35"
-                        >
-                          Book · ${rate * duration}
-                        </button>
-                      )}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        ))}
-      </div>
-
-      <div className="mt-4 hidden overflow-x-auto rounded-2xl border border-[#e8e5df] bg-white lg:block">
-        <table className="w-full min-w-[640px] text-left text-[12px]">
-          <thead>
-            <tr className="border-b border-[#ece8e2] bg-[#faf9f7]">
-              <th className="px-3 py-2 font-medium text-[#8a8477]">Time</th>
-              {COURTS.map((c) => (
-                <th key={c.id} className="px-3 py-2 font-medium text-[#8a8477]">
-                  {c.name}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {BOOKING_HOURS.map((hour) => (
-              <tr key={hour} className="border-b border-[#f0ede8]">
-                <td className="whitespace-nowrap px-3 py-2 text-[#6b665e]">{formatHour(hour)}</td>
-                {COURTS.map((court) => {
-                  const occ = occupancy(date, court.id, hour);
-                  const open = canBook(date, court.id, hour);
-                  return (
-                    <td key={court.id} className="px-2 py-1.5">
-                      {occ ? (
-                        occ.type === "clinic" ? (
-                          <Link
-                            href={`${occ.kind === "junior" ? "/Summer27/juniors" : "/Summer27/clinics"}?clinic=${encodeURIComponent(occ.clinicId)}&date=${date}`}
-                            className={`block rounded-md px-2 py-1.5 text-[11px] ${slotClass(occ.type)}`}
-                          >
-                            {occ.label}
-                          </Link>
-                        ) : (
-                          <span className={`block rounded-md px-2 py-1.5 text-[11px] ${slotClass(occ.type)}`}>
-                            {occ.label}
-                          </span>
-                        )
-                      ) : (
-                        <button
-                          type="button"
-                          disabled={!open || paying}
-                          onClick={() => requestSlot(court.id, hour)}
-                          className="w-full rounded-md border border-[#e8e5df] bg-[#faf9f7] px-2 py-1.5 text-[11px] font-medium text-[#1a1a1a] hover:bg-white disabled:opacity-40"
-                        >
-                          ${rate * duration}
-                        </button>
-                      )}
-                    </td>
-                  );
-                })}
-              </tr>
+          ))}
+        </div>
+        {BOOKING_HOURS.map((hour) => (
+          <div
+            key={hour}
+            className="grid grid-cols-[3.25rem_1fr_1fr] border-b border-[#f0ede8] last:border-b-0 sm:grid-cols-[4.5rem_1fr_1fr]"
+          >
+            <div className="flex items-center px-2 py-1.5 text-[11px] text-[#6b665e] sm:px-3 sm:text-[12px]">
+              {formatHour(hour).replace(":00 ", " ")}
+            </div>
+            {COURTS.map((court) => (
+              <div key={court.id} className="border-l border-[#f0ede8] p-1 sm:p-1.5">
+                {renderSlot(court.id, hour)}
+              </div>
             ))}
-          </tbody>
-        </table>
+          </div>
+        ))}
       </div>
 
       {pendingSlot && (
