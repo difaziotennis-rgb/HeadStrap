@@ -84,7 +84,7 @@ export default function Summer27JoinPage() {
       <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Membership</p>
       <h2 className="mt-1 text-2xl font-semibold tracking-tight">Join Summer ’27</h2>
       <p className="mt-2 text-[14px] text-[#6b665e]">
-        Member court rate $40/hr, clinic and event discounts, a dashboard of everything you’re signed up for, and
+        Member court rate $50/hr, clinic and event discounts, a dashboard of everything you’re signed up for, and
         optional saved card for one-click booking. Everything is paid in advance.
       </p>
 
