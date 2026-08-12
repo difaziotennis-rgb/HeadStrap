@@ -20,7 +20,7 @@ export const COURTS = [
 
 export type CourtId = (typeof COURTS)[number]["id"];
 
-export const BOOKING_HOURS = Array.from({ length: 13 }, (_, i) => i + 8); // 8 AM – 8 PM
+export const BOOKING_HOURS = Array.from({ length: 14 }, (_, i) => i + 7); // 7 AM – 8 PM
 
 export const COURT_RATES = {
   member: 50,

@@ -73,7 +73,7 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
   const liveEvents = getLiveEvents();
   const courtRates = getLiveCourtRates();
 
-  const [courtDraft, setCourtDraft] = useState({ date: "", hour: "8", durationHours: "1", courtId: "court-2" as CourtId });
+  const [courtDraft, setCourtDraft] = useState({ date: "", hour: "7", durationHours: "1", courtId: "court-2" as CourtId });
   const [lessonDraft, setLessonDraft] = useState({ date: "", hour: "8", duration: "60" as "60" | "90", focus: "" });
   const [clinicDraft, setClinicDraft] = useState("");
   const [eventDraft, setEventDraft] = useState("1");
