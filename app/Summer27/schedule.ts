@@ -129,6 +129,14 @@ function usableClinics(clinics: unknown, fallback: ClinicDef[]): ClinicDef[] {
   return ok.length ? ok : fallback;
 }
 
+function eventImagePath(raw: string | undefined, fallback: string | undefined) {
+  const value = (raw || fallback || "").trim();
+  if (!value) return fallback || "";
+  // Old paths under /summer27/* were swallowed by the lowercase Summer27 rewrite.
+  if (value.startsWith("/summer27/")) return value.replace(/^\/summer27\//, "/s27/");
+  return value;
+}
+
 function usableEvents(events: unknown, fallback: EventDef[]): EventDef[] {
   if (!Array.isArray(events) || events.length === 0) return fallback;
   const ok = events
@@ -138,7 +146,7 @@ function usableEvents(events: unknown, fallback: EventDef[]): EventDef[] {
       return {
         ...base,
         ...e,
-        image: e.image || base?.image || fallback[0]?.image || "",
+        image: eventImagePath(e.image, base?.image || fallback[0]?.image),
         theme: e.theme || base?.theme || fallback[0]?.theme,
         highlights: Array.isArray(e.highlights) && e.highlights.length ? e.highlights : base?.highlights || [],
       } as EventDef;

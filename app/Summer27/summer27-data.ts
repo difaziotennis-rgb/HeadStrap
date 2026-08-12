@@ -286,7 +286,7 @@ export const s27Events: EventDef[] = [
     description:
       "Rotating mixed doubles on Courts 1 & 2. Partner optional — we’ll pair you. Water and a quick gathering in the clubhouse after.",
     highlights: ["Rotating partners", "Both courts", "Clubhouse after"],
-    image: "/summer27/events/opening-mixed.jpg",
+    image: "/s27/events/opening-mixed.jpg",
     theme: { wash: "#2f4a3a", soft: "#eef2ea", accent: "#4a6b52" },
   },
   {
@@ -300,7 +300,7 @@ export const s27Events: EventDef[] = [
     guestPrice: 55,
     description: "Ladies doubles on both courts, then coffee in the clubhouse. Members and guests welcome.",
     highlights: ["Doubles only", "Coffee in the clubhouse", "Members + guests"],
-    image: "/summer27/events/ladies-morning.jpg",
+    image: "/s27/events/ladies-morning.jpg",
     theme: { wash: "#3d5a2c", soft: "#eef1ea", accent: "#5f734f" },
   },
   {
@@ -314,7 +314,7 @@ export const s27Events: EventDef[] = [
     guestPrice: 70,
     description: "Bring a guest for doubles on Courts 1 & 2, then a toast in the clubhouse.",
     highlights: ["One guest with each member", "Round-robin draw", "Clubhouse toast"],
-    image: "/summer27/events/member-guest.jpg",
+    image: "/s27/events/member-guest.jpg",
     theme: { wash: "#3d4a38", soft: "#f0f2ec", accent: "#5a6b4a" },
   },
   {
@@ -328,7 +328,7 @@ export const s27Events: EventDef[] = [
     guestPrice: 40,
     description: "Parent–child games and easy round robins across both courts. Casual and welcoming.",
     highlights: ["Parent–child games", "Both courts", "All ages welcome"],
-    image: "/summer27/events/family-play.jpg",
+    image: "/s27/events/family-play.jpg",
     theme: { wash: "#35503a", soft: "#eef3ea", accent: "#4f7358" },
   },
   {
@@ -342,7 +342,7 @@ export const s27Events: EventDef[] = [
     guestPrice: 60,
     description: "Mid-summer mixed doubles with rotating partners on Courts 1 & 2. Courtside water and fruit.",
     highlights: ["Rotating mixed doubles", "Both courts", "Water & fruit"],
-    image: "/summer27/events/august-mixed.jpg",
+    image: "/s27/events/august-mixed.jpg",
     theme: { wash: "#2f4a3a", soft: "#eef2ea", accent: "#4a6b52" },
   },
   {
@@ -357,7 +357,7 @@ export const s27Events: EventDef[] = [
     description:
       "Optional mixed play on both courts, then a simple season-end gathering in the clubhouse — not a banquet, just the club.",
     highlights: ["Optional tennis block", "Clubhouse gathering", "Season toast"],
-    image: "/summer27/events/season-close.jpg",
+    image: "/s27/events/season-close.jpg",
     theme: { wash: "#3a4634", soft: "#f1f3ec", accent: "#5c6e4d" },
   },
 ];
