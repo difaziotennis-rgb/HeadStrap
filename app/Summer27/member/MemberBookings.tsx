@@ -251,7 +251,7 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
 
   function saveCourt(row: (typeof rows)[number]) {
     const hour = Number(courtDraft.hour);
-    const durationHours = Number(courtDraft.durationHours) === 2 ? 2 : 1;
+    const durationHours = 1;
     if (!canChangeBooking(courtDraft.date, hour)) {
       setMsg(`New court time must also be at least ${CANCEL_WINDOW_HOURS} hours out.`);
       return;
@@ -481,10 +481,6 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
                   {BOOKING_HOURS.map((h) => (
                     <option key={h} value={h}>{formatHour(h)}</option>
                   ))}
-                </select>
-                <select className={inputClass} value={courtDraft.durationHours} onChange={(e) => setCourtDraft({ ...courtDraft, durationHours: e.target.value })}>
-                  <option value="1">1 hour</option>
-                  <option value="2">2 hours</option>
                 </select>
                 <div className="flex gap-2 sm:col-span-4">
                   <button className="rounded-lg bg-[#1a1a1a] px-3 py-1.5 text-[12px] text-white">Save change</button>

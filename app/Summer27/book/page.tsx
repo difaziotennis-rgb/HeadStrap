@@ -24,7 +24,7 @@ import {
   saveRecord,
   type S27CourtBooking,
 } from "../storage";
-import { DateChips, dateChipFromIso, Segmented } from "../DateChips";
+import { DateChips, dateChipFromIso } from "../DateChips";
 
 function addDays(date: Date, n: number) {
   const d = new Date(date);
@@ -45,7 +45,7 @@ function Summer27BookInner() {
   const searchParams = useSearchParams();
   const [date, setDate] = useState(() => formatDateInput(new Date()));
   const [bookings, setBookings] = useState<Record<string, S27CourtBooking>>({});
-  const [duration, setDuration] = useState<1 | 2>(1);
+  const duration = 1;
   const [guestName, setGuestName] = useState("");
   const [guestEmail, setGuestEmail] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
@@ -347,16 +347,8 @@ function Summer27BookInner() {
       )}
 
       <div className="mt-5 -mx-4 border-y border-[#ece8e2] bg-white px-4 py-3 sm:mx-0 sm:rounded-2xl sm:border">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <div className="mb-3">
           <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Day</p>
-          <Segmented
-            value={String(duration)}
-            onChange={(v) => setDuration(Number(v) as 1 | 2)}
-            options={[
-              { value: "1", label: "1 hour" },
-              { value: "2", label: "2 hours" },
-            ]}
-          />
         </div>
         <DateChips items={dayChips} value={date} onChange={setDate} ariaLabel="Court dates" />
         <p className="mt-3 text-[13px] font-medium text-[#1a1a1a]">

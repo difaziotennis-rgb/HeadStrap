@@ -109,7 +109,6 @@ function CourtsBlock({
 }: Pick<Props, "courts" | "onCourts"> & { range: Range; member: S27MemberAccount | null }) {
   const [date, setDate] = useState(today());
   const [hour, setHour] = useState("8");
-  const [durationHours, setDurationHours] = useState("1");
   const [courtId, setCourtId] = useState<CourtId>("court-2");
   const [guestName, setGuestName] = useState("");
   const [status, setStatus] = useState<"paid" | "pending">("paid");
@@ -126,7 +125,7 @@ function CourtsBlock({
     e.preventDefault();
     const name = member?.name || guestName.trim();
     if (!name) return;
-    const hours = (Number(durationHours) === 2 ? 2 : 1) as 1 | 2;
+    const hours = 1 as const;
     const rates = getLiveCourtRates();
     onCourts([
       ...courts,
@@ -159,10 +158,6 @@ function CourtsBlock({
         </select>
         <select className={inputClass} value={hour} onChange={(e) => setHour(e.target.value)}>
           {BOOKING_HOURS.map((h) => <option key={h} value={h}>{formatHour(h)}</option>)}
-        </select>
-        <select className={inputClass} value={durationHours} onChange={(e) => setDurationHours(e.target.value)}>
-          <option value="1">1 hour</option>
-          <option value="2">2 hours</option>
         </select>
         {!member && <input className={`${inputClass} sm:col-span-2`} placeholder="Walk-up name" value={guestName} onChange={(e) => setGuestName(e.target.value)} />}
         <select className={inputClass} value={status} onChange={(e) => setStatus(e.target.value as "paid" | "pending")}>
