@@ -115,7 +115,7 @@ export type S27StringingOrder = {
   stringId: string;
   stringName: string;
   tension: string;
-  pickupDate: string;
+  pickupDate?: string;
   clientName: string;
   clientEmail: string;
   memberNumber?: string;

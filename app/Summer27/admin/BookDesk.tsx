@@ -453,7 +453,6 @@ function StringingBlock({
   const [racket, setRacket] = useState("");
   const [stringId, setStringId] = useState(STRING_OPTIONS[0].id);
   const [tension, setTension] = useState("52");
-  const [pickupDate, setPickupDate] = useState(today());
   const [guestName, setGuestName] = useState("");
   const [status, setStatus] = useState<"paid" | "pending">("paid");
   const stringOpt = STRING_OPTIONS.find((s) => s.id === stringId) || STRING_OPTIONS[0];
@@ -473,7 +472,7 @@ function StringingBlock({
   const list = stringing
     .filter((b) => inRangeDate(b.pickupDate || b.createdAt.slice(0, 10), range, b.paymentStatus === "pending"))
     .slice()
-    .sort((a, b) => (a.pickupDate || "").localeCompare(b.pickupDate || ""));
+    .sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
 
   function add(e: React.FormEvent) {
     e.preventDefault();
@@ -485,7 +484,6 @@ function StringingBlock({
         stringId: stringOpt.id,
         stringName: stringOpt.name,
         tension,
-        pickupDate,
         clientName: name,
         clientEmail: member?.email || "",
         memberNumber: member?.memberNumber,
@@ -511,7 +509,6 @@ function StringingBlock({
         <select className={inputClass} value={tension} onChange={(e) => setTension(e.target.value)}>
           {["48", "50", "52", "54", "56", "58"].map((t) => <option key={t} value={t}>{t} lbs</option>)}
         </select>
-        <input type="date" className={inputClass} value={pickupDate} onChange={(e) => setPickupDate(e.target.value)} />
         {!member && <input className={inputClass} placeholder="Walk-up name" value={guestName} onChange={(e) => setGuestName(e.target.value)} />}
         <select className={inputClass} value={status} onChange={(e) => setStatus(e.target.value as "paid" | "pending")}>
           <option value="paid">Paid</option>
@@ -524,7 +521,7 @@ function StringingBlock({
         rows={list.map((b) => ({
           id: b.id,
           title: `${b.racket} · ${b.stringName} @ ${b.tension}`,
-          detail: `${b.clientName} · $${b.amount}${b.pickupDate ? ` · pickup ${formatPrettyDate(b.pickupDate)}` : ""}`,
+          detail: `${b.clientName} · $${b.amount}`,
           status: b.paymentStatus,
           onPaid: () => onStringing(stringing.map((x) => (x.id === b.id ? { ...x, paymentStatus: x.paymentStatus === "paid" ? "pending" : "paid" } : x))),
           onDelete: () => onStringing(stringing.filter((x) => x.id !== b.id)),

@@ -23,7 +23,6 @@ function Summer27StringingInner() {
   const [racket, setRacket] = useState("");
   const [stringId, setStringId] = useState(STRING_OPTIONS[0].id);
   const [tension, setTension] = useState("52");
-  const [pickupDate, setPickupDate] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [orders, setOrders] = useState<S27StringingOrder[]>([]);
@@ -88,7 +87,6 @@ function Summer27StringingInner() {
       stringId: option.id,
       stringName: option.name,
       tension,
-      pickupDate,
       clientName,
       clientEmail,
       memberNumber: session?.memberNumber,
@@ -168,20 +166,14 @@ function Summer27StringingInner() {
             ))}
           </select>
         </label>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="text-[12px] text-[#6b665e]">
-            Tension
-            <select value={tension} onChange={(e) => setTension(e.target.value)} className="mt-1 w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]">
-              {["48", "50", "51", "52", "53", "54", "55", "56", "58"].map((t) => (
-                <option key={t} value={t}>{t} lbs</option>
-              ))}
-            </select>
-          </label>
-          <label className="text-[12px] text-[#6b665e]">
-            Pickup
-            <input type="date" value={pickupDate} onChange={(e) => setPickupDate(e.target.value)} className="mt-1 w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]" />
-          </label>
-        </div>
+        <label className="block text-[12px] text-[#6b665e]">
+          Tension
+          <select value={tension} onChange={(e) => setTension(e.target.value)} className="mt-1 w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]">
+            {["48", "50", "51", "52", "53", "54", "55", "56", "58"].map((t) => (
+              <option key={t} value={t}>{t} lbs</option>
+            ))}
+          </select>
+        </label>
         {!isMember && (
           <>
             <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" className="w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]" />

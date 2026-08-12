@@ -147,7 +147,7 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
           date: b.pickupDate || b.createdAt.slice(0, 10),
           hour: 9,
           label: `Stringing · ${b.racket}`,
-          detail: `${b.stringName} @ ${b.tension}${b.pickupDate ? ` · pickup ${formatPrettyDate(b.pickupDate)}` : ""} · ${shopLabel}`,
+          detail: `${b.stringName} @ ${b.tension} · ${shopLabel}`,
           amount: b.amount,
           status: b.paymentStatus,
           booking: b,
@@ -222,7 +222,6 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
     }
     if (row.kind === "clinic") setClinicDraft(row.date);
     if (row.kind === "event") setEventDraft(String((row.booking as S27EventBooking).guestCount));
-    if (row.kind === "stringing") setStringDraft(row.date);
   }
 
   function cancelBooking(row: (typeof rows)[number]) {
@@ -375,18 +374,6 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
     flash("Event registration updated.");
   }
 
-  function saveStringing(row: (typeof rows)[number]) {
-    if (!canChangeBooking(stringDraft, 9)) {
-      setMsg(`Pickup must be at least ${CANCEL_WINDOW_HOURS} hours out.`);
-      return;
-    }
-    saveList(
-      KEYS.stringing,
-      loadList<S27StringingOrder>(KEYS.stringing).map((b) => (b.id === row.id ? { ...b, pickupDate: stringDraft } : b))
-    );
-    flash("Stringing pickup updated.");
-  }
-
   function renderPastRow(row: (typeof rows)[number]) {
     const kindLabel =
       row.kind === "stringing" ? "Stringing" : row.kind === "charge" ? "Charge" : row.kind;
@@ -451,7 +438,7 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
               </div>
               {open ? (
                 <div className="flex gap-2">
-                  {!lessonRequest && !isCharge && (
+                  {!lessonRequest && !isCharge && row.kind !== "stringing" && (
                     <button type="button" onClick={() => startEdit(row)} className="text-[12px] text-[#6b665e] underline-offset-2 hover:underline">
                       Change
                     </button>
