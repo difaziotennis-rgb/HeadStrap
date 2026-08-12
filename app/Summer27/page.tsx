@@ -46,9 +46,11 @@ export default function Summer27Home() {
             <p className="text-[11px] uppercase tracking-[0.16em] text-white/80">DiFazio Tennis at Rhinebeck</p>
             <h2 className="mt-2 max-w-3xl text-[26px] font-semibold tracking-tight text-white sm:text-5xl">
               Courts 1 &amp; 2. Lessons. Club play.
+              <span className="block font-medium text-white/85 sm:mt-1">A first season.</span>
             </h2>
             <p className="mt-3 max-w-xl text-[14px] leading-relaxed text-white/90 sm:text-[15px]">
-              Private instruction, weekly clinics, court time, and stringing.
+              Private instruction, weekly clinics, court time, and a handful of gatherings in the clubhouse —
+              Hudson Valley, unhurried.
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
               <Link
