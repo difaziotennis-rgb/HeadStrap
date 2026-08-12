@@ -16,6 +16,7 @@ import {
   type CourtId,
 } from "../summer27-data";
 import { getLiveCourtRates, getProgramBlock } from "../schedule";
+import { canChangeBooking, CANCEL_WINDOW_HOURS } from "../booking-policy";
 import {
   KEYS,
   courtBookingKey,
@@ -50,6 +51,7 @@ function Summer27BookInner() {
   const [msg, setMsg] = useState<string | null>(null);
   const [paying, setPaying] = useState(false);
   const [pendingSlot, setPendingSlot] = useState<{ courtId: CourtId; hour: number } | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<S27CourtBooking | null>(null);
   const isMember = !!session;
   const rates = getLiveCourtRates();
   const rate = isMember ? rates.member : rates.guest;
@@ -88,12 +90,20 @@ function Summer27BookInner() {
     [weekDays]
   );
 
+  function isMine(booking: S27CourtBooking) {
+    if (!session) return false;
+    return (
+      (!!booking.memberNumber && booking.memberNumber === session.memberNumber) ||
+      booking.clientEmail.trim().toLowerCase() === session.memberEmail.trim().toLowerCase()
+    );
+  }
+
   function occupancy(dateStr: string, courtId: CourtId, hour: number) {
     const program = getProgramBlock(dateStr, courtId, hour);
     if (program) return program;
     const existing = bookings[courtBookingKey(dateStr, courtId, hour)];
     if (existing?.paymentStatus === "paid" || existing?.paymentStatus === "pending") {
-      return { type: "booked" as const, label: existing.clientName };
+      return { type: "booked" as const, label: existing.clientName, booking: existing };
     }
     return null;
   }
@@ -194,12 +204,25 @@ function Summer27BookInner() {
       setMsg("Add your name and email first.");
       return;
     }
-    if (savedCard) {
-      void bookSlot(courtId, hour, "saved-card");
-      return;
-    }
+    setCancelTarget(null);
     setPendingSlot({ courtId, hour });
     setMsg(null);
+  }
+
+  function cancelBooking(booking: S27CourtBooking) {
+    if (!canChangeBooking(booking.date, booking.hour)) {
+      setMsg(`Cancellations need at least ${CANCEL_WINDOW_HOURS} hours’ notice.`);
+      setCancelTarget(null);
+      return;
+    }
+    const next = { ...bookings };
+    for (const [key, b] of Object.entries(next)) {
+      if (b.id === booking.id) delete next[key];
+    }
+    saveRecord(KEYS.courts, next);
+    setBookings(next);
+    setCancelTarget(null);
+    setMsg(`Cancelled ${booking.courtName} · ${formatHour(booking.hour)}.`);
   }
 
   function slotClass(type: string) {
@@ -207,6 +230,7 @@ function Summer27BookInner() {
     if (type === "lesson") return "bg-[#f4efe4] text-[#7a6230]";
     if (type === "event") return "bg-[#ece8f5] text-[#4a3d6b]";
     if (type === "hold") return "bg-[#f6eaea] text-[#7a3d3d]";
+    if (type === "mine") return "bg-[#1a1a1a] text-white";
     return "bg-[#f3eee8] text-[#6b665e]";
   }
 
@@ -214,14 +238,17 @@ function Summer27BookInner() {
     if (type === "lesson") return "Lesson";
     if (type === "event") return "Event";
     if (type === "hold") return "Held";
+    if (type === "mine") return "Yours";
     if (type === "booked") return label.split(" ")[0] || "Booked";
-    return label
-      .replace(/^Weekend\s+/i, "")
-      .replace(/^Midweek\s+/i, "")
-      .replace(/^Weeknight\s+/i, "")
-      .replace(/\s+Clinic$/i, "")
-      .replace(/\s+&\s+Drills$/i, "")
-      .trim() || label;
+    return (
+      label
+        .replace(/^Weekend\s+/i, "")
+        .replace(/^Midweek\s+/i, "")
+        .replace(/^Weeknight\s+/i, "")
+        .replace(/\s+Clinic$/i, "")
+        .replace(/\s+&\s+Drills$/i, "")
+        .trim() || label
+    );
   }
 
   function renderSlot(courtId: CourtId, hour: number) {
@@ -238,8 +265,27 @@ function Summer27BookInner() {
           </Link>
         );
       }
+      if (occ.type === "booked" && isMine(occ.booking)) {
+        const cancellable = canChangeBooking(occ.booking.date, occ.booking.hour);
+        return (
+          <button
+            type="button"
+            onClick={() => {
+              setPendingSlot(null);
+              setCancelTarget(occ.booking);
+              setMsg(null);
+            }}
+            className={`w-full truncate rounded-md px-1.5 py-2 text-center text-[10px] font-medium leading-tight sm:px-2 sm:text-[11px] ${slotClass("mine")}`}
+            title={cancellable ? "Tap to cancel" : `Locked within ${CANCEL_WINDOW_HOURS} hours`}
+          >
+            {cancellable ? "Yours · Cancel" : "Yours"}
+          </button>
+        );
+      }
       return (
-        <span className={`block truncate rounded-md px-1.5 py-2 text-center text-[10px] leading-tight sm:px-2 sm:text-[11px] ${slotClass(occ.type)}`}>
+        <span
+          className={`block truncate rounded-md px-1.5 py-2 text-center text-[10px] leading-tight sm:px-2 sm:text-[11px] ${slotClass(occ.type)}`}
+        >
           {shortOccLabel(occ.label, occ.type)}
         </span>
       );
@@ -256,6 +302,11 @@ function Summer27BookInner() {
     );
   }
 
+  const pendingCourtName = pendingSlot
+    ? COURTS.find((c) => c.id === pendingSlot.courtId)?.name || pendingSlot.courtId
+    : "";
+  const cancelCancellable = cancelTarget ? canChangeBooking(cancelTarget.date, cancelTarget.hour) : false;
+
   return (
     <main className="mx-auto w-full max-w-3xl px-4 pb-10 pt-6 sm:max-w-6xl sm:px-6 sm:pt-8">
       <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Courts</p>
@@ -270,6 +321,12 @@ function Summer27BookInner() {
           difaziotennis@gmail.com
         </a>
       </p>
+      {isMember && (
+        <p className="mt-2 max-w-2xl text-[12px] text-[#8a8477]">
+          Tap an open slot to confirm. Your bookings show as Yours — cancel anytime until {CANCEL_WINDOW_HOURS} hours
+          before.
+        </p>
+      )}
 
       <div className="mt-5 -mx-4 border-y border-[#ece8e2] bg-white px-4 py-3 sm:mx-0 sm:rounded-2xl sm:border">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
@@ -326,7 +383,10 @@ function Summer27BookInner() {
             Time
           </div>
           {COURTS.map((c) => (
-            <div key={c.id} className="border-l border-[#ece8e2] px-2 py-2.5 text-center text-[11px] font-semibold text-[#1a1a1a] sm:px-3 sm:text-[12px]">
+            <div
+              key={c.id}
+              className="border-l border-[#ece8e2] px-2 py-2.5 text-center text-[11px] font-semibold text-[#1a1a1a] sm:px-3 sm:text-[12px]"
+            >
               {c.name}
             </div>
           ))}
@@ -349,25 +409,103 @@ function Summer27BookInner() {
       </div>
 
       {pendingSlot && (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[#e8e5df] bg-[#faf9f7]/98 p-4 backdrop-blur sm:inset-x-auto sm:bottom-6 sm:left-1/2 sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:rounded-2xl sm:border sm:shadow-lg">
-          <div className="mb-3 flex items-start justify-between gap-3">
-            <div>
-              <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Pay to book</p>
-              <p className="mt-1 text-[14px] font-medium">
-                {COURTS.find((c) => c.id === pendingSlot.courtId)?.name} · {formatHour(pendingSlot.hour)} · ${rate * duration}
-              </p>
-            </div>
-            <button type="button" onClick={() => setPendingSlot(null)} className="text-[12px] text-[#8a8477]">
-              Close
-            </button>
-          </div>
-          <PayChooser
-            amount={rate * duration}
-            savedCard={savedCard}
-            paying={paying}
-            primaryLabel="Book"
-            onPay={(method) => bookSlot(pendingSlot.courtId, pendingSlot.hour, method)}
+        <div className="fixed inset-0 z-40 flex items-end justify-center p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:items-center sm:p-4">
+          <button
+            type="button"
+            aria-label="Close booking confirmation"
+            className="absolute inset-0 bg-[#1a1a1a]/30"
+            onClick={() => setPendingSlot(null)}
           />
+          <div className="relative z-10 w-full max-w-md overflow-hidden rounded-2xl border border-[#e8e5df] bg-white shadow-xl">
+            <div className="flex items-start justify-between gap-3 border-b border-[#ece8e2] px-4 py-3.5">
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">
+                  {savedCard ? "Confirm booking" : "Pay to book"}
+                </p>
+                <p className="mt-1 text-[15px] font-medium text-[#1a1a1a]">
+                  {pendingCourtName} · {formatHour(pendingSlot.hour)}
+                </p>
+                <p className="mt-0.5 text-[12px] text-[#6b665e]">
+                  {formatPrettyDate(date)} · {duration} hour{duration === 1 ? "" : "s"} · ${rate * duration}
+                </p>
+              </div>
+              <button type="button" onClick={() => setPendingSlot(null)} className="text-[12px] text-[#8a8477]">
+                Close
+              </button>
+            </div>
+            <div className="px-4 py-4">
+              {savedCard && (
+                <p className="mb-3 text-[12px] leading-relaxed text-[#6b665e]">
+                  Confirm to charge {savedCard.brand} •••• {savedCard.last4}. You can cancel from this page until{" "}
+                  {CANCEL_WINDOW_HOURS} hours before start.
+                </p>
+              )}
+              <PayChooser
+                amount={rate * duration}
+                savedCard={savedCard}
+                paying={paying}
+                primaryLabel="Confirm"
+                onPay={(method) => bookSlot(pendingSlot.courtId, pendingSlot.hour, method)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {cancelTarget && (
+        <div className="fixed inset-0 z-40 flex items-end justify-center p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:items-center sm:p-4">
+          <button
+            type="button"
+            aria-label="Close cancel confirmation"
+            className="absolute inset-0 bg-[#1a1a1a]/30"
+            onClick={() => setCancelTarget(null)}
+          />
+          <div className="relative z-10 w-full max-w-md overflow-hidden rounded-2xl border border-[#e8e5df] bg-white shadow-xl">
+            <div className="px-4 py-4">
+              <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Your booking</p>
+              <p className="mt-1 text-[15px] font-medium text-[#1a1a1a]">
+                {cancelTarget.courtName} · {formatHour(cancelTarget.hour)}
+              </p>
+              <p className="mt-0.5 text-[12px] text-[#6b665e]">
+                {formatPrettyDate(cancelTarget.date)} · {cancelTarget.durationHours} hour
+                {cancelTarget.durationHours === 1 ? "" : "s"} · ${cancelTarget.amount}
+              </p>
+              {cancelCancellable ? (
+                <>
+                  <p className="mt-3 text-[13px] text-[#6b665e]">Cancel this court time?</p>
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setCancelTarget(null)}
+                      className="rounded-2xl border border-[#e8e5df] bg-[#faf9f7] py-3 text-[14px] font-medium text-[#4a4a4a]"
+                    >
+                      Keep
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => cancelBooking(cancelTarget)}
+                      className="rounded-2xl bg-[#991b1b] py-3 text-[14px] font-medium text-white"
+                    >
+                      Cancel booking
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="mt-3 text-[13px] text-[#6b665e]">
+                    Inside the {CANCEL_WINDOW_HOURS}-hour window — call the shop to change this.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setCancelTarget(null)}
+                    className="mt-4 w-full rounded-2xl border border-[#e8e5df] bg-[#faf9f7] py-3 text-[14px] font-medium text-[#4a4a4a]"
+                  >
+                    Close
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </main>
