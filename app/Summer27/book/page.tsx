@@ -237,21 +237,28 @@ function Summer27BookInner() {
                   return (
                     <td key={court.id} className="px-2 py-1.5">
                       {occ ? (
+                        occ.type === "clinic" ? (
+                          <Link
+                            href={`${occ.kind === "junior" ? "/Summer27/juniors" : "/Summer27/clinics"}?clinic=${encodeURIComponent(occ.clinicId)}&date=${date}`}
+                            className="block rounded-md bg-[#eef3ea] px-2 py-1.5 text-[11px] text-[#3d5a2c] hover:bg-[#e4ecdf]"
+                          >
+                            {occ.label}
+                          </Link>
+                        ) : (
                         <span
                           className={`block rounded-md px-2 py-1.5 text-[11px] ${
-                            occ.type === "clinic"
-                              ? "bg-[#eef3ea] text-[#3d5a2c]"
-                              : occ.type === "lesson"
-                                ? "bg-[#f4efe4] text-[#7a6230]"
-                                : occ.type === "event"
-                                  ? "bg-[#ece8f5] text-[#4a3d6b]"
-                                  : occ.type === "hold"
-                                    ? "bg-[#f6eaea] text-[#7a3d3d]"
-                                  : "bg-[#f3eee8] text-[#6b665e]"
+                            occ.type === "lesson"
+                              ? "bg-[#f4efe4] text-[#7a6230]"
+                              : occ.type === "event"
+                                ? "bg-[#ece8f5] text-[#4a3d6b]"
+                                : occ.type === "hold"
+                                  ? "bg-[#f6eaea] text-[#7a3d3d]"
+                                : "bg-[#f3eee8] text-[#6b665e]"
                           }`}
                         >
                           {occ.label}
                         </span>
+                        )
                       ) : (
                         <button
                           type="button"

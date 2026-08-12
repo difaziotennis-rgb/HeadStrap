@@ -209,7 +209,7 @@ export function getProgramBlock(
       clinic.blockCourts.includes(courtId) &&
       hoursOverlap(clinic.startHour, clinic.durationHours, hour)
     ) {
-      return { type: "clinic", label: clinic.name };
+      return { type: "clinic", label: clinic.name, clinicId: clinic.id, kind: clinic.kind };
     }
   }
 

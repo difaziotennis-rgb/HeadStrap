@@ -388,7 +388,7 @@ export function lessonProLabel(booking: { proName?: string }) {
 }
 
 export type SlotBlockReason =
-  | { type: "clinic"; label: string }
+  | { type: "clinic"; label: string; clinicId: string; kind: ClinicKind }
   | { type: "lesson"; label: string }
   | { type: "event"; label: string }
   | { type: "hold"; label: string }

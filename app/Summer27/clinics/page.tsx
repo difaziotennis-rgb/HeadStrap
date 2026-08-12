@@ -21,7 +21,7 @@ import {
   type S27ClinicBooking,
 } from "../storage";
 
-function nextDatesForClinic(clinic: ClinicDef | undefined, count = 6): string[] {
+function nextDatesForClinic(clinic: ClinicDef | undefined, count = 6, extra?: string): string[] {
   const dates: string[] = [];
   if (!clinic || !Array.isArray(clinic.days)) return dates;
   const start = new Date();
@@ -30,6 +30,10 @@ function nextDatesForClinic(clinic: ClinicDef | undefined, count = 6): string[] 
     const d = new Date(start);
     d.setDate(start.getDate() + i);
     if (clinic.days.includes(d.getDay())) dates.push(formatDateInput(d));
+  }
+  if (extra && clinic.days.includes(parseDateInput(extra).getDay()) && !dates.includes(extra)) {
+    dates.push(extra);
+    dates.sort();
   }
   return dates;
 }
@@ -45,17 +49,24 @@ export default function Summer27ClinicsPage() {
 function Summer27ClinicsInner() {
   const session = useS27Session();
   const searchParams = useSearchParams();
+  const queryClinic = searchParams.get("clinic") || "";
+  const queryDate = searchParams.get("date") || "";
   const [bookings, setBookings] = useState<S27ClinicBooking[]>([]);
   const [clinics, setClinics] = useState<ClinicDef[]>(s27Clinics.filter((c) => c.kind === "adult"));
-  const [selectedId, setSelectedId] = useState(s27Clinics.find((c) => c.kind === "adult")?.id || "");
-  const [date, setDate] = useState("");
+  const [selectedId, setSelectedId] = useState(
+    () =>
+      (queryClinic && s27Clinics.some((c) => c.id === queryClinic && c.kind === "adult")
+        ? queryClinic
+        : s27Clinics.find((c) => c.kind === "adult")?.id) || ""
+  );
+  const [date, setDate] = useState(queryDate);
   const [guestName, setGuestName] = useState("");
   const [guestEmail, setGuestEmail] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
   const [paying, setPaying] = useState(false);
 
   const clinic = clinics.find((c) => c.id === selectedId) || clinics[0];
-  const dates = useMemo(() => nextDatesForClinic(clinic), [clinic]);
+  const dates = useMemo(() => nextDatesForClinic(clinic, 6, queryDate), [clinic, queryDate]);
   const isMember = !!session;
   const savedCard = canOneClick(session);
   const price = clinic ? (isMember ? clinic.memberPrice : clinic.guestPrice) : 0;
@@ -65,7 +76,10 @@ function Summer27ClinicsInner() {
       const live = getLiveClinics().filter((c) => c.kind === "adult");
       if (live.length) {
         setClinics(live);
-        setSelectedId((id) => (live.some((c) => c.id === id) ? id : live[0].id));
+        setSelectedId((id) => {
+          const preferred = queryClinic || id;
+          return live.some((c) => c.id === preferred) ? preferred : live[0].id;
+        });
       }
     } catch {
       // keep defaults
@@ -74,8 +88,12 @@ function Summer27ClinicsInner() {
   }, []);
 
   useEffect(() => {
+    if (queryDate && dates.includes(queryDate)) {
+      setDate(queryDate);
+      return;
+    }
     if (!date || !dates.includes(date)) setDate(dates[0] || "");
-  }, [dates, date]);
+  }, [dates, date, queryDate]);
 
   useEffect(() => {
     const status = searchParams.get("payment");
