@@ -196,10 +196,6 @@ export default function Summer27DirectorPage() {
     return date === today && b.paymentStatus === "pending";
   }).length;
 
-  if (!authed) {
-    return null;
-  }
-
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
