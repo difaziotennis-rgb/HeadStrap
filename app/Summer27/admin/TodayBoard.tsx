@@ -1,0 +1,299 @@
+"use client";
+
+import { formatHour, formatPrettyDate } from "../summer27-data";
+import type { S27Catalog } from "../schedule";
+import type { S27AdminBlock } from "../schedule";
+import {
+  type S27ClinicBooking,
+  type S27CourtBooking,
+  type S27EventBooking,
+  type S27LessonBooking,
+  type S27MemberAccount,
+  type S27StringingOrder,
+} from "../storage";
+import { PaidPill } from "./ui";
+
+type Props = {
+  today: string;
+  members: S27MemberAccount[];
+  courts: S27CourtBooking[];
+  clinics: S27ClinicBooking[];
+  lessons: S27LessonBooking[];
+  events: S27EventBooking[];
+  stringing: S27StringingOrder[];
+  blocks: S27AdminBlock[];
+  catalog: S27Catalog;
+  onOpenMember: (memberNumber: string) => void;
+  onToggleCourt: (id: string) => void;
+  onToggleClinic: (id: string) => void;
+  onToggleLesson: (id: string) => void;
+  onToggleEvent: (id: string) => void;
+  onToggleStringing: (id: string) => void;
+};
+
+type GlanceItem = {
+  id: string;
+  time: number;
+  kind: string;
+  title: string;
+  name: string;
+  extra?: string;
+  status?: "paid" | "pending";
+  memberNumber?: string;
+  onToggle?: () => void;
+};
+
+function memberNumberFor(
+  members: S27MemberAccount[],
+  memberNumber?: string,
+  email?: string
+) {
+  if (memberNumber) return memberNumber;
+  if (!email) return undefined;
+  return members.find((m) => m.email.trim().toLowerCase() === email.trim().toLowerCase())?.memberNumber;
+}
+
+export default function TodayBoard({
+  today,
+  members,
+  courts,
+  clinics,
+  lessons,
+  events,
+  stringing,
+  blocks,
+  catalog,
+  onOpenMember,
+  onToggleCourt,
+  onToggleClinic,
+  onToggleLesson,
+  onToggleEvent,
+  onToggleStringing,
+}: Props) {
+  const nowHour = new Date().getHours();
+  const courtItems: GlanceItem[] = courts
+    .filter((b) => b.date === today)
+    .map((b) => ({
+      id: b.id,
+      time: b.hour,
+      kind: b.courtName,
+      title: `${b.courtName} · ${b.durationHours}h`,
+      name: b.clientName,
+      extra: `$${b.amount}`,
+      status: b.paymentStatus,
+      memberNumber: memberNumberFor(members, b.memberNumber, b.clientEmail),
+      onToggle: () => onToggleCourt(b.id),
+    }));
+  const lessonItems: GlanceItem[] = lessons
+    .filter((b) => b.date === today)
+    .map((b) => ({
+      id: b.id,
+      time: b.hour,
+      kind: "Lesson",
+      title: `Lesson · ${b.duration} min`,
+      name: b.clientName,
+      extra: b.focus || `$${b.amount}`,
+      status: b.paymentStatus,
+      memberNumber: memberNumberFor(members, b.memberNumber, b.clientEmail),
+      onToggle: () => onToggleLesson(b.id),
+    }));
+  const holdItems: GlanceItem[] = blocks
+    .filter((b) => b.date === today)
+    .map((b) => ({
+      id: b.id,
+      time: b.startHour,
+      kind: "Hold",
+      title: `${b.courtId === "both" ? "Both courts" : b.courtId === "court-1" ? "Court 1" : "Court 2"} · ${b.durationHours}h`,
+      name: b.reason,
+    }));
+
+  const clinicGroups = Object.values(
+    clinics
+      .filter((b) => b.date === today)
+      .reduce<Record<string, { clinicId: string; name: string; time: number; rows: S27ClinicBooking[] }>>(
+        (acc, b) => {
+          const def = catalog.clinics.find((c) => c.id === b.clinicId);
+          const key = b.clinicId || b.clinicName;
+          if (!acc[key]) {
+            acc[key] = {
+              clinicId: b.clinicId,
+              name: b.clinicName,
+              time: def?.startHour ?? 8,
+              rows: [],
+            };
+          }
+          acc[key].rows.push(b);
+          return acc;
+        },
+        {}
+      )
+  ).sort((a, b) => a.time - b.time);
+
+  const todayEvents = events.filter((b) => b.eventDate === today);
+  const pickups = stringing.filter((b) => b.pickupDate === today);
+  const timeline = [...courtItems, ...lessonItems, ...holdItems].sort((a, b) => a.time - b.time || a.name.localeCompare(b.name));
+  const hourGroups = timeline.reduce<Array<{ hour: number; items: GlanceItem[] }>>((acc, item) => {
+    const last = acc[acc.length - 1];
+    if (last && last.hour === item.time) last.items.push(item);
+    else acc.push({ hour: item.time, items: [item] });
+    return acc;
+  }, []);
+
+  const pendingRows = [
+    ...courts.filter((b) => b.date === today && b.paymentStatus === "pending").map((b) => ({ id: b.id, name: b.clientName, label: b.courtName, amount: b.amount, onToggle: () => onToggleCourt(b.id) })),
+    ...clinics.filter((b) => b.date === today && b.paymentStatus === "pending").map((b) => ({ id: b.id, name: b.clientName, label: b.clinicName, amount: b.amount, onToggle: () => onToggleClinic(b.id) })),
+    ...lessons.filter((b) => b.date === today && b.paymentStatus === "pending").map((b) => ({ id: b.id, name: b.clientName, label: "Lesson", amount: b.amount, onToggle: () => onToggleLesson(b.id) })),
+    ...events.filter((b) => b.eventDate === today && b.paymentStatus === "pending").map((b) => ({ id: b.id, name: b.attendeeName, label: b.eventTitle, amount: b.amount, onToggle: () => onToggleEvent(b.id) })),
+    ...stringing.filter((b) => b.pickupDate === today && b.paymentStatus === "pending").map((b) => ({ id: b.id, name: b.clientName, label: "Stringing", amount: b.amount, onToggle: () => onToggleStringing(b.id) })),
+  ];
+  const pendingTotal = pendingRows.reduce((sum, row) => sum + row.amount, 0);
+
+  return (
+    <div className="mt-4 space-y-4">
+      <p className="text-[15px] font-medium text-[#1a1a1a]">{formatPrettyDate(today)}</p>
+
+      {pendingRows.length > 0 && (
+        <section className="rounded-2xl border border-[#ead9c2] bg-[#fbf6ee] p-4">
+          <p className="text-[12px] font-medium uppercase tracking-[0.12em] text-[#8a6230]">
+            Unpaid today · ${pendingTotal}
+          </p>
+          <ul className="mt-2 space-y-1.5">
+            {pendingRows.map((row) => (
+              <li key={row.id} className="flex items-baseline justify-between gap-2 text-[15px]">
+                <span>
+                  {row.name}
+                  <span className="text-[#8a8477]"> · {row.label}</span>
+                </span>
+                <button type="button" onClick={row.onToggle} className="text-[13px] font-medium text-[#8a6230]">
+                  ${row.amount} · mark paid
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <section className="overflow-hidden rounded-2xl border border-[#e8e5df] bg-white">
+        <p className="border-b border-[#f0ede8] px-4 py-3 text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">
+          Courts & lessons
+        </p>
+        {hourGroups.length === 0 ? (
+          <p className="px-4 py-5 text-[15px] text-[#8a8477]">No court or lesson bookings today.</p>
+        ) : (
+          hourGroups.map((group) => {
+            const current = Math.floor(nowHour) === Math.floor(group.hour);
+            return (
+              <div key={group.hour} className={`border-b border-[#f0ede8] last:border-0 ${current ? "bg-[#faf9f7]" : ""}`}>
+                <p className="px-4 pt-3 text-[20px] font-semibold tracking-tight">
+                  {formatHour(group.hour)}
+                  {current ? <span className="ml-2 text-[11px] font-medium uppercase tracking-[0.12em] text-[#3d5c34]">Now</span> : null}
+                </p>
+                <ul className="px-4 pb-3">
+                  {group.items.map((item) => (
+                    <li key={item.id} className="flex flex-wrap items-center justify-between gap-2 py-1.5">
+                      <div>
+                        <p className="text-[16px] font-medium leading-tight">{item.name}</p>
+                        <p className="text-[13px] text-[#6b665e]">
+                          {item.title}
+                          {item.extra ? ` · ${item.extra}` : ""}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {item.status && <PaidPill status={item.status} onToggle={item.onToggle} />}
+                        {item.memberNumber && (
+                          <button
+                            type="button"
+                            onClick={() => onOpenMember(item.memberNumber!)}
+                            className="text-[12px] text-[#8a8477]"
+                          >
+                            File
+                          </button>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })
+        )}
+      </section>
+
+      {clinicGroups.map((group) => (
+        <section key={group.clinicId || group.name} className="overflow-hidden rounded-2xl border border-[#e8e5df] bg-white">
+          <div className="border-b border-[#f0ede8] px-4 py-3">
+            <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Clinic · {formatHour(group.time)}</p>
+            <p className="text-[18px] font-semibold tracking-tight">{group.name}</p>
+            <p className="text-[13px] text-[#6b665e]">{group.rows.length} signed up</p>
+          </div>
+          <ul className="divide-y divide-[#f0ede8]">
+            {group.rows.map((row) => (
+              <li key={row.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const n = memberNumberFor(members, row.memberNumber, row.clientEmail);
+                    if (n) onOpenMember(n);
+                  }}
+                  className="text-left text-[16px] font-medium"
+                >
+                  {row.clientName}
+                </button>
+                <PaidPill status={row.paymentStatus} onToggle={() => onToggleClinic(row.id)} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+
+      {todayEvents.length > 0 && (
+        <section className="overflow-hidden rounded-2xl border border-[#e8e5df] bg-white">
+          <p className="border-b border-[#f0ede8] px-4 py-3 text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Events</p>
+          {Object.values(
+            todayEvents.reduce<Record<string, S27EventBooking[]>>((acc, row) => {
+              acc[row.eventTitle] = acc[row.eventTitle] || [];
+              acc[row.eventTitle].push(row);
+              return acc;
+            }, {})
+          ).map((rows) => (
+            <div key={rows[0].eventTitle} className="border-b border-[#f0ede8] px-4 py-3 last:border-0">
+              <p className="text-[18px] font-semibold tracking-tight">{rows[0].eventTitle}</p>
+              <ul className="mt-1">
+                {rows.map((row) => (
+                  <li key={row.id} className="flex flex-wrap items-center justify-between gap-2 py-1">
+                    <span className="text-[15px]">
+                      {row.attendeeName}
+                      <span className="text-[#8a8477]"> ×{row.guestCount}</span>
+                    </span>
+                    <PaidPill status={row.paymentStatus} onToggle={() => onToggleEvent(row.id)} />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </section>
+      )}
+
+      {pickups.length > 0 && (
+        <section className="overflow-hidden rounded-2xl border border-[#e8e5df] bg-white">
+          <p className="border-b border-[#f0ede8] px-4 py-3 text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">
+            Stringing pickup
+          </p>
+          <ul className="divide-y divide-[#f0ede8]">
+            {pickups.map((row) => (
+              <li key={row.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5">
+                <div>
+                  <p className="text-[16px] font-medium">{row.clientName}</p>
+                  <p className="text-[13px] text-[#6b665e]">
+                    {row.racket} · {row.stringName} @ {row.tension}
+                  </p>
+                </div>
+                <PaidPill status={row.paymentStatus} onToggle={() => onToggleStringing(row.id)} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </div>
+  );
+}

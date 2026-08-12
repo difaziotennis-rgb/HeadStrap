@@ -1,0 +1,589 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import {
+  BOOKING_HOURS,
+  COURTS,
+  STRING_OPTIONS,
+  formatDateInput,
+  formatHour,
+  formatPrettyDate,
+  type CourtId,
+} from "../summer27-data";
+import { getLiveClinics, getLiveEvents, getLiveCourtRates, getLiveLessonRates, getLiveStringingLabor, getProgramBlock } from "../schedule";
+import {
+  type S27ClinicBooking,
+  type S27CourtBooking,
+  type S27EventBooking,
+  type S27LessonBooking,
+  type S27MemberAccount,
+  type S27StringingOrder,
+} from "../storage";
+import type { S27AdminBlock } from "../schedule";
+import { PaidPill, inputClass, uid } from "./ui";
+
+type Section = "courts" | "clinics" | "lessons" | "events" | "stringing" | "holds";
+type Range = "today" | "upcoming" | "pending" | "all";
+
+type Props = {
+  members: S27MemberAccount[];
+  courts: S27CourtBooking[];
+  clinics: S27ClinicBooking[];
+  lessons: S27LessonBooking[];
+  events: S27EventBooking[];
+  stringing: S27StringingOrder[];
+  blocks: S27AdminBlock[];
+  onCourts: (next: S27CourtBooking[]) => void;
+  onClinics: (next: S27ClinicBooking[]) => void;
+  onLessons: (next: S27LessonBooking[]) => void;
+  onEvents: (next: S27EventBooking[]) => void;
+  onStringing: (next: S27StringingOrder[]) => void;
+  onHolds: (next: S27AdminBlock[]) => void;
+};
+
+const today = () => formatDateInput(new Date());
+
+function inRangeDate(date: string, range: Range, pending: boolean) {
+  if (range === "pending") return pending;
+  if (range === "all") return true;
+  const t = today();
+  if (range === "today") return date === t;
+  return date >= t;
+}
+
+export default function BookDesk(props: Props) {
+  const [section, setSection] = useState<Section>("courts");
+  const [range, setRange] = useState<Range>("today");
+  const [memberNo, setMemberNo] = useState("");
+  const member = props.members.find((m) => m.memberNumber === memberNo) || null;
+
+  return (
+    <div className="mt-4 space-y-3">
+      <div className="grid gap-2 sm:grid-cols-3">
+        <select className={inputClass} value={section} onChange={(e) => setSection(e.target.value as Section)}>
+          <option value="courts">Courts</option>
+          <option value="clinics">Clinics</option>
+          <option value="lessons">Lessons</option>
+          <option value="events">Events</option>
+          <option value="stringing">Stringing</option>
+          <option value="holds">Holds</option>
+        </select>
+        <select className={inputClass} value={range} onChange={(e) => setRange(e.target.value as Range)}>
+          <option value="today">Today</option>
+          <option value="upcoming">Upcoming</option>
+          <option value="pending">Pending pay</option>
+          <option value="all">All records</option>
+        </select>
+        <select className={inputClass} value={memberNo} onChange={(e) => setMemberNo(e.target.value)}>
+          <option value="">Guest / walk-up</option>
+          {props.members
+            .slice()
+            .sort((a, b) => a.name.localeCompare(b.name))
+            .map((m) => (
+              <option key={m.memberNumber} value={m.memberNumber}>
+                #{m.memberNumber} · {m.name}
+              </option>
+            ))}
+        </select>
+      </div>
+
+      {section === "courts" && <CourtsBlock {...props} range={range} member={member} />}
+      {section === "clinics" && <ClinicsBlock {...props} range={range} member={member} />}
+      {section === "lessons" && <LessonsBlock {...props} range={range} member={member} />}
+      {section === "events" && <EventsBlock {...props} range={range} member={member} />}
+      {section === "stringing" && <StringingBlock {...props} range={range} member={member} />}
+      {section === "holds" && <HoldsBlock blocks={props.blocks} onHolds={props.onHolds} range={range} />}
+    </div>
+  );
+}
+
+function CourtsBlock({
+  courts,
+  onCourts,
+  range,
+  member,
+}: Pick<Props, "courts" | "onCourts"> & { range: Range; member: S27MemberAccount | null }) {
+  const [date, setDate] = useState(today());
+  const [hour, setHour] = useState("8");
+  const [durationHours, setDurationHours] = useState("1");
+  const [courtId, setCourtId] = useState<CourtId>("court-2");
+  const [guestName, setGuestName] = useState("");
+  const [status, setStatus] = useState<"paid" | "pending">("paid");
+  const list = useMemo(
+    () =>
+      courts
+        .filter((b) => inRangeDate(b.date, range, b.paymentStatus === "pending"))
+        .slice()
+        .sort((a, b) => `${a.date}${a.hour}`.localeCompare(`${b.date}${b.hour}`)),
+    [courts, range]
+  );
+
+  function add(e: React.FormEvent) {
+    e.preventDefault();
+    const name = member?.name || guestName.trim();
+    if (!name) return;
+    const hours = (Number(durationHours) === 2 ? 2 : 1) as 1 | 2;
+    const rates = getLiveCourtRates();
+    onCourts([
+      ...courts,
+      {
+        id: uid("court"),
+        date,
+        hour: Number(hour),
+        durationHours: hours,
+        courtId,
+        courtName: COURTS.find((c) => c.id === courtId)?.name || courtId,
+        clientName: name,
+        clientEmail: member?.email || "",
+        clientPhone: member?.phone || "",
+        memberNumber: member?.memberNumber,
+        amount: (member ? rates.member : rates.guest) * hours,
+        paymentStatus: status,
+        paymentMethod: "manual",
+        createdAt: new Date().toISOString(),
+      },
+    ]);
+    setGuestName("");
+  }
+
+  return (
+    <>
+      <form onSubmit={add} className="grid gap-2 rounded-2xl border border-[#e8e5df] bg-white p-4 sm:grid-cols-4">
+        <input type="date" className={inputClass} value={date} onChange={(e) => setDate(e.target.value)} />
+        <select className={inputClass} value={courtId} onChange={(e) => setCourtId(e.target.value as CourtId)}>
+          {COURTS.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+        <select className={inputClass} value={hour} onChange={(e) => setHour(e.target.value)}>
+          {BOOKING_HOURS.map((h) => <option key={h} value={h}>{formatHour(h)}</option>)}
+        </select>
+        <select className={inputClass} value={durationHours} onChange={(e) => setDurationHours(e.target.value)}>
+          <option value="1">1 hour</option>
+          <option value="2">2 hours</option>
+        </select>
+        {!member && <input className={`${inputClass} sm:col-span-2`} placeholder="Walk-up name" value={guestName} onChange={(e) => setGuestName(e.target.value)} />}
+        <select className={inputClass} value={status} onChange={(e) => setStatus(e.target.value as "paid" | "pending")}>
+          <option value="paid">Paid</option>
+          <option value="pending">Pending</option>
+        </select>
+        <button className="rounded-lg bg-[#1a1a1a] px-3 py-2 text-[12px] font-medium text-white">Add court</button>
+      </form>
+      <SimpleList
+        empty="No court bookings in this view."
+        rows={list.map((b) => ({
+          id: b.id,
+          title: `${b.courtName} · ${formatPrettyDate(b.date)} ${formatHour(b.hour)}`,
+          detail: `${b.clientName} · ${b.durationHours}h · $${b.amount}${getProgramBlock(b.date, b.courtId, b.hour)?.type === "clinic" ? " · overlaps clinic" : ""}`,
+          status: b.paymentStatus,
+          onPaid: () => onCourts(courts.map((x) => (x.id === b.id ? { ...x, paymentStatus: x.paymentStatus === "paid" ? "pending" : "paid" } : x))),
+          onDelete: () => onCourts(courts.filter((x) => x.id !== b.id)),
+        }))}
+      />
+    </>
+  );
+}
+
+function ClinicsBlock({
+  clinics,
+  onClinics,
+  range,
+  member,
+}: Pick<Props, "clinics" | "onClinics"> & { range: Range; member: S27MemberAccount | null }) {
+  const defs = getLiveClinics();
+  const [clinicId, setClinicId] = useState(defs[0]?.id || "");
+  const [date, setDate] = useState(today());
+  const [guestName, setGuestName] = useState("");
+  const [status, setStatus] = useState<"paid" | "pending">("paid");
+  const def = defs.find((c) => c.id === clinicId);
+  const list = clinics
+    .filter((b) => inRangeDate(b.date, range, b.paymentStatus === "pending"))
+    .slice()
+    .sort((a, b) => `${a.date}${a.clinicName}`.localeCompare(`${b.date}${b.clinicName}`));
+
+  function add(e: React.FormEvent) {
+    e.preventDefault();
+    if (!def) return;
+    const name = member?.name || guestName.trim();
+    if (!name) return;
+    onClinics([
+      ...clinics,
+      {
+        id: uid("clinic"),
+        clinicId: def.id,
+        clinicName: def.name,
+        date,
+        clientName: name,
+        clientEmail: member?.email || "",
+        memberNumber: member?.memberNumber,
+        amount: member ? def.memberPrice : def.guestPrice,
+        paymentStatus: status,
+        paymentMethod: "manual",
+        createdAt: new Date().toISOString(),
+      },
+    ]);
+    setGuestName("");
+  }
+
+  return (
+    <>
+      <form onSubmit={add} className="grid gap-2 rounded-2xl border border-[#e8e5df] bg-white p-4 sm:grid-cols-3">
+        <select className={inputClass} value={clinicId} onChange={(e) => setClinicId(e.target.value)}>
+          {defs.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+        <input type="date" className={inputClass} value={date} onChange={(e) => setDate(e.target.value)} />
+        {!member && <input className={inputClass} placeholder="Walk-up name" value={guestName} onChange={(e) => setGuestName(e.target.value)} />}
+        <select className={inputClass} value={status} onChange={(e) => setStatus(e.target.value as "paid" | "pending")}>
+          <option value="paid">Paid</option>
+          <option value="pending">Pending</option>
+        </select>
+        <button className="rounded-lg bg-[#1a1a1a] px-3 py-2 text-[12px] font-medium text-white">Add to roster</button>
+      </form>
+      <SimpleList
+        empty="No clinic signups in this view."
+        rows={list.map((b) => ({
+          id: b.id,
+          title: b.clinicName,
+          detail: `${formatPrettyDate(b.date)} · ${b.clientName} · $${b.amount}`,
+          status: b.paymentStatus,
+          onPaid: () => onClinics(clinics.map((x) => (x.id === b.id ? { ...x, paymentStatus: x.paymentStatus === "paid" ? "pending" : "paid" } : x))),
+          onDelete: () => onClinics(clinics.filter((x) => x.id !== b.id)),
+        }))}
+      />
+    </>
+  );
+}
+
+function LessonsBlock({
+  lessons,
+  onLessons,
+  range,
+  member,
+}: Pick<Props, "lessons" | "onLessons"> & { range: Range; member: S27MemberAccount | null }) {
+  const [date, setDate] = useState(today());
+  const [hour, setHour] = useState("8");
+  const [duration, setDuration] = useState<"60" | "90">("60");
+  const [guestName, setGuestName] = useState("");
+  const [focus, setFocus] = useState("");
+  const [status, setStatus] = useState<"paid" | "pending">("paid");
+  const list = lessons
+    .filter((b) => inRangeDate(b.date, range, b.paymentStatus === "pending"))
+    .slice()
+    .sort((a, b) => `${a.date}${a.hour}`.localeCompare(`${b.date}${b.hour}`));
+
+  function add(e: React.FormEvent) {
+    e.preventDefault();
+    const name = member?.name || guestName.trim();
+    if (!name) return;
+    const rates = getLiveLessonRates();
+    const hourly = member ? rates.member : rates.guest;
+    onLessons([
+      ...lessons,
+      {
+        id: uid("lesson"),
+        date,
+        hour: Number(hour),
+        duration,
+        clientName: name,
+        clientEmail: member?.email || "",
+        clientPhone: member?.phone || "",
+        memberNumber: member?.memberNumber,
+        focus,
+        amount: duration === "90" ? Math.round(hourly * 1.5) : hourly,
+        paymentStatus: status,
+        paymentMethod: "manual",
+        createdAt: new Date().toISOString(),
+      },
+    ]);
+    setGuestName("");
+    setFocus("");
+  }
+
+  return (
+    <>
+      <form onSubmit={add} className="grid gap-2 rounded-2xl border border-[#e8e5df] bg-white p-4 sm:grid-cols-3">
+        <input type="date" className={inputClass} value={date} onChange={(e) => setDate(e.target.value)} />
+        <select className={inputClass} value={hour} onChange={(e) => setHour(e.target.value)}>
+          {BOOKING_HOURS.map((h) => <option key={h} value={h}>{formatHour(h)}</option>)}
+        </select>
+        <select className={inputClass} value={duration} onChange={(e) => setDuration(e.target.value as "60" | "90")}>
+          <option value="60">60 min</option>
+          <option value="90">90 min</option>
+        </select>
+        {!member && <input className={inputClass} placeholder="Walk-up name" value={guestName} onChange={(e) => setGuestName(e.target.value)} />}
+        <input className={inputClass} placeholder="Focus" value={focus} onChange={(e) => setFocus(e.target.value)} />
+        <select className={inputClass} value={status} onChange={(e) => setStatus(e.target.value as "paid" | "pending")}>
+          <option value="paid">Paid</option>
+          <option value="pending">Pending</option>
+        </select>
+        <button className="rounded-lg bg-[#1a1a1a] px-3 py-2 text-[12px] font-medium text-white">Add lesson</button>
+      </form>
+      <SimpleList
+        empty="No lessons in this view."
+        rows={list.map((b) => ({
+          id: b.id,
+          title: `${formatPrettyDate(b.date)} ${formatHour(b.hour)} · ${b.duration} min`,
+          detail: `${b.clientName}${b.focus ? ` · ${b.focus}` : ""} · $${b.amount}`,
+          status: b.paymentStatus,
+          onPaid: () => onLessons(lessons.map((x) => (x.id === b.id ? { ...x, paymentStatus: x.paymentStatus === "paid" ? "pending" : "paid" } : x))),
+          onDelete: () => onLessons(lessons.filter((x) => x.id !== b.id)),
+        }))}
+      />
+    </>
+  );
+}
+
+function EventsBlock({
+  events,
+  onEvents,
+  range,
+  member,
+}: Pick<Props, "events" | "onEvents"> & { range: Range; member: S27MemberAccount | null }) {
+  const defs = getLiveEvents();
+  const [eventId, setEventId] = useState(defs[0]?.id || "");
+  const [guestName, setGuestName] = useState("");
+  const [guestCount, setGuestCount] = useState("1");
+  const [status, setStatus] = useState<"paid" | "pending">("paid");
+  const def = defs.find((e) => e.id === eventId);
+  const list = events
+    .filter((b) => inRangeDate(b.eventDate, range, b.paymentStatus === "pending"))
+    .slice()
+    .sort((a, b) => a.eventDate.localeCompare(b.eventDate));
+
+  function add(e: React.FormEvent) {
+    e.preventDefault();
+    if (!def) return;
+    const name = member?.name || guestName.trim();
+    if (!name) return;
+    const spots = Math.max(1, Number(guestCount) || 1);
+    onEvents([
+      ...events,
+      {
+        id: uid("event"),
+        eventId: def.id,
+        eventTitle: def.title,
+        eventDate: def.date,
+        attendeeName: name,
+        attendeeEmail: member?.email || "",
+        guestCount: spots,
+        memberNumber: member?.memberNumber,
+        amount: (member ? def.memberPrice : def.guestPrice) * spots,
+        paymentStatus: status,
+        paymentMethod: "manual",
+        createdAt: new Date().toISOString(),
+      },
+    ]);
+    setGuestName("");
+  }
+
+  return (
+    <>
+      <form onSubmit={add} className="grid gap-2 rounded-2xl border border-[#e8e5df] bg-white p-4 sm:grid-cols-3">
+        <select className={inputClass} value={eventId} onChange={(e) => setEventId(e.target.value)}>
+          {defs.map((e) => <option key={e.id} value={e.id}>{e.title}</option>)}
+        </select>
+        {!member && <input className={inputClass} placeholder="Walk-up name" value={guestName} onChange={(e) => setGuestName(e.target.value)} />}
+        <select className={inputClass} value={guestCount} onChange={(e) => setGuestCount(e.target.value)}>
+          {[1, 2, 3, 4].map((n) => <option key={n} value={n}>{n} spot{n > 1 ? "s" : ""}</option>)}
+        </select>
+        <select className={inputClass} value={status} onChange={(e) => setStatus(e.target.value as "paid" | "pending")}>
+          <option value="paid">Paid</option>
+          <option value="pending">Pending</option>
+        </select>
+        <button className="rounded-lg bg-[#1a1a1a] px-3 py-2 text-[12px] font-medium text-white">Add reservation</button>
+      </form>
+      <SimpleList
+        empty="No event reservations in this view."
+        rows={list.map((b) => ({
+          id: b.id,
+          title: b.eventTitle,
+          detail: `${b.attendeeName} ×${b.guestCount} · $${b.amount}`,
+          status: b.paymentStatus,
+          onPaid: () => onEvents(events.map((x) => (x.id === b.id ? { ...x, paymentStatus: x.paymentStatus === "paid" ? "pending" : "paid" } : x))),
+          onDelete: () => onEvents(events.filter((x) => x.id !== b.id)),
+        }))}
+      />
+    </>
+  );
+}
+
+function StringingBlock({
+  stringing,
+  onStringing,
+  range,
+  member,
+}: Pick<Props, "stringing" | "onStringing"> & { range: Range; member: S27MemberAccount | null }) {
+  const [racket, setRacket] = useState("");
+  const [stringId, setStringId] = useState(STRING_OPTIONS[0].id);
+  const [tension, setTension] = useState("52");
+  const [pickupDate, setPickupDate] = useState(today());
+  const [guestName, setGuestName] = useState("");
+  const [status, setStatus] = useState<"paid" | "pending">("paid");
+  const stringOpt = STRING_OPTIONS.find((s) => s.id === stringId) || STRING_OPTIONS[0];
+  const list = stringing
+    .filter((b) => inRangeDate(b.pickupDate || b.createdAt.slice(0, 10), range, b.paymentStatus === "pending"))
+    .slice()
+    .sort((a, b) => (a.pickupDate || "").localeCompare(b.pickupDate || ""));
+
+  function add(e: React.FormEvent) {
+    e.preventDefault();
+    const name = member?.name || guestName.trim();
+    if (!racket.trim() || !name) return;
+    onStringing([
+      ...stringing,
+      {
+        id: uid("string"),
+        racket: racket.trim(),
+        stringId: stringOpt.id,
+        stringName: stringOpt.name,
+        tension,
+        pickupDate,
+        clientName: name,
+        clientEmail: member?.email || "",
+        memberNumber: member?.memberNumber,
+        amount: getLiveStringingLabor() + stringOpt.extra,
+        paymentStatus: status,
+        paymentMethod: "manual",
+        createdAt: new Date().toISOString(),
+      },
+    ]);
+    setRacket("");
+    setGuestName("");
+  }
+
+  return (
+    <>
+      <form onSubmit={add} className="grid gap-2 rounded-2xl border border-[#e8e5df] bg-white p-4 sm:grid-cols-3">
+        <input className={inputClass} placeholder="Racket" value={racket} onChange={(e) => setRacket(e.target.value)} />
+        <select className={inputClass} value={stringId} onChange={(e) => setStringId(e.target.value)}>
+          {STRING_OPTIONS.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+        </select>
+        <select className={inputClass} value={tension} onChange={(e) => setTension(e.target.value)}>
+          {["48", "50", "52", "54", "56", "58"].map((t) => <option key={t} value={t}>{t} lbs</option>)}
+        </select>
+        <input type="date" className={inputClass} value={pickupDate} onChange={(e) => setPickupDate(e.target.value)} />
+        {!member && <input className={inputClass} placeholder="Walk-up name" value={guestName} onChange={(e) => setGuestName(e.target.value)} />}
+        <select className={inputClass} value={status} onChange={(e) => setStatus(e.target.value as "paid" | "pending")}>
+          <option value="paid">Paid</option>
+          <option value="pending">Pending</option>
+        </select>
+        <button className="rounded-lg bg-[#1a1a1a] px-3 py-2 text-[12px] font-medium text-white">Add order</button>
+      </form>
+      <SimpleList
+        empty="No stringing orders in this view."
+        rows={list.map((b) => ({
+          id: b.id,
+          title: `${b.racket} · ${b.stringName} @ ${b.tension}`,
+          detail: `${b.clientName} · $${b.amount}${b.pickupDate ? ` · pickup ${formatPrettyDate(b.pickupDate)}` : ""}`,
+          status: b.paymentStatus,
+          onPaid: () => onStringing(stringing.map((x) => (x.id === b.id ? { ...x, paymentStatus: x.paymentStatus === "paid" ? "pending" : "paid" } : x))),
+          onDelete: () => onStringing(stringing.filter((x) => x.id !== b.id)),
+        }))}
+      />
+    </>
+  );
+}
+
+function HoldsBlock({
+  blocks,
+  onHolds,
+  range,
+}: {
+  blocks: S27AdminBlock[];
+  onHolds: (next: S27AdminBlock[]) => void;
+  range: Range;
+}) {
+  const [date, setDate] = useState(today());
+  const [courtId, setCourtId] = useState<CourtId | "both">("both");
+  const [startHour, setStartHour] = useState("8");
+  const [durationHours, setDurationHours] = useState("1");
+  const [reason, setReason] = useState("Maintenance");
+  const list = blocks.filter((b) => inRangeDate(b.date, range, false));
+
+  function add(e: React.FormEvent) {
+    e.preventDefault();
+    onHolds([
+      ...blocks,
+      {
+        id: uid("hold"),
+        date,
+        courtId,
+        startHour: Number(startHour),
+        durationHours: Number(durationHours) || 1,
+        reason: reason.trim() || "Director hold",
+        createdAt: new Date().toISOString(),
+      },
+    ]);
+  }
+
+  return (
+    <>
+      <form onSubmit={add} className="grid gap-2 rounded-2xl border border-[#e8e5df] bg-white p-4 sm:grid-cols-3">
+        <input type="date" className={inputClass} value={date} onChange={(e) => setDate(e.target.value)} />
+        <select className={inputClass} value={courtId} onChange={(e) => setCourtId(e.target.value as CourtId | "both")}>
+          <option value="both">Both courts</option>
+          <option value="court-1">Court 1</option>
+          <option value="court-2">Court 2</option>
+        </select>
+        <select className={inputClass} value={startHour} onChange={(e) => setStartHour(e.target.value)}>
+          {BOOKING_HOURS.map((h) => <option key={h} value={h}>{formatHour(h)}</option>)}
+        </select>
+        <select className={inputClass} value={durationHours} onChange={(e) => setDurationHours(e.target.value)}>
+          {[1, 2, 3, 4].map((n) => <option key={n} value={n}>{n === 1 ? "1 hour" : `${n} hours`}</option>)}
+        </select>
+        <select className={inputClass} value={reason} onChange={(e) => setReason(e.target.value)}>
+          <option>Maintenance</option>
+          <option>Weather</option>
+          <option>Private event</option>
+          <option>Teaching</option>
+          <option>Other</option>
+        </select>
+        <button className="rounded-lg bg-[#1a1a1a] px-3 py-2 text-[12px] font-medium text-white">Add hold</button>
+      </form>
+      <div className="overflow-hidden rounded-2xl border border-[#e8e5df] bg-white">
+        {list.length === 0 ? (
+          <p className="p-4 text-[13px] text-[#8a8477]">No holds in this view.</p>
+        ) : (
+          list.map((b) => (
+            <div key={b.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-[#f0ede8] p-3 last:border-0">
+              <p className="text-[14px] font-medium">
+                {formatPrettyDate(b.date)} {formatHour(b.startHour)} · {b.courtId === "both" ? "Both" : b.courtId} · {b.reason}
+              </p>
+              <button type="button" onClick={() => onHolds(blocks.filter((x) => x.id !== b.id))} className="text-[12px] text-[#991b1b]">
+                Delete
+              </button>
+            </div>
+          ))
+        )}
+      </div>
+    </>
+  );
+}
+
+function SimpleList({
+  empty,
+  rows,
+}: {
+  empty: string;
+  rows: Array<{ id: string; title: string; detail: string; status: "paid" | "pending"; onPaid: () => void; onDelete: () => void }>;
+}) {
+  if (rows.length === 0) {
+    return <p className="rounded-2xl border border-[#e8e5df] bg-white p-4 text-[13px] text-[#8a8477]">{empty}</p>;
+  }
+  return (
+    <div className="overflow-hidden rounded-2xl border border-[#e8e5df] bg-white">
+      {rows.map((row) => (
+        <div key={row.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-[#f0ede8] px-3 py-2.5 last:border-0">
+          <div className="min-w-0">
+            <p className="text-[14px] font-medium">{row.title}</p>
+            <p className="text-[12px] text-[#6b665e]">{row.detail}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <PaidPill status={row.status} onToggle={row.onPaid} />
+            <button type="button" onClick={row.onDelete} className="text-[12px] text-[#991b1b]">
+              Delete
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
