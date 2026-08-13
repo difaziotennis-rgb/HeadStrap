@@ -100,6 +100,7 @@ function shortClinicName(name: string): string {
     .replace(/^Wednesday Morning\s+/i, "Wed AM ")
     .replace(/^Tuesday Morning\s+/i, "Tue AM ")
     .replace(/^Tuesday\s+/i, "Tue ")
+    .replace(/^Saturday Night\s+/i, "Sat Night ")
     .replace(/^Saturday\s+/i, "")
     .replace(/^Wednesday\s+/i, "Wed ")
     .replace(/\s+Juniors$/i, "")
