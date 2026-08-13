@@ -12,6 +12,7 @@ import {
 import type { S27Catalog } from "../schedule";
 import type { S27AdminBlock } from "../schedule";
 import {
+  type S27Charge,
   type S27ClinicBooking,
   type S27CourtBooking,
   type S27EventBooking,
@@ -21,6 +22,7 @@ import {
 } from "../storage";
 import { bookingProId } from "../lesson-slots";
 import { PaidPill } from "./ui";
+import WeatherClosePanel from "./WeatherClosePanel";
 
 type Props = {
   today: string;
@@ -40,6 +42,15 @@ type Props = {
   onDeclineLessonRequest: (id: string) => void;
   onToggleEvent: (id: string) => void;
   onToggleStringing: (id: string) => void;
+  onWeatherClose: (result: {
+    courts: S27CourtBooking[];
+    clinics: S27ClinicBooking[];
+    lessons: S27LessonBooking[];
+    blocks: S27AdminBlock[];
+    charges: S27Charge[];
+    emailed: number;
+    refunded: number;
+  }) => void;
 };
 
 type GlanceItem = {
@@ -235,6 +246,7 @@ export default function TodayBoard({
   onDeclineLessonRequest,
   onToggleEvent,
   onToggleStringing,
+  onWeatherClose,
 }: Props) {
   const thisWeekStart = useMemo(() => startOfWeekMonday(parseDateInput(today)), [today]);
   const [weekStart, setWeekStart] = useState(thisWeekStart);
@@ -707,6 +719,15 @@ export default function TodayBoard({
           </button>
         )}
       </div>
+
+      <WeatherClosePanel
+        date={selectedDate}
+        courts={courts}
+        clinics={clinics}
+        lessons={lessons}
+        blocks={blocks}
+        onApply={onWeatherClose}
+      />
 
       <section className="overflow-hidden rounded-2xl border border-[#e8e5df] bg-white">
         <p className="border-b border-[#f0ede8] px-4 py-3 text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">

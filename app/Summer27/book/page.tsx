@@ -278,6 +278,10 @@ function Summer27BookInner() {
       return;
     }
 
+    booking.paymentIntentId = result.paymentIntentId;
+    for (let i = 0; i < duration; i++) {
+      next[courtBookingKey(date, courtId, hour + i)] = { ...booking };
+    }
     saveRecord(KEYS.courts, next);
     setBookings(next);
     setPendingSlot(null);

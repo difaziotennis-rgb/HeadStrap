@@ -82,6 +82,8 @@ export type S27CourtBooking = {
   players?: S27CourtPlayer[];
   format?: "solo" | "singles" | "doubles";
   lfgPostId?: string;
+  /** Stripe PaymentIntent for refunds (weather / cancel) */
+  paymentIntentId?: string;
 };
 
 export type S27LfgFormat = "singles" | "doubles";
@@ -153,6 +155,7 @@ export type S27ClinicBooking = {
   paymentStatus: "pending" | "paid";
   paymentMethod: "stripe" | "saved-card" | "manual" | "paypal" | "venmo";
   createdAt: string;
+  paymentIntentId?: string;
 };
 
 export type S27LessonBooking = {
@@ -174,6 +177,7 @@ export type S27LessonBooking = {
   /** Member preferred-time requests (Derek) before the director confirms. */
   requestStatus?: "requested" | "accepted" | "declined";
   createdAt: string;
+  paymentIntentId?: string;
 };
 
 export type S27EventBooking = {

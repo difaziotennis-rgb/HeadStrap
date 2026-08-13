@@ -36,6 +36,7 @@ Until keys exist, the site stays in **demo mode**: fake last-4 cards, demo guest
 | Member charge on book (immediate) | Ready |
 | Guest Stripe Checkout (courts + clinics) | Ready |
 | Refund API for cancels | Ready (`/api/summer27/refund`) |
+| Weather / rain-out desk (hold courts, clear bookings, email, refund) | Ready (Week desk → Rain out) |
 | Webhook handler | Ready |
 | Admin password gate | Ready (env or demo) |
 | Mock data off when live / Stripe configured | Ready |

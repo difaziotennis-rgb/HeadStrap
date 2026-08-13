@@ -14,6 +14,7 @@ import {
   S27_INSTAGRAM_HANDLE,
   S27_INSTAGRAM_URL,
 } from "./summer27-data";
+import { weatherClosedOnDate } from "./schedule";
 
 function upcomingClinicSessions(count = 6) {
   const clinics = s27Clinics;
@@ -25,7 +26,7 @@ function upcomingClinicSessions(count = 6) {
     d.setDate(start.getDate() + i);
     const day = d.getDay();
     const iso = formatDateInput(d);
-    if (clinicsSuspendedOnDate(iso, s27Events)) continue;
+    if (clinicsSuspendedOnDate(iso, s27Events) || weatherClosedOnDate(iso)) continue;
     for (const clinic of clinics) {
       if (!clinic.days.includes(day)) continue;
       out.push({ date: iso, clinic });

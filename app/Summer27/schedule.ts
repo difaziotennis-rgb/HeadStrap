@@ -307,6 +307,17 @@ export function saveMemberNotes(notes: S27MemberNote[]) {
   localStorage.setItem(S27_NOTES_KEY, JSON.stringify(notes));
 }
 
+/** Full-day weather hold from the director desk (both courts). */
+export function weatherClosedOnDate(dateStr: string): boolean {
+  return getAdminBlocks().some(
+    (b) =>
+      b.date === dateStr &&
+      b.courtId === "both" &&
+      b.kind !== "open" &&
+      /weather/i.test(b.reason || "")
+  );
+}
+
 export function getProgramBlock(
   dateStr: string,
   courtId: CourtId,
@@ -314,7 +325,7 @@ export function getProgramBlock(
 ): SlotBlockReason | null {
   const catalog = getCatalog();
   const day = parseDateInput(dateStr).getDay();
-  const clinicsOff = clinicsSuspendedOnDate(dateStr, catalog.events);
+  const clinicsOff = clinicsSuspendedOnDate(dateStr, catalog.events) || weatherClosedOnDate(dateStr);
 
   if (!clinicsOff) {
     for (const clinic of catalog.clinics) {

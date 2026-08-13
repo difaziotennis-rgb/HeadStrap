@@ -17,7 +17,7 @@ import {
   type ClinicDef,
   type EventDef,
 } from "../summer27-data";
-import { getLiveClinics, getLiveEvents } from "../schedule";
+import { getLiveClinics, getLiveEvents, weatherClosedOnDate } from "../schedule";
 import { KEYS, findMemberAccount, loadList, saveList, type S27ClinicBooking, type S27MemberChild } from "../storage";
 import { DateChips, dateChipFromIso } from "../DateChips";
 import { canChangeBooking, CANCEL_WINDOW_HOURS } from "../booking-policy";
@@ -76,13 +76,14 @@ function nextDatesForClinic(
     d.setDate(start.getDate() + i);
     const iso = formatDateInput(d);
     if (!clinic.days.includes(d.getDay())) continue;
-    if (clinicsSuspendedOnDate(iso, events)) continue;
+    if (clinicsSuspendedOnDate(iso, events) || weatherClosedOnDate(iso)) continue;
     dates.push(iso);
   }
   if (
     extra &&
     clinic.days.includes(parseDateInput(extra).getDay()) &&
     !clinicsSuspendedOnDate(extra, events) &&
+    !weatherClosedOnDate(extra) &&
     !dates.includes(extra)
   ) {
     dates.push(extra);
@@ -112,7 +113,7 @@ function occurrencesForWeek(clinics: ClinicDef[], weekStart: Date, events: Event
   const out: Occurrence[] = [];
   for (let i = 0; i < 7; i++) {
     const date = formatDateInput(addDays(weekStart, i));
-    if (clinicsSuspendedOnDate(date, events)) continue;
+    if (clinicsSuspendedOnDate(date, events) || weatherClosedOnDate(date)) continue;
     const jsDay = parseDateInput(date).getDay();
     for (const clinic of clinics) {
       if (!clinic.days.includes(jsDay)) continue;
@@ -411,6 +412,7 @@ function Summer27ClinicsInner() {
     }
 
     booking.paymentStatus = "paid";
+    booking.paymentIntentId = result.paymentIntentId;
     const next = [...bookings, booking];
     saveList(KEYS.clinics, next);
     setBookings(next);

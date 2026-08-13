@@ -324,6 +324,16 @@ export default function Summer27DirectorPage() {
           onToggleStringing={(id) =>
             saveStringing(stringing.map((x) => (x.id === id ? { ...x, paymentStatus: x.paymentStatus === "paid" ? "pending" : "paid" } : x)))
           }
+          onWeatherClose={(result) => {
+            saveCourts(result.courts);
+            saveClinics(result.clinics);
+            saveLessons(result.lessons);
+            saveHolds(result.blocks);
+            saveCharges([...result.charges, ...charges]);
+            ping(
+              `Weather close · ${result.emailed} emailed · ${result.refunded} refund${result.refunded === 1 ? "" : "s"}.`
+            );
+          }}
         />
       )}
 
