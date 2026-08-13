@@ -17,7 +17,7 @@ import {
   type SlotBlockReason,
 } from "./summer27-data";
 
-export const S27_CATALOG_KEY = "s27_catalog_v23";
+export const S27_CATALOG_KEY = "s27_catalog_v24";
 export const S27_BLOCKS_KEY = "s27_admin_blocks_v1";
 export const S27_NOTES_KEY = "s27_member_notes_v1";
 
@@ -121,15 +121,32 @@ export function normalizePrimeTeaching(raw: unknown): S27Catalog["primeTeaching"
 function usableClinics(clinics: unknown, fallback: ClinicDef[]): ClinicDef[] {
   if (!Array.isArray(clinics) || clinics.length === 0) return fallback;
   const fallbackIds = new Set(fallback.map((f) => f.id));
-  const ok = clinics.filter(
-    (c): c is ClinicDef =>
-      !!c &&
-      typeof c === "object" &&
-      typeof (c as ClinicDef).id === "string" &&
-      fallbackIds.has((c as ClinicDef).id) &&
-      typeof (c as ClinicDef).name === "string" &&
-      Array.isArray((c as ClinicDef).days)
-  );
+  const ok = clinics
+    .filter(
+      (c): c is ClinicDef =>
+        !!c &&
+        typeof c === "object" &&
+        typeof (c as ClinicDef).id === "string" &&
+        fallbackIds.has((c as ClinicDef).id) &&
+        typeof (c as ClinicDef).name === "string" &&
+        Array.isArray((c as ClinicDef).days)
+    )
+    .map((c) => {
+      const base = fallback.find((f) => f.id === c.id);
+      if (!base) return c;
+      // Keep admin price/capacity edits; sync names and schedule from defaults.
+      return {
+        ...c,
+        name: base.name,
+        kind: base.kind,
+        level: base.level,
+        description: base.description,
+        days: base.days,
+        startHour: base.startHour,
+        durationHours: base.durationHours,
+        blockCourts: base.blockCourts,
+      };
+    });
   const ids = new Set(ok.map((c) => c.id));
   for (const clinic of fallback) {
     if (!ids.has(clinic.id)) ok.push(clinic);

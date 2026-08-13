@@ -153,7 +153,7 @@ export type ClinicDef = {
 export const s27Clinics: ClinicDef[] = [
   {
     id: "sat-sun-cardio",
-    name: "Weekend Cardio & Drills",
+    name: "Weekend Intermediate Cardio",
     kind: "adult",
     level: "3.0–3.5 or by pro invitation",
     days: [0, 6],
@@ -167,7 +167,7 @@ export const s27Clinics: ClinicDef[] = [
   },
   {
     id: "sat-sun-point-play",
-    name: "Weekend Point Play",
+    name: "Weekend Advanced Point Play",
     kind: "adult",
     level: "4.0+ or by pro invitation",
     days: [0, 6],
@@ -181,7 +181,7 @@ export const s27Clinics: ClinicDef[] = [
   },
   {
     id: "wed-am-beginner",
-    name: "Wednesday Morning Beginner Clinic",
+    name: "Wednesday Morning Beginner",
     kind: "adult",
     level: "2.5–3.0 · new players welcome",
     days: [3],
@@ -195,7 +195,7 @@ export const s27Clinics: ClinicDef[] = [
   },
   {
     id: "mon-fri-beginner",
-    name: "Weeknight Beginner Clinic",
+    name: "Weeknight Beginner",
     kind: "adult",
     level: "2.5–3.0 · new players welcome",
     days: [1, 5],
@@ -209,7 +209,7 @@ export const s27Clinics: ClinicDef[] = [
   },
   {
     id: "mon-fri-advanced",
-    name: "Advanced Clinic",
+    name: "Morning Advanced Point Play",
     kind: "adult",
     level: "4.5+ or by pro invitation",
     days: [1, 5],
@@ -223,7 +223,7 @@ export const s27Clinics: ClinicDef[] = [
   },
   {
     id: "mon-fri-int-adv",
-    name: "Weeknight Clinic",
+    name: "Weeknight Intermediate",
     kind: "adult",
     level: "3.5+ or by pro invitation",
     days: [1, 5],
