@@ -5,11 +5,7 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useS27Session } from "../../use-s27-session";
 import { getPaymentProfile } from "../../payments";
-import {
-  emitS27SessionChange,
-  S27_MEMBER_SESSION_KEY,
-  type S27MemberSession,
-} from "../../member-session";
+import { patchS27Session, type S27MemberSession } from "../../member-session";
 import MemberBookings from "../MemberBookings";
 import {
   KEYS,
@@ -39,8 +35,7 @@ function uidChild() {
 }
 
 function writeSession(next: S27MemberSession) {
-  localStorage.setItem(S27_MEMBER_SESSION_KEY, JSON.stringify(next));
-  emitS27SessionChange();
+  patchS27Session(next);
 }
 
 export default function Summer27PortalPage() {

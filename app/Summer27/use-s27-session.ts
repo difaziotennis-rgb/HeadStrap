@@ -2,9 +2,8 @@
 
 import { useEffect, useState } from "react";
 import {
-  parseS27Session,
+  readS27Session,
   S27_MEMBER_SESSION_EVENT,
-  S27_MEMBER_SESSION_KEY,
   type S27MemberSession,
 } from "./member-session";
 
@@ -14,7 +13,7 @@ export function useS27Session() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     function apply() {
-      setSession(parseS27Session(localStorage.getItem(S27_MEMBER_SESSION_KEY)));
+      setSession(readS27Session());
     }
     apply();
     window.addEventListener(S27_MEMBER_SESSION_EVENT, apply);

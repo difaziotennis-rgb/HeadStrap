@@ -3,9 +3,12 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
-  emitS27SessionChange,
-  parseS27Session,
-  S27_MEMBER_SESSION_KEY,
+  clearRememberedSignIn,
+  clearS27Session,
+  readRememberedSignIn,
+  readS27Session,
+  writeRememberedSignIn,
+  writeS27Session,
   type S27MemberSession,
 } from "./member-session";
 import { KEYS, ensureDerekMember, loadList, type S27MemberAccount } from "./storage";
@@ -15,23 +18,40 @@ export default function MemberAuth() {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [staySignedIn, setStaySignedIn] = useState(true);
+  const [rememberSignIn, setRememberSignIn] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
       ensureDerekMember();
-      setSession(parseS27Session(localStorage.getItem(S27_MEMBER_SESSION_KEY)));
+      setSession(readS27Session());
+      const remembered = readRememberedSignIn();
+      if (remembered) {
+        setEmail(remembered.email);
+        setPassword(remembered.password);
+        setRememberSignIn(true);
+      }
     } catch {
       setSession(null);
     }
   }, []);
 
   function signOut() {
-    localStorage.removeItem(S27_MEMBER_SESSION_KEY);
+    clearS27Session();
     setSession(null);
-    emitS27SessionChange();
     setOpen(false);
+    const remembered = readRememberedSignIn();
+    if (remembered) {
+      setEmail(remembered.email);
+      setPassword(remembered.password);
+      setRememberSignIn(true);
+    } else {
+      setEmail("");
+      setPassword("");
+      setRememberSignIn(false);
+    }
   }
 
   function signIn(e: React.FormEvent) {
@@ -62,11 +82,12 @@ export default function MemberAuth() {
       memberPhone: match.phone,
       signedInAt: new Date().toISOString(),
     };
-    localStorage.setItem(S27_MEMBER_SESSION_KEY, JSON.stringify(next));
+    writeS27Session(next, staySignedIn);
+    if (rememberSignIn) writeRememberedSignIn(email.trim(), password);
+    else clearRememberedSignIn();
     setSession(next);
-    emitS27SessionChange();
     setOpen(false);
-    setPassword("");
+    if (!rememberSignIn) setPassword("");
     setMsg(null);
   }
 
@@ -101,7 +122,9 @@ export default function MemberAuth() {
             <input
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="Email or member #"
+              placeholder="Email, name, or member #"
+              name="username"
+              autoComplete="username"
               className="w-full rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px] outline-none focus:border-[#1a1a1a]"
             />
             <input
@@ -109,8 +132,28 @@ export default function MemberAuth() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Password"
+              name="password"
+              autoComplete="current-password"
               className="w-full rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px] outline-none focus:border-[#1a1a1a]"
             />
+            <label className="flex cursor-pointer items-start gap-2 pt-0.5 text-[11px] leading-snug text-[#6b665e]">
+              <input
+                type="checkbox"
+                checked={staySignedIn}
+                onChange={(e) => setStaySignedIn(e.target.checked)}
+                className="mt-0.5"
+              />
+              <span>Stay signed in on this device</span>
+            </label>
+            <label className="flex cursor-pointer items-start gap-2 text-[11px] leading-snug text-[#6b665e]">
+              <input
+                type="checkbox"
+                checked={rememberSignIn}
+                onChange={(e) => setRememberSignIn(e.target.checked)}
+                className="mt-0.5"
+              />
+              <span>Remember email &amp; password for next visit</span>
+            </label>
             {msg && <p className="text-[12px] text-[#991b1b]">{msg}</p>}
             <button type="submit" className="w-full rounded-lg bg-[#1a1a1a] py-2 text-[12px] font-medium text-white">
               Sign in

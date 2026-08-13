@@ -3,8 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  emitS27SessionChange,
-  S27_MEMBER_SESSION_KEY,
+  writeS27Session,
 } from "../member-session";
 import {
   KEYS,
@@ -26,6 +25,7 @@ export default function Summer27JoinPage() {
   const [expMonth, setExpMonth] = useState("");
   const [expYear, setExpYear] = useState("");
   const [zip, setZip] = useState("");
+  const [staySignedIn, setStaySignedIn] = useState(true);
   const [msg, setMsg] = useState<string | null>(null);
 
   function join(e: React.FormEvent) {
@@ -66,17 +66,16 @@ export default function Summer27JoinPage() {
     });
     saveList(KEYS.payment, payments);
 
-    localStorage.setItem(
-      S27_MEMBER_SESSION_KEY,
-      JSON.stringify({
+    writeS27Session(
+      {
         memberNumber,
         memberEmail: account.email,
         memberName: account.name,
         memberPhone: account.phone,
         signedInAt: new Date().toISOString(),
-      })
+      },
+      staySignedIn
     );
-    emitS27SessionChange();
     router.push("/Summer27/member/portal");
   }
 
@@ -89,10 +88,40 @@ export default function Summer27JoinPage() {
       </p>
 
       <form onSubmit={join} className="mt-6 space-y-3 rounded-2xl border border-[#e8e5df] bg-white p-5">
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" className="w-full rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]" />
-        <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" type="email" className="w-full rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]" />
-        <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone" className="w-full rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]" />
-        <input value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" type="password" className="w-full rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]" />
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Full name"
+          name="name"
+          autoComplete="name"
+          className="w-full rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
+        />
+        <input
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="Email"
+          type="email"
+          name="email"
+          autoComplete="username"
+          className="w-full rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
+        />
+        <input
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder="Phone"
+          name="tel"
+          autoComplete="tel"
+          className="w-full rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
+        />
+        <input
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Password"
+          type="password"
+          name="new-password"
+          autoComplete="new-password"
+          className="w-full rounded-lg border border-[#e8e5df] px-3 py-2 text-[13px]"
+        />
 
         <div className="rounded-xl border border-[#ece8e2] bg-[#faf9f7] p-4">
           <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Card on file (required)</p>
@@ -109,6 +138,16 @@ export default function Summer27JoinPage() {
             <input value={zip} onChange={(e) => setZip(e.target.value)} placeholder="Billing ZIP" className="rounded-lg border border-[#e8e5df] bg-white px-3 py-2 text-[13px] sm:col-span-2" />
           </div>
         </div>
+
+        <label className="flex cursor-pointer items-start gap-2 text-[12px] leading-snug text-[#6b665e]">
+          <input
+            type="checkbox"
+            checked={staySignedIn}
+            onChange={(e) => setStaySignedIn(e.target.checked)}
+            className="mt-0.5"
+          />
+          <span>Stay signed in on this device</span>
+        </label>
 
         {msg && <p className="text-[13px] text-[#991b1b]">{msg}</p>}
         <button className="w-full rounded-lg bg-[#1a1a1a] py-2.5 text-[13px] font-medium text-white">
