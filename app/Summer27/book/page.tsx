@@ -19,6 +19,7 @@ import {
 } from "../summer27-data";
 import { getLiveCourtRates, getProgramBlock } from "../schedule";
 import { canChangeBooking, CANCEL_WINDOW_HOURS } from "../booking-policy";
+import { BookingPolicies } from "../BookingPolicies";
 import {
   KEYS,
   courtBookingKey,
@@ -695,6 +696,8 @@ function Summer27BookInner() {
           </div>
         </div>
       )}
+
+      <BookingPolicies />
     </main>
   );
 }

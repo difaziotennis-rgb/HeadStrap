@@ -21,6 +21,7 @@ import { getLiveClinics, getLiveEvents } from "../schedule";
 import { KEYS, findMemberAccount, loadList, saveList, type S27ClinicBooking, type S27MemberChild } from "../storage";
 import { DateChips, dateChipFromIso } from "../DateChips";
 import { canChangeBooking, CANCEL_WINDOW_HOURS } from "../booking-policy";
+import { BookingPolicies } from "../BookingPolicies";
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 
@@ -742,6 +743,8 @@ function Summer27ClinicsInner() {
           </div>
         </div>
       )}
+
+      <BookingPolicies />
     </main>
   );
 }

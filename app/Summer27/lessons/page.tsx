@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { useS27Session } from "../use-s27-session";
 import { canOneClick, startMemberPayment, storageMethodFor, type S27PayMethod } from "../payments";
 import { PayChooser } from "../PayChooser";
+import { BookingPolicies } from "../BookingPolicies";
 import {
   BOOKING_HOURS,
   COURTS,
@@ -383,6 +384,8 @@ function Summer27LessonsInner() {
           <PayChooser amount={amount} savedCard={savedCard} paying={paying} primaryLabel="Book" onPay={bookLesson} />
         )}
       </div>
+
+      <BookingPolicies />
     </main>
   );
 }

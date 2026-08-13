@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { getLiveEvents } from "../schedule";
 import { eventDateRangeLabel, parseDateInput, s27Events, type EventDef } from "../summer27-data";
 import { KEYS, loadList, type S27EventBooking } from "../storage";
+import { BookingPolicies } from "../BookingPolicies";
 
 function monthHeading(ym: string) {
   const [y, m] = ym.split("-").map(Number);
@@ -129,6 +130,8 @@ export default function Summer27EventsPage() {
           </section>
         ))}
       </div>
+
+      <BookingPolicies />
     </main>
   );
 }

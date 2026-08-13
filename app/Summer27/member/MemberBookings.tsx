@@ -15,7 +15,7 @@ import {
 } from "../summer27-data";
 import { getLiveClinics, getLiveCourtRates, getLiveEvents, getLivePros, getProgramBlock } from "../schedule";
 import { lessonConflict } from "../lesson-slots";
-import { canChangeBooking, CANCEL_WINDOW_HOURS, eventStartHour } from "../booking-policy";
+import { canChangeBooking, CANCEL_POLICY, CANCEL_WINDOW_HOURS, eventStartHour, WEATHER_POLICY } from "../booking-policy";
 import {
   KEYS,
   courtShareForMember,
@@ -552,9 +552,16 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
 
   return (
     <div className="mt-3 space-y-5">
-      <p className="text-[12px] text-[#8a8477]">
-        Changes until {CANCEL_WINDOW_HOURS} hours before.
-      </p>
+      <div className="space-y-2 text-[12px] leading-relaxed text-[#6b665e]">
+        <p>
+          <span className="font-medium text-[#4a4a4a]">Cancellation. </span>
+          {CANCEL_POLICY}
+        </p>
+        <p>
+          <span className="font-medium text-[#4a4a4a]">Weather. </span>
+          {WEATHER_POLICY}
+        </p>
+      </div>
       {msg && <p className="rounded-lg border border-[#e8e5df] bg-[#faf9f7] px-3 py-2 text-[13px]">{msg}</p>}
 
       <div className="space-y-2">
