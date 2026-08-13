@@ -92,7 +92,6 @@ function nextDatesForClinic(
 
 function shortClinicName(name: string): string {
   return name
-    .replace(/\s+Clinic$/i, "")
     .replace(/^Weekend\s+/i, "")
     .replace(/^Weeknight\s+/i, "")
     .replace(/^Morning\s+/i, "")
@@ -103,7 +102,7 @@ function shortClinicName(name: string): string {
     .replace(/^Saturday Night\s+/i, "Sat Night ")
     .replace(/^Saturday\s+/i, "")
     .replace(/^Wednesday\s+/i, "Wed ")
-    .replace(/\s+Juniors$/i, "")
+    .replace(/\s+Juniors$/i, " Jrs")
     .replace(/\s+Junior\s+/i, " ");
 }
 
