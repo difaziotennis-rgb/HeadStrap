@@ -226,7 +226,7 @@ export const s27Clinics: ClinicDef[] = [
     name: "Morning Advanced Point Play",
     kind: "adult",
     level: "4.5+ or by pro invitation",
-    days: [1, 5],
+    days: [2],
     startHour: 10,
     durationHours: 1,
     capacity: 10,
