@@ -17,7 +17,7 @@ import {
   type SlotBlockReason,
 } from "./summer27-data";
 
-export const S27_CATALOG_KEY = "s27_catalog_v29";
+export const S27_CATALOG_KEY = "s27_catalog_v30";
 export const S27_BLOCKS_KEY = "s27_admin_blocks_v1";
 export const S27_NOTES_KEY = "s27_member_notes_v1";
 
@@ -145,6 +145,9 @@ function usableClinics(clinics: unknown, fallback: ClinicDef[]): ClinicDef[] {
         startHour: base.startHour,
         durationHours: base.durationHours,
         blockCourts: base.blockCourts,
+        memberPrice: base.memberPrice,
+        guestPrice: base.guestPrice,
+        capacity: base.capacity,
       };
     });
   const ids = new Set(ok.map((c) => c.id));
