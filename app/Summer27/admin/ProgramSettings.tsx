@@ -112,8 +112,8 @@ export default function ProgramSettings({ catalog, onSave, onReset }: Props) {
       focus: "",
       bio: "",
       courtId: "court-2",
-      memberRate: draft.lessonRates?.member || 160,
-      guestRate: draft.lessonRates?.guest || 175,
+      memberRate: draft.lessonRates?.member || 180,
+      guestRate: draft.lessonRates?.guest || 195,
       days: [1, 2, 3, 4, 5],
       windows: [
         { start: 9, end: 12 },

@@ -324,7 +324,7 @@ function Summer27BookInner() {
         return (
           <Link
             href={`/Summer27/clinics?clinic=${encodeURIComponent(occ.clinicId)}&date=${date}`}
-            className={`block truncate rounded-md px-1.5 py-2 text-center text-[10px] font-medium leading-tight sm:px-2 sm:text-[11px] ${slotClass(occ.type)}`}
+            className={`block truncate rounded-md px-1.5 py-2.5 text-center text-[11px] font-medium leading-tight sm:px-2 sm:py-2 sm:text-[11px] ${slotClass(occ.type)}`}
           >
             {shortOccLabel(occ.label, occ.type)}
           </Link>
@@ -341,7 +341,7 @@ function Summer27BookInner() {
               setCancelTarget(mine);
               setMsg(null);
             }}
-            className={`w-full truncate rounded-md px-1.5 py-2 text-center text-[10px] font-medium leading-tight sm:px-2 sm:text-[11px] ${slotClass("mine")}`}
+            className={`w-full truncate rounded-md px-1.5 py-2.5 text-center text-[11px] font-medium leading-tight sm:px-2 sm:py-2 sm:text-[11px] ${slotClass("mine")}`}
             title={cancellable ? "Tap to cancel" : `Locked within ${CANCEL_WINDOW_HOURS} hours`}
           >
             {cancellable ? "Yours · Cancel" : "Yours"}
@@ -350,7 +350,7 @@ function Summer27BookInner() {
       }
       return (
         <span
-          className={`block truncate rounded-md px-1.5 py-2 text-center text-[10px] leading-tight sm:px-2 sm:text-[11px] ${slotClass(occ.type)}`}
+          className={`block truncate rounded-md px-1.5 py-2.5 text-center text-[11px] leading-tight sm:px-2 sm:py-2 sm:text-[11px] ${slotClass(occ.type)}`}
           title={occ.type === "booked" && "booking" in occ && occ.booking ? occ.booking.clientName : occ.label}
         >
           {occ.type === "booked" && "booking" in occ && occ.booking
@@ -364,7 +364,7 @@ function Summer27BookInner() {
         type="button"
         disabled={!open || paying}
         onClick={() => requestSlot(courtId, hour)}
-        className="w-full rounded-md border border-[#e8e5df] bg-[#faf9f7] px-1.5 py-2 text-[10px] font-medium text-[#1a1a1a] hover:bg-white disabled:opacity-35 sm:px-2 sm:text-[11px]"
+        className="w-full rounded-md border border-[#e8e5df] bg-[#faf9f7] px-1.5 py-2.5 text-[11px] font-medium text-[#1a1a1a] hover:bg-white disabled:opacity-35 sm:px-2 sm:py-2 sm:text-[11px]"
       >
         ${rate * duration}
       </button>
@@ -436,14 +436,14 @@ function Summer27BookInner() {
       )}
 
       <div className="mt-4 overflow-hidden rounded-2xl border border-[#e8e5df] bg-white">
-        <div className="grid grid-cols-[3.25rem_1fr_1fr] border-b border-[#ece8e2] bg-[#faf9f7] sm:grid-cols-[4.5rem_1fr_1fr]">
-          <div className="px-2 py-2.5 text-[10px] font-medium uppercase tracking-[0.1em] text-[#8a8477] sm:px-3 sm:text-[11px]">
+        <div className="grid grid-cols-[3.75rem_1fr_1fr] border-b border-[#ece8e2] bg-[#faf9f7] sm:grid-cols-[4.5rem_1fr_1fr]">
+          <div className="px-2 py-2.5 text-[11px] font-medium uppercase tracking-[0.1em] text-[#8a8477] sm:px-3 sm:text-[11px]">
             Time
           </div>
           {COURTS.map((c) => (
             <div
               key={c.id}
-              className="border-l border-[#ece8e2] px-2 py-2.5 text-center text-[11px] font-semibold text-[#1a1a1a] sm:px-3 sm:text-[12px]"
+              className="border-l border-[#ece8e2] px-2 py-2.5 text-center text-[12px] font-semibold text-[#1a1a1a] sm:px-3 sm:text-[12px]"
             >
               {c.name}
             </div>
@@ -452,13 +452,13 @@ function Summer27BookInner() {
         {BOOKING_HOURS.map((hour) => (
           <div
             key={hour}
-            className="grid grid-cols-[3.25rem_1fr_1fr] border-b border-[#f0ede8] last:border-b-0 sm:grid-cols-[4.5rem_1fr_1fr]"
+            className="grid grid-cols-[3.75rem_1fr_1fr] border-b border-[#f0ede8] last:border-b-0 sm:grid-cols-[4.5rem_1fr_1fr]"
           >
-            <div className="flex items-center px-2 py-1.5 text-[11px] text-[#6b665e] sm:px-3 sm:text-[12px]">
+            <div className="flex items-center px-2 py-2 text-[12px] text-[#6b665e] sm:px-3 sm:py-1.5 sm:text-[12px]">
               {formatHour(hour).replace(":00 ", " ")}
             </div>
             {COURTS.map((court) => (
-              <div key={court.id} className="border-l border-[#f0ede8] p-1 sm:p-1.5">
+              <div key={court.id} className="border-l border-[#f0ede8] p-1.5 sm:p-1.5">
                 {renderSlot(court.id, hour)}
               </div>
             ))}

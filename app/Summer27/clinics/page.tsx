@@ -402,7 +402,7 @@ function Summer27ClinicsInner() {
       </div>
 
       <div className="-mx-4 mt-5 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:overflow-visible sm:px-0">
-        <div className="min-w-[34rem] overflow-hidden rounded-2xl border border-[#e8e5df] bg-white sm:min-w-0">
+        <div className="min-w-[37rem] overflow-hidden rounded-2xl border border-[#e8e5df] bg-white sm:min-w-0">
           <div className="grid grid-cols-7 border-b border-[#ece8e2] bg-[#faf9f7]">
             {days.map((iso, i) => {
               const d = parseDateInput(iso);
@@ -410,15 +410,15 @@ function Summer27ClinicsInner() {
               return (
                 <div
                   key={iso}
-                  className={`border-r border-[#ece8e2] px-1 py-2 text-center last:border-r-0 sm:px-2 sm:py-2.5 ${
+                  className={`border-r border-[#ece8e2] px-1.5 py-2.5 text-center last:border-r-0 sm:px-2 sm:py-2.5 ${
                     isToday ? "bg-white" : ""
                   }`}
                 >
-                  <p className="text-[9px] uppercase tracking-[0.1em] text-[#8a8477] sm:text-[10px] sm:tracking-[0.12em]">
+                  <p className="text-[10px] uppercase tracking-[0.1em] text-[#8a8477] sm:text-[10px] sm:tracking-[0.12em]">
                     {DAY_LABELS[i]}
                   </p>
                   <p
-                    className={`mt-0.5 text-[13px] font-semibold sm:text-[15px] ${
+                    className={`mt-0.5 text-[14px] font-semibold sm:text-[15px] ${
                       isToday ? "text-[#1a1a1a]" : "text-[#4a4a4a]"
                     }`}
                   >
@@ -435,7 +435,7 @@ function Summer27ClinicsInner() {
               return (
                 <div
                   key={iso}
-                  className={`min-h-[11rem] border-r border-[#ece8e2] p-1 last:border-r-0 sm:min-h-[14rem] sm:p-2 ${
+                  className={`min-h-[12.5rem] border-r border-[#ece8e2] p-1.5 last:border-r-0 sm:min-h-[14rem] sm:p-2 ${
                     isToday ? "bg-[#faf9f7]/60" : ""
                   }`}
                 >
@@ -457,21 +457,21 @@ function Summer27ClinicsInner() {
                             <button
                               type="button"
                               onClick={() => openClinic(o.clinic, o.date)}
-                              className={`w-full rounded-md border px-1 py-1.5 text-left transition sm:rounded-lg sm:px-2 sm:py-2 ${
+                              className={`w-full rounded-md border px-1.5 py-2 text-left transition sm:rounded-lg sm:px-2 sm:py-2 ${
                                 mine
                                   ? "border-[#1a1a1a] bg-[#1a1a1a] text-white hover:bg-[#2a2a2a]"
                                   : "border-[#e8e5df] bg-[#f7f7f5] hover:border-[#1a1a1a] hover:bg-white"
                               }`}
                             >
                               <span
-                                className={`block text-[9px] font-medium tabular-nums sm:text-[11px] ${
+                                className={`block text-[10px] font-medium tabular-nums sm:text-[11px] ${
                                   mine ? "text-white/70" : "text-[#6b665e]"
                                 }`}
                               >
                                 {formatHour(o.clinic.startHour)}
                               </span>
                               <span
-                                className={`mt-0.5 block text-[10px] font-medium leading-snug sm:text-[12px] ${
+                                className={`mt-0.5 block text-[11px] font-medium leading-snug sm:text-[12px] ${
                                   mine ? "text-white" : "text-[#1a1a1a]"
                                 }`}
                               >

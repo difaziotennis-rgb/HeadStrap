@@ -28,8 +28,8 @@ export const COURT_RATES = {
 } as const;
 
 export const LESSON_RATES = {
-  member: 160,
-  guest: 175,
+  member: 180,
+  guest: 195,
 } as const;
 
 export const STRINGING_LABOR = 50;
@@ -86,8 +86,8 @@ export const s27Pros: ProDef[] = [
     quote: "Movement is medicine. Play is essential.",
     image: "/derek-bio.png",
     courtId: "court-1",
-    memberRate: 200,
-    guestRate: 215,
+    memberRate: 180,
+    guestRate: 195,
     lessonMode: "request",
     days: [1, 2, 3, 4, 5],
     windows: [
