@@ -433,7 +433,7 @@ export const s27Events: EventDef[] = [
       "Men’s doubles and women’s doubles Club Championships over Labor Day weekend. Draw format set once entries are in. Normal clinics are cancelled for the weekend — courts reserved for championship play.",
     highlights: ["Men’s doubles", "Women’s doubles", "Format TBD by entries", "No regular clinics"],
     suspendClinics: true,
-    image: "/s27/events/season-close.jpg",
+    image: "/s27/events/club-championship.jpg",
     theme: { wash: "#243528", soft: "#eef2ea", accent: "#4a6b52" },
   },
   {

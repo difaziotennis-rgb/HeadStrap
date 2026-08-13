@@ -92,23 +92,6 @@ function nextDatesForClinic(
   return dates;
 }
 
-function shortClinicName(name: string): string {
-  return name
-    .replace(/^Weekend\s+/i, "")
-    .replace(/^Weeknight\s+/i, "")
-    .replace(/^Morning\s+/i, "")
-    .replace(/^Thursday\s+/i, "Thu ")
-    .replace(/^High School\s+/i, "HS ")
-    .replace(/^Wednesday Morning\s+/i, "Wed AM ")
-    .replace(/^Tuesday Morning\s+/i, "Tue AM ")
-    .replace(/^Tuesday\s+/i, "Tue ")
-    .replace(/^Saturday Night\s+/i, "Sat Night ")
-    .replace(/^Saturday\s+/i, "")
-    .replace(/^Wednesday\s+/i, "Wed ")
-    .replace(/\s+Juniors$/i, " Jrs")
-    .replace(/\s+Junior\s+/i, " ");
-}
-
 function occurrencesForWeek(clinics: ClinicDef[], weekStart: Date, events: EventDef[]): Occurrence[] {
   const out: Occurrence[] = [];
   for (let i = 0; i < 7; i++) {
@@ -140,6 +123,10 @@ function Summer27ClinicsInner() {
   const [bookings, setBookings] = useState<S27ClinicBooking[]>([]);
   const [clinics, setClinics] = useState<ClinicDef[]>(s27Clinics);
   const [events, setEvents] = useState<EventDef[]>(s27Events);
+  const [audience, setAudience] = useState<"adult" | "junior">(() => {
+    const q = s27Clinics.find((c) => c.id === queryClinic);
+    return q?.kind === "junior" ? "junior" : "adult";
+  });
   const [weekStart, setWeekStart] = useState(() =>
     startOfWeekMonday(queryDate ? parseDateInput(queryDate) : new Date())
   );
@@ -166,10 +153,23 @@ function Summer27ClinicsInner() {
   const todayIso = formatDateInput(new Date());
   const thisWeekStart = useMemo(() => startOfWeekMonday(new Date()), []);
   const days = useMemo(() => weekDates(weekStart), [weekStart]);
-  const occurrences = useMemo(
-    () => occurrencesForWeek(clinics, weekStart, events),
-    [clinics, weekStart, events]
+  const filteredClinics = useMemo(
+    () => clinics.filter((c) => c.kind === audience),
+    [clinics, audience]
   );
+  const occurrences = useMemo(
+    () => occurrencesForWeek(filteredClinics, weekStart, events),
+    [filteredClinics, weekStart, events]
+  );
+  const dayGroups = useMemo(() => {
+    return days
+      .map((iso, dayIndex) => ({
+        iso,
+        dayIndex,
+        items: occurrences.filter((o) => o.dayIndex === dayIndex),
+      }))
+      .filter((g) => g.items.length > 0);
+  }, [days, occurrences]);
 
   useEffect(() => {
     if (!session) {
@@ -192,6 +192,10 @@ function Summer27ClinicsInner() {
           if (preferred && live.some((c) => c.id === preferred)) return preferred;
           return id;
         });
+        const preferred = live.find((c) => c.id === (queryClinic || selectedId));
+        if (preferred?.kind === "junior" || preferred?.kind === "adult") {
+          setAudience(preferred.kind);
+        }
       }
       const liveEvents = getLiveEvents();
       if (liveEvents.length) setEvents(liveEvents);
@@ -199,7 +203,7 @@ function Summer27ClinicsInner() {
       // keep defaults
     }
     setBookings(loadList<S27ClinicBooking>(KEYS.clinics));
-  }, [queryClinic]);
+  }, [queryClinic]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!sheetOpen || !clinic) return;
@@ -430,7 +434,27 @@ function Summer27ClinicsInner() {
         Adult and junior sessions. Tap one to book. Half hour $35 · one hour $55 · 90 minutes $80.
       </p>
 
-      <div className="mt-6 flex items-center justify-between gap-3">
+      <div className="mt-6 flex rounded-full border border-[#e8e5df] bg-white p-1">
+        {(
+          [
+            { id: "adult" as const, label: "Adults" },
+            { id: "junior" as const, label: "Juniors" },
+          ] as const
+        ).map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setAudience(tab.id)}
+            className={`flex-1 rounded-full px-4 py-2.5 text-[13px] font-medium transition ${
+              audience === tab.id ? "bg-[#1a1a1a] text-white" : "text-[#6b665e] hover:text-[#1a1a1a]"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-5 flex items-center justify-between gap-3">
         <button
           type="button"
           onClick={() => setWeekStart((w) => addDays(w, -7))}
@@ -461,101 +485,75 @@ function Summer27ClinicsInner() {
         </button>
       </div>
 
-      <div className="-mx-4 mt-5 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:overflow-visible sm:px-0">
-        <div className="min-w-[37rem] overflow-hidden rounded-2xl border border-[#e8e5df] bg-white sm:min-w-0">
-          <div className="grid grid-cols-7 border-b border-[#ece8e2] bg-[#faf9f7]">
-            {days.map((iso, i) => {
-              const d = parseDateInput(iso);
-              const isToday = iso === todayIso;
-              return (
-                <div
-                  key={iso}
-                  className={`border-r border-[#ece8e2] px-1.5 py-2.5 text-center last:border-r-0 sm:px-2 sm:py-2.5 ${
-                    isToday ? "bg-white" : ""
-                  }`}
-                >
-                  <p className="text-[10px] uppercase tracking-[0.1em] text-[#8a8477] sm:text-[10px] sm:tracking-[0.12em]">
-                    {DAY_LABELS[i]}
-                  </p>
-                  <p
-                    className={`mt-0.5 text-[14px] font-semibold sm:text-[15px] ${
-                      isToday ? "text-[#1a1a1a]" : "text-[#4a4a4a]"
-                    }`}
-                  >
-                    {d.getDate()}
-                  </p>
+      <div className="mt-5 space-y-6">
+        {dayGroups.length === 0 ? (
+          <p className="rounded-2xl border border-[#e8e5df] bg-white px-4 py-8 text-center text-[14px] text-[#8a8477]">
+            No {audience === "junior" ? "junior" : "adult"} clinics this week.
+          </p>
+        ) : (
+          dayGroups.map((group) => {
+            const d = parseDateInput(group.iso);
+            const isToday = group.iso === todayIso;
+            return (
+              <section key={group.iso}>
+                <div className="mb-2 flex items-baseline gap-2">
+                  <h3 className="text-[15px] font-semibold tracking-tight text-[#1a1a1a]">
+                    {DAY_LABELS[group.dayIndex]} · {d.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                  </h3>
+                  {isToday ? (
+                    <span className="text-[11px] font-medium uppercase tracking-[0.12em] text-[#3d5c34]">Today</span>
+                  ) : null}
                 </div>
-              );
-            })}
-          </div>
-          <div className="grid grid-cols-7">
-            {days.map((iso, dayIndex) => {
-              const dayOcc = occurrences.filter((o) => o.dayIndex === dayIndex);
-              const isToday = iso === todayIso;
-              return (
-                <div
-                  key={iso}
-                  className={`min-h-[12.5rem] border-r border-[#ece8e2] p-1.5 last:border-r-0 sm:min-h-[14rem] sm:p-2 ${
-                    isToday ? "bg-[#faf9f7]/60" : ""
-                  }`}
-                >
-                  {dayOcc.length === 0 ? (
-                    <p className="px-0.5 py-2 text-center text-[10px] text-[#d0cbc3] sm:text-[11px]">—</p>
-                  ) : (
-                    <ul className="space-y-1 sm:space-y-1.5">
-                      {dayOcc.map((o) => {
-                        const dayRoster = rosterByClinicDate[`${o.clinic.id}|${o.date}`] || [];
-                        const taken = dayRoster.length;
-                        const open = Math.max(0, o.clinic.capacity - taken);
-                        const mine =
-                          !!session &&
-                          dayRoster.some(
-                            (b) => b.memberNumber === session.memberNumber || b.clientEmail === session.memberEmail
-                          );
-                        return (
-                          <li key={`${o.clinic.id}-${o.date}`}>
-                            <button
-                              type="button"
-                              onClick={() => openClinic(o.clinic, o.date)}
-                              className={`w-full rounded-md border px-1.5 py-2 text-left transition sm:rounded-lg sm:px-2 sm:py-2 ${
-                                mine
-                                  ? "border-[#1a1a1a] bg-[#1a1a1a] text-white hover:bg-[#2a2a2a]"
-                                  : "border-[#e8e5df] bg-[#f7f7f5] hover:border-[#1a1a1a] hover:bg-white"
-                              }`}
-                            >
-                              <span
-                                className={`block text-[10px] font-medium tabular-nums sm:text-[11px] ${
-                                  mine ? "text-white/70" : "text-[#6b665e]"
-                                }`}
-                              >
-                                {formatHour(o.clinic.startHour)}
-                              </span>
-                              <span
-                                className={`mt-0.5 block text-[11px] font-medium leading-snug sm:text-[12px] ${
-                                  mine ? "text-white" : "text-[#1a1a1a]"
-                                }`}
-                              >
-                                {o.clinic.kind === "junior" ? "Jr · " : ""}
-                                {shortClinicName(o.clinic.name)}
-                              </span>
-                              <span
-                                className={`mt-0.5 block text-[9px] sm:mt-1 sm:text-[10px] ${
-                                  mine ? "text-white/65" : "text-[#8a8477]"
-                                }`}
-                              >
-                                {mine ? "Yours" : open > 0 ? `${open} open` : "Full"}
-                              </span>
-                            </button>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
+                <ul className="overflow-hidden rounded-2xl border border-[#e8e5df] bg-white">
+                  {group.items.map((o, idx) => {
+                    const dayRoster = rosterByClinicDate[`${o.clinic.id}|${o.date}`] || [];
+                    const taken = dayRoster.length;
+                    const open = Math.max(0, o.clinic.capacity - taken);
+                    const mine =
+                      !!session &&
+                      dayRoster.some(
+                        (b) => b.memberNumber === session.memberNumber || b.clientEmail === session.memberEmail
+                      );
+                    const priceLabel = isMember ? o.clinic.memberPrice : o.clinic.guestPrice;
+                    return (
+                      <li
+                        key={`${o.clinic.id}-${o.date}`}
+                        className={idx > 0 ? "border-t border-[#f0ede8]" : ""}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => openClinic(o.clinic, o.date)}
+                          className={`flex w-full items-center gap-3 px-4 py-3.5 text-left transition hover:bg-[#faf9f7] sm:gap-4 sm:px-5 ${
+                            mine ? "bg-[#f7f7f5]" : ""
+                          }`}
+                        >
+                          <span className="w-14 shrink-0 text-[13px] font-medium tabular-nums text-[#6b665e] sm:w-16 sm:text-[14px]">
+                            {formatHour(o.clinic.startHour)}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-[15px] font-medium leading-snug text-[#1a1a1a] sm:text-[16px]">
+                              {o.clinic.name}
+                            </span>
+                            <span className="mt-0.5 block text-[12px] text-[#8a8477] sm:text-[13px]">
+                              {o.clinic.level}
+                              {mine ? " · You’re in" : open > 0 ? ` · ${open} open` : " · Full"}
+                            </span>
+                          </span>
+                          <span className="shrink-0 text-right">
+                            <span className="block text-[14px] font-medium tabular-nums text-[#1a1a1a]">${priceLabel}</span>
+                            <span className="mt-0.5 block text-[11px] font-medium text-[#6b665e]">
+                              {mine ? "View" : open > 0 ? "Join →" : "Full"}
+                            </span>
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            );
+          })
+        )}
       </div>
 
       {sheetOpen && clinic && (
