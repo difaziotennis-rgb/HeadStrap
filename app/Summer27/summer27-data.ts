@@ -209,7 +209,7 @@ export const s27Clinics: ClinicDef[] = [
   },
   {
     id: "mon-fri-beginner",
-    name: "Weeknight Beginner",
+    name: "2.5–3.0 Clinic",
     kind: "adult",
     level: "2.5–3.0 · new players welcome",
     days: [1, 5],
@@ -237,7 +237,7 @@ export const s27Clinics: ClinicDef[] = [
   },
   {
     id: "mon-fri-int-adv",
-    name: "Weeknight Intermediate",
+    name: "3.5+ Clinic",
     kind: "adult",
     level: "3.5+ or by pro invitation",
     days: [1, 5],
