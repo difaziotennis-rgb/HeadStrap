@@ -4,7 +4,8 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useS27Session } from "../use-s27-session";
-import { canOneClick, getPaymentProfile, startMemberPayment, storageMethodFor, type S27PayMethod } from "../payments";
+import { canOneClick, getPaymentProfile, startGuestCheckout, startMemberPayment, storageMethodFor, type S27PayMethod } from "../payments";
+import { getSummer27StripeConfig } from "../stripe-config";
 import { PayChooser } from "../PayChooser";
 import { MemberPicker } from "../MemberPicker";
 import {
@@ -61,6 +62,9 @@ function Summer27BookInner() {
   const [splitMode, setSplitMode] = useState<SplitMode>("solo");
   const [partners, setPartners] = useState<S27MemberAccount[]>([]);
   const [members, setMembers] = useState<S27MemberAccount[]>([]);
+  const [guestName, setGuestName] = useState("");
+  const [guestEmail, setGuestEmail] = useState("");
+  const [stripeReady, setStripeReady] = useState(false);
   const isMember = !!session;
   const rates = getLiveCourtRates();
   const rate = isMember ? rates.member : rates.guest;
@@ -73,6 +77,7 @@ function Summer27BookInner() {
   useEffect(() => {
     setBookings(loadRecord<S27CourtBooking>(KEYS.courts));
     setMembers(loadList<S27MemberAccount>(KEYS.members));
+    getSummer27StripeConfig().then((c) => setStripeReady(c.configured));
   }, []);
 
   useEffect(() => {
@@ -150,35 +155,43 @@ function Summer27BookInner() {
   }
 
   async function bookSlot(courtId: CourtId, hour: number, method: S27PayMethod) {
-    if (!isMember || !session) {
-      setMsg("Sign in as a member to book.");
-      return;
-    }
-    if (!savedCard) {
-      setMsg("Add a card on file in My Account to book.");
-      return;
-    }
-    if (!canBook(date, courtId, hour)) {
-      setMsg("That window is no longer open.");
-      return;
-    }
-    if (splitMode !== "solo" && partners.length !== partnerSlots) {
-      setMsg(
-        splitMode === "singles"
-          ? "Pick one partner to split singles."
-          : "Pick three partners to split doubles."
-      );
-      return;
-    }
-    for (const p of partners) {
-      if (!getPaymentProfile(p.memberNumber)?.last4) {
-        setMsg(`${p.name} needs a card on file to split.`);
+    if (isMember && session) {
+      if (!savedCard && method === "saved-card") {
+        setMsg("Add a card on file in My Account to book.");
+        return;
+      }
+      if (splitMode !== "solo" && partners.length !== partnerSlots) {
+        setMsg(
+          splitMode === "singles"
+            ? "Pick one partner to split singles."
+            : "Pick three partners to split doubles."
+        );
+        return;
+      }
+      for (const p of partners) {
+        if (!getPaymentProfile(p.memberNumber)?.last4) {
+          setMsg(`${p.name} needs a card on file to split.`);
+          return;
+        }
+      }
+    } else {
+      if (!guestName.trim() || !guestEmail.trim()) {
+        setMsg("Enter your name and email to book as a guest.");
+        return;
+      }
+      if (splitMode !== "solo") {
+        setMsg("Guest bookings are for a single player. Sign in to split.");
         return;
       }
     }
 
+    if (!canBook(date, courtId, hour)) {
+      setMsg("That window is no longer open.");
+      return;
+    }
+
     const total = rate * duration;
-    const players = buildPlayers();
+    const players = isMember ? buildPlayers() : undefined;
     const hostAmount = players?.[0]?.amount ?? total;
     const id = `court-${Date.now()}`;
     const courtName = COURTS.find((c) => c.id === courtId)?.name || courtId;
@@ -189,12 +202,12 @@ function Summer27BookInner() {
       durationHours: duration,
       courtId,
       courtName,
-      clientName: session.memberName,
-      clientEmail: session.memberEmail,
-      clientPhone: session.memberPhone || "",
-      memberNumber: session.memberNumber,
+      clientName: session?.memberName || guestName.trim(),
+      clientEmail: session?.memberEmail || guestEmail.trim(),
+      clientPhone: session?.memberPhone || "",
+      memberNumber: session?.memberNumber,
       amount: total,
-      paymentStatus: "paid",
+      paymentStatus: method === "checkout" && stripeReady ? "pending" : "paid",
       paymentMethod: storageMethodFor(method),
       createdAt: new Date().toISOString(),
       players,
@@ -207,19 +220,60 @@ function Summer27BookInner() {
     }
 
     setPaying(true);
+
+    if (!isMember || method === "checkout") {
+      const guestPay = await startGuestCheckout({
+        amount: total,
+        email: booking.clientEmail,
+        name: booking.clientName,
+        description: `${courtName} · ${formatPrettyDate(date)} · ${formatHour(hour)}`,
+        successPath: "/Summer27/book",
+        bookingId: id,
+        metadata: { type: "court", courtId, date, hour: String(hour) },
+      });
+      if (guestPay.kind === "error") {
+        setPaying(false);
+        setMsg(guestPay.error);
+        return;
+      }
+      if (guestPay.kind === "checkout") {
+        saveRecord(KEYS.courts, next);
+        setBookings(next);
+        window.location.href = guestPay.url;
+        return;
+      }
+      booking.paymentStatus = "paid";
+      for (let i = 0; i < duration; i++) {
+        next[courtBookingKey(date, courtId, hour + i)] = booking;
+      }
+      saveRecord(KEYS.courts, next);
+      setBookings(next);
+      setPaying(false);
+      setPendingSlot(null);
+      setMsg(`Booked ${courtName} ${formatHour(hour)} (demo). $${total}.`);
+      return;
+    }
+
     const result = await startMemberPayment({
       method,
       amount: hostAmount,
-      email: session.memberEmail,
+      email: session!.memberEmail,
       description: `${courtName} · ${formatPrettyDate(date)} · ${formatHour(hour)}`,
       successPath: "/Summer27/book",
       bookingId: id,
       metadata: { type: "court", courtId, date, hour: String(hour) },
+      paymentProfile: savedCard,
     });
 
     if (result.kind === "error") {
       setPaying(false);
       setMsg(result.error);
+      return;
+    }
+    if (result.kind === "checkout") {
+      saveRecord(KEYS.courts, next);
+      setBookings(next);
+      window.location.href = result.url;
       return;
     }
 
@@ -239,14 +293,6 @@ function Summer27BookInner() {
   }
 
   function requestSlot(courtId: CourtId, hour: number) {
-    if (!isMember) {
-      setMsg("Sign in as a member to book.");
-      return;
-    }
-    if (!savedCard) {
-      setMsg("Add a card on file in My Account to book.");
-      return;
-    }
     setCancelTarget(null);
     setSplitMode("solo");
     setPartners([]);
@@ -415,10 +461,11 @@ function Summer27BookInner() {
         </p>
         {!isMember && (
           <div className="mt-3 rounded-xl border border-[#ead9c2] bg-[#fbf6ee] px-3 py-3 text-[13px] text-[#6b665e]">
-            Sign in with a card on file to book.{" "}
+            Guests can book and pay by card. Or{" "}
             <Link href="/Summer27/member" className="font-medium text-[#1a1a1a] underline-offset-2 hover:underline">
-              Join or sign in
-            </Link>
+              join / sign in
+            </Link>{" "}
+            to save a card.
           </div>
         )}
         {isMember && !savedCard && (
@@ -492,6 +539,25 @@ function Summer27BookInner() {
               </button>
             </div>
             <div className="px-4 py-4 space-y-4">
+              {!isMember && (
+                <div className="space-y-2">
+                  <input
+                    value={guestName}
+                    onChange={(e) => setGuestName(e.target.value)}
+                    placeholder="Your name"
+                    className="w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]"
+                  />
+                  <input
+                    value={guestEmail}
+                    onChange={(e) => setGuestEmail(e.target.value)}
+                    placeholder="Email for receipt"
+                    type="email"
+                    className="w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]"
+                  />
+                </div>
+              )}
+
+              {isMember && (
               <div>
                 <p className="mb-2 text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Who’s playing</p>
                 <div className="grid grid-cols-3 gap-1.5">
@@ -520,8 +586,9 @@ function Summer27BookInner() {
                   ))}
                 </div>
               </div>
+              )}
 
-              {splitMode !== "solo" && session && (
+              {isMember && splitMode !== "solo" && session && (
                 <div>
                   <p className="mb-2 text-[12px] text-[#6b665e]">
                     {splitMode === "singles"
@@ -547,8 +614,10 @@ function Summer27BookInner() {
                 }
                 savedCard={savedCard}
                 paying={paying}
-                disabled={splitMode !== "solo" && partners.length !== partnerSlots}
+                disabled={isMember && splitMode !== "solo" && partners.length !== partnerSlots}
                 primaryLabel={splitMode === "solo" ? "Confirm" : "Confirm split"}
+                allowGuestCheckout={!savedCard}
+                stripeReady={stripeReady}
                 onPay={(method) => bookSlot(pendingSlot.courtId, pendingSlot.hour, method)}
               />
               {splitMode !== "solo" && partners.length === partnerSlots && (

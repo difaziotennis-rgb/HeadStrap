@@ -56,6 +56,10 @@ const TABS: { id: Tab; label: string }[] = [
 ];
 
 export default function Summer27DirectorPage() {
+  const [authed, setAuthed] = useState(false);
+  const [authChecking, setAuthChecking] = useState(true);
+  const [adminPassword, setAdminPassword] = useState("");
+  const [authError, setAuthError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("today");
   const [flash, setFlash] = useState<string | null>(null);
   const [selectedMember, setSelectedMember] = useState<string | null>(null);
@@ -97,9 +101,29 @@ export default function Summer27DirectorPage() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    sessionStorage.setItem("s27_admin", "1");
-    reload();
+    const ok = sessionStorage.getItem("s27_admin") === "1";
+    setAuthed(ok);
+    setAuthChecking(false);
+    if (ok) reload();
   }, []);
+
+  async function unlockAdmin(e: React.FormEvent) {
+    e.preventDefault();
+    setAuthError(null);
+    const res = await fetch("/api/summer27/admin-auth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: adminPassword }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) {
+      setAuthError(data.error || "Incorrect password.");
+      return;
+    }
+    sessionStorage.setItem("s27_admin", "1");
+    setAuthed(true);
+    reload();
+  }
 
   function ping(message: string) {
     setFlash(message);
@@ -195,6 +219,40 @@ export default function Summer27DirectorPage() {
   }
 
   const today = formatDateInput(new Date());
+
+  if (authChecking) {
+    return <main className="mx-auto max-w-md px-4 py-16 text-[13px] text-[#8a8477]">Loading desk…</main>;
+  }
+
+  if (!authed) {
+    return (
+      <main className="mx-auto max-w-md px-4 py-16">
+        <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Director desk</p>
+        <h2 className="mt-1 text-2xl font-semibold tracking-tight">Sign in</h2>
+        <p className="mt-2 text-[13px] text-[#6b665e]">
+          Set <code className="text-[12px]">S27_ADMIN_PASSWORD</code> in Vercel for production. Until then, demo passwords{" "}
+          <code className="text-[12px]">admin</code> / <code className="text-[12px]">admin123</code> work.
+        </p>
+        <form onSubmit={unlockAdmin} className="mt-5 space-y-3 rounded-2xl border border-[#e8e5df] bg-white p-5">
+          <input
+            type="password"
+            value={adminPassword}
+            onChange={(e) => setAdminPassword(e.target.value)}
+            placeholder="Password"
+            className="w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]"
+            autoComplete="current-password"
+          />
+          {authError && <p className="text-[13px] text-[#991b1b]">{authError}</p>}
+          <button type="submit" className="w-full rounded-xl bg-[#1a1a1a] py-3 text-[13px] font-medium text-white">
+            Unlock
+          </button>
+        </form>
+        <Link href="/Summer27" className="mt-4 inline-block text-[12px] text-[#8a8477] hover:text-[#1a1a1a]">
+          ← Back to site
+        </Link>
+      </main>
+    );
+  }
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6">

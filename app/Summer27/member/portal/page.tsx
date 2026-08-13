@@ -5,6 +5,7 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useS27Session } from "../../use-s27-session";
 import { getPaymentProfile } from "../../payments";
+import { SaveCardForm } from "../../SaveCardForm";
 import { patchS27Session, type S27MemberSession } from "../../member-session";
 import MemberBookings from "../MemberBookings";
 import {
@@ -64,7 +65,6 @@ function PortalInner() {
   const [payment, setPayment] = useState<S27PaymentProfile | null>(null);
   const [brand, setBrand] = useState<S27PaymentProfile["brand"]>("Visa");
   const [last4, setLast4] = useState("");
-  const [oneClick] = useState(true);
   const [msg, setMsg] = useState<string | null>(null);
 
   const [profile, setProfile] = useState({ name: "", email: "", phone: "", password: "", confirm: "" });
@@ -240,24 +240,13 @@ function PortalInner() {
     saveChildren(next);
   }
 
-  function saveCard(e: React.FormEvent) {
-    e.preventDefault();
-    if (!session || last4.trim().length !== 4) {
-      ping("Enter the last 4 digits of your card.");
-      return;
-    }
+  function persistCard(next: S27PaymentProfile) {
+    if (!session) return;
     const all = loadList<S27PaymentProfile>(KEYS.payment).filter((p) => p.memberNumber !== session.memberNumber);
-    const next: S27PaymentProfile = {
-      memberNumber: session.memberNumber,
-      brand,
-      last4: last4.trim(),
-      expMonth: payment?.expMonth || "",
-      expYear: payment?.expYear || "",
-      billingZip: payment?.billingZip || "",
-      oneClick,
-    };
     saveList(KEYS.payment, [...all, next]);
     setPayment(next);
+    setBrand(next.brand);
+    setLast4(next.last4);
     ping("Card saved.");
   }
 
@@ -516,30 +505,34 @@ function PortalInner() {
           {payment ? (
             <p className="mt-2 text-[13px] text-[#4a4a4a]">
               {payment.brand} •••• {payment.last4}
+              {payment.stripePaymentMethodId ? " · ready for live charges" : " · demo card"}
             </p>
           ) : (
             <p className="mt-2 text-[13px] text-[#8a8477]">
               No card on file yet. Add one to book courts, lessons, clinics, and events.
             </p>
           )}
-          <form onSubmit={saveCard} className="mt-3 space-y-2">
-            <select
-              value={brand}
-              onChange={(e) => setBrand(e.target.value as S27PaymentProfile["brand"])}
-              className="w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]"
-            >
-              <option>Visa</option>
-              <option>Mastercard</option>
-              <option>Amex</option>
-            </select>
-            <input
-              value={last4}
-              onChange={(e) => setLast4(e.target.value.replace(/\D/g, "").slice(0, 4))}
-              placeholder="Last 4"
-              className="w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]"
+          <div className="mt-3">
+            <SaveCardForm
+              email={session.memberEmail}
+              name={session.memberName}
+              memberNumber={session.memberNumber}
+              existingCustomerId={payment?.stripeCustomerId}
+              onSaved={(saved) => {
+                persistCard({
+                  memberNumber: session.memberNumber,
+                  brand: saved.brand,
+                  last4: saved.last4,
+                  expMonth: saved.expMonth,
+                  expYear: saved.expYear,
+                  billingZip: payment?.billingZip || "",
+                  oneClick: true,
+                  stripeCustomerId: saved.customerId || undefined,
+                  stripePaymentMethodId: saved.paymentMethodId || undefined,
+                });
+              }}
             />
-              <button className="w-full rounded-xl bg-[#1a1a1a] py-3 text-[13px] font-medium text-white">Save card</button>
-          </form>
+          </div>
         </section>
       )}
     </main>

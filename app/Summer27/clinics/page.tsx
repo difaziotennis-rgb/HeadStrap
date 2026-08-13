@@ -4,7 +4,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useS27Session } from "../use-s27-session";
-import { canOneClick, startMemberPayment, storageMethodFor, type S27PayMethod } from "../payments";
+import { canOneClick, startGuestCheckout, startMemberPayment, storageMethodFor, type S27PayMethod } from "../payments";
 import { PayChooser } from "../PayChooser";
 import {
   clinicTimeLabel,
@@ -299,14 +299,6 @@ function Summer27ClinicsInner() {
 
   async function signUp(method: S27PayMethod) {
     if (!clinic) return;
-    if (!isMember || !session) {
-      setMsg("Sign in as a member to book.");
-      return;
-    }
-    if (!savedCard) {
-      setMsg("Add a card on file in My Account to book.");
-      return;
-    }
     if (seatsLeft <= 0) {
       setMsg("This session is full.");
       return;
@@ -316,12 +308,35 @@ function Summer27ClinicsInner() {
       return;
     }
 
-    const clientName = isJunior
-      ? childName.trim() || `${session.memberName}'s junior`
-      : session.memberName;
-    if (isJunior && !clientName.trim()) {
-      setMsg("Please add the junior’s name.");
-      return;
+    let clientName = "";
+    let clientEmail = "";
+    let memberNumber: string | undefined;
+
+    if (isMember && session) {
+      if (!savedCard && method === "saved-card") {
+        setMsg("Add a card on file in My Account to book.");
+        return;
+      }
+      clientName = isJunior
+        ? childName.trim() || `${session.memberName}'s junior`
+        : session.memberName;
+      clientEmail = session.memberEmail;
+      memberNumber = session.memberNumber;
+      if (isJunior && !childName.trim() && !clientName.trim()) {
+        setMsg("Please add the junior’s name.");
+        return;
+      }
+    } else {
+      if (isJunior) {
+        setMsg("Sign in as a member to enroll a junior.");
+        return;
+      }
+      if (!guestName.trim() || !guestEmail.trim()) {
+        setMsg("Enter your name and email to join as a guest.");
+        return;
+      }
+      clientName = guestName.trim();
+      clientEmail = guestEmail.trim();
     }
 
     const id = `${isJunior ? "junior" : "clinic"}-${Date.now()}`;
@@ -331,22 +346,55 @@ function Summer27ClinicsInner() {
       clinicName: clinic.name,
       date,
       clientName,
-      clientEmail: session.memberEmail,
-      memberNumber: session.memberNumber,
+      clientEmail,
+      memberNumber,
       amount: price,
-      paymentStatus: "paid",
+      paymentStatus: method === "checkout" ? "pending" : "paid",
       paymentMethod: storageMethodFor(method),
       createdAt: new Date().toISOString(),
     };
 
     setPaying(true);
+
+    if (!isMember || method === "checkout") {
+      const guestPay = await startGuestCheckout({
+        amount: price,
+        email: clientEmail,
+        name: clientName,
+        description: `${clinic.name} · ${date}`,
+        successPath: "/Summer27/clinics",
+        bookingId: id,
+        metadata: { type: "clinic", clinicId: clinic.id, date },
+      });
+      if (guestPay.kind === "error") {
+        setPaying(false);
+        setMsg(guestPay.error);
+        return;
+      }
+      const nextPending = [...bookings, booking];
+      if (guestPay.kind === "checkout") {
+        saveList(KEYS.clinics, nextPending);
+        setBookings(nextPending);
+        window.location.href = guestPay.url;
+        return;
+      }
+      booking.paymentStatus = "paid";
+      const next = [...bookings, booking];
+      saveList(KEYS.clinics, next);
+      setBookings(next);
+      setPaying(false);
+      setMsg(`You’re in (demo). $${price}.`);
+      return;
+    }
+
     const result = await startMemberPayment({
       method,
       amount: price,
-      email: session.memberEmail,
+      email: clientEmail,
       description: isJunior ? `${clinic.name} · ${clientName} · ${date}` : `${clinic.name} · ${date}`,
       successPath: "/Summer27/clinics",
       bookingId: id,
+      paymentProfile: savedCard,
       metadata: { type: isJunior ? "junior" : "clinic", clinicId: clinic.id, date },
     });
 
@@ -355,7 +403,12 @@ function Summer27ClinicsInner() {
       setMsg(result.error);
       return;
     }
+    if (result.kind === "checkout") {
+      window.location.href = result.url;
+      return;
+    }
 
+    booking.paymentStatus = "paid";
     const next = [...bookings, booking];
     saveList(KEYS.clinics, next);
     setBookings(next);
@@ -680,6 +733,7 @@ function Summer27ClinicsInner() {
                     savedCard={savedCard}
                     paying={paying}
                     primaryLabel={isJunior ? "Enroll" : "Join"}
+                    allowGuestCheckout={!isJunior && !savedCard}
                     onPay={signUp}
                   />
                 )}

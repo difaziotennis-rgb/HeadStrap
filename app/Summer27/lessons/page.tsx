@@ -191,12 +191,17 @@ function Summer27LessonsInner() {
       description: `Private lesson · ${pro.name} · ${formatPrettyDate(date)} ${formatHour(hour)}`,
       successPath: `/Summer27/lessons?pro=${encodeURIComponent(pro.id)}`,
       bookingId: id,
+      paymentProfile: savedCard,
       metadata: { type: "lesson", proId: pro.id, date, hour: String(hour) },
     });
 
     if (result.kind === "error") {
       setPaying(false);
       setMsg(result.error);
+      return;
+    }
+    if (result.kind === "checkout") {
+      window.location.href = result.url;
       return;
     }
 

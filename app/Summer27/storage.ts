@@ -55,6 +55,11 @@ export type S27PaymentProfile = {
   expYear: string;
   billingZip: string;
   oneClick: boolean;
+  /** Set when Stripe is live */
+  stripeCustomerId?: string;
+  stripePaymentMethodId?: string;
+  /** Last successful PaymentIntent — used for refunds on cancel */
+  lastPaymentIntentId?: string;
 };
 
 export type S27CourtBooking = {

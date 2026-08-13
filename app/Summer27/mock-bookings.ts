@@ -518,6 +518,9 @@ function seedStringing(): S27StringingOrder[] {
 
 export function seedMockBookings() {
   if (typeof window === "undefined") return;
+  // Production flag — set NEXT_PUBLIC_S27_LIVE=1 in Vercel when you go live.
+  if (process.env.NEXT_PUBLIC_S27_LIVE === "1") return;
+  if (localStorage.getItem("s27_disable_mocks") === "1") return;
   if (localStorage.getItem(MOCK_FLAG) === "1") return;
 
   try {

@@ -112,12 +112,17 @@ function Summer27StringingInner() {
       description: `Stringing · ${option.name} · ${racket}`,
       successPath: "/Summer27/stringing",
       bookingId: id,
+      paymentProfile: savedCard,
       metadata: { type: "stringing" },
     });
 
     if (result.kind === "error") {
       setPaying(false);
       setMsg(result.error);
+      return;
+    }
+    if (result.kind === "checkout") {
+      window.location.href = result.url;
       return;
     }
 

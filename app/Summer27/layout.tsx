@@ -5,13 +5,27 @@ import { usePathname } from "next/navigation";
 import MemberAuth from "./MemberAuth";
 import { seedMockBookings } from "./mock-bookings";
 import { s27Nav, S27_INSTAGRAM_HANDLE, S27_INSTAGRAM_URL } from "./summer27-data";
+import { getSummer27StripeConfig } from "./stripe-config";
 import { useS27Session } from "./use-s27-session";
+import { useEffect } from "react";
 
 export default function Summer27Layout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const session = useS27Session();
   const isAdmin = pathname === "/Summer27/admin" || pathname?.startsWith("/Summer27/admin/");
   const nav = s27Nav.filter((item) => !item.memberOnly || session);
+
+  useEffect(() => {
+    getSummer27StripeConfig().then((cfg) => {
+      if (cfg.configured) {
+        try {
+          localStorage.setItem("s27_disable_mocks", "1");
+        } catch {
+          // ignore
+        }
+      }
+    });
+  }, []);
 
   // Seed before child pages read localStorage (effects run child→parent).
   if (typeof window !== "undefined") {

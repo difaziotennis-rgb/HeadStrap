@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { useS27Session } from "../../use-s27-session";
-import { canOneClick, startMemberPayment, storageMethodFor, type S27PayMethod } from "../../payments";
+import { canOneClick, startGuestCheckout, startMemberPayment, storageMethodFor, type S27PayMethod } from "../../payments";
 import { PayChooser } from "../../PayChooser";
 import { eventDateRangeLabel, parseDateInput, s27Events, type EventDef } from "../../summer27-data";
 import { getLiveEvents } from "../../schedule";
@@ -102,12 +102,17 @@ function Summer27EventDetailInner() {
       description: `${event.title} · ${guestCount} player(s)`,
       successPath: `/Summer27/events/${event.id}`,
       bookingId: id,
+      paymentProfile: savedCard,
       metadata: { type: "event", eventId: event.id },
     });
 
     if (result.kind === "error") {
       setPaying(false);
       setMsg(result.error);
+      return;
+    }
+    if (result.kind === "checkout") {
+      window.location.href = result.url;
       return;
     }
 
