@@ -841,11 +841,7 @@ function Summer27ClinicsInner() {
                       className="w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]"
                     />
                   ))}
-                {addSecond && !extraName.trim() ? (
-                  <p className="text-[12px] text-[#8a8477]">
-                    {isJunior ? "Name the sibling to charge the second spot." : "Name the guest to charge the second spot."}
-                  </p>
-                ) : extraSameAsFirst ? (
+                {extraSameAsFirst ? (
                   <p className="text-[12px] text-[#991b1b]">Use a different name for the second spot.</p>
                 ) : extraAlreadyIn ? (
                   <p className="text-[12px] text-[#991b1b]">
