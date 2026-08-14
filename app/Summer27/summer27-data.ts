@@ -195,7 +195,7 @@ export const s27Clinics: ClinicDef[] = [
   },
   {
     id: "tue-am-beginner-fundamentals",
-    name: "Beginner Fundamentals Group",
+    name: "Tennis 101",
     kind: "adult",
     level: "2.5–3.0 · new players welcome",
     days: [2],
