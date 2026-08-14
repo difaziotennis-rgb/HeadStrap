@@ -2,7 +2,6 @@ import {
   BOOKING_HOURS,
   COURTS,
   COURT_RATES,
-  LESSON_RATES,
   STRING_OPTIONS,
   STRINGING_LABOR,
   clinicTimeLabel,
@@ -10,11 +9,16 @@ import {
   formatDateInput,
   formatHour,
   formatPrettyDate,
+  lessonRateForPro,
   parseDateInput,
+  proHoursOnDate,
+  proScheduleLabel,
+  proUsesLessonRequests,
   type ClinicDef,
   type CourtId,
+  type ProDef,
 } from "./summer27-data";
-import { getLiveClinics, getLiveCourtRates, getLiveEvents, getLiveLessonRates, getLiveStringingLabor, getProgramBlock } from "./schedule";
+import { getLiveClinics, getLiveCourtRates, getLiveEvents, getLivePros, getLiveStringingLabor, getProgramBlock } from "./schedule";
 import { canChangeBooking, CANCEL_WINDOW_HOURS } from "./booking-policy";
 import {
   KEYS,
@@ -111,6 +115,41 @@ function nextClinicDates(clinic: ClinicDef, from: Date, count = 2): string[] {
   return out;
 }
 
+function firstName(pro: ProDef) {
+  return (pro.name.split(" ")[0] || pro.name).trim();
+}
+
+function namedPros(pros: ProDef[], hint: string | null): ProDef[] {
+  if (!hint) return [];
+  const h = hint.toLowerCase();
+  return pros.filter((p) => {
+    const first = firstName(p).toLowerCase();
+    const last = p.name.split(" ").slice(1).join(" ").toLowerCase();
+    return h === p.id || h.includes(p.id) || h.includes(first) || (last.length > 2 && h.includes(last));
+  });
+}
+
+function proTeaches(pro: ProDef, date: string | null, hour: number | null) {
+  if (proUsesLessonRequests(pro)) return false;
+  if (!date) return true;
+  const hours = proHoursOnDate(pro, date);
+  if (!hours.length) return false;
+  if (hour == null) return true;
+  return hours.includes(Math.floor(hour));
+}
+
+function lessonLinks(pros: ProDef[], date: string, hour: number | null) {
+  return pros.map((p) => {
+    const qs = new URLSearchParams({ pro: p.id, date });
+    if (hour != null) qs.set("hour", String(Math.floor(hour)));
+    const request = proUsesLessonRequests(p);
+    return {
+      href: `/Summer27/lessons?${qs.toString()}`,
+      label: request ? `Request ${firstName(p)}` : `Book ${firstName(p)}`,
+    };
+  });
+}
+
 function needSignIn(spoken: string): VoiceResult {
   return {
     spoken,
@@ -186,7 +225,6 @@ export function resolveVoice(intent: VoiceIntent, session: S27MemberSession | nu
 
   if (intent.intent === "prices") {
     const court = getLiveCourtRates();
-    const lesson = getLiveLessonRates();
     const labor = getLiveStringingLabor();
     const topic = intent.priceTopic || "all";
     const lines: string[] = [];
@@ -197,7 +235,9 @@ export function resolveVoice(intent: VoiceIntent, session: S27MemberSession | nu
       lines.push("Clinics $35 half hour · $55 one hour · $80 for 90 minutes (members). Guests a bit more.");
     }
     if (topic === "all" || topic === "lesson") {
-      lines.push(`Lessons with Derek $${lesson.member || LESSON_RATES.member} members · $${lesson.guest || LESSON_RATES.guest} guests.`);
+      const pros = getLivePros();
+      const bits = pros.map((p) => `${p.name.split(" ")[0]} $${lessonRateForPro(p, true)}`);
+      lines.push(`Lessons ${bits.join(" · ")} members. Guests a bit more. Derek is by request; Maya and Jonah have open calendars.`);
     }
     if (topic === "all" || topic === "stringing") {
       lines.push(`Stringing $${labor || STRINGING_LABOR} labor plus string (poly +$${STRING_OPTIONS.find((s) => s.id === "poly")?.extra || 32}).`);
@@ -461,15 +501,31 @@ export function resolveVoice(intent: VoiceIntent, session: S27MemberSession | nu
   if (intent.intent === "check_lesson" || intent.intent === "request_lesson") {
     const date = intent.date || today;
     const hour = intent.hour;
-    const qs = new URLSearchParams({ pro: "derek", date });
-    if (hour != null) qs.set("hour", String(hour));
+    const all = getLivePros();
+    const named = namedPros(all, intent.proHint);
+    const juniorAsk = !!(intent.childName || /\bjunior/.test((intent.proHint || "").toLowerCase()));
+    let picks = named;
+    if (!picks.length && juniorAsk) {
+      picks = all.filter((p) => /junior/.test(`${p.focus} ${p.title}`.toLowerCase()));
+    }
+    if (!picks.length) {
+      const onCalendar = all.filter((p) => proTeaches(p, date, hour));
+      picks = onCalendar.length ? onCalendar : all;
+    }
+    const lines = picks.map((p) => {
+      const request = proUsesLessonRequests(p);
+      const when = request ? "by request" : proScheduleLabel(p);
+      return `${p.name} · $${lessonRateForPro(p, !!session)}/hr · ${when}`;
+    });
+    const pretty = formatPrettyDate(date);
+    const timeBit = hour != null ? ` at ${formatHour(hour)}` : "";
     return {
       spoken:
-        hour != null
-          ? `I can request Derek at ${formatHour(hour)} on ${formatPrettyDate(date)}. He confirms preferred times.`
-          : `Open Derek’s lesson page for ${formatPrettyDate(date)}.`,
-      detail: "Derek books by request — you’ll pick the time and he’ll confirm.",
-      links: [{ href: `/Summer27/lessons?${qs.toString()}`, label: "Request a lesson" }],
+        picks.length === 1
+          ? `${firstName(picks[0])}${timeBit} on ${pretty}. Confirm on the next screen.`
+          : `${picks.map((p) => firstName(p)).join(", ")} take lessons${timeBit ? timeBit : ""} on ${pretty}.`,
+      detail: lines.join("\n"),
+      links: [...lessonLinks(picks, date, hour), { href: "/Summer27/lessons", label: "All pros" }],
     };
   }
 

@@ -28,6 +28,7 @@ export type VoiceIntent = {
   clinicHint: string | null;
   courtId: "court-1" | "court-2" | null;
   childName: string | null;
+  proHint: string | null;
   eventHint: string | null;
   stringHint: string | null;
   tension: string | null;
@@ -226,6 +227,14 @@ function parseStringHint(text: string): string | null {
   return null;
 }
 
+function parseProHint(text: string): string | null {
+  const t = text.toLowerCase();
+  if (/\bderek\b/.test(t)) return "derek";
+  if (/\bmaya\b/.test(t)) return "maya-ellison";
+  if (/\bjonah\b/.test(t)) return "jonah-berkowitz";
+  return null;
+}
+
 function parsePriceTopic(text: string): string | null {
   const t = text.toLowerCase();
   if (/\blesson/.test(t)) return "lesson";
@@ -247,6 +256,7 @@ function emptyIntent(partial: Partial<VoiceIntent>): VoiceIntent {
     clinicHint: partial.clinicHint ?? null,
     courtId: partial.courtId ?? null,
     childName: partial.childName ?? null,
+    proHint: partial.proHint ?? null,
     eventHint: partial.eventHint ?? null,
     stringHint: partial.stringHint ?? null,
     tension: partial.tension ?? null,
@@ -276,6 +286,7 @@ export function parseVoiceFallback(transcript: string, now = new Date()): VoiceI
   if (/\bcourt\s*3\b/.test(t)) courtId = "court-1";
   if (/\bcourt\s*4\b/.test(t)) courtId = "court-2";
   const childName = parseChildName(transcript);
+  const proHint = parseProHint(transcript);
   const clinicTalk = /\b(clinic|class|cardio|tennis 101|point play|juniors?|tots|toddlers)\b/.test(t);
   const book = /\b(book|reserve|sign(?:\s*me)?[\s-]?up|enroll|join|put|register)\b/.test(t);
 
@@ -300,12 +311,14 @@ export function parseVoiceFallback(transcript: string, now = new Date()): VoiceI
       tension: parseTension(t),
     });
   }
-  if (/\b(lesson|derek)\b/.test(t) && !clinicTalk) {
+  if (/\b(lesson|derek|maya|jonah)\b/.test(t) && !clinicTalk) {
     return emptyIntent({
       intent: book || /\brequest\b/.test(t) ? "request_lesson" : "check_lesson",
       date: date || isoDate(now),
       hour,
       timeOfDay,
+      proHint,
+      childName,
     });
   }
   if (/\b(event|tournament|championship|105|wimbledon|social)\b/.test(t)) {
@@ -349,6 +362,7 @@ export function mergeIntent(parsed: Partial<VoiceIntent>, fallback: VoiceIntent)
     clinicHint: parsed.clinicHint || fallback.clinicHint,
     courtId: fallback.courtId ?? parsed.courtId ?? null,
     childName: fallback.childName ?? parsed.childName ?? null,
+    proHint: fallback.proHint ?? (parsed.proHint && parsed.proHint !== "derek" ? parsed.proHint : null),
     eventHint: parsed.eventHint || fallback.eventHint,
     stringHint: parsed.stringHint || fallback.stringHint,
     tension: parsed.tension || fallback.tension,

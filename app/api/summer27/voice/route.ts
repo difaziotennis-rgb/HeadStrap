@@ -34,6 +34,7 @@ Return ONLY JSON:
   "clinicHint": string|null,
   "courtId": "court-1"|"court-2"|null,
   "childName": string|null,
+  "proHint": "derek"|"maya-ellison"|"jonah-berkowitz"|null,
   "eventHint": string|null,
   "stringHint": "poly"|"gut"|"hybrid"|"synthetic"|"multifilament"|null,
   "tension": "52"|null,
@@ -44,6 +45,8 @@ Rules:
 - Saturday/Sunday morning clinics: 8am cardio, 9am point play. "sign up for 9am Sat clinic" → book_clinic, hour 9 (NOT 8), date next Saturday.
 - If they name a clock time, set hour to that time in 24h (9am=9, 9pm=21) and do not pick a different clinic.
 - "move my court at 4 to 5" → move, hour 16, hourTo 17.
+- Pros: Derek DiFazio (id derek, by request), Maya Ellison (maya-ellison), Jonah Berkowitz (jonah-berkowitz). Never default proHint to derek.
+- "lesson with Maya" → request_lesson, proHint maya-ellison. "I want a lesson" → check_lesson, proHint null.
 - "put Emma in Tuesday juniors" → book_clinic, childName Emma, clinicHint juniors, date next Tuesday.
 - "is my racket ready" → check_stringing. "poly at 52" → order_stringing.
 - "how much is a guest court" → prices, priceTopic court.
