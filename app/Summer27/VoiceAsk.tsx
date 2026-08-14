@@ -7,15 +7,20 @@ import { useS27Session } from "./use-s27-session";
 import { mergeIntent, parseVoiceFallback, type VoiceIntent } from "./voice-intent";
 import { applyVoiceCancel, resolveVoice, type VoiceResult } from "./voice-resolve";
 
+type SpeechRecResult = { isFinal: boolean; 0?: { transcript: string } };
+type SpeechRecEvent = { results: ArrayLike<SpeechRecResult> };
+type SpeechRecError = { error?: string };
+
 type SpeechRec = {
   lang: string;
   interimResults: boolean;
   continuous: boolean;
-  onresult: ((ev: { results: { [i: number]: { [j: number]: { transcript: string } } } }) => void) | null;
-  onerror: (() => void) | null;
+  onresult: ((ev: SpeechRecEvent) => void) | null;
+  onerror: ((ev: SpeechRecError) => void) | null;
   onend: (() => void) | null;
   start: () => void;
   stop: () => void;
+  abort: () => void;
 };
 
 function speechSupported() {
@@ -30,17 +35,21 @@ function makeRecognizer(): SpeechRec | null {
   if (!Ctor) return null;
   const rec = new Ctor();
   rec.lang = "en-US";
-  rec.interimResults = false;
-  rec.continuous = false;
+  rec.interimResults = true;
+  rec.continuous = true;
   return rec;
 }
 
-function speak(text: string) {
-  if (typeof window === "undefined" || !window.speechSynthesis) return;
-  window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.rate = 1.02;
-  window.speechSynthesis.speak(u);
+function transcriptFrom(ev: SpeechRecEvent) {
+  let finalText = "";
+  let interim = "";
+  for (let i = 0; i < ev.results.length; i++) {
+    const row = ev.results[i];
+    const t = row?.[0]?.transcript || "";
+    if (row.isFinal) finalText += t;
+    else interim += t;
+  }
+  return { finalText: finalText.trim(), heard: (finalText || interim).trim() };
 }
 
 export default function VoiceAsk() {
@@ -52,13 +61,32 @@ export default function VoiceAsk() {
   const [result, setResult] = useState<VoiceResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const recRef = useRef<SpeechRec | null>(null);
+  const listeningRef = useRef(false);
+  const heardRef = useRef("");
   const canTalk = speechSupported();
 
+  function killRec() {
+    listeningRef.current = false;
+    const rec = recRef.current;
+    recRef.current = null;
+    if (!rec) return;
+    rec.onresult = null;
+    rec.onerror = null;
+    rec.onend = null;
+    try {
+      rec.abort();
+    } catch {
+      try {
+        rec.stop();
+      } catch {
+        // already stopped
+      }
+    }
+  }
+
   useEffect(() => {
-    return () => {
-      recRef.current?.stop();
-      if (typeof window !== "undefined") window.speechSynthesis?.cancel();
-    };
+    return () => killRec();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function runTranscript(text: string) {
@@ -92,14 +120,12 @@ export default function VoiceAsk() {
     const next = resolveVoice(intent, session);
     setResult(next);
     setPhase("done");
-    speak(next.spoken);
   }
 
   function confirmCancel() {
     if (!result?.cancel) return;
     const next = applyVoiceCancel(result.cancel);
     setResult(next);
-    speak(next.spoken);
   }
 
   function startListen() {
@@ -107,42 +133,71 @@ export default function VoiceAsk() {
     setResult(null);
     setError(null);
     setTranscript("");
-    if (typeof window !== "undefined") window.speechSynthesis?.cancel();
-    if (phase === "listen") {
-      recRef.current?.stop();
-      setPhase("idle");
+    heardRef.current = "";
+    if (phase === "listen" || listeningRef.current) {
+      const leftover = heardRef.current;
+      killRec();
+      if (leftover) void runTranscript(leftover);
+      else setPhase("idle");
       return;
     }
+    killRec();
     const rec = makeRecognizer();
     if (!rec) {
       setPhase("idle");
+      setError("This browser can’t use the mic — type it below.");
       return;
     }
     recRef.current = rec;
+    listeningRef.current = true;
     rec.onresult = (ev) => {
-      const text = ev.results[0]?.[0]?.transcript || "";
-      rec.stop();
-      void runTranscript(text);
+      const { finalText, heard } = transcriptFrom(ev);
+      heardRef.current = heard;
+      setTranscript(heard);
+      if (finalText) {
+        listeningRef.current = false;
+        rec.onend = null;
+        try {
+          rec.stop();
+        } catch {
+          // already ending
+        }
+        recRef.current = null;
+        void runTranscript(finalText);
+      }
     };
-    rec.onerror = () => {
+    rec.onerror = (ev) => {
+      const code = ev.error || "";
+      if (code === "aborted") return;
+      if (!listeningRef.current) return;
+      listeningRef.current = false;
       setPhase("idle");
-      setError("Mic didn’t work — type it below.");
+      if (code === "no-speech") setError("I didn’t catch that — tap Ask and try again.");
+      else if (code === "not-allowed") setError("Allow the microphone, then tap Ask again.");
+      else if (code === "audio-capture") setError("No microphone found.");
+      else setError("Mic didn’t work — type it below.");
     };
     rec.onend = () => {
-      setPhase((p) => (p === "listen" ? "idle" : p));
+      if (!listeningRef.current) return;
+      listeningRef.current = false;
+      recRef.current = null;
+      const leftover = heardRef.current;
+      if (leftover) void runTranscript(leftover);
+      else setPhase((p) => (p === "listen" ? "idle" : p));
     };
     try {
       rec.start();
       setPhase("listen");
     } catch {
+      listeningRef.current = false;
+      recRef.current = null;
       setPhase("idle");
       setError("Mic didn’t start — type it below.");
     }
   }
 
   function close() {
-    recRef.current?.stop();
-    if (typeof window !== "undefined") window.speechSynthesis?.cancel();
+    killRec();
     setOpen(false);
     setPhase("idle");
   }
@@ -183,7 +238,8 @@ export default function VoiceAsk() {
             </div>
             <div className="space-y-3 px-4 py-4">
               <p className="text-[13px] leading-relaxed text-[#6b665e]">
-                Courts, clinics, your day, cancel, lessons, stringing, events, play, prices — or “put Emma in Tuesday juniors.”
+                Courts, clinics, your day, cancel, lessons, stringing, events, play, prices — or “put Emma in Tuesday
+                juniors.”
               </p>
               {canTalk && (
                 <button
