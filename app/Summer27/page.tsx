@@ -54,7 +54,6 @@ export default function Summer27Home() {
           </h2>
           <p className="mt-3 max-w-xl text-[14px] leading-relaxed text-white/90 sm:text-[15px]">
             Private lessons, weekly clinics, court time, and a handful of social events — Hudson Valley Tennis.
-            Between sessions, the pro shop lounge is where players sit, restring, and see who’s around.
           </p>
           <div className="mt-5 flex flex-wrap gap-2">
             <Link
