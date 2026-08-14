@@ -2,24 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { formatPrettyDate } from "../summer27-data";
-import { refundStripePayment } from "../payments";
 import type { S27AdminBlock } from "../schedule";
-import type {
-  S27Charge,
-  S27ClinicBooking,
-  S27CourtBooking,
-  S27LessonBooking,
-} from "../storage";
-
-type Affected = {
-  email: string;
-  name: string;
-  kind: string;
-  label: string;
-  amount: number;
-  paymentIntentId?: string;
-  bookingId: string;
-};
+import type { S27Charge, S27ClinicBooking, S27CourtBooking, S27LessonBooking } from "../storage";
+import { applyWeatherClose, weatherAffectedRows, weatherAlreadyClosed, type WeatherCloseResult } from "../weather-close";
 
 type Props = {
   date: string;
@@ -27,34 +12,10 @@ type Props = {
   clinics: S27ClinicBooking[];
   lessons: S27LessonBooking[];
   blocks: S27AdminBlock[];
-  onApply: (result: {
-    courts: S27CourtBooking[];
-    clinics: S27ClinicBooking[];
-    lessons: S27LessonBooking[];
-    blocks: S27AdminBlock[];
-    charges: S27Charge[];
-    emailed: number;
-    refunded: number;
-  }) => void;
+  onApply: (result: WeatherCloseResult) => void;
 };
 
-function uniqueCourts(list: S27CourtBooking[]) {
-  const seen = new Set<string>();
-  return list.filter((b) => {
-    if (seen.has(b.id)) return false;
-    seen.add(b.id);
-    return true;
-  });
-}
-
-export default function WeatherClosePanel({
-  date,
-  courts,
-  clinics,
-  lessons,
-  blocks,
-  onApply,
-}: Props) {
+export default function WeatherClosePanel({ date, courts, clinics, lessons, blocks, onApply }: Props) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [includeCourts, setIncludeCourts] = useState(true);
@@ -63,72 +24,15 @@ export default function WeatherClosePanel({
   const [sendEmail, setSendEmail] = useState(true);
   const [msg, setMsg] = useState<string | null>(null);
 
-  const dayCourts = useMemo(
-    () => uniqueCourts(courts.filter((b) => b.date === date && b.paymentStatus === "paid")),
-    [courts, date]
-  );
-  const dayClinics = useMemo(
-    () => clinics.filter((b) => b.date === date && b.paymentStatus === "paid"),
-    [clinics, date]
-  );
-  const dayLessons = useMemo(
-    () =>
-      lessons.filter(
-        (b) =>
-          b.date === date &&
-          b.paymentStatus === "paid" &&
-          b.requestStatus !== "declined"
-      ),
-    [lessons, date]
+  const affected = useMemo(
+    () => weatherAffectedRows({ date, courts, clinics, lessons, includeCourts, includeClinics, includeLessons }),
+    [date, courts, clinics, lessons, includeCourts, includeClinics, includeLessons]
   );
 
-  const affected: Affected[] = useMemo(() => {
-    const rows: Affected[] = [];
-    if (includeCourts) {
-      for (const b of dayCourts) {
-        rows.push({
-          email: b.clientEmail,
-          name: b.clientName,
-          kind: "court",
-          label: `${b.courtName} · ${b.hour}:00`,
-          amount: b.amount,
-          paymentIntentId: b.paymentIntentId,
-          bookingId: b.id,
-        });
-      }
-    }
-    if (includeClinics) {
-      for (const b of dayClinics) {
-        rows.push({
-          email: b.clientEmail,
-          name: b.clientName,
-          kind: "clinic",
-          label: b.clinicName,
-          amount: b.amount,
-          paymentIntentId: b.paymentIntentId,
-          bookingId: b.id,
-        });
-      }
-    }
-    if (includeLessons) {
-      for (const b of dayLessons) {
-        rows.push({
-          email: b.clientEmail,
-          name: b.clientName,
-          kind: "lesson",
-          label: `Lesson · ${b.hour}:00`,
-          amount: b.amount,
-          paymentIntentId: b.paymentIntentId,
-          bookingId: b.id,
-        });
-      }
-    }
-    return rows;
-  }, [includeCourts, includeClinics, includeLessons, dayCourts, dayClinics, dayLessons]);
-
-  const alreadyClosed = blocks.some(
-    (b) => b.date === date && b.courtId === "both" && /weather/i.test(b.reason || "")
-  );
+  const alreadyClosed = weatherAlreadyClosed(blocks, date);
+  const courtCount = weatherAffectedRows({ date, courts, clinics, lessons, includeCourts: true, includeClinics: false, includeLessons: false }).length;
+  const clinicCount = weatherAffectedRows({ date, courts, clinics, lessons, includeCourts: false, includeClinics: true, includeLessons: false }).length;
+  const lessonCount = weatherAffectedRows({ date, courts, clinics, lessons, includeCourts: false, includeClinics: false, includeLessons: true }).length;
 
   async function runClose() {
     if (!affected.length && alreadyClosed) {
@@ -137,85 +41,22 @@ export default function WeatherClosePanel({
     }
     setBusy(true);
     setMsg(null);
-
-    const removeCourtIds = new Set(includeCourts ? dayCourts.map((b) => b.id) : []);
-    const removeClinicIds = new Set(includeClinics ? dayClinics.map((b) => b.id) : []);
-    const removeLessonIds = new Set(includeLessons ? dayLessons.map((b) => b.id) : []);
-
-    let refunded = 0;
-    for (const row of affected) {
-      if (!row.paymentIntentId) continue;
-      const result = await refundStripePayment({
-        paymentIntentId: row.paymentIntentId,
-        amount: row.amount,
-      });
-      if (result.ok) refunded += 1;
-    }
-
-    let emailed = 0;
-    if (sendEmail) {
-      const byEmail = new Map<string, Affected[]>();
-      for (const row of affected) {
-        const key = row.email.trim().toLowerCase();
-        if (!key) continue;
-        (byEmail.get(key) || byEmail.set(key, []).get(key)!).push(row);
-      }
-      for (const [email, rows] of byEmail) {
-        const res = await fetch("/api/summer27/weather-notify", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email,
-            name: rows[0].name,
-            date,
-            items: rows.map((r) => ({ kind: r.kind, label: r.label, amount: r.amount })),
-          }),
-        });
-        if (res.ok) emailed += 1;
-      }
-    }
-
-    const hold: S27AdminBlock = {
-      id: `weather-${date}`,
+    const result = await applyWeatherClose({
       date,
-      courtId: "both",
-      startHour: 7,
-      durationHours: 14,
-      reason: "Weather — courts closed",
-      createdAt: new Date().toISOString(),
-      kind: "hold",
-    };
-    const nextBlocks = [
-      ...blocks.filter((b) => !(b.date === date && /weather/i.test(b.reason || ""))),
-      hold,
-    ];
-
-    const refundCharges: S27Charge[] = affected.map((row) => ({
-      id: `weather-refund-${row.bookingId}`,
-      date,
-      description: `Weather refund · ${row.kind} · ${row.label}`,
-      clientName: row.name,
-      clientEmail: row.email,
-      amount: -Math.abs(row.amount),
-      paymentStatus: "paid",
-      paymentMethod: row.paymentIntentId ? "stripe" : "manual",
-      createdAt: new Date().toISOString(),
-    }));
-
-    onApply({
-      courts: courts.filter((b) => !removeCourtIds.has(b.id)),
-      clinics: clinics.filter((b) => !removeClinicIds.has(b.id)),
-      lessons: lessons.filter((b) => !removeLessonIds.has(b.id)),
-      blocks: nextBlocks,
-      charges: refundCharges,
-      emailed,
-      refunded,
+      courts,
+      clinics,
+      lessons,
+      blocks,
+      includeCourts,
+      includeClinics,
+      includeLessons,
+      sendEmail,
     });
-
+    onApply(result);
     setBusy(false);
     setOpen(false);
     setMsg(
-      `Closed ${formatPrettyDate(date)} for weather · ${affected.length} booking${affected.length === 1 ? "" : "s"} cleared · ${emailed} emailed · ${refunded} Stripe refund${refunded === 1 ? "" : "s"}.`
+      `Closed ${formatPrettyDate(date)} for weather · ${affected.length} booking${affected.length === 1 ? "" : "s"} cleared · ${result.emailed} emailed · ${result.refunded} Stripe refund${result.refunded === 1 ? "" : "s"}.`
     );
   }
 
@@ -249,15 +90,15 @@ export default function WeatherClosePanel({
           <div className="flex flex-wrap gap-4 text-[13px] text-[#4a4a4a]">
             <label className="flex items-center gap-2">
               <input type="checkbox" checked={includeCourts} onChange={(e) => setIncludeCourts(e.target.checked)} />
-              Courts ({dayCourts.length})
+              Courts ({courtCount})
             </label>
             <label className="flex items-center gap-2">
               <input type="checkbox" checked={includeClinics} onChange={(e) => setIncludeClinics(e.target.checked)} />
-              Clinics ({dayClinics.length})
+              Clinics ({clinicCount})
             </label>
             <label className="flex items-center gap-2">
               <input type="checkbox" checked={includeLessons} onChange={(e) => setIncludeLessons(e.target.checked)} />
-              Lessons ({dayLessons.length})
+              Lessons ({lessonCount})
             </label>
             <label className="flex items-center gap-2">
               <input type="checkbox" checked={sendEmail} onChange={(e) => setSendEmail(e.target.checked)} />

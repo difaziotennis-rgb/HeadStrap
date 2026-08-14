@@ -163,9 +163,9 @@ function parseTimeOfDay(text: string): VoiceIntent["timeOfDay"] {
   return null;
 }
 
-function parseDate(text: string, now: Date): string | null {
+export function parseSpokenDate(text: string, now: Date): string | null {
   const t = text.toLowerCase();
-  if (/\btoday\b/.test(t)) return isoDate(now);
+  if (/\btoday'?s?\b/.test(t)) return isoDate(now);
   if (/\btomorrow\b/.test(t)) return isoDate(addDays(now, 1));
   const days: [RegExp, number][] = [
     [/\bsunday\b|\bsun\b/, 0],
@@ -306,7 +306,7 @@ export function parseVoiceFallback(transcript: string, now = new Date()): VoiceI
   const hour = parseHour(t);
   const hourTo = /\bto\b/.test(t) ? parseHourTo(t) : null;
   const timeOfDay = parseTimeOfDay(t);
-  let date = parseDate(t, now);
+  let date = parseSpokenDate(t, now);
   let dateTo: string | null = null;
   if (/\bweekend\b/.test(t)) {
     const w = weekendRange(now);

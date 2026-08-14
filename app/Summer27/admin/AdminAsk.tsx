@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
-import { formatDateInput } from "./summer27-data";
-import { useS27Session } from "./use-s27-session";
-import { mergeIntent, parseVoiceFallback, type VoiceIntent } from "./voice-intent";
+import {
+  applyAdminDraft,
+  parseAdminVoice,
+  type AdminDraft,
+  type AdminVoiceActions,
+  type AdminVoiceData,
+} from "../admin-voice";
 import {
   errorMessageForSpeech,
   makeRecognizer,
@@ -12,17 +15,22 @@ import {
   transcriptFrom,
   VOICE_SILENCE_MS,
   type SpeechRec,
-} from "./voice-listen";
-import { applyVoiceCancel, resolveVoice, type VoiceResult } from "./voice-resolve";
+} from "../voice-listen";
 
-export default function VoiceAsk() {
-  const session = useS27Session();
+type Props = {
+  data: AdminVoiceData;
+  actions: AdminVoiceActions;
+  ping: (message: string) => void;
+};
+
+export default function AdminAsk({ data, actions, ping }: Props) {
   const [open, setOpen] = useState(false);
-  const [phase, setPhase] = useState<"idle" | "listen" | "think" | "done">("idle");
+  const [phase, setPhase] = useState<"idle" | "listen" | "think" | "confirm">("idle");
   const [transcript, setTranscript] = useState("");
   const [typed, setTyped] = useState("");
-  const [result, setResult] = useState<VoiceResult | null>(null);
+  const [draft, setDraft] = useState<AdminDraft | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   const recRef = useRef<SpeechRec | null>(null);
   const listeningRef = useRef(false);
   const heardRef = useRef("");
@@ -74,7 +82,7 @@ export default function VoiceAsk() {
         // already ending
       }
     }
-    if (leftover) void runTranscript(leftover);
+    if (leftover) runTranscript(leftover);
     else setPhase((p) => (p === "listen" ? "idle" : p));
   }
 
@@ -92,7 +100,7 @@ export default function VoiceAsk() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function runTranscript(text: string) {
+  function runTranscript(text: string) {
     const said = text.trim();
     if (!said) {
       setError("I didn’t catch that.");
@@ -102,47 +110,42 @@ export default function VoiceAsk() {
     setTranscript(said);
     setPhase("think");
     setError(null);
-    const fallback = parseVoiceFallback(said);
-    let intent: VoiceIntent = fallback;
-    try {
-      const now = new Date();
-      const res = await fetch("/api/summer27/voice", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          transcript: said,
-          today: formatDateInput(now),
-          weekday: now.toLocaleDateString("en-US", { weekday: "long" }),
-        }),
-      });
-      const data = (await res.json()) as { intent?: Partial<VoiceIntent> | null };
-      if (data.intent) intent = mergeIntent(data.intent, fallback);
-    } catch {
-      intent = fallback;
+    setDraft(parseAdminVoice(said, data));
+    setPhase("confirm");
+  }
+
+  async function confirm() {
+    if (!draft || !draft.mutating) {
+      if (draft?.kind === "open_member") {
+        actions.openMember(draft.memberNumber);
+        ping(`Opened ${draft.title.replace(/^Open /, "")}.`);
+      }
+      close();
+      return;
     }
-    const next = resolveVoice(intent, session);
-    setResult(next);
-    setPhase("done");
+    setBusy(true);
+    try {
+      const message = await applyAdminDraft(draft, data, actions);
+      if (message) ping(message);
+      close();
+    } catch {
+      setError("Couldn’t apply that. Try again from the desk.");
+      setBusy(false);
+    }
   }
 
-  function confirmCancel() {
-    if (!result?.cancel) return;
-    const next = applyVoiceCancel(result.cancel);
-    setResult(next);
-  }
-
-  async function startListen() {
+  function startListen() {
     setOpen(true);
     if (phase === "listen" || listeningRef.current) {
       const leftover = heardRef.current;
       genRef.current += 1;
       killRec();
-      if (leftover) void runTranscript(leftover);
+      if (leftover) runTranscript(leftover);
       else setPhase("idle");
       return;
     }
-    ++genRef.current;
-    setResult(null);
+    genRef.current += 1;
+    setDraft(null);
     setError(null);
     setTranscript("");
     heardRef.current = "";
@@ -171,16 +174,12 @@ export default function VoiceAsk() {
         if (heardRef.current.trim()) return;
         listeningRef.current = false;
         setPhase("idle");
-        setError("I didn’t catch that — tap Ask and try again.");
+        setError(errorMessageForSpeech(code));
         return;
       }
       listeningRef.current = false;
       setPhase("idle");
-      if (code === "not-allowed") {
-        setError("Microphone is blocked. Tap the lock in the address bar, set Microphone to Allow, then tap Ask.");
-      } else {
-        setError(errorMessageForSpeech(code));
-      }
+      setError(errorMessageForSpeech(code));
     };
     rec.onend = () => {
       if (recRef.current === rec) recRef.current = null;
@@ -204,6 +203,10 @@ export default function VoiceAsk() {
     killRec();
     setOpen(false);
     setPhase("idle");
+    setBusy(false);
+    setDraft(null);
+    setTranscript("");
+    setError(null);
   }
 
   return (
@@ -211,10 +214,10 @@ export default function VoiceAsk() {
       <button
         type="button"
         onClick={startListen}
-        className="inline-flex items-center gap-1.5 rounded-full border border-white/40 bg-white/10 px-4 py-2.5 text-[12px] font-medium text-white hover:bg-white/20"
+        className="inline-flex items-center gap-1.5 rounded-lg border border-[#e8e5df] bg-white px-3 py-1.5 text-[12px] font-medium text-[#1a1a1a] hover:bg-[#faf9f7]"
       >
         <span aria-hidden>🎙️</span>
-        Ask
+        Speak
       </button>
 
       {open && (
@@ -227,13 +230,9 @@ export default function VoiceAsk() {
           >
             <div className="flex items-start justify-between gap-3 border-b border-[#ece8e2] px-4 py-3.5">
               <div>
-                <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Ask the club</p>
+                <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Director</p>
                 <p className="mt-0.5 text-[16px] font-semibold tracking-tight">
-                  {phase === "listen"
-                    ? "Listening…"
-                    : phase === "think"
-                      ? "Checking…"
-                      : "Say what you need"}
+                  {phase === "listen" ? "Listening…" : phase === "think" ? "Checking…" : "Speak, then confirm"}
                 </p>
               </div>
               <button
@@ -246,8 +245,8 @@ export default function VoiceAsk() {
             </div>
             <div className="space-y-3 px-4 py-4">
               <p className="text-[13px] leading-relaxed text-[#6b665e]">
-                Courts, clinics, your day, cancel, lessons, stringing, events, play, prices — or “put Emma in Tuesday
-                juniors.”
+                Rain out, who’s on a court, walk-up clinic or court, cancel, hold, racket ready, charge balls/grip,
+                accept a lesson, mark paid, or a note on a member.
               </p>
               {canTalk && (
                 <button
@@ -262,36 +261,57 @@ export default function VoiceAsk() {
               )}
               {transcript && <p className="text-[13px] text-[#1a1a1a]">“{transcript}”</p>}
               {error && <p className="text-[13px] text-[#991b1b]">{error}</p>}
-              {result && (
+              {draft && (
                 <div className="rounded-xl bg-[#faf9f7] px-3 py-3">
-                  <p className="whitespace-pre-wrap text-[14px] leading-relaxed text-[#1a1a1a]">{result.detail}</p>
+                  <p className="text-[14px] font-medium text-[#1a1a1a]">{draft.title}</p>
+                  <p className="mt-1 whitespace-pre-wrap text-[13px] leading-relaxed text-[#6b665e]">{draft.detail}</p>
                   <div className="mt-3 flex flex-wrap gap-2">
-                    {result.cancel && (
-                      <button
-                        type="button"
-                        onClick={confirmCancel}
-                        className="rounded-full bg-[#991b1b] px-3.5 py-2 text-[12px] font-medium text-white"
-                      >
-                        Confirm cancel
-                      </button>
+                    {draft.mutating ? (
+                      <>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => void confirm()}
+                          className="rounded-full bg-[#1a1a1a] px-3.5 py-2 text-[12px] font-medium text-white disabled:opacity-40"
+                        >
+                          {busy ? "Working…" : "Confirm"}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={close}
+                          className="rounded-full border border-[#e8e5df] bg-white px-3.5 py-2 text-[12px] font-medium text-[#6b665e]"
+                        >
+                          Don’t
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        {draft.kind === "open_member" && (
+                          <button
+                            type="button"
+                            onClick={() => void confirm()}
+                            className="rounded-full bg-[#1a1a1a] px-3.5 py-2 text-[12px] font-medium text-white"
+                          >
+                            Open file
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={close}
+                          className="rounded-full border border-[#e8e5df] bg-white px-3.5 py-2 text-[12px] font-medium text-[#6b665e]"
+                        >
+                          Done
+                        </button>
+                      </>
                     )}
-                    {result.links.map((l) => (
-                      <Link
-                        key={l.href}
-                        href={l.href}
-                        onClick={close}
-                        className="rounded-full bg-[#1a1a1a] px-3.5 py-2 text-[12px] font-medium text-white"
-                      >
-                        {l.label}
-                      </Link>
-                    ))}
                   </div>
                 </div>
               )}
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
-                  void runTranscript(typed);
+                  runTranscript(typed);
                   setTyped("");
                 }}
                 className="flex gap-2"

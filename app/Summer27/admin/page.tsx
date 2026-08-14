@@ -39,6 +39,7 @@ import Ledger from "./Ledger";
 import ProgramSettings from "./ProgramSettings";
 import StringingShop from "./StringingShop";
 import ChargeDesk from "./ChargeDesk";
+import AdminAsk from "./AdminAsk";
 import AdminStats from "./AdminStats";
 
 type Tab = "today" | "charge" | "shop" | "book" | "members" | "stats" | "money" | "settings";
@@ -265,6 +266,48 @@ export default function Summer27DirectorPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <AdminAsk
+            data={{
+              members,
+              courts,
+              clinics,
+              lessons,
+              events,
+              stringing,
+              charges,
+              blocks,
+              notes,
+              catalog,
+              today,
+            }}
+            actions={{
+              saveCourts,
+              saveClinics,
+              saveLessons,
+              saveEvents,
+              saveStringing,
+              saveCharges,
+              saveHolds,
+              saveNotes: (next) => {
+                saveMemberNotes(next);
+                setNotes(next);
+              },
+              markStringingReady,
+              markStringingPickedUp,
+              onWeatherClose: (result) => {
+                saveCourts(result.courts);
+                saveClinics(result.clinics);
+                saveLessons(result.lessons);
+                saveHolds(result.blocks);
+                saveCharges([...result.charges, ...charges]);
+              },
+              openMember: (memberNumber) => {
+                setSelectedMember(memberNumber);
+                setTab("members");
+              },
+            }}
+            ping={ping}
+          />
           <Link href="/Summer27" className="rounded-lg border border-[#e8e5df] bg-white px-3 py-1.5 text-[12px] text-[#6b665e]">
             View site
           </Link>
