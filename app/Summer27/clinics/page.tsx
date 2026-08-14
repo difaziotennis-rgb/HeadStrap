@@ -606,24 +606,24 @@ function Summer27ClinicsInner() {
                         <button
                           type="button"
                           onClick={() => openClinic(o.clinic, o.date)}
-                          className={`flex w-full items-center gap-3 px-4 py-3.5 text-left transition hover:bg-[#faf9f7] sm:gap-4 sm:px-5 ${
+                          className={`flex w-full min-w-0 items-start gap-2.5 overflow-hidden px-3 py-3.5 text-left transition hover:bg-[#faf9f7] sm:items-center sm:gap-4 sm:px-5 ${
                             mine ? "bg-[#f7f7f5]" : ""
                           }`}
                         >
-                          <span className="w-14 shrink-0 text-[13px] font-medium tabular-nums text-[#6b665e] sm:w-16 sm:text-[14px]">
+                          <span className="shrink-0 whitespace-nowrap pt-0.5 text-[12px] font-medium tabular-nums text-[#6b665e] sm:w-16 sm:pt-0 sm:text-[14px]">
                             {formatHour(o.clinic.startHour)}
                           </span>
-                          <span className="min-w-0 flex-1">
-                            <span className="block text-[15px] font-medium leading-snug text-[#1a1a1a] sm:text-[16px]">
+                          <span className="min-w-0 flex-1 overflow-hidden">
+                            <span className="block break-words text-[14px] font-medium leading-snug text-[#1a1a1a] [overflow-wrap:anywhere] sm:text-[16px]">
                               {o.clinic.name}
                             </span>
-                            <span className="mt-0.5 block text-[12px] text-[#8a8477] sm:text-[13px]">
+                            <span className="mt-0.5 block text-[12px] leading-snug text-[#8a8477] sm:text-[13px]">
                               {o.clinic.level}
                               {mine ? " · You’re in" : open > 0 ? ` · ${open} open` : " · Full"}
                             </span>
                           </span>
-                          <span className="shrink-0 text-right">
-                            <span className="block text-[14px] font-medium tabular-nums text-[#1a1a1a]">${priceLabel}</span>
+                          <span className="shrink-0 pt-0.5 text-right sm:pt-0">
+                            <span className="block text-[13px] font-medium tabular-nums text-[#1a1a1a] sm:text-[14px]">${priceLabel}</span>
                             <span className="mt-0.5 block text-[11px] font-medium text-[#6b665e]">
                               {mine ? "View" : open > 0 ? "Join →" : "Full"}
                             </span>
@@ -658,7 +658,7 @@ function Summer27ClinicsInner() {
                 <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">
                   {isJunior ? "Enroll" : "Book clinic"}
                 </p>
-                <h3 id="clinic-sheet-title" className="mt-0.5 text-lg font-semibold tracking-tight text-[#1a1a1a] sm:mt-1 sm:text-xl">
+                <h3 id="clinic-sheet-title" className="mt-0.5 break-words text-[17px] font-semibold leading-snug tracking-tight text-[#1a1a1a] [overflow-wrap:anywhere] sm:mt-1 sm:text-xl">
                   {clinic.name}
                 </h3>
                 <p className="mt-0.5 text-[12px] text-[#6b665e] sm:mt-1 sm:text-[13px]">{clinic.level}</p>

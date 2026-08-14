@@ -359,7 +359,7 @@ export default function VoiceAsk() {
                   value={typed}
                   onChange={(e) => setTyped(e.target.value)}
                   placeholder={canTalk ? "Or type it" : "Type what you need"}
-                  className="min-w-0 flex-1 rounded-xl border border-[#e8e5df] px-3 py-2.5 text-[14px]"
+                  className="min-w-0 flex-1 rounded-xl border border-[#e8e5df] px-3 py-2.5 text-[16px]"
                 />
                 <button type="submit" className="rounded-xl border border-[#e8e5df] px-3 py-2.5 text-[13px] font-medium">
                   Go

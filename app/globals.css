@@ -5,9 +5,23 @@
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
 
 @layer base {
+  html {
+    overflow-x: clip;
+  }
+
   body {
     @apply bg-white text-gray-900;
     font-family: 'Inter', system-ui, sans-serif;
+    overflow-x: clip;
+  }
+
+  /* iOS Safari zooms any field under 16px. Keep type fields at 16px on touch. */
+  @media (pointer: coarse) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="range"]):not([type="file"]):not([type="button"]):not([type="submit"]):not([type="reset"]),
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
   }
 }
 
