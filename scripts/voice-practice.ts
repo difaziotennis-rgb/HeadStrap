@@ -1,5 +1,5 @@
 /**
- * 150 distinct spoken requests. Run: npx tsx scripts/voice-practice.ts
+ * 250 distinct spoken requests. Run: npx tsx scripts/voice-practice.ts
  */
 import { parseVoiceFallback, type VoiceIntentKind } from "../app/Summer27/voice-intent";
 import { resolveVoice } from "../app/Summer27/voice-resolve";
@@ -208,17 +208,110 @@ const CASES: Case[] = [
   { q: "season end party tickets", intent: ["check_event", "book_event"], href: "season-close" },
 ];
 
+const MORE: Case[] = [
+  { q: "is court 3 free at 9 tomorrow", intent: "check_court", hour: 9 },
+  { q: "can I reserve court 4 on Monday at 11", intent: "book_court", hour: 11, href: "court=court-2" },
+  { q: "any time left tonight on court 3", intent: "check_court" },
+  { q: "book 7am court 4 tomorrow", intent: "book_court", hour: 7 },
+  { q: "what's open Sunday at 2pm", intent: "check_court", hour: 14 },
+  { q: "hold court 3 at noon for me", intent: "book_court", hour: 12 },
+  { q: "two hours on court 4 at 3pm", intent: "book_court", hour: 15 },
+  { q: "is 8 tonight available", intent: "check_court", hour: 20 },
+  { q: "court time Wednesday morning", intent: "check_court" },
+  { q: "need court 3 Thursday at 5", intent: ["check_court", "book_court"], hour: 17 },
+  { q: "show openings at 1 o'clock", intent: "check_court", hour: 13 },
+  { q: "book me 6:00 pm court 3", intent: "book_court", hour: 18 },
+  { q: "is court 4 taken at 10am", intent: "check_court", hour: 10 },
+  { q: "any courts left this evening", intent: "check_court" },
+  { q: "reserve 4pm Sunday court 3", intent: "book_court", hour: 16 },
+  { q: "can we get a court Friday at 7pm", intent: ["check_court", "book_court"], hour: 19 },
+  { q: "open hour at 8am on court 3", intent: "check_court", hour: 8 },
+  { q: "I want court 4 tomorrow afternoon", intent: ["check_court", "book_court"] },
+  { q: "is 11:00 free on court 3 today", intent: "check_court", hour: 11 },
+  { q: "book court 3 Saturday at 2", intent: "book_court", hour: 14 },
+  { q: "sign up for Sunday 8 cardio", intent: "book_clinic", hour: 8, clinic: "sat-sun-cardio" },
+  { q: "got space in Saturday games clinic", intent: "check_clinic", clinic: "sat-sun-point-play" },
+  { q: "put me in 9 a.m. this Sunday", intent: "book_clinic", hour: 9, clinic: "sat-sun-point-play" },
+  { q: "weekend beginner clinic spots", intent: "check_clinic", clinic: "sat-sun-cardio" },
+  { q: "join advanced point play Saturday", intent: "book_clinic", clinic: "sat-sun-point-play" },
+  { q: "is Sunday cardio full", intent: "check_clinic", clinic: "sat-sun-cardio" },
+  { q: "book the 8 o'clock weekend class", intent: "book_clinic", hour: 8, clinic: "sat-sun-cardio" },
+  { q: "how many left in Saturday 9 games", intent: "check_clinic", hour: 9, clinic: "sat-sun-point-play" },
+  { q: "enroll me in Tennis 101 this week", intent: "book_clinic", clinic: "tue-am-beginner-fundamentals" },
+  { q: "any room Thursday ladies doubles", intent: "check_clinic", clinic: "thu-am-ladies-doubles" },
+  { q: "Wednesday men's cardio sign up", intent: "book_clinic", clinic: "wed-am-beginner" },
+  { q: "Monday weeknight beginner clinic", intent: "check_clinic", clinic: "mon-fri-beginner" },
+  { q: "join Friday 6:00 3.5 clinic", intent: "book_clinic", hour: 18, clinic: "mon-fri-int-adv" },
+  { q: "high performance Tuesday 10am spots", intent: "check_clinic", hour: 10, clinic: "mon-fri-advanced" },
+  { q: "sign me up for ladies clinic", intent: "book_clinic", clinic: "thu-am-ladies-doubles" },
+  { q: "is there a 5pm clinic tonight", intent: "check_clinic", hour: 17 },
+  { q: "book Wednesday 8 cardio", intent: "book_clinic", hour: 8, clinic: "wed-am-beginner" },
+  { q: "Tennis 101 this Tuesday morning", intent: ["check_clinic", "book_clinic"], clinic: "tue-am-beginner-fundamentals" },
+  { q: "put Isla in Tuesday juniors", intent: "book_clinic", child: "Isla", clinic: "tue-am-juniors" },
+  { q: "enroll Theo in high school clinic", intent: "book_clinic", child: "Theo", clinic: "thu-hs-juniors" },
+  { q: "tots for Chloe on Tuesday", intent: "book_clinic", child: "Chloe", clinic: "wed-am-tots" },
+  { q: "can Henry do toddlers Tuesday", intent: "book_clinic", child: "Henry", clinic: "wed-am-toddlers" },
+  { q: "is Tuesday juniors full this week", intent: "check_clinic", clinic: "tue-am-juniors" },
+  { q: "sign Ruby up for 4pm tots", intent: "book_clinic", child: "Ruby", hour: 16, clinic: "wed-am-tots" },
+  { q: "high school juniors Thursday spots", intent: "check_clinic", clinic: "thu-hs-juniors" },
+  { q: "put Leo in the junior clinic", intent: "book_clinic", child: "Leo", clinic: "tue-am-juniors" },
+  { q: "toddler class Tuesday 4:30 for Ella", intent: "book_clinic", child: "Ella", clinic: "wed-am-toddlers" },
+  { q: "book a private with Derek Friday", intent: "request_lesson", pro: "derek" },
+  { q: "does Jonah have Sunday morning", intent: ["check_lesson", "request_lesson"], pro: "jonah-berkowitz" },
+  { q: "Maya lesson tomorrow at 10", intent: ["check_lesson", "request_lesson"], pro: "maya-ellison", hour: 10 },
+  { q: "I need Jonah Thursday after school", intent: ["check_lesson", "request_lesson"], pro: "jonah-berkowitz" },
+  { q: "request 8am with Derek Tuesday", intent: "request_lesson", pro: "derek", hour: 8 },
+  { q: "book Maya Ellison Wednesday 11", intent: "request_lesson", pro: "maya-ellison", hour: 11 },
+  { q: "lesson prices for Maya", intent: "prices" },
+  { q: "can Jonah do Saturday at noon", intent: ["check_lesson", "request_lesson"], pro: "jonah-berkowitz", hour: 12 },
+  { q: "private hitting with Derek", intent: "request_lesson", pro: "derek" },
+  { q: "who teaches juniors lessons", intent: ["check_lesson", "request_lesson"] },
+  { q: "cancel tomorrow's 11am court", intent: "cancel", hour: 11 },
+  { q: "drop Emma from tots", intent: "cancel", child: "Emma" },
+  { q: "take me off Saturday cardio", intent: "cancel" },
+  { q: "move my 10am court to noon", intent: "move", hour: 10 },
+  { q: "reschedule Saturday clinic", intent: "move" },
+  { q: "cancel Jonah lesson", intent: "cancel" },
+  { q: "change 5pm to 6pm please", intent: "move", hour: 17 },
+  { q: "remove me from Thursday ladies", intent: "cancel" },
+  { q: "what's on my calendar today", intent: "my_day" },
+  { q: "do I have court this weekend", intent: "my_day" },
+  { q: "am I in any clinics tomorrow", intent: "my_day" },
+  { q: "show everything I booked", intent: "my_day" },
+  { q: "my week at the club", intent: "my_day" },
+  { q: "poly 54 pounds please", intent: "order_stringing", href: "poly" },
+  { q: "hybrid gut at 52", intent: "order_stringing" },
+  { q: "is the racket done yet", intent: "check_stringing" },
+  { q: "drop off for synthetic gut 48", intent: "order_stringing" },
+  { q: "own string 55 lbs", intent: "order_stringing" },
+  { q: "I want a restring this week", intent: ["order_stringing", "check_stringing"] },
+  { q: "sign up for Wimbledon viewing party", intent: "book_event", href: "wimbledon" },
+  { q: "club championship Labor Day", intent: "check_event", href: "club-championship" },
+  { q: "family play Sunday spots", intent: "check_event", href: "family-play" },
+  { q: "join opening mixed doubles", intent: "book_event" },
+  { q: "season close social tickets", intent: ["check_event", "book_event"], href: "season-close" },
+  { q: "anyone looking for singles tomorrow", intent: "check_play" },
+  { q: "need a doubles partner Saturday 10", intent: "check_play", hour: 10 },
+  { q: "who's hitting Sunday afternoon", intent: "check_play" },
+  { q: "post that I'm looking tonight", intent: "check_play" },
+  { q: "how much for a member court", intent: "prices" },
+  { q: "guest rate for clinics", intent: "prices" },
+  { q: "what does stringing run", intent: "prices" },
+  { q: "Derek lesson cost", intent: "prices" },
+];
+
 function asList(v: VoiceIntentKind | VoiceIntentKind[]) {
   return Array.isArray(v) ? v : [v];
 }
 
 function main() {
+  const all = [...CASES, ...MORE];
   const seen = new Set<string>();
   const fails: string[] = [];
-  if (CASES.length < 150) {
-    fails.push(`expected at least 150 cases, got ${CASES.length}`);
+  if (all.length < 250) {
+    fails.push(`expected at least 250 cases, got ${all.length}`);
   }
-  CASES.forEach((c, i) => {
+  all.forEach((c, i) => {
     const key = c.q.toLowerCase();
     if (seen.has(key)) fails.push(`#${i + 1} duplicate: ${c.q}`);
     seen.add(key);
@@ -253,11 +346,11 @@ function main() {
     }
   });
   if (fails.length) {
-    console.error(`${fails.length} failures / ${CASES.length} phrases\n`);
+    console.error(`${fails.length} failures / ${all.length} phrases\n`);
     console.error(fails.join("\n"));
     process.exit(1);
   }
-  console.log(`OK ${CASES.length} distinct practice requests`);
+  console.log(`OK ${all.length} distinct practice requests`);
 }
 
 main();

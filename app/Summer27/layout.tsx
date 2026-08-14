@@ -93,11 +93,11 @@ export default function Summer27Layout({ children }: { children: React.ReactNode
               href={S27_INSTAGRAM_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-block text-[13px] font-medium text-[#1a1a1a] hover:underline"
+              className="inline-flex items-center rounded-full bg-[#1a1a1a] px-4 py-2 text-[13px] font-medium text-white hover:bg-[#2a2a2a]"
             >
               Instagram {S27_INSTAGRAM_HANDLE}
             </a>
-            <p className="mt-1 text-[12px] text-[#8a8477]">Club photos, clinics &amp; updates</p>
+            <p className="mt-2 text-[12px] text-[#8a8477]">Club photos, clinics &amp; updates</p>
           </div>
         </div>
         <div className="border-t border-[#e8e5df]">

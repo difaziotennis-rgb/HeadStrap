@@ -11,6 +11,8 @@ import {
   parseDateInput,
   s27Clinics,
   s27Events,
+  S27_INSTAGRAM_HANDLE,
+  S27_INSTAGRAM_URL,
 } from "./summer27-data";
 import { weatherClosedOnDate } from "./schedule";
 import VoiceAsk from "./VoiceAsk";
@@ -46,10 +48,12 @@ export default function Summer27Home() {
         <div className="overflow-hidden rounded-2xl border border-[#e8e5df] bg-[#1e3a5f] p-5 shadow-[0_14px_36px_rgba(26,26,26,0.07)] sm:p-10">
           <p className="text-[11px] uppercase tracking-[0.16em] text-white/80">DiFazio Tennis at Rhinebeck</p>
           <h2 className="mt-2 max-w-3xl text-[26px] font-semibold tracking-tight text-white sm:text-5xl">
-            A first season on Courts 3 &amp; 4
+            Courts 3 &amp; 4 and a Pro Shop
+            <span className="block font-medium text-white/85 sm:mt-1">A first season.</span>
           </h2>
           <p className="mt-3 max-w-xl text-[14px] leading-relaxed text-white/90 sm:text-[15px]">
-            Private lessons, weekly clinics, court time, and a handful of club events.
+            Private lessons, weekly clinics, court time, and a handful of social events — Hudson Valley Tennis.
+            Between sessions, the pro shop lounge is where players sit, restring, and see who’s around.
           </p>
           <div className="mt-5 flex flex-wrap gap-2">
             <Link
@@ -61,6 +65,29 @@ export default function Summer27Home() {
             <VoiceAsk />
           </div>
         </div>
+      </section>
+
+      <section className="mx-auto w-full max-w-6xl px-4 pb-5 sm:px-6">
+        <a
+          href={S27_INSTAGRAM_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group block overflow-hidden rounded-2xl border border-[#e8e5df] bg-[#1a1a1a] p-5 shadow-[0_14px_36px_rgba(26,26,26,0.07)] sm:p-8"
+        >
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-[10px] uppercase tracking-[0.16em] text-white/55">Featured</p>
+              <p className="mt-2 text-[28px] font-semibold tracking-tight text-white sm:text-4xl">{S27_INSTAGRAM_HANDLE}</p>
+              <p className="mt-2 max-w-lg text-[14px] leading-relaxed text-white/75 sm:text-[15px]">
+                Club life between sessions — court moments, clinic days, and what’s coming next. Follow along and check
+                in often.
+              </p>
+            </div>
+            <span className="inline-flex shrink-0 items-center rounded-full bg-white px-5 py-2.5 text-[13px] font-medium text-[#1a1a1a] transition group-hover:bg-[#f5f3ef]">
+              Open Instagram →
+            </span>
+          </div>
+        </a>
       </section>
 
       <section className="mx-auto w-full max-w-6xl px-4 pb-5 sm:px-6">

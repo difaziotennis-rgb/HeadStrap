@@ -11,7 +11,7 @@ import {
   type S27MemberAccount,
   type S27StringingOrder,
 } from "./storage";
-import { parseHour, parseSpokenDate } from "./voice-intent";
+import { isoDate, parseHour, parseSpokenDate } from "./voice-intent";
 import { applyWeatherClose, weatherAffectedRows, weatherAlreadyClosed, type WeatherCloseResult } from "./weather-close";
 
 function uid(prefix: string) {
@@ -251,19 +251,34 @@ function clinicMatch(clinic: { name: string; level: string; id: string; kind: st
   if (/\bjuniors?\b/.test(h)) return clinic.kind === "junior" && !/tots|toddler/.test(blob);
   const keys = ["101", "cardio", "point play", "ladies", "high performance", "weeknight", "beginner", "3.5", "2.5", "games"];
   const hits = keys.filter((k) => h.includes(k));
-  if (hits.length === 0) return true;
+  if (hits.length === 0) return false;
   return hits.some((k) => blob.includes(k));
+}
+
+function hasClinicHint(text: string) {
+  return /\b(tots|toddlers?|high school|juniors?|101|cardio|point play|ladies|high performance|weeknight|beginner|3\.5|2\.5|games)\b/.test(
+    text.toLowerCase()
+  );
+}
+
+function nextDateForClinic(clinic: ClinicDef, from: string) {
+  const start = parseDateInput(from);
+  for (let i = 0; i <= 7; i++) {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
+    if (clinic.days.includes(d.getDay())) return isoDate(d);
+  }
+  return from;
 }
 
 function pickClinic(text: string, date: string, hour: number | null, defs: ClinicDef[]) {
   const day = parseDateInput(date).getDay();
-  let list = defs.filter((c) => c.days.includes(day));
-  const named = list.filter((c) => clinicMatch(c, text));
-  if (named.length && named.length < list.length) list = named;
+  const named = hasClinicHint(text) ? defs.filter((c) => clinicMatch(c, text)) : [];
+  let list = named.length ? named : defs.filter((c) => c.days.includes(day));
   if (hour != null) {
     const exact = list.filter((c) => Math.abs(c.startHour - hour) < 0.26);
     const near = list.filter((c) => Math.abs(c.startHour - hour) < 1);
-    list = exact.length ? exact : near.length ? near : hour != null ? [] : list;
+    list = exact.length ? exact : near.length ? near : hour != null && named.length ? named : hour != null ? [] : list;
   }
   list.sort((a, b) => a.startHour - b.startHour);
   return list[0] || null;
@@ -345,14 +360,12 @@ export function parseAdminVoice(transcript: string, data: AdminVoiceData, now = 
   }
 
   if (
-    (/\b(who('?s| is)|what('?s| is)|what'?s happening|roster|how('?s| is) .+ looking|on court|in (the )?clinic)\b/.test(t) ||
-      (/\bclinics?\b/.test(t) && !/\b(add|book|put|cancel|sign|charge|hold)\b/.test(t))) &&
-    !/\b(add|book|put|cancel|charge|hold)\b/.test(t)
+    person?.member &&
+    (/\bpull up\b/.test(t) ||
+      /\bmember file\b/.test(t) ||
+      (/\bopen\b/.test(t) && !/\b(hold|court|clinic)\b/.test(t)) ||
+      (/\bshow\b/.test(t) && !/\bno-show\b/.test(t) && !/\bcourt\b/.test(t)))
   ) {
-    return lookupDraft(t, data, date, hour, courtId);
-  }
-
-  if (/\b(pull up|open|show|member file)\b/.test(t) && person?.member) {
     return {
       kind: "open_member",
       title: `Open ${person.member.name}`,
@@ -362,7 +375,10 @@ export function parseAdminVoice(transcript: string, data: AdminVoiceData, now = 
     };
   }
 
-  if (/\b(racket|string).*(ready|done|notify)|notify .*(racket|string)\b/.test(t) || (/\bready\b/.test(t) && /\b(racket|string)\b/.test(t))) {
+  if (
+    /\b(racket|string|restring).*(ready|done|notify)|notify .*(racket|string|restring)\b/.test(t) ||
+    (/\bready\b/.test(t) && /\b(racket|string|restring)\b/.test(t))
+  ) {
     const order = findStringing(data.stringing, person?.name || hint || "", ["in_shop", "ready"]);
     if (!order) return unknown("I need a name on a stringing order still in the shop. Try “Sarah’s racket is ready.”");
     return {
@@ -374,7 +390,11 @@ export function parseAdminVoice(transcript: string, data: AdminVoiceData, now = 
     };
   }
 
-  if (/\b(picked up|collected|they (got|took) (it|their racket))\b/.test(t)) {
+  if (
+    /\b(picked up|collected)\b/.test(t) ||
+    /\b(got|took)\s+(his|her|their|the)\s+(racket|restring)\b/.test(t) ||
+    /\bthey (got|took)\b/.test(t)
+  ) {
     const order = findStringing(data.stringing, person?.name || hint || "", ["ready", "in_shop"]);
     if (!order) return unknown("I need a name on a stringing order. Try “Sarah picked up her racket.”");
     return {
@@ -469,7 +489,7 @@ export function parseAdminVoice(transcript: string, data: AdminVoiceData, now = 
     };
   }
 
-  if (/\b(open|release|unhold|lift).*(hold|block)\b/.test(t) || (/\brelease\b/.test(t) && /\bcourt/.test(t))) {
+  if (/\b(open|release|unhold|lift).*(hold|block)\b/.test(t) || /\bunhold\b/.test(t) || (/\brelease\b/.test(t) && /\b(hold|block|court)\b/.test(t))) {
     const match = data.blocks
       .filter((b) => b.date === date && (b.kind || "hold") === "hold")
       .filter((b) => (courtId && courtId !== "both" ? b.courtId === courtId || b.courtId === "both" : true))
@@ -509,7 +529,7 @@ export function parseAdminVoice(transcript: string, data: AdminVoiceData, now = 
     };
   }
 
-  if (/\b(cancel|drop|take off|remove)\b/.test(t) && person) {
+  if (/\b(cancel|drop|take off|remove|take \w+ off)\b/.test(t) && person) {
     const hit = findCancel(data, person.name, date, hour, t);
     if (!hit) return unknown(`No booking for ${person.name} to cancel.`);
     return {
@@ -521,16 +541,21 @@ export function parseAdminVoice(transcript: string, data: AdminVoiceData, now = 
     };
   }
 
-  if ((/\b(add|put|walk[- ]?up|sign)\b/.test(t) && /\b(clinic|class|juniors?|tots|cardio|101)\b/.test(t)) || (/\b(add|put)\b/.test(t) && person && pickClinic(t, date, hour, data.catalog.clinics))) {
+  if (
+    !/\bcourt/.test(t) &&
+    ((/\b(add|put|walk[- ]?up|sign)\b/.test(t) && /\b(clinic|class|juniors?|tots|toddlers?|cardio|101|games|ladies)\b/.test(t)) ||
+      (/\b(add|put)\b/.test(t) && person && pickClinic(t, date, hour, data.catalog.clinics)))
+  ) {
     if (!person) return unknown("Who should I add? Try “add Emma to Tuesday juniors.”");
     const def = pickClinic(t, date, hour, data.catalog.clinics);
     if (!def) return unknown("Which clinic? Try “add Emma to Tuesday juniors” or “put Sarah in 9am Saturday.”");
+    const clinicDate = nextDateForClinic(def, date);
     const member = person.member;
     const booking: S27ClinicBooking = {
       id: uid("clinic"),
       clinicId: def.id,
       clinicName: def.name,
-      date,
+      date: clinicDate,
       clientName: person.name,
       clientEmail: member?.email || "",
       memberNumber: member?.memberNumber,
@@ -542,7 +567,7 @@ export function parseAdminVoice(transcript: string, data: AdminVoiceData, now = 
     return {
       kind: "add_clinic",
       title: `Add ${person.name}`,
-      detail: `${def.name} · ${pretty} · ${formatHour(def.startHour)} · $${booking.amount} paid (desk).${person.ambiguous || !member ? `\n\n${warn(!!person.ambiguous, person.name, member)}` : ""}`,
+      detail: `${def.name} · ${formatPrettyDate(clinicDate)} · ${formatHour(def.startHour)} · $${booking.amount} paid (desk).${person.ambiguous || !member ? `\n\n${warn(!!person.ambiguous, person.name, member)}` : ""}`,
       mutating: true,
       booking,
     };
@@ -578,7 +603,7 @@ export function parseAdminVoice(transcript: string, data: AdminVoiceData, now = 
     };
   }
 
-  if (person?.member && /\b(open|show|file|pull)\b/.test(t)) {
+  if (person?.member && /\b(open|show|file|pull)\b/.test(t) && !/\b(hold|court|no-show)\b/.test(t)) {
     return {
       kind: "open_member",
       title: `Open ${person.member.name}`,
@@ -586,6 +611,16 @@ export function parseAdminVoice(transcript: string, data: AdminVoiceData, now = 
       mutating: false,
       memberNumber: person.member.memberNumber,
     };
+  }
+
+  if (
+    /\b(who('?s| is| has)|what('?s| is)|what'?s happening|roster|how('?s| is) .+ looking|board at|in (the )?clinic|on court|openings)\b/.test(
+      t
+    ) ||
+    (/\bclinics?\b/.test(t) && !/\b(add|put|sign)\b/.test(t)) ||
+    (/\bcourt\b/.test(t) && hour != null && !/\b(hold|block|book|add|cancel|charge)\b/.test(t))
+  ) {
+    return lookupDraft(t, data, date, hour, courtId);
   }
 
   return unknown(
@@ -626,7 +661,7 @@ function findUnpaid(data: AdminVoiceData, hint: string, date: string, t: string)
     );
     if (row) return { label: `Lesson · ${formatPrettyDate(row.date)} ${formatHour(row.hour)} · $${row.amount}`, target: { type: "lesson" as const, id: row.id } };
   }
-  if (/\bstring\b/.test(t)) {
+  if (/\bstring(?:ing)?\b/.test(t)) {
     const scored = data.stringing
       .filter((b) => b.paymentStatus === "pending")
       .map((row) => ({ row, score: scoreName(row.clientName, hint) }))
@@ -657,7 +692,7 @@ function findUnpaid(data: AdminVoiceData, hint: string, date: string, t: string)
 }
 
 function findCancel(data: AdminVoiceData, hint: string, date: string, hour: number | null, t: string) {
-  if (/\bclinic|class|juniors?\b/.test(t)) {
+  if (/\bclinic|class|juniors?|tots|toddlers?|roster|ladies\b/.test(t)) {
     const row = bestBooking(data.clinics, hint, date);
     if (row) return { label: `${row.clinicName} · ${formatPrettyDate(row.date)} · ${row.clientName}`, target: { type: "clinic" as const, id: row.id } };
   }
@@ -691,15 +726,19 @@ function lookupDraft(
   courtId: CourtId | "both" | null
 ): AdminDraft {
   const pretty = formatPrettyDate(date);
-  if (/\bclinic|class|juniors?|roster\b/.test(t) || (hour != null && /\b(nine|9|eight|8|ten|10)\b/.test(t) && !/\bcourt/.test(t))) {
+  if (
+    /\bclinic|class|juniors?|roster|tots|toddlers?|101|cardio|ladies|games\b/.test(t) ||
+    (hour != null && /\b(nine|9|eight|8|ten|10)\b/.test(t) && !/\bcourt/.test(t))
+  ) {
     const def = pickClinic(t, date, hour, data.catalog.clinics);
     if (def) {
-      const roster = data.clinics.filter((b) => b.clinicId === def.id && b.date === date);
+      const when = nextDateForClinic(def, date);
+      const roster = data.clinics.filter((b) => b.clinicId === def.id && b.date === when);
       const names = roster.map((b) => `${b.clientName}${b.paymentStatus === "pending" ? " (unpaid)" : ""}`).join("\n") || "Nobody on the roster yet.";
       return {
         kind: "lookup",
         title: def.name,
-        detail: `${pretty} · ${formatHour(def.startHour)} · ${roster.length}/${def.capacity}\n\n${names}`,
+        detail: `${formatPrettyDate(when)} · ${formatHour(def.startHour)} · ${roster.length}/${def.capacity}\n\n${names}`,
         mutating: false,
       };
     }

@@ -116,39 +116,49 @@ const HOUR_WORDS: Record<string, number> = {
 };
 
 export function parseHour(text: string): number | null {
-  const t = normalizeTalk(text).replace(/(\d)\s*(a\.?m\.?|p\.?m\.?)/g, "$1$2");
-  if (/\bnoon\b/.test(t)) return 12;
-  if (/\bmidnight\b/.test(t)) return 0;
-  const withMer = [...t.matchAll(/\b(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)\b/g)];
+  let t = normalizeTalk(text).replace(/(\d)\s*(a\.?m\.?|p\.?m\.?)/g, "$1$2");
+  t = t.replace(/\bcourt\s*[34]\b/g, "court");
+  t = t.replace(/\b(105|101)\b/g, " ");
+  const source = t.replace(
+    /\b(?:to|until)\s+(?:noon|midnight|\d{1,2}(?::\d{2})?\s*(?:a\.?m\.?|p\.?m\.?)?|(?:seven|eight|nine|ten|eleven|twelve)(?:\s*o['’]?clock)?)\b/g,
+    " "
+  );
+  if (/\bnoon\b/.test(source)) return 12;
+  if (/\bmidnight\b/.test(source)) return 0;
+  const withMer = [...source.matchAll(/\b(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)\b/g)];
   if (withMer[0]) {
     let hour = hourFromParts(withMer[0][1], withMer[0][2], withMer[0][3]);
     if (hour != null && hour < 12 && /\b(tonight|evening|night)\b/.test(t)) hour += 12;
     return hour;
   }
-  const word = t.match(/\b(seven|eight|nine|ten|eleven|twelve)\s*(o['’]?clock)?\s*(a\.?m\.?|p\.?m\.?)?\b/);
+  const word = source.match(/\b(seven|eight|nine|ten|eleven|twelve)\s*(o['’]?clock)?\s*(a\.?m\.?|p\.?m\.?)?\b/);
   if (word) {
     const h = HOUR_WORDS[word[1]];
     const mer = word[3] || (/\b(tonight|evening|night|afternoon)\b/.test(t) && h < 12 ? "pm" : h === 12 ? "pm" : undefined);
     return hourFromParts(String(h > 12 ? h - 12 : h), undefined, mer);
   }
-  const at = t.match(/\bat\s+(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)?\b/);
+  const at = source.match(/\bat\s+(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)?\b/);
   if (at) {
     let hour = hourFromParts(at[1], at[2], at[3]);
     if (hour != null && hour < 12 && /\b(tonight|evening|night)\b/.test(t) && !at[3]) hour += 12;
     return hour;
   }
-  const clock = t.match(/\b(\d{1,2}):(\d{2})\s*(a\.?m\.?|p\.?m\.?)?\b/);
+  const clock = source.match(/\b(\d{1,2}):(\d{2})\s*(a\.?m\.?|p\.?m\.?)?\b/);
   if (clock) return hourFromParts(clock[1], clock[2], clock[3]);
-  const cleaned = t
-    .replace(/\b(105|101)\b/g, " ")
-    .replace(/\b\d+\.\d+\b/g, " ");
+  const cleaned = source.replace(/\b\d+\.\d+\b/g, " ");
   const bare = cleaned.match(/\b([1-9]|1[0-2])\b/);
-  if (bare) return hourFromParts(bare[1], undefined, undefined);
+  if (bare) {
+    let hour = hourFromParts(bare[1], undefined, undefined);
+    if (hour != null && hour < 12 && /\b(tonight|evening|night)\b/.test(t)) hour += 12;
+    return hour;
+  }
   return null;
 }
 
 function parseHourTo(text: string): number | null {
-  const t = text.toLowerCase();
+  const t = normalizeTalk(text);
+  if (/\b(?:to|until)\s+noon\b/.test(t)) return 12;
+  if (/\b(?:to|until)\s+midnight\b/.test(t)) return 0;
   const m = t.match(/\b(?:to|until)\s+(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)?\b/);
   if (!m) return null;
   return hourFromParts(m[1], m[2], m[3]);
@@ -186,6 +196,9 @@ function parseChildName(text: string): string | null {
   const m =
     text.match(/\b(?:put|enroll)\s+([A-Z][a-z]+)/) ||
     text.match(/\bsign\s+up\s+([A-Z][a-z]+)/) ||
+    text.match(/\bsign\s+([A-Z][a-z]+)\s+up\b/) ||
+    text.match(/\bcan\s+([A-Z][a-z]+)\s+do\b/) ||
+    text.match(/\bdrop\s+([A-Z][a-z]+)/) ||
     text.match(/\bcancel\s+([A-Z][a-z]+)(?:['’]s)?\b/) ||
     text.match(/\b([A-Z][a-z]{2,})\s+(?:join|in|into)\b/) ||
     text.match(/\bfor\s+([A-Z][a-z]{2,})\b/) ||
@@ -320,22 +333,25 @@ export function parseVoiceFallback(transcript: string, now = new Date()): VoiceI
   const proHint = parseProHint(transcript);
   const clinicTalk =
     /\b(clinics?|class(?:es)?|cardio|tennis 101|point play|advanced games|tots|toddlers|ladies|high performance|weeknight|roster)\b/.test(t) ||
-    (/\bjuniors?\b/.test(t) && !/\blesson\b/.test(t));
+    (/\bgames\b/.test(t) && /\b(sat|sun|saturday|sunday|clinic|9)\b/.test(t)) ||
+    (/\bjuniors?\b/.test(t) && !/\blessons?\b/.test(t));
   const book =
-    /\b(book|reserve|sign(?:\s*me)?[\s-]?up|enroll|join|put|register|schedule|get me (?:in|into)|add me|still make)\b/.test(t) ||
+    /\b(book|reserve|sign(?:\s*me)?[\s-]?up|enroll|join|put|register|schedule|get me (?:in|into)|add me|still make|hold (?:me |a |the )?court|two hours)\b/.test(t) ||
     /\bi (?:wanna|want to) (?:book|join|hit)\b/.test(t);
 
-  if (/\b(how much|prices?|cost|rate|rates|charge|fee)\b/.test(t)) {
+  if (/\b(how much|prices?|cost|rate|rates|charge|fee|what does .+ run)\b/.test(t)) {
     return emptyIntent({ intent: "prices", priceTopic: parsePriceTopic(t), date, hour, timeOfDay, courtId, proHint });
   }
   if (/\b(move|reschedule|change .+ to)\b/.test(t)) {
     return emptyIntent({ intent: "move", date, dateTo, hour, hourTo: hourTo || hour, timeOfDay, courtId, clinicHint: clinicTalk ? transcript : null });
   }
-  if (/\b(cancel|drop me|remove me|take me off)\b/.test(t)) {
+  if (/\b(cancel|drop me|drop (?!off)|remove me|take me off|take .+ off)\b/.test(t)) {
     return emptyIntent({ intent: "cancel", date, hour, timeOfDay, courtId, clinicHint: clinicTalk ? transcript : null, childName });
   }
   if (
-    /\b(what do i have|what'?s on my book|my (day|week|weekend|bookings|schedule)|am i booked|do i have anything|show my bookings)\b/.test(t)
+    /\b(what do i have|what'?s on my (book|calendar)|my (day|week|weekend|bookings|schedule|calendar)|am i booked|am i in any|do i have (anything|court|a booking)|show my bookings|show everything i booked)\b/.test(
+      t
+    )
   ) {
     return emptyIntent({ intent: "my_day", date, dateTo, hour, timeOfDay, courtId });
   }
@@ -349,7 +365,7 @@ export function parseVoiceFallback(transcript: string, now = new Date()): VoiceI
       tension: parseTension(t),
     });
   }
-  if ((/\blesson\b/.test(t) || proHint) && !clinicTalk) {
+  if ((/\blessons?\b/.test(t) || proHint) && (!clinicTalk || /\b(who teaches|private lesson|lessons?)\b/.test(t))) {
     return emptyIntent({
       intent: book || /\brequest\b/.test(t) || !!proHint ? "request_lesson" : "check_lesson",
       date: date || isoDate(now),
@@ -371,7 +387,9 @@ export function parseVoiceFallback(transcript: string, now = new Date()): VoiceI
     });
   }
   if (
-    /\b(looking for a game|looking for doubles|hit with|hitting partner|anyone (playing|free|looking)|lfg|find a game)\b/.test(t)
+    /\b(looking for a game|looking for doubles|need a doubles partner|hit with|hitting partner|who'?s hitting|anyone (playing|free|looking)|lfg|find a game|post that i'?m looking)\b/.test(
+      t
+    )
   ) {
     return emptyIntent({ intent: "check_play", date: date || isoDate(now), hour, timeOfDay, courtId });
   }
@@ -388,7 +406,7 @@ export function parseVoiceFallback(transcript: string, now = new Date()): VoiceI
   if (book && (/\bcourt/.test(t) || hour != null)) {
     return emptyIntent({ intent: "book_court", date: date || isoDate(now), hour, timeOfDay, courtId });
   }
-  if (/\b(what'?s open|anything open|open this)\b/.test(t) || /\b(court|open time|court time|open courts|open slots)\b/.test(t) || hour != null) {
+  if (/\b(what'?s open|anything open|open this|courts left|any courts)\b/.test(t) || /\b(court|open time|court time|open courts|open slots)\b/.test(t) || hour != null) {
     return emptyIntent({ intent: "check_court", date: date || isoDate(now), hour, timeOfDay, courtId });
   }
   return emptyIntent({ intent: "unknown", date, hour, timeOfDay, clinicHint: transcript, courtId, childName, proHint });
