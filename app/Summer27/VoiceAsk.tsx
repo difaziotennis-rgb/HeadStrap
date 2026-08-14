@@ -112,9 +112,18 @@ export default function VoiceAsk() {
   const listeningRef = useRef(false);
   const heardRef = useRef("");
   const genRef = useRef(0);
+  const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const canTalk = speechSupported();
 
+  function clearSilence() {
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
+  }
+
   function killRec() {
+    clearSilence();
     listeningRef.current = false;
     const rec = recRef.current;
     recRef.current = null;
@@ -131,6 +140,36 @@ export default function VoiceAsk() {
         // already stopped
       }
     }
+  }
+
+  function finishListen() {
+    clearSilence();
+    const leftover = heardRef.current.trim();
+    heardRef.current = "";
+    listeningRef.current = false;
+    const rec = recRef.current;
+    recRef.current = null;
+    if (rec) {
+      rec.onresult = null;
+      rec.onerror = null;
+      rec.onend = null;
+      try {
+        rec.stop();
+      } catch {
+        // already ending
+      }
+    }
+    if (leftover) void runTranscript(leftover);
+    else setPhase((p) => (p === "listen" ? "idle" : p));
+  }
+
+  function armSilence() {
+    clearSilence();
+    silenceTimerRef.current = setTimeout(() => {
+      silenceTimerRef.current = null;
+      if (!listeningRef.current) return;
+      finishListen();
+    }, 1500);
   }
 
   useEffect(() => {
@@ -216,40 +255,35 @@ export default function VoiceAsk() {
     recRef.current = rec;
     listeningRef.current = true;
     rec.onresult = (ev) => {
-      const { finalText, heard } = transcriptFrom(ev);
+      const { heard } = transcriptFrom(ev);
+      if (!heard) return;
       heardRef.current = heard;
       setTranscript(heard);
-      if (finalText) {
-        listeningRef.current = false;
-        rec.onend = null;
-        try {
-          rec.stop();
-        } catch {
-          // already ending
-        }
-        recRef.current = null;
-        void runTranscript(finalText);
-      }
+      armSilence();
     };
     rec.onerror = (ev) => {
       const code = ev.error || "";
       if (code === "aborted") return;
       if (!listeningRef.current) return;
+      if (code === "no-speech") {
+        if (heardRef.current.trim()) return;
+        listeningRef.current = false;
+        setPhase("idle");
+        setError("I didn’t catch that — tap Ask and try again.");
+        return;
+      }
       listeningRef.current = false;
       setPhase("idle");
-      if (code === "no-speech") setError("I didn’t catch that — tap Ask and try again.");
-      else if (code === "not-allowed") {
+      if (code === "not-allowed") {
         setError("Microphone is blocked. Tap the lock in the address bar, set Microphone to Allow, then tap Ask.");
       } else if (code === "audio-capture") setError("No microphone found.");
       else setError("Mic didn’t work — type it below.");
     };
     rec.onend = () => {
+      if (recRef.current === rec) recRef.current = null;
       if (!listeningRef.current) return;
-      listeningRef.current = false;
-      recRef.current = null;
-      const leftover = heardRef.current;
-      if (leftover) void runTranscript(leftover);
-      else setPhase((p) => (p === "listen" ? "idle" : p));
+      if (heardRef.current.trim() && silenceTimerRef.current) return;
+      finishListen();
     };
     try {
       rec.start();
@@ -292,7 +326,11 @@ export default function VoiceAsk() {
               <div>
                 <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Ask the club</p>
                 <p className="mt-0.5 text-[16px] font-semibold tracking-tight">
-                  {phase === "listen" ? "Listening…" : phase === "think" ? "Checking…" : "Say what you need"}
+                  {phase === "listen"
+                    ? "Listening…"
+                    : phase === "think"
+                      ? "Checking…"
+                      : "Say what you need"}
                 </p>
               </div>
               <button
