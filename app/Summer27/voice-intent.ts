@@ -54,6 +54,10 @@ const KINDS: VoiceIntentKind[] = [
   "unknown",
 ];
 
+function normalizeTalk(text: string) {
+  return text.toLowerCase().replace(/['’]/g, "'").replace(/[“”]/g, '"');
+}
+
 function pad(n: number) {
   return String(n).padStart(2, "0");
 }
@@ -112,20 +116,34 @@ const HOUR_WORDS: Record<string, number> = {
 };
 
 export function parseHour(text: string): number | null {
-  const t = text.toLowerCase().replace(/(\d)\s*(a\.?m\.?|p\.?m\.?)/g, "$1$2");
+  const t = normalizeTalk(text).replace(/(\d)\s*(a\.?m\.?|p\.?m\.?)/g, "$1$2");
   if (/\bnoon\b/.test(t)) return 12;
   if (/\bmidnight\b/.test(t)) return 0;
   const withMer = [...t.matchAll(/\b(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)\b/g)];
-  if (withMer[0]) return hourFromParts(withMer[0][1], withMer[0][2], withMer[0][3]);
+  if (withMer[0]) {
+    let hour = hourFromParts(withMer[0][1], withMer[0][2], withMer[0][3]);
+    if (hour != null && hour < 12 && /\b(tonight|evening|night)\b/.test(t)) hour += 12;
+    return hour;
+  }
   const word = t.match(/\b(seven|eight|nine|ten|eleven|twelve)\s*(o['’]?clock)?\s*(a\.?m\.?|p\.?m\.?)?\b/);
   if (word) {
     const h = HOUR_WORDS[word[1]];
-    return hourFromParts(String(h > 12 ? h - 12 : h), undefined, word[3] || (h === 12 ? "pm" : "am"));
+    const mer = word[3] || (/\b(tonight|evening|night|afternoon)\b/.test(t) && h < 12 ? "pm" : h === 12 ? "pm" : undefined);
+    return hourFromParts(String(h > 12 ? h - 12 : h), undefined, mer);
   }
   const at = t.match(/\bat\s+(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)?\b/);
-  if (at) return hourFromParts(at[1], at[2], at[3]);
+  if (at) {
+    let hour = hourFromParts(at[1], at[2], at[3]);
+    if (hour != null && hour < 12 && /\b(tonight|evening|night)\b/.test(t) && !at[3]) hour += 12;
+    return hour;
+  }
   const clock = t.match(/\b(\d{1,2}):(\d{2})\s*(a\.?m\.?|p\.?m\.?)?\b/);
   if (clock) return hourFromParts(clock[1], clock[2], clock[3]);
+  const cleaned = t
+    .replace(/\b(105|101)\b/g, " ")
+    .replace(/\b\d+\.\d+\b/g, " ");
+  const bare = cleaned.match(/\b([1-9]|1[0-2])\b/);
+  if (bare) return hourFromParts(bare[1], undefined, undefined);
   return null;
 }
 
@@ -166,8 +184,11 @@ function parseDate(text: string, now: Date): string | null {
 
 function parseChildName(text: string): string | null {
   const m =
-    text.match(/\b(?:put|enroll)\s+([A-Z][a-z]+|[A-Za-z]+)\s+(?:in|for|up)\b/) ||
-    text.match(/\bsign\s+up\s+([A-Z][a-z]+)\s+(?:in|for)\b/) ||
+    text.match(/\b(?:put|enroll)\s+([A-Z][a-z]+)/) ||
+    text.match(/\bsign\s+up\s+([A-Z][a-z]+)/) ||
+    text.match(/\bcancel\s+([A-Z][a-z]+)(?:['’]s)?\b/) ||
+    text.match(/\b([A-Z][a-z]{2,})\s+(?:join|in|into)\b/) ||
+    text.match(/\bfor\s+([A-Z][a-z]{2,})\b/) ||
     text.match(/\b([A-Z][a-z]{2,})\s+(?:in|into)\s+(?:the\s+)?(?:junior|clinic)/i);
   if (!m) return null;
   const name = m[1];
@@ -202,6 +223,16 @@ function parseChildName(text: string): string | null {
     "cardio",
     "today",
     "tomorrow",
+    "tots",
+    "both",
+    "kids",
+    "guests",
+    "guest",
+    "ladies",
+    "high",
+    "performance",
+    "weeknight",
+    "tennis",
   ]);
   if (skip.has(name.toLowerCase())) return null;
   return name;
@@ -236,8 +267,8 @@ function parseProHint(text: string): string | null {
 }
 
 function parsePriceTopic(text: string): string | null {
-  const t = text.toLowerCase();
-  if (/\blesson/.test(t)) return "lesson";
+  const t = normalizeTalk(text);
+  if (/\blesson|derek|maya|jonah/.test(t)) return "lesson";
   if (/\bclinic|class/.test(t)) return "clinic";
   if (/\bstring|restring|racket/.test(t)) return "stringing";
   if (/\bevent|tournament|championship/.test(t)) return "event";
@@ -271,7 +302,7 @@ function clinicExistsAt(date: string | null, hour: number | null) {
 }
 
 export function parseVoiceFallback(transcript: string, now = new Date()): VoiceIntent {
-  const t = transcript.toLowerCase();
+  const t = normalizeTalk(transcript);
   const hour = parseHour(t);
   const hourTo = /\bto\b/.test(t) ? parseHourTo(t) : null;
   const timeOfDay = parseTimeOfDay(t);
@@ -287,33 +318,40 @@ export function parseVoiceFallback(transcript: string, now = new Date()): VoiceI
   if (/\bcourt\s*4\b/.test(t)) courtId = "court-2";
   const childName = parseChildName(transcript);
   const proHint = parseProHint(transcript);
-  const clinicTalk = /\b(clinic|class|cardio|tennis 101|point play|juniors?|tots|toddlers)\b/.test(t);
-  const book = /\b(book|reserve|sign(?:\s*me)?[\s-]?up|enroll|join|put|register)\b/.test(t);
+  const clinicTalk =
+    /\b(clinics?|class(?:es)?|cardio|tennis 101|point play|advanced games|tots|toddlers|ladies|high performance|weeknight|roster)\b/.test(t) ||
+    (/\bjuniors?\b/.test(t) && !/\blesson\b/.test(t));
+  const book =
+    /\b(book|reserve|sign(?:\s*me)?[\s-]?up|enroll|join|put|register|schedule|get me (?:in|into)|add me|still make)\b/.test(t) ||
+    /\bi (?:wanna|want to) (?:book|join|hit)\b/.test(t);
 
-  if (/\b(how much|price|cost|rate|rates|charge)\b/.test(t)) {
-    return emptyIntent({ intent: "prices", priceTopic: parsePriceTopic(t), date, hour, timeOfDay, courtId });
+  if (/\b(how much|prices?|cost|rate|rates|charge|fee)\b/.test(t)) {
+    return emptyIntent({ intent: "prices", priceTopic: parsePriceTopic(t), date, hour, timeOfDay, courtId, proHint });
   }
   if (/\b(move|reschedule|change .+ to)\b/.test(t)) {
     return emptyIntent({ intent: "move", date, dateTo, hour, hourTo: hourTo || hour, timeOfDay, courtId, clinicHint: clinicTalk ? transcript : null });
   }
-  if (/\b(cancel|drop|remove me)\b/.test(t)) {
+  if (/\b(cancel|drop me|remove me|take me off)\b/.test(t)) {
     return emptyIntent({ intent: "cancel", date, hour, timeOfDay, courtId, clinicHint: clinicTalk ? transcript : null, childName });
   }
-  if (/\b(what do i have|my (day|week|weekend|bookings|schedule)|am i booked)\b/.test(t)) {
+  if (
+    /\b(what do i have|what'?s on my book|my (day|week|weekend|bookings|schedule)|am i booked|do i have anything|show my bookings)\b/.test(t)
+  ) {
     return emptyIntent({ intent: "my_day", date, dateTo, hour, timeOfDay, courtId });
   }
-  if (/\b(string|restring|racket ready|poly|gut)\b/.test(t)) {
-    const order = /\b(order|drop|restring|string my)\b/.test(t);
+  if (/\b(stringing|string|restring|racket|poly|gut|multifilament|synthetic)\b/.test(t)) {
+    const checking = /\b(ready|done|status|check)\b/.test(t);
+    const order = /\b(order|drop off|restring|string my|string it)\b/.test(t) || !!parseStringHint(t);
     return emptyIntent({
-      intent: order || parseStringHint(t) ? "order_stringing" : "check_stringing",
+      intent: checking || (!order && /\bracket\b/.test(t)) ? "check_stringing" : "order_stringing",
       date,
       stringHint: parseStringHint(t),
       tension: parseTension(t),
     });
   }
-  if (/\b(lesson|derek|maya|jonah)\b/.test(t) && !clinicTalk) {
+  if ((/\blesson\b/.test(t) || proHint) && !clinicTalk) {
     return emptyIntent({
-      intent: book || /\brequest\b/.test(t) ? "request_lesson" : "check_lesson",
+      intent: book || /\brequest\b/.test(t) || !!proHint ? "request_lesson" : "check_lesson",
       date: date || isoDate(now),
       hour,
       timeOfDay,
@@ -321,14 +359,20 @@ export function parseVoiceFallback(transcript: string, now = new Date()): VoiceI
       childName,
     });
   }
-  if (/\b(event|tournament|championship|105|wimbledon|social)\b/.test(t)) {
+  if (
+    /\b(events?|tournament|championships?|105|wimbledon|social|family play|mixed doubles|round robin|season close|season end)\b/.test(
+      t
+    )
+  ) {
     return emptyIntent({
       intent: book ? "book_event" : "check_event",
       date,
       eventHint: transcript,
     });
   }
-  if (/\b(looking for a game|hit with|anyone (playing|free)|lfg|find a game)\b/.test(t)) {
+  if (
+    /\b(looking for a game|looking for doubles|hit with|hitting partner|anyone (playing|free|looking)|lfg|find a game)\b/.test(t)
+  ) {
     return emptyIntent({ intent: "check_play", date: date || isoDate(now), hour, timeOfDay, courtId });
   }
   if (clinicTalk || childName || (book && !/\bcourt/.test(t) && clinicExistsAt(date, hour))) {
@@ -344,10 +388,10 @@ export function parseVoiceFallback(transcript: string, now = new Date()): VoiceI
   if (book && (/\bcourt/.test(t) || hour != null)) {
     return emptyIntent({ intent: "book_court", date: date || isoDate(now), hour, timeOfDay, courtId });
   }
-  if (/\b(court|open time|court time)\b/.test(t) || hour != null) {
+  if (/\b(what'?s open|anything open|open this)\b/.test(t) || /\b(court|open time|court time|open courts|open slots)\b/.test(t) || hour != null) {
     return emptyIntent({ intent: "check_court", date: date || isoDate(now), hour, timeOfDay, courtId });
   }
-  return emptyIntent({ intent: "unknown", date, hour, timeOfDay, clinicHint: transcript, courtId, childName });
+  return emptyIntent({ intent: "unknown", date, hour, timeOfDay, clinicHint: transcript, courtId, childName, proHint });
 }
 
 export function mergeIntent(parsed: Partial<VoiceIntent>, fallback: VoiceIntent): VoiceIntent {

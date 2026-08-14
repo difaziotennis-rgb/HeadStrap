@@ -81,21 +81,25 @@ function clinicHintMatch(clinic: ClinicDef, hint: string | null) {
   if (!hint) return true;
   const h = hint.toLowerCase();
   const blob = `${clinic.name} ${clinic.level} ${clinic.id} ${clinic.kind}`.toLowerCase();
+  if (/\btots\b/.test(h)) return blob.includes("tots");
+  if (/\btoddlers?\b/.test(h)) return /toddler/.test(blob);
+  if (/\bhigh school\b/.test(h)) return blob.includes("high school");
+  if (/\bjuniors?\b/.test(h)) return clinic.kind === "junior" && !/tots|toddler/.test(blob);
   const keys = [
     "101",
     "cardio",
     "point play",
     "ladies",
-    "juniors",
-    "junior",
     "high performance",
     "weeknight",
     "beginner",
-    "high school",
-    "tots",
+    "3.5",
+    "2.5",
+    "men's cardio",
+    "mens cardio",
+    "games",
   ];
   const hits = keys.filter((k) => h.includes(k));
-  if (h.includes("junior") || h.includes("juniors")) return clinic.kind === "junior";
   if (hits.length === 0) return true;
   return hits.some((k) => blob.includes(k));
 }
@@ -204,7 +208,7 @@ function eventMatch(hint: string | null) {
       (blob.includes("wimbledon") && /wimbledon/.test(h)) ||
       (blob.includes("family") && /family/.test(h)) ||
       (blob.includes("mixed") && /mixed/.test(h)) ||
-      (blob.includes("season") && /season|close/.test(h)) ||
+      (blob.includes("season") && /season|close|end party/.test(h)) ||
       e.title.toLowerCase().includes(h.slice(0, 18))
     );
   });
