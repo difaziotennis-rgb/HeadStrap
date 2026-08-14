@@ -76,7 +76,7 @@ function installEnv() {
   (globalThis as unknown as { fetch: typeof fetch }).fetch = (async () => ({
     ok: true,
     json: async () => ({ ok: true, configured: false, emailed: true }),
-  })) as typeof fetch;
+  })) as unknown as typeof fetch;
 }
 
 installEnv();
