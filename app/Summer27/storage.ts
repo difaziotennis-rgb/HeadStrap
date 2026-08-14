@@ -156,6 +156,8 @@ export type S27ClinicBooking = {
   paymentMethod: "stripe" | "saved-card" | "manual" | "paypal" | "venmo";
   createdAt: string;
   paymentIntentId?: string;
+  /** Set on a second spot paid in the same checkout as this id. */
+  paidWithId?: string;
 };
 
 export type S27LessonBooking = {

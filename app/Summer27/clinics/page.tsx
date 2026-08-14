@@ -141,6 +141,9 @@ function Summer27ClinicsInner() {
   const [guestEmail, setGuestEmail] = useState("");
   const [childName, setChildName] = useState(queryChild);
   const [familyChildren, setFamilyChildren] = useState<S27MemberChild[]>([]);
+  const [addSecond, setAddSecond] = useState(false);
+  const [extraName, setExtraName] = useState("");
+  const [extraOther, setExtraOther] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [paying, setPaying] = useState(false);
 
@@ -221,7 +224,9 @@ function Summer27ClinicsInner() {
     const bookingId = searchParams.get("bookingId");
     if (status === "success" && bookingId) {
       const all = loadList<S27ClinicBooking>(KEYS.clinics).map((b) =>
-        b.id === bookingId ? { ...b, paymentStatus: "paid" as const, paymentMethod: "stripe" as const } : b
+        b.id === bookingId || b.paidWithId === bookingId
+          ? { ...b, paymentStatus: "paid" as const, paymentMethod: "stripe" as const }
+          : b
       );
       saveList(KEYS.clinics, all);
       setBookings(all);
@@ -268,6 +273,17 @@ function Summer27ClinicsInner() {
     !!childName.trim() &&
     roster.some((b) => b.clientName.trim().toLowerCase() === childName.trim().toLowerCase());
   const alreadyIn = isJunior ? childAlreadyIn : !!myBooking;
+  const extraAlreadyIn =
+    !!extraName.trim() &&
+    roster.some((b) => b.clientName.trim().toLowerCase() === extraName.trim().toLowerCase());
+  const extraSameAsFirst =
+    !!extraName.trim() &&
+    (isJunior
+      ? extraName.trim().toLowerCase() === childName.trim().toLowerCase()
+      : extraName.trim().toLowerCase() === (session?.memberName || guestName).trim().toLowerCase());
+  const spotsToBook =
+    (isJunior ? (childAlreadyIn ? 0 : 1) : alreadyIn ? 0 : 1) + (addSecond ? 1 : 0);
+  const totalDue = price * Math.max(spotsToBook, 0);
   const cancellable = !!(clinic && canChangeBooking(date, clinic.startHour));
 
   const dateChips = useMemo(
@@ -285,12 +301,18 @@ function Summer27ClinicsInner() {
     setSelectedId(c.id);
     setDate(occurrenceDate);
     setMsg(null);
+    setAddSecond(false);
+    setExtraName("");
+    setExtraOther(false);
     setSheetOpen(true);
   }
 
   function closeSheet() {
     setSheetOpen(false);
     setMsg(null);
+    setAddSecond(false);
+    setExtraName("");
+    setExtraOther(false);
   }
 
   function cancelSignup(booking?: S27ClinicBooking) {
@@ -308,16 +330,60 @@ function Summer27ClinicsInner() {
 
   async function signUp(method: S27PayMethod) {
     if (!clinic) return;
-    if (seatsLeft <= 0) {
-      setMsg("This session is full.");
-      return;
+
+    const names: string[] = [];
+    if (isJunior) {
+      const first = childName.trim();
+      if (first && !childAlreadyIn) names.push(first);
+      if (addSecond) {
+        const second = extraName.trim();
+        if (!second) {
+          setMsg("Add the sibling’s name.");
+          return;
+        }
+        if (extraSameAsFirst || extraAlreadyIn) {
+          setMsg(extraAlreadyIn ? "That junior is already enrolled." : "Use two different names.");
+          return;
+        }
+        names.push(second);
+      }
+      if (names.length === 0) {
+        setMsg("That junior is already enrolled.");
+        return;
+      }
+    } else {
+      if (isMember && session) {
+        if (!alreadyIn) names.push(session.memberName);
+      } else {
+        if (!guestName.trim() || !guestEmail.trim()) {
+          setMsg("Enter your name and email to join as a guest.");
+          return;
+        }
+        if (!alreadyIn) names.push(guestName.trim());
+      }
+      if (addSecond) {
+        const second = extraName.trim();
+        if (!second) {
+          setMsg("Add the second player’s name.");
+          return;
+        }
+        if (extraSameAsFirst || extraAlreadyIn) {
+          setMsg(extraAlreadyIn ? "That player is already on the roster." : "Use a different name for the second spot.");
+          return;
+        }
+        names.push(second);
+      }
+      if (names.length === 0) {
+        setMsg("You’re already on this roster.");
+        return;
+      }
     }
-    if (alreadyIn) {
-      setMsg(isJunior ? "That junior is already enrolled." : "You’re already on this roster.");
+
+    if (names.length > seatsLeft) {
+      setMsg(seatsLeft <= 0 ? "This session is full." : "Not enough spots left for two players.");
       return;
     }
 
-    let clientName = "";
     let clientEmail = "";
     let memberNumber: string | undefined;
 
@@ -326,12 +392,9 @@ function Summer27ClinicsInner() {
         setMsg("Add a card on file in My Account to book.");
         return;
       }
-      clientName = isJunior
-        ? childName.trim() || `${session.memberName}'s junior`
-        : session.memberName;
       clientEmail = session.memberEmail;
       memberNumber = session.memberNumber;
-      if (isJunior && !childName.trim() && !clientName.trim()) {
+      if (isJunior && names.some((n) => !n.trim())) {
         setMsg("Please add the junior’s name.");
         return;
       }
@@ -340,71 +403,73 @@ function Summer27ClinicsInner() {
         setMsg("Sign in as a member to enroll a junior.");
         return;
       }
-      if (!guestName.trim() || !guestEmail.trim()) {
-        setMsg("Enter your name and email to join as a guest.");
-        return;
-      }
-      clientName = guestName.trim();
       clientEmail = guestEmail.trim();
     }
 
-    const id = `${isJunior ? "junior" : "clinic"}-${Date.now()}`;
-    const booking: S27ClinicBooking = {
-      id,
+    const perSpot = price;
+    const total = perSpot * names.length;
+    const primaryId = `${isJunior ? "junior" : "clinic"}-${Date.now()}`;
+    const newRows: S27ClinicBooking[] = names.map((name, i) => ({
+      id: i === 0 ? primaryId : `${primaryId}-${i + 1}`,
       clinicId: clinic.id,
       clinicName: clinic.name,
       date,
-      clientName,
+      clientName: name,
       clientEmail,
       memberNumber,
-      amount: price,
+      amount: perSpot,
       paymentStatus: method === "checkout" ? "pending" : "paid",
       paymentMethod: storageMethodFor(method),
       createdAt: new Date().toISOString(),
-    };
+      paidWithId: i === 0 ? undefined : primaryId,
+    }));
 
     setPaying(true);
+    const who = names.join(" & ");
 
     if (!isMember || method === "checkout") {
       const guestPay = await startGuestCheckout({
-        amount: price,
+        amount: total,
         email: clientEmail,
-        name: clientName,
-        description: `${clinic.name} · ${date}`,
+        name: names[0],
+        description: `${clinic.name} · ${date}${names.length > 1 ? ` · ${names.length} spots` : ""}`,
         successPath: "/Summer27/clinics",
-        bookingId: id,
-        metadata: { type: "clinic", clinicId: clinic.id, date },
+        bookingId: primaryId,
+        metadata: { type: "clinic", clinicId: clinic.id, date, spots: String(names.length) },
       });
       if (guestPay.kind === "error") {
         setPaying(false);
         setMsg(guestPay.error);
         return;
       }
-      const nextPending = [...bookings, booking];
+      const nextPending = [...bookings, ...newRows];
       if (guestPay.kind === "checkout") {
         saveList(KEYS.clinics, nextPending);
         setBookings(nextPending);
         window.location.href = guestPay.url;
         return;
       }
-      booking.paymentStatus = "paid";
-      const next = [...bookings, booking];
+      const paidRows = newRows.map((b) => ({ ...b, paymentStatus: "paid" as const }));
+      const next = [...bookings, ...paidRows];
       saveList(KEYS.clinics, next);
       setBookings(next);
       setPaying(false);
-      setMsg(`You’re in (demo). $${price}.`);
+      setAddSecond(false);
+      setExtraName("");
+      setExtraOther(false);
+      setMsg(`You’re in (demo). ${who}. $${total}.`);
       return;
     }
 
     const result = await startMemberPayment({
       method,
-      amount: price,
+      amount: total,
       email: clientEmail,
-      description: isJunior ? `${clinic.name} · ${clientName} · ${date}` : `${clinic.name} · ${date}`,
+      description: `${clinic.name} · ${who} · ${date}`,
       successPath: "/Summer27/clinics",
-      bookingId: id,
+      bookingId: primaryId,
       paymentProfile: savedCard,
-      metadata: { type: isJunior ? "junior" : "clinic", clinicId: clinic.id, date },
+      metadata: { type: isJunior ? "junior" : "clinic", clinicId: clinic.id, date, spots: String(names.length) },
     });
 
     if (result.kind === "error") {
@@ -413,17 +478,32 @@ function Summer27ClinicsInner() {
       return;
     }
     if (result.kind === "checkout") {
+      const nextPending = [...bookings, ...newRows];
+      saveList(KEYS.clinics, nextPending);
+      setBookings(nextPending);
       window.location.href = result.url;
       return;
     }
 
-    booking.paymentStatus = "paid";
-    booking.paymentIntentId = result.paymentIntentId;
-    const next = [...bookings, booking];
+    const paidRows = newRows.map((b) => ({
+      ...b,
+      paymentStatus: "paid" as const,
+      paymentIntentId: result.paymentIntentId,
+    }));
+    const next = [...bookings, ...paidRows];
     saveList(KEYS.clinics, next);
     setBookings(next);
     setPaying(false);
-    setMsg(isJunior ? `Enrolled. $${price} charged.` : `You’re in. $${price} charged.`);
+    setAddSecond(false);
+    setExtraName("");
+    setExtraOther(false);
+    setMsg(
+      names.length > 1
+        ? `Enrolled ${who}. $${total} charged.`
+        : isJunior
+          ? `Enrolled. $${total} charged.`
+          : `You’re in. $${total} charged.`
+    );
   }
 
   const isThisWeek = formatDateInput(weekStart) === formatDateInput(thisWeekStart);
@@ -433,7 +513,8 @@ function Summer27ClinicsInner() {
       <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Clinics</p>
       <h2 className="mt-1 text-2xl font-semibold tracking-tight">Weekly group play</h2>
       <p className="mt-2 max-w-xl text-[14px] leading-relaxed text-[#6b665e]">
-        Adult and junior sessions. Tap one to book. Half hour $35 · one hour $55 · 90 minutes $80.
+        Adult and junior sessions. Tap one to book. You can pay for a second spot — partner or sibling. Half hour $35 ·
+        one hour $55 · 90 minutes $80.
       </p>
 
       <div className="mt-6 flex rounded-full border border-[#e8e5df] bg-white p-1">
@@ -683,6 +764,94 @@ function Summer27ClinicsInner() {
                     />
                   </>
                 )}
+                {seatsLeft >= (alreadyIn ? 1 : 2) || addSecond ? (
+                  <label className="flex cursor-pointer items-start gap-2 text-[13px] leading-snug text-[#4a4a4a]">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5"
+                      checked={addSecond}
+                      onChange={(e) => {
+                        setAddSecond(e.target.checked);
+                        if (!e.target.checked) {
+                          setExtraName("");
+                          setExtraOther(false);
+                        }
+                      }}
+                      disabled={seatsLeft < (alreadyIn ? 1 : 2) && !addSecond}
+                    />
+                    <span>
+                      {isJunior ? "Add a sibling — second spot, same card" : "Add a guest — second spot, same card"}
+                      {price ? ` · +$${price}` : ""}
+                    </span>
+                  </label>
+                ) : null}
+                {addSecond &&
+                  (isJunior && isMember && familyChildren.filter((c) => c.name !== childName).length > 0 ? (
+                    <div>
+                      <label className="block text-[11px] text-[#8a8477]">
+                        Second junior
+                        <select
+                          value={
+                            familyChildren.some((c) => c.name === extraName && c.name !== childName)
+                              ? extraName
+                              : extraOther || extraName
+                                ? "__other"
+                                : ""
+                          }
+                          onChange={(e) => {
+                            if (e.target.value === "") {
+                              setExtraOther(false);
+                              setExtraName("");
+                            } else if (e.target.value === "__other") {
+                              setExtraOther(true);
+                              setExtraName("");
+                            } else {
+                              setExtraOther(false);
+                              setExtraName(e.target.value);
+                            }
+                          }}
+                          className="mt-1 w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]"
+                        >
+                          <option value="">Choose…</option>
+                          {familyChildren
+                            .filter((c) => c.name !== childName)
+                            .map((c) => (
+                              <option key={c.id} value={c.name}>
+                                {c.name}
+                                {c.birthYear ? ` (${c.birthYear})` : ""}
+                              </option>
+                            ))}
+                          <option value="__other">Someone else…</option>
+                        </select>
+                      </label>
+                      {(extraOther || (extraName !== "" && !familyChildren.some((c) => c.name === extraName))) && (
+                        <input
+                          value={extraName}
+                          onChange={(e) => setExtraName(e.target.value)}
+                          placeholder="Sibling’s full name"
+                          className="mt-2 w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]"
+                        />
+                      )}
+                    </div>
+                  ) : (
+                    <input
+                      value={extraName}
+                      onChange={(e) => setExtraName(e.target.value)}
+                      placeholder={isJunior ? "Sibling’s name" : "Second player’s name"}
+                      className="w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]"
+                    />
+                  ))}
+                {addSecond && !extraName.trim() ? (
+                  <p className="text-[12px] text-[#8a8477]">
+                    {isJunior ? "Name the sibling to charge the second spot." : "Name the guest to charge the second spot."}
+                  </p>
+                ) : extraSameAsFirst ? (
+                  <p className="text-[12px] text-[#991b1b]">Use a different name for the second spot.</p>
+                ) : extraAlreadyIn ? (
+                  <p className="text-[12px] text-[#991b1b]">
+                    {isJunior ? "That junior is already enrolled." : "That player is already on the roster."}
+                  </p>
+                ) : null}
                 {msg && <p className="text-[13px] text-[#4a4a4a]">{msg}</p>}
                 {isJunior && myBookings.length > 0 && (
                   <div className="space-y-2 rounded-xl bg-[#faf9f7] px-3 py-3">
@@ -729,18 +898,26 @@ function Summer27ClinicsInner() {
                       </p>
                     )}
                   </div>
-                ) : seatsLeft <= 0 ? (
+                ) : null}
+                {seatsLeft <= 0 && spotsToBook > 0 ? (
                   <p className="rounded-xl bg-[#faf9f7] px-3 py-3 text-center text-[13px] text-[#8a8477]">Full</p>
-                ) : alreadyIn && isJunior ? null : (
+                ) : spotsToBook > seatsLeft ? (
+                  <p className="rounded-xl bg-[#faf9f7] px-3 py-3 text-center text-[13px] text-[#8a8477]">
+                    Only {seatsLeft} spot{seatsLeft === 1 ? "" : "s"} left
+                  </p>
+                ) : spotsToBook > 0 ? (
                   <PayChooser
-                    amount={price}
+                    amount={totalDue}
                     savedCard={savedCard}
                     paying={paying}
-                    primaryLabel={isJunior ? "Enroll" : "Join"}
+                    disabled={addSecond && (!extraName.trim() || extraSameAsFirst || extraAlreadyIn)}
+                    primaryLabel={
+                      spotsToBook > 1 ? (isJunior ? "Enroll both" : "Join both") : isJunior ? "Enroll" : "Join"
+                    }
                     allowGuestCheckout={!isJunior && !savedCard}
                     onPay={signUp}
                   />
-                )}
+                ) : null}
               </div>
             </div>
           </div>
