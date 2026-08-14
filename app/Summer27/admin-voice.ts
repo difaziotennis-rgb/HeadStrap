@@ -180,7 +180,8 @@ function scoreMember(m: S27MemberAccount, q: string) {
   if (m.memberNumber === ql) return 1000;
   let best = scoreName(m.name, q);
   for (const child of m.children || []) {
-    best = Math.max(best, scoreName(child.name, q) + 20);
+    const childScore = scoreName(child.name, q);
+    if (childScore > 0) best = Math.max(best, childScore + 20);
   }
   return best;
 }
@@ -281,6 +282,8 @@ function pickClinic(text: string, date: string, hour: number | null, defs: Clini
   const day = parseDateInput(date).getDay();
   const named = hasClinicHint(text) ? defs.filter((c) => clinicMatch(c, text)) : [];
   let list = named.length ? named : defs.filter((c) => c.days.includes(day));
+  const onDay = list.filter((c) => c.days.includes(day));
+  if (onDay.length) list = onDay;
   if (hour != null) {
     const exact = list.filter((c) => Math.abs(c.startHour - hour) < 0.26);
     const near = list.filter((c) => Math.abs(c.startHour - hour) < 1);
@@ -702,6 +705,13 @@ function findLessonRequest(lessons: S27LessonBooking[], hint: string, date: stri
 }
 
 function findUnpaid(data: AdminVoiceData, hint: string, date: string, t: string) {
+  if (/\bevent\b/.test(t)) {
+    const mapped = data.events
+      .filter((b) => b.paymentStatus === "pending")
+      .map((b) => ({ ...b, clientName: b.attendeeName, date: b.eventDate }));
+    const row = bestBooking(mapped, hint, date);
+    if (row) return { label: `${row.eventTitle} · ${formatPrettyDate(row.eventDate)} · $${row.amount}`, target: { type: "event" as const, id: row.id } };
+  }
   if (/\bclinic\b/.test(t)) {
     const row = bestBooking(
       data.clinics.filter((b) => b.paymentStatus === "pending"),
@@ -745,11 +755,16 @@ function findUnpaid(data: AdminVoiceData, hint: string, date: string, t: string)
     date
   );
   if (lesson) return { label: `Lesson · ${formatPrettyDate(lesson.date)} ${formatHour(lesson.hour)} · $${lesson.amount}`, target: { type: "lesson" as const, id: lesson.id } };
+  const mappedEvents = data.events
+    .filter((b) => b.paymentStatus === "pending")
+    .map((b) => ({ ...b, clientName: b.attendeeName, date: b.eventDate }));
+  const event = bestBooking(mappedEvents, hint, date);
+  if (event) return { label: `${event.eventTitle} · ${formatPrettyDate(event.eventDate)} · $${event.amount}`, target: { type: "event" as const, id: event.id } };
   return null;
 }
 
 function findCancel(data: AdminVoiceData, hint: string, date: string, hour: number | null, t: string) {
-  if (/\bclinic|class|juniors?|tots|toddlers?|roster|ladies\b/.test(t)) {
+  if (/\bclinic|class|juniors?|tots|toddlers?|roster|ladies|101|cardio|point play\b/.test(t)) {
     const row = bestBooking(data.clinics, hint, date);
     if (row) return { label: `${row.clinicName} · ${formatPrettyDate(row.date)} · ${row.clientName}`, target: { type: "clinic" as const, id: row.id } };
   }
@@ -874,12 +889,46 @@ export async function applyAdminDraft(draft: AdminDraft, data: AdminVoiceData, a
     return `Charged ${draft.charge.clientName} $${draft.charge.amount}.`;
   }
   if (draft.kind === "add_clinic") {
+    const dup = data.clinics.find(
+      (b) =>
+        b.clinicId === draft.booking.clinicId &&
+        b.date === draft.booking.date &&
+        b.clientName.trim().toLowerCase() === draft.booking.clientName.trim().toLowerCase()
+    );
+    if (dup) return `${draft.booking.clientName} is already on ${draft.booking.clinicName}.`;
     actions.saveClinics([...data.clinics, draft.booking]);
     return `Added ${draft.booking.clientName} to ${draft.booking.clinicName}.`;
   }
   if (draft.kind === "add_court") {
-    actions.saveCourts([...data.courts, draft.booking]);
-    return `Booked ${draft.booking.clientName} on ${draft.booking.courtName}.`;
+    const next = draft.booking;
+    const weather = data.blocks.find(
+      (b) =>
+        b.date === next.date &&
+        b.kind !== "open" &&
+        /weather/i.test(b.reason || "") &&
+        (b.courtId === "both" || b.courtId === next.courtId) &&
+        next.hour < b.startHour + b.durationHours &&
+        b.startHour < next.hour + next.durationHours
+    );
+    if (weather) return `Courts are closed for weather (${weather.reason}).`;
+    const taken = data.courts.find(
+      (b) =>
+        b.date === next.date &&
+        b.courtId === next.courtId &&
+        b.paymentStatus === "paid" &&
+        next.hour < b.hour + b.durationHours &&
+        b.hour < next.hour + next.durationHours
+    );
+    if (taken) {
+      const same =
+        (taken.memberNumber && taken.memberNumber === next.memberNumber) ||
+        taken.clientName.trim().toLowerCase() === next.clientName.trim().toLowerCase();
+      return same
+        ? `Already on ${taken.courtName} at ${formatHour(taken.hour)}.`
+        : `${taken.clientName} already has ${taken.courtName} at ${formatHour(taken.hour)}.`;
+    }
+    actions.saveCourts([...data.courts, next]);
+    return `Booked ${next.clientName} on ${next.courtName}.`;
   }
   if (draft.kind === "cancel") {
     if (draft.target.type === "court") actions.saveCourts(data.courts.filter((x) => x.id !== draft.target.id));
