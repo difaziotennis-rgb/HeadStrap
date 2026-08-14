@@ -237,7 +237,7 @@ export const s27Clinics: ClinicDef[] = [
   },
   {
     id: "mon-fri-advanced",
-    name: "Tuesday Morning Advanced Point Play",
+    name: "High Performance Point Play 4.5+",
     kind: "adult",
     level: "4.5+ or by pro invitation",
     days: [2],
