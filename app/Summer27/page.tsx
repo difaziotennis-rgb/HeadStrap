@@ -14,7 +14,7 @@ import {
   S27_INSTAGRAM_HANDLE,
   S27_INSTAGRAM_URL,
 } from "./summer27-data";
-import { weatherClosedOnDate } from "./schedule";
+import { weatherClosedForWindow } from "./schedule";
 import VoiceAsk from "./VoiceAsk";
 
 function upcomingClinicSessions(count = 4) {
@@ -27,9 +27,10 @@ function upcomingClinicSessions(count = 4) {
     d.setDate(start.getDate() + i);
     const day = d.getDay();
     const iso = formatDateInput(d);
-    if (clinicsSuspendedOnDate(iso, s27Events) || weatherClosedOnDate(iso)) continue;
+    if (clinicsSuspendedOnDate(iso, s27Events)) continue;
     for (const clinic of clinics) {
       if (!clinic.days.includes(day)) continue;
+      if (weatherClosedForWindow(iso, clinic.startHour, clinic.durationHours)) continue;
       out.push({ date: iso, clinic });
       if (out.length >= count) break;
     }

@@ -7,6 +7,7 @@ type Body = {
   email?: string;
   name?: string;
   date?: string;
+  windowLabel?: string;
   items?: Item[];
 };
 
@@ -16,6 +17,7 @@ export async function POST(request: Request) {
     const email = (body.email || "").trim();
     const name = (body.name || "").trim() || "there";
     const date = (body.date || "").trim();
+    const windowLabel = (body.windowLabel || "").trim();
     if (!email) {
       return NextResponse.json({ error: "Email required." }, { status: 400 });
     }
@@ -27,11 +29,16 @@ export async function POST(request: Request) {
       return `• ${label}${amount}`;
     });
 
+    const when = [date, windowLabel && windowLabel !== "all day" ? windowLabel : ""]
+      .filter(Boolean)
+      .join(" · ");
+    const whenBit = when ? ` on ${when}` : windowLabel === "all day" && date ? ` on ${date}` : "";
+
     const subject = "Weather cancellation — DiFazio Tennis at Rhinebeck";
     const text = [
       `Hi ${name},`,
       "",
-      `Courts 3 & 4 are unplayable due to weather${date ? ` on ${date}` : ""}.`,
+      `Courts 3 & 4 are unplayable due to weather${whenBit}.`,
       "Your booking(s) below are cancelled. You’ll receive a refund (or a free reschedule) — no action needed.",
       "",
       ...(lines.length ? lines : ["• Your session"]),
@@ -52,7 +59,7 @@ export async function POST(request: Request) {
       <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1a1a1a;line-height:1.5;max-width:520px;">
         <p style="margin:0 0 12px;">Hi ${escapeHtml(name)},</p>
         <p style="margin:0 0 12px;">Courts 3 &amp; 4 are <strong>unplayable due to weather</strong>${
-          date ? ` on <strong>${escapeHtml(date)}</strong>` : ""
+          whenBit ? ` <strong>${escapeHtml(whenBit.trim())}</strong>` : ""
         }.</p>
         <p style="margin:0 0 12px;">Your booking(s) are cancelled. You’ll get a <strong>refund</strong> (or we can reschedule) — nothing you need to do.</p>
         ${listHtml}

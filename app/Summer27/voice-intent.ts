@@ -155,7 +155,7 @@ export function parseHour(text: string): number | null {
   return null;
 }
 
-function parseHourTo(text: string): number | null {
+export function parseHourTo(text: string): number | null {
   const t = normalizeTalk(text);
   if (/\b(?:to|until)\s+noon\b/.test(t)) return 12;
   if (/\b(?:to|until)\s+midnight\b/.test(t)) return 0;

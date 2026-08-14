@@ -267,6 +267,11 @@ function cases(): Expect[] {
 
   add("rain out today", "rain");
   add("rain out tomorrow", "rain");
+  add("rain out 4pm", "rain");
+  add("rain out 4 to 6", "rain");
+  add("rain out two hours at 4", "rain");
+  add("rain out 4 and 5 this afternoon", "rain");
+  add("wash out Saturday morning", "rain");
   add("wash out Saturday", "rain");
   add("close the courts for weather", "rain");
   add("weather close Sunday", "rain");

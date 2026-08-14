@@ -245,8 +245,8 @@ export default function AdminAsk({ data, actions, ping }: Props) {
             </div>
             <div className="space-y-3 px-4 py-4">
               <p className="text-[13px] leading-relaxed text-[#6b665e]">
-                Rain out, who’s on a court, walk-up clinic or court, cancel, hold, racket ready, charge balls/grip,
-                accept a lesson, mark paid, or a note on a member.
+                Rain out a day or just 4 to 6, who’s on a court, walk-up clinic or court, cancel, hold, racket ready,
+                charge balls/grip, accept a lesson, mark paid, or a note on a member.
               </p>
               {canTalk && (
                 <button

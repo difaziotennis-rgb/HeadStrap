@@ -11,8 +11,14 @@ import {
   type S27MemberAccount,
   type S27StringingOrder,
 } from "./storage";
-import { isoDate, parseHour, parseSpokenDate } from "./voice-intent";
-import { applyWeatherClose, weatherAffectedRows, weatherAlreadyClosed, type WeatherCloseResult } from "./weather-close";
+import { isoDate, parseHour, parseHourTo, parseSpokenDate } from "./voice-intent";
+import {
+  applyWeatherClose,
+  weatherAffectedRows,
+  weatherAlreadyClosed,
+  weatherWindowLabel,
+  type WeatherCloseResult,
+} from "./weather-close";
 
 function uid(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
@@ -51,7 +57,7 @@ export type AdminDraft =
   | { kind: "unknown"; title: string; detail: string; mutating: false }
   | { kind: "lookup"; title: string; detail: string; mutating: false }
   | { kind: "open_member"; title: string; detail: string; mutating: false; memberNumber: string }
-  | { kind: "rain"; title: string; detail: string; mutating: true; date: string }
+  | { kind: "rain"; title: string; detail: string; mutating: true; date: string; startHour: number | null; durationHours: number | null }
   | { kind: "string_ready"; title: string; detail: string; mutating: true; orderId: string }
   | { kind: "string_pickup"; title: string; detail: string; mutating: true; orderId: string }
   | { kind: "charge"; title: string; detail: string; mutating: true; charge: S27Charge }
@@ -325,6 +331,35 @@ function warn(ambiguous: boolean, name: string, member: S27MemberAccount | null)
   return "";
 }
 
+function rainWindow(t: string, hour: number | null): { startHour: number | null; durationHours: number | null } {
+  if (hour == null) {
+    if (/\bmorning\b/.test(t)) return { startHour: 7, durationHours: 5 };
+    if (/\bafternoon\b/.test(t)) return { startHour: 12, durationHours: 5 };
+    if (/\b(evening|tonight|night)\b/.test(t)) return { startHour: 17, durationHours: 4 };
+    return { startHour: null, durationHours: null };
+  }
+  const start = Math.floor(hour);
+  const hourTo = parseHourTo(t);
+  if (hourTo != null && hourTo > start) return { startHour: start, durationHours: hourTo - start };
+  const and = t.match(/\band\s+(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)?\b/);
+  if (and) {
+    let second = Number(and[1]);
+    if (and[3]) {
+      const mer = and[3].replace(/\./g, "");
+      if (mer.startsWith("p") && second < 12) second += 12;
+      if (mer.startsWith("a") && second === 12) second = 0;
+    } else if (start >= 12 && second < 12) second += 12;
+    if (second >= start) return { startHour: start, durationHours: Math.max(1, second - start + 1) };
+  }
+  const named = t.match(/\b(?:for\s+)?(an|a|one|two|three|four|\d+)\s+hours?\b/);
+  if (named) {
+    const map: Record<string, number> = { an: 1, a: 1, one: 1, two: 2, three: 3, four: 4 };
+    const n = map[named[1]] ?? Number(named[1]);
+    if (Number.isFinite(n) && n > 0) return { startHour: start, durationHours: n };
+  }
+  return { startHour: start, durationHours: 1 };
+}
+
 function unknown(detail: string): AdminDraft {
   return { kind: "unknown", title: "Didn’t catch an action", detail, mutating: false };
 }
@@ -341,10 +376,30 @@ export function parseAdminVoice(transcript: string, data: AdminVoiceData, now = 
   const pretty = formatPrettyDate(date);
 
   if (/\b(rain\s*out|wash\s*out|weather|close (?:the )?courts?|courts? closed)\b/.test(t)) {
-    if (weatherAlreadyClosed(data.blocks, date) && weatherAffectedRows({ date, courts: data.courts, clinics: data.clinics, lessons: data.lessons }).length === 0) {
-      return { kind: "lookup", title: "Already closed", detail: `${pretty} is already marked closed for weather.`, mutating: false };
+    const window = rainWindow(t, hour);
+    if (
+      weatherAlreadyClosed(data.blocks, date, window.startHour, window.durationHours) &&
+      weatherAffectedRows({
+        date,
+        courts: data.courts,
+        clinics: data.clinics,
+        lessons: data.lessons,
+        startHour: window.startHour,
+        durationHours: window.durationHours,
+      }).length === 0
+    ) {
+      const label = weatherWindowLabel(window.startHour ?? 7, window.durationHours ?? 14, window.startHour == null);
+      return { kind: "lookup", title: "Already closed", detail: `${pretty} ${label} is already marked closed for weather.`, mutating: false };
     }
-    const rows = weatherAffectedRows({ date, courts: data.courts, clinics: data.clinics, lessons: data.lessons });
+    const rows = weatherAffectedRows({
+      date,
+      courts: data.courts,
+      clinics: data.clinics,
+      lessons: data.lessons,
+      startHour: window.startHour,
+      durationHours: window.durationHours,
+    });
+    const label = weatherWindowLabel(window.startHour ?? 7, window.durationHours ?? 14, window.startHour == null);
     const preview = rows
       .slice(0, 8)
       .map((r) => `${r.name} · ${r.kind} · ${r.label} · $${r.amount}`)
@@ -352,10 +407,12 @@ export function parseAdminVoice(transcript: string, data: AdminVoiceData, now = 
     const extra = rows.length > 8 ? `\nand ${rows.length - 8} more` : "";
     return {
       kind: "rain",
-      title: `Rain out ${pretty}`,
-      detail: `Hold both courts, clear ${rows.length} paid booking${rows.length === 1 ? "" : "s"}, email players, and refund Stripe charges when we have them.${preview ? `\n\n${preview}${extra}` : "\n\nNo paid bookings on the book — still places the weather hold."}`,
+      title: `Rain out ${pretty} · ${label}`,
+      detail: `Hold both courts ${label}, clear ${rows.length} paid booking${rows.length === 1 ? "" : "s"} in that window, email players, and refund Stripe charges when we have them.${preview ? `\n\n${preview}${extra}` : "\n\nNo paid bookings in this window — still places the weather hold."}`,
       mutating: true,
       date,
+      startHour: window.startHour,
+      durationHours: window.durationHours,
     };
   }
 
@@ -798,6 +855,8 @@ export async function applyAdminDraft(draft: AdminDraft, data: AdminVoiceData, a
       clinics: data.clinics,
       lessons: data.lessons,
       blocks: data.blocks,
+      startHour: draft.startHour,
+      durationHours: draft.durationHours,
     });
     actions.onWeatherClose(result);
     return `Weather close · ${result.emailed} emailed · ${result.refunded} refund${result.refunded === 1 ? "" : "s"}.`;

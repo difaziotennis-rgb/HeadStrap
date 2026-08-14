@@ -309,14 +309,27 @@ export function saveMemberNotes(notes: S27MemberNote[]) {
   localStorage.setItem(S27_NOTES_KEY, JSON.stringify(notes));
 }
 
-/** Full-day weather hold from the director desk (both courts). */
+/** Full-day weather hold from the director desk (both courts). Hourly rain-outs do not count. */
 export function weatherClosedOnDate(dateStr: string): boolean {
   return getAdminBlocks().some(
     (b) =>
       b.date === dateStr &&
       b.courtId === "both" &&
       b.kind !== "open" &&
-      /weather/i.test(b.reason || "")
+      /weather/i.test(b.reason || "") &&
+      (b.durationHours >= 12 || (b.startHour <= 7 && b.startHour + b.durationHours >= 21))
+  );
+}
+
+/** True when a weather hold overlaps this clinic/session window. */
+export function weatherClosedForWindow(dateStr: string, startHour: number, durationHours: number): boolean {
+  return getAdminBlocks().some(
+    (b) =>
+      b.date === dateStr &&
+      b.kind !== "open" &&
+      /weather/i.test(b.reason || "") &&
+      b.startHour < startHour + durationHours &&
+      startHour < b.startHour + b.durationHours
   );
 }
 
@@ -327,7 +340,20 @@ export function getProgramBlock(
 ): SlotBlockReason | null {
   const catalog = getCatalog();
   const day = parseDateInput(dateStr).getDay();
-  const clinicsOff = clinicsSuspendedOnDate(dateStr, catalog.events) || weatherClosedOnDate(dateStr);
+
+  const weatherHold = getAdminBlocks().find(
+    (b) =>
+      b.date === dateStr &&
+      b.kind !== "open" &&
+      /weather/i.test(b.reason || "") &&
+      (b.courtId === "both" || b.courtId === courtId) &&
+      hoursOverlap(b.startHour, b.durationHours, hour)
+  );
+  if (weatherHold) {
+    return { type: "hold", label: weatherHold.reason || "Weather" };
+  }
+
+  const clinicsOff = clinicsSuspendedOnDate(dateStr, catalog.events);
 
   if (!clinicsOff) {
     for (const clinic of catalog.clinics) {
