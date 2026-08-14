@@ -97,7 +97,6 @@ export default function Summer27Layout({ children }: { children: React.ReactNode
             >
               Instagram {S27_INSTAGRAM_HANDLE}
             </a>
-            <p className="mt-2 text-[12px] text-[#8a8477]">Club photos, clinics &amp; updates</p>
           </div>
         </div>
         <div className="border-t border-[#e8e5df]">
