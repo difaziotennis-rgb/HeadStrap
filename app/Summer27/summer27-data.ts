@@ -167,9 +167,9 @@ export const s27Clinics: ClinicDef[] = [
   },
   {
     id: "sat-sun-point-play",
-    name: "Weekend Advanced Point Play",
+    name: "Intermediate/Advanced Games and Point Play 3.5+",
     kind: "adult",
-    level: "4.0+ or by pro invitation",
+    level: "3.5+ or by pro invitation",
     days: [0, 6],
     startHour: 9,
     durationHours: 1.5,
