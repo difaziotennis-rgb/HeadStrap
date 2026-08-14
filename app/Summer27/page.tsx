@@ -13,6 +13,7 @@ import {
   s27Events,
 } from "./summer27-data";
 import { weatherClosedOnDate } from "./schedule";
+import VoiceAsk from "./VoiceAsk";
 
 function upcomingClinicSessions(count = 4) {
   const clinics = s27Clinics;
@@ -50,13 +51,14 @@ export default function Summer27Home() {
           <p className="mt-3 max-w-xl text-[14px] leading-relaxed text-white/90 sm:text-[15px]">
             Private lessons, weekly clinics, court time, and a handful of club events.
           </p>
-          <div className="mt-5">
+          <div className="mt-5 flex flex-wrap gap-2">
             <Link
               href={session ? "/Summer27/book" : "/Summer27/member"}
               className="inline-flex rounded-full bg-white px-4 py-2.5 text-[12px] font-medium text-[#1a1a1a] hover:bg-[#f5f3ef]"
             >
               {session ? "Book a court" : "Join"}
             </Link>
+            <VoiceAsk />
           </div>
         </div>
       </section>

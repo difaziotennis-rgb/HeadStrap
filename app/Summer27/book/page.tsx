@@ -53,7 +53,12 @@ export default function Summer27BookPage() {
 function Summer27BookInner() {
   const session = useS27Session();
   const searchParams = useSearchParams();
-  const [date, setDate] = useState(() => formatDateInput(new Date()));
+  const queryDate = searchParams.get("date") || "";
+  const queryHour = Number(searchParams.get("hour") || "");
+  const queryCourt = searchParams.get("court") as CourtId | null;
+  const [date, setDate] = useState(() =>
+    queryDate && /^\d{4}-\d{2}-\d{2}$/.test(queryDate) ? queryDate : formatDateInput(new Date())
+  );
   const [bookings, setBookings] = useState<Record<string, S27CourtBooking>>({});
   const duration = 1;
   const [msg, setMsg] = useState<string | null>(null);
@@ -80,6 +85,15 @@ function Summer27BookInner() {
     setMembers(loadList<S27MemberAccount>(KEYS.members));
     getSummer27StripeConfig().then((c) => setStripeReady(c.configured));
   }, []);
+
+  useEffect(() => {
+    if (!queryDate && !queryHour) return;
+    if (queryDate && /^\d{4}-\d{2}-\d{2}$/.test(queryDate)) setDate(queryDate);
+    const courtOk = queryCourt === "court-1" || queryCourt === "court-2";
+    if (courtOk && BOOKING_HOURS.includes(queryHour)) {
+      setPendingSlot({ courtId: queryCourt, hour: queryHour });
+    }
+  }, [queryDate, queryHour, queryCourt]);
 
   useEffect(() => {
     const status = searchParams.get("payment");
