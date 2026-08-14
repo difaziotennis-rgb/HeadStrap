@@ -11,12 +11,10 @@ import {
   parseDateInput,
   s27Clinics,
   s27Events,
-  S27_INSTAGRAM_HANDLE,
-  S27_INSTAGRAM_URL,
 } from "./summer27-data";
 import { weatherClosedOnDate } from "./schedule";
 
-function upcomingClinicSessions(count = 6) {
+function upcomingClinicSessions(count = 4) {
   const clinics = s27Clinics;
   const start = new Date();
   start.setHours(0, 0, 0, 0);
@@ -38,103 +36,34 @@ function upcomingClinicSessions(count = 6) {
 
 export default function Summer27Home() {
   const session = useS27Session();
-  const events = s27Events;
-  const upcoming = useMemo(() => upcomingClinicSessions(6), []);
+  const events = s27Events.slice(0, 3);
+  const upcoming = useMemo(() => upcomingClinicSessions(4), []);
 
   return (
     <main>
       <section className="mx-auto w-full max-w-6xl px-4 pb-5 pt-5 sm:px-6 sm:pb-6 sm:pt-10">
-        <div className="overflow-hidden rounded-2xl border border-[#e8e5df] bg-white shadow-[0_14px_36px_rgba(26,26,26,0.07)]">
-          <div className="relative border-b border-[#f0ede8] bg-[#1e3a5f] p-5 sm:p-10">
-            <p className="text-[11px] uppercase tracking-[0.16em] text-white/80">DiFazio Tennis at Rhinebeck</p>
-            <h2 className="mt-2 max-w-3xl text-[26px] font-semibold tracking-tight text-white sm:text-5xl">
-              Courts 3 &amp; 4 and a Pro Shop
-              <span className="block font-medium text-white/85 sm:mt-1">A first season.</span>
-            </h2>
-            <p className="mt-3 max-w-xl text-[14px] leading-relaxed text-white/90 sm:text-[15px]">
-              Private lessons, weekly clinics, court time, and a handful of social events — Hudson Valley Tennis.
-            </p>
-            <div className="mt-5 flex flex-wrap gap-2">
-              <Link
-                href={session ? "/Summer27/book" : "/Summer27/member"}
-                className="rounded-full bg-white px-4 py-2.5 text-[12px] font-medium text-[#1a1a1a] hover:bg-[#f5f3ef]"
-              >
-                {session ? "Book a court" : "Join"}
-              </Link>
-              {session ? (
-                <Link
-                  href="/Summer27/play"
-                  className="rounded-full border border-white/40 bg-white/10 px-4 py-2.5 text-[12px] font-medium text-white hover:bg-white/20"
-                >
-                  Looking for a game
-                </Link>
-              ) : (
-                <Link
-                  href="/Summer27/clinics"
-                  className="rounded-full border border-white/40 bg-white/10 px-4 py-2.5 text-[12px] font-medium text-white hover:bg-white/20"
-                >
-                  Clinics
-                </Link>
-              )}
-            </div>
-          </div>
-
-          <div className="grid gap-2 bg-[#faf9f7] p-3 sm:grid-cols-3 sm:gap-3 sm:p-6">
-            {[
-              { label: "Courts", value: "$50 / hour", note: "Members · $60 guests", href: "/Summer27/book" },
-              { label: "Lessons", value: "Request with Derek", note: "Preferred times · by invitation", href: "/Summer27/lessons" },
-              { label: "Stringing", value: "$50 labor", note: "Plus cost of string", href: "/Summer27/stringing" },
-            ].map((item) => (
-              <Link key={item.label} href={item.href} className="rounded-xl border border-[#e8e5df] bg-white p-4 hover:bg-[#faf9f7]">
-                <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">{item.label}</p>
-                <p className="mt-1 text-[16px] font-medium">{item.value}</p>
-                <p className="mt-1 text-[12px] text-[#6b665e]">{item.note}</p>
-              </Link>
-            ))}
-            <p className="px-1 text-[12px] text-[#6b665e] sm:col-span-3">
-              For seasonal court options, contact{" "}
-              <a href="mailto:difaziotennis@gmail.com" className="text-[#1a1a1a] underline-offset-2 hover:underline">
-                difaziotennis@gmail.com
-              </a>
-              .
-            </p>
+        <div className="overflow-hidden rounded-2xl border border-[#e8e5df] bg-[#1e3a5f] p-5 shadow-[0_14px_36px_rgba(26,26,26,0.07)] sm:p-10">
+          <p className="text-[11px] uppercase tracking-[0.16em] text-white/80">DiFazio Tennis at Rhinebeck</p>
+          <h2 className="mt-2 max-w-3xl text-[26px] font-semibold tracking-tight text-white sm:text-5xl">
+            A first season on Courts 3 &amp; 4
+          </h2>
+          <p className="mt-3 max-w-xl text-[14px] leading-relaxed text-white/90 sm:text-[15px]">
+            Private lessons, weekly clinics, court time, and a handful of club events.
+          </p>
+          <div className="mt-5">
+            <Link
+              href={session ? "/Summer27/book" : "/Summer27/member"}
+              className="inline-flex rounded-full bg-white px-4 py-2.5 text-[12px] font-medium text-[#1a1a1a] hover:bg-[#f5f3ef]"
+            >
+              {session ? "Book a court" : "Join"}
+            </Link>
           </div>
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-6xl px-4 pb-6 sm:px-6">
-        <a
-          href={S27_INSTAGRAM_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="group block overflow-hidden rounded-2xl border border-[#e8e5df] bg-[#1a1a1a] p-5 shadow-[0_14px_36px_rgba(26,26,26,0.07)] sm:p-8"
-        >
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-[10px] uppercase tracking-[0.16em] text-white/55">Featured for members</p>
-              <p className="mt-2 text-[28px] font-semibold tracking-tight text-white sm:text-4xl">
-                {S27_INSTAGRAM_HANDLE}
-              </p>
-              <p className="mt-2 max-w-lg text-[14px] leading-relaxed text-white/75 sm:text-[15px]">
-                Club life between sessions — court moments, clinic days, and what’s coming next. Follow along and check
-                in often.
-              </p>
-            </div>
-            <span className="inline-flex shrink-0 items-center rounded-full bg-white px-5 py-2.5 text-[13px] font-medium text-[#1a1a1a] transition group-hover:bg-[#f5f3ef]">
-              Open Instagram →
-            </span>
-          </div>
-        </a>
-      </section>
-
-      <section className="mx-auto w-full max-w-6xl px-4 pb-6 sm:px-6">
+      <section className="mx-auto w-full max-w-6xl px-4 pb-5 sm:px-6">
         <div className="rounded-2xl border border-[#e8e5df] bg-white p-4 sm:p-6">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Coming up</p>
-            <Link href="/Summer27/clinics" className="text-[12px] text-[#6b665e] hover:text-[#1a1a1a]">
-              All clinics →
-            </Link>
-          </div>
+          <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Coming up</p>
           <ul className="mt-3 divide-y divide-[#f0ede8]">
             {upcoming.map(({ date, clinic }) => (
               <li key={`${clinic.id}-${date}`}>
@@ -163,14 +92,9 @@ export default function Summer27Home() {
 
       <section className="mx-auto w-full max-w-6xl px-4 pb-10 sm:px-6">
         <div className="rounded-2xl border border-[#e8e5df] bg-white p-4 sm:p-6">
-          <div className="flex items-center justify-between">
-            <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Events</p>
-            <Link href="/Summer27/events" className="text-[12px] text-[#6b665e] hover:text-[#1a1a1a]">
-              Calendar
-            </Link>
-          </div>
-          <ul className="mt-4 grid gap-2 sm:grid-cols-2">
-            {events.slice(0, 4).map((e) => (
+          <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Events</p>
+          <ul className="mt-4 grid gap-2 sm:grid-cols-3">
+            {events.map((e) => (
               <li key={e.id}>
                 <Link
                   href={`/Summer27/events/${e.id}`}
