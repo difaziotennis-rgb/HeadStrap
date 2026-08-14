@@ -126,6 +126,7 @@ function Summer27ClinicsInner() {
   const [events, setEvents] = useState<EventDef[]>(s27Events);
   const [audience, setAudience] = useState<"adult" | "junior">(() => {
     const q = s27Clinics.find((c) => c.id === queryClinic);
+    if (queryChild) return "junior";
     return q?.kind === "junior" ? "junior" : "adult";
   });
   const [weekStart, setWeekStart] = useState(() =>
