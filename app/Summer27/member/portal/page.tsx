@@ -303,7 +303,6 @@ function PortalInner() {
 
       {tab === "bookings" && (
         <section className="mt-4 rounded-2xl border border-[#e8e5df] bg-white p-4 sm:p-5">
-          <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8477]">Bookings & bill</p>
           <MemberBookings
             courts={courts}
             clinics={clinics}
