@@ -52,6 +52,54 @@ function transcriptFrom(ev: SpeechRecEvent) {
   return { finalText: finalText.trim(), heard: (finalText || interim).trim() };
 }
 
+const MIC_FLAG = "s27_mic_allowed";
+let micReady = false;
+
+async function micPermissionState(): Promise<"granted" | "denied" | "prompt" | "unknown"> {
+  try {
+    const status = await navigator.permissions.query({ name: "microphone" as PermissionName });
+    return status.state;
+  } catch {
+    return "unknown";
+  }
+}
+
+/** Durable origin permission — SpeechRecognition’s own prompt often does not stick. */
+async function ensureMic(): Promise<"ok" | "denied" | "missing"> {
+  if (micReady) return "ok";
+  if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) return "ok";
+  const state = await micPermissionState();
+  if (state === "denied") return "denied";
+  if (state === "granted") {
+    micReady = true;
+    try {
+      localStorage.setItem(MIC_FLAG, "1");
+    } catch {
+      // ignore
+    }
+    return "ok";
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    stream.getTracks().forEach((t) => t.stop());
+    micReady = true;
+    try {
+      localStorage.setItem(MIC_FLAG, "1");
+    } catch {
+      // ignore
+    }
+    await new Promise((r) => setTimeout(r, 40));
+    return "ok";
+  } catch (err) {
+    const name = err instanceof Error ? err.name : "";
+    if (name === "NotAllowedError" || name === "PermissionDeniedError" || name === "SecurityError") {
+      return "denied";
+    }
+    if (name === "NotFoundError" || name === "DevicesNotFoundError") return "missing";
+    return "ok";
+  }
+}
+
 export default function VoiceAsk() {
   const session = useS27Session();
   const [open, setOpen] = useState(false);
@@ -63,6 +111,7 @@ export default function VoiceAsk() {
   const recRef = useRef<SpeechRec | null>(null);
   const listeningRef = useRef(false);
   const heardRef = useRef("");
+  const genRef = useRef(0);
   const canTalk = speechSupported();
 
   function killRec() {
@@ -128,20 +177,36 @@ export default function VoiceAsk() {
     setResult(next);
   }
 
-  function startListen() {
+  async function startListen() {
     setOpen(true);
-    setResult(null);
-    setError(null);
-    setTranscript("");
-    heardRef.current = "";
     if (phase === "listen" || listeningRef.current) {
       const leftover = heardRef.current;
+      genRef.current += 1;
       killRec();
       if (leftover) void runTranscript(leftover);
       else setPhase("idle");
       return;
     }
+    const gen = ++genRef.current;
+    setResult(null);
+    setError(null);
+    setTranscript("");
+    heardRef.current = "";
     killRec();
+
+    const mic = await ensureMic();
+    if (gen !== genRef.current) return;
+    if (mic === "denied") {
+      setPhase("idle");
+      setError("Microphone is blocked. Tap the lock in the address bar, set Microphone to Allow, then tap Ask.");
+      return;
+    }
+    if (mic === "missing") {
+      setPhase("idle");
+      setError("No microphone found.");
+      return;
+    }
+
     const rec = makeRecognizer();
     if (!rec) {
       setPhase("idle");
@@ -173,8 +238,9 @@ export default function VoiceAsk() {
       listeningRef.current = false;
       setPhase("idle");
       if (code === "no-speech") setError("I didn’t catch that — tap Ask and try again.");
-      else if (code === "not-allowed") setError("Allow the microphone, then tap Ask again.");
-      else if (code === "audio-capture") setError("No microphone found.");
+      else if (code === "not-allowed") {
+        setError("Microphone is blocked. Tap the lock in the address bar, set Microphone to Allow, then tap Ask.");
+      } else if (code === "audio-capture") setError("No microphone found.");
       else setError("Mic didn’t work — type it below.");
     };
     rec.onend = () => {
@@ -197,6 +263,7 @@ export default function VoiceAsk() {
   }
 
   function close() {
+    genRef.current += 1;
     killRec();
     setOpen(false);
     setPhase("idle");
