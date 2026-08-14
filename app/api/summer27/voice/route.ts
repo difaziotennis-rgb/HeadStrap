@@ -41,12 +41,15 @@ Return ONLY JSON:
 }
 Rules:
 - tomorrow = next calendar day. this weekend = upcoming Sat (date) through Sun (dateTo).
+- Saturday/Sunday morning clinics: 8am cardio, 9am point play. "sign up for 9am Sat clinic" → book_clinic, hour 9 (NOT 8), date next Saturday.
+- If they name a clock time, set hour to that time in 24h (9am=9, 9pm=21) and do not pick a different clinic.
 - "move my court at 4 to 5" → move, hour 16, hourTo 17.
 - "put Emma in Tuesday juniors" → book_clinic, childName Emma, clinicHint juniors, date next Tuesday.
 - "is my racket ready" → check_stringing. "poly at 52" → order_stringing.
 - "how much is a guest court" → prices, priceTopic court.
 - "anyone looking Saturday 11" → check_play.
 - "what do I have this weekend" → my_day.
+- sign up / sign me up / join / enroll / book = book_* intent.
 - book/request never charges; we only route the player.
 
 Request: ${transcript}`;

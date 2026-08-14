@@ -35,6 +35,7 @@ import {
   type S27StringingOrder,
 } from "./storage";
 import type { S27MemberSession } from "./member-session";
+import { parseHour } from "./voice-intent";
 import type { VoiceIntent } from "./voice-intent";
 
 export type VoiceLink = { href: string; label: string };
@@ -269,6 +270,10 @@ export function resolveVoice(intent: VoiceIntent, session: S27MemberSession | nu
       if (!mine.clinic(b) || b.paymentStatus !== "paid") return false;
       if (b.date !== date) return false;
       if (intent.childName && b.clientName.toLowerCase() !== intent.childName.toLowerCase()) return false;
+      if (hour != null) {
+        const def = clinics.find((c) => c.id === b.clinicId);
+        if (!def || Math.abs(def.startHour - hour) >= 0.26) return false;
+      }
       return true;
     });
     const lessonsMine = lessons.filter((b) => {
@@ -277,10 +282,17 @@ export function resolveVoice(intent: VoiceIntent, session: S27MemberSession | nu
       if (hour != null && b.hour !== hour) return false;
       return true;
     });
+    const clinicHour = (row: S27ClinicBooking) => clinics.find((c) => c.id === row.clinicId)?.startHour ?? 8;
     const target = courtsMine[0]
       ? { kind: "court" as const, id: courtsMine[0].id, label: `${courtsMine[0].courtName} ${formatHour(courtsMine[0].hour)}`, hour: courtsMine[0].hour, date: courtsMine[0].date }
       : clinicsMine[0]
-        ? { kind: "clinic" as const, id: clinicsMine[0].id, label: clinicsMine[0].clinicName, hour: 8, date: clinicsMine[0].date }
+        ? {
+            kind: "clinic" as const,
+            id: clinicsMine[0].id,
+            label: clinicsMine[0].clinicName,
+            hour: clinicHour(clinicsMine[0]),
+            date: clinicsMine[0].date,
+          }
         : lessonsMine[0]
           ? { kind: "lesson" as const, id: lessonsMine[0].id, label: `Lesson ${formatHour(lessonsMine[0].hour)}`, hour: lessonsMine[0].hour, date: lessonsMine[0].date }
           : null;
@@ -376,6 +388,7 @@ export function resolveVoice(intent: VoiceIntent, session: S27MemberSession | nu
 
   if (intent.intent === "check_clinic" || intent.intent === "book_clinic") {
     const date = intent.date;
+    const hour = intent.hour ?? (intent.clinicHint ? parseHour(intent.clinicHint) : null);
     let list = clinics.filter((c) => clinicHintMatch(c, intent.clinicHint));
     if (intent.childName) {
       const juniors = list.filter((c) => c.kind === "junior");
@@ -388,7 +401,11 @@ export function resolveVoice(intent: VoiceIntent, session: S27MemberSession | nu
       const day = parseDateInput(date).getDay();
       list = list.filter((c) => c.days.includes(day));
     }
-    if (list.length === 0) list = clinics.filter((c) => clinicHintMatch(c, intent.clinicHint));
+    if (hour != null) {
+      const exact = list.filter((c) => Math.abs(c.startHour - hour) < 0.26);
+      const near = list.filter((c) => Math.abs(c.startHour - hour) < 1);
+      list = exact.length ? exact : near;
+    }
 
     const rows: { clinic: ClinicDef; date: string; open: number }[] = [];
     for (const clinic of list) {
@@ -401,31 +418,43 @@ export function resolveVoice(intent: VoiceIntent, session: S27MemberSession | nu
         rows.push({ clinic, date: d, open: Math.max(0, clinic.capacity - taken) });
       }
     }
+    rows.sort((a, b) => a.date.localeCompare(b.date) || a.clinic.startHour - b.clinic.startHour);
+    if (hour != null) {
+      rows.sort((a, b) => Math.abs(a.clinic.startHour - hour) - Math.abs(b.clinic.startHour - hour));
+    }
     if (rows.length === 0) {
       return {
-        spoken: "I couldn’t match that clinic.",
+        spoken: hour != null && date
+          ? `No clinic at ${formatHour(hour)} on ${formatPrettyDate(date)}.`
+          : "I couldn’t match that clinic.",
         detail: "No matching clinic found.",
         links: [{ href: "/Summer27/clinics", label: "All clinics" }],
       };
     }
     const first = rows[0];
     const childQ = intent.childName ? `&child=${encodeURIComponent(intent.childName)}` : "";
+    const book = intent.intent === "book_clinic";
     const lines = rows
       .slice(0, 4)
       .map((r) => `${r.clinic.name} · ${formatPrettyDate(r.date)} ${clinicTimeLabel(r.clinic)} · ${r.open} open`);
     const who = intent.childName ? ` for ${intent.childName}` : "";
+    const joinLinks = rows.slice(0, 4).map((r) => ({
+      href: `/Summer27/clinics?clinic=${encodeURIComponent(r.clinic.id)}&date=${r.date}${childQ}`,
+      label:
+        rows.length === 1
+          ? intent.childName
+            ? `Enroll ${intent.childName}`
+            : book
+              ? `Join ${formatHour(r.clinic.startHour)}`
+              : `View ${formatHour(r.clinic.startHour)}`
+          : `${book ? "Join" : "View"} ${formatHour(r.clinic.startHour)}`,
+    }));
     return {
-      spoken: `${first.clinic.name}${who} on ${formatPrettyDate(first.date)} has ${first.open} ${
+      spoken: `${first.clinic.name}${who} at ${formatHour(first.clinic.startHour)} on ${formatPrettyDate(first.date)} has ${first.open} ${
         first.open === 1 ? "spot" : "spots"
       } left.`,
       detail: lines.join("\n"),
-      links: [
-        {
-          href: `/Summer27/clinics?clinic=${encodeURIComponent(first.clinic.id)}&date=${first.date}${childQ}`,
-          label: intent.childName ? `Enroll ${intent.childName}` : intent.intent === "book_clinic" ? "Join this clinic" : "View clinic",
-        },
-        { href: "/Summer27/clinics", label: "All clinics" },
-      ],
+      links: [...joinLinks, { href: "/Summer27/clinics", label: "All clinics" }],
     };
   }
 

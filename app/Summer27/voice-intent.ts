@@ -1,3 +1,5 @@
+import { parseDateInput, s27Clinics } from "./summer27-data";
+
 export type VoiceIntentKind =
   | "check_court"
   | "book_court"
@@ -87,29 +89,50 @@ export function weekendRange(now: Date): { date: string; dateTo: string } {
   return { date: isoDate(sat), dateTo: isoDate(addDays(sat, 1)) };
 }
 
-function parseHourToken(raw: string, mer?: string): number | null {
+function hourFromParts(raw: string, minutes?: string, mer?: string): number | null {
   let h = Number(raw);
   if (!Number.isFinite(h) || h > 23) return null;
+  const min = minutes ? Number(minutes) : 0;
+  if (!Number.isFinite(min) || min < 0 || min > 59) return null;
   const m = (mer || "").replace(/\./g, "");
   if (m === "pm" && h < 12) h += 12;
   if (m === "am" && h === 12) h = 0;
   if (!m && h >= 1 && h <= 7) h += 12;
-  return h;
+  return h + min / 60;
 }
 
+const HOUR_WORDS: Record<string, number> = {
+  seven: 7,
+  eight: 8,
+  nine: 9,
+  ten: 10,
+  eleven: 11,
+  twelve: 12,
+};
+
 export function parseHour(text: string): number | null {
-  const t = text.toLowerCase();
+  const t = text.toLowerCase().replace(/(\d)\s*(a\.?m\.?|p\.?m\.?)/g, "$1$2");
   if (/\bnoon\b/.test(t)) return 12;
-  const m = t.match(/\b(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)?\b/);
-  if (!m) return null;
-  return parseHourToken(m[1], m[3]);
+  if (/\bmidnight\b/.test(t)) return 0;
+  const withMer = [...t.matchAll(/\b(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)\b/g)];
+  if (withMer[0]) return hourFromParts(withMer[0][1], withMer[0][2], withMer[0][3]);
+  const word = t.match(/\b(seven|eight|nine|ten|eleven|twelve)\s*(o['’]?clock)?\s*(a\.?m\.?|p\.?m\.?)?\b/);
+  if (word) {
+    const h = HOUR_WORDS[word[1]];
+    return hourFromParts(String(h > 12 ? h - 12 : h), undefined, word[3] || (h === 12 ? "pm" : "am"));
+  }
+  const at = t.match(/\bat\s+(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)?\b/);
+  if (at) return hourFromParts(at[1], at[2], at[3]);
+  const clock = t.match(/\b(\d{1,2}):(\d{2})\s*(a\.?m\.?|p\.?m\.?)?\b/);
+  if (clock) return hourFromParts(clock[1], clock[2], clock[3]);
+  return null;
 }
 
 function parseHourTo(text: string): number | null {
   const t = text.toLowerCase();
-  const m = t.match(/\b(?:to|until|at)\s+(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)?\b/);
+  const m = t.match(/\b(?:to|until)\s+(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)?\b/);
   if (!m) return null;
-  return parseHourToken(m[1], m[3]);
+  return hourFromParts(m[1], m[2], m[3]);
 }
 
 function parseTimeOfDay(text: string): VoiceIntent["timeOfDay"] {
@@ -142,12 +165,43 @@ function parseDate(text: string, now: Date): string | null {
 
 function parseChildName(text: string): string | null {
   const m =
-    text.match(/\b(?:put|enroll|sign(?:\s+up)?)\s+([A-Z][a-z]+|[A-Za-z]+)\s+(?:in|for|up)\b/) ||
-    text.match(/\bfor\s+([A-Z][a-z]+|[A-Za-z]+)(?:\s+in|\s+for)?\b/) ||
+    text.match(/\b(?:put|enroll)\s+([A-Z][a-z]+|[A-Za-z]+)\s+(?:in|for|up)\b/) ||
+    text.match(/\bsign\s+up\s+([A-Z][a-z]+)\s+(?:in|for)\b/) ||
     text.match(/\b([A-Z][a-z]{2,})\s+(?:in|into)\s+(?:the\s+)?(?:junior|clinic)/i);
   if (!m) return null;
   const name = m[1];
-  const skip = new Set(["my", "the", "a", "an", "me", "our", "his", "her", "their", "junior", "juniors"]);
+  const skip = new Set([
+    "my",
+    "the",
+    "a",
+    "an",
+    "me",
+    "our",
+    "his",
+    "her",
+    "their",
+    "junior",
+    "juniors",
+    "saturday",
+    "sunday",
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "sat",
+    "sun",
+    "mon",
+    "tue",
+    "wed",
+    "thu",
+    "fri",
+    "clinic",
+    "class",
+    "cardio",
+    "today",
+    "tomorrow",
+  ]);
   if (skip.has(name.toLowerCase())) return null;
   return name;
 }
@@ -200,6 +254,12 @@ function emptyIntent(partial: Partial<VoiceIntent>): VoiceIntent {
   };
 }
 
+function clinicExistsAt(date: string | null, hour: number | null) {
+  if (!date || hour == null) return false;
+  const day = parseDateInput(date).getDay();
+  return s27Clinics.some((c) => c.days.includes(day) && Math.abs(c.startHour - hour) < 0.26);
+}
+
 export function parseVoiceFallback(transcript: string, now = new Date()): VoiceIntent {
   const t = transcript.toLowerCase();
   const hour = parseHour(t);
@@ -216,8 +276,8 @@ export function parseVoiceFallback(transcript: string, now = new Date()): VoiceI
   if (/\bcourt\s*3\b/.test(t)) courtId = "court-1";
   if (/\bcourt\s*4\b/.test(t)) courtId = "court-2";
   const childName = parseChildName(transcript);
-  const clinicTalk = /\b(clinic|class|cardio|tennis 101|point play|juniors?)\b/.test(t);
-  const book = /\b(book|reserve|sign me|enroll|join|put)\b/.test(t);
+  const clinicTalk = /\b(clinic|class|cardio|tennis 101|point play|juniors?|tots|toddlers)\b/.test(t);
+  const book = /\b(book|reserve|sign(?:\s*me)?[\s-]?up|enroll|join|put|register)\b/.test(t);
 
   if (/\b(how much|price|cost|rate|rates|charge)\b/.test(t)) {
     return emptyIntent({ intent: "prices", priceTopic: parsePriceTopic(t), date, hour, timeOfDay, courtId });
@@ -258,7 +318,7 @@ export function parseVoiceFallback(transcript: string, now = new Date()): VoiceI
   if (/\b(looking for a game|hit with|anyone (playing|free)|lfg|find a game)\b/.test(t)) {
     return emptyIntent({ intent: "check_play", date: date || isoDate(now), hour, timeOfDay, courtId });
   }
-  if (clinicTalk || childName) {
+  if (clinicTalk || childName || (book && !/\bcourt/.test(t) && clinicExistsAt(date, hour))) {
     return emptyIntent({
       intent: book || childName ? "book_clinic" : "check_clinic",
       date,
@@ -281,17 +341,17 @@ export function mergeIntent(parsed: Partial<VoiceIntent>, fallback: VoiceIntent)
   const intent = KINDS.includes(parsed.intent as VoiceIntentKind) ? (parsed.intent as VoiceIntentKind) : fallback.intent;
   return {
     intent,
-    date: parsed.date ?? fallback.date,
-    dateTo: parsed.dateTo ?? fallback.dateTo,
-    hour: typeof parsed.hour === "number" ? parsed.hour : fallback.hour,
-    hourTo: typeof parsed.hourTo === "number" ? parsed.hourTo : fallback.hourTo,
-    timeOfDay: parsed.timeOfDay ?? fallback.timeOfDay,
-    clinicHint: parsed.clinicHint ?? fallback.clinicHint,
-    courtId: parsed.courtId ?? fallback.courtId,
-    childName: parsed.childName ?? fallback.childName,
-    eventHint: parsed.eventHint ?? fallback.eventHint,
-    stringHint: parsed.stringHint ?? fallback.stringHint,
-    tension: parsed.tension ?? fallback.tension,
-    priceTopic: parsed.priceTopic ?? fallback.priceTopic,
+    date: fallback.date ?? parsed.date ?? null,
+    dateTo: fallback.dateTo ?? parsed.dateTo ?? null,
+    hour: fallback.hour ?? (typeof parsed.hour === "number" ? parsed.hour : null),
+    hourTo: fallback.hourTo ?? (typeof parsed.hourTo === "number" ? parsed.hourTo : null),
+    timeOfDay: fallback.timeOfDay ?? parsed.timeOfDay ?? null,
+    clinicHint: parsed.clinicHint || fallback.clinicHint,
+    courtId: fallback.courtId ?? parsed.courtId ?? null,
+    childName: fallback.childName ?? parsed.childName ?? null,
+    eventHint: parsed.eventHint || fallback.eventHint,
+    stringHint: parsed.stringHint || fallback.stringHint,
+    tension: parsed.tension || fallback.tension,
+    priceTopic: parsed.priceTopic ?? fallback.priceTopic ?? null,
   };
 }
