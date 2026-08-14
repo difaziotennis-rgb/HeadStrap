@@ -181,7 +181,7 @@ export const s27Clinics: ClinicDef[] = [
   },
   {
     id: "wed-am-beginner",
-    name: "Men's Fast Paced",
+    name: "Men's Cardio",
     kind: "adult",
     level: "2.5–3.0 · new players welcome",
     days: [3],
