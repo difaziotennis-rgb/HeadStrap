@@ -153,9 +153,9 @@ export type ClinicDef = {
 export const s27Clinics: ClinicDef[] = [
   {
     id: "sat-sun-cardio",
-    name: "Weekend Intermediate Cardio",
+    name: "Beginner/Intermediate Cardio 2.5–3.5",
     kind: "adult",
-    level: "3.0–3.5 or by pro invitation",
+    level: "2.5–3.5 or by pro invitation",
     days: [0, 6],
     startHour: 8,
     durationHours: 1,
