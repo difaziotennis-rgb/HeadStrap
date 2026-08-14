@@ -43,11 +43,16 @@ export default function Summer27LessonsPage() {
 function Summer27LessonsInner() {
   const session = useS27Session();
   const searchParams = useSearchParams();
+  const selectedId = searchParams.get("pro");
+  const queryDate = searchParams.get("date") || "";
+  const queryHour = Number(searchParams.get("hour") || "");
   const [pros, setPros] = useState<ProDef[]>(s27Pros);
   const [lessons, setLessons] = useState<S27LessonBooking[]>([]);
   const [courts, setCourts] = useState<S27CourtBooking[]>([]);
-  const [date, setDate] = useState(() => formatDateInput(new Date()));
-  const [hour, setHour] = useState(7);
+  const [date, setDate] = useState(() =>
+    queryDate && /^\d{4}-\d{2}-\d{2}$/.test(queryDate) ? queryDate : formatDateInput(new Date())
+  );
+  const [hour, setHour] = useState(() => (BOOKING_HOURS.includes(queryHour) ? queryHour : 7));
   const duration = "60" as const;
   const [focus, setFocus] = useState("");
   const [guestName, setGuestName] = useState("");
@@ -57,7 +62,6 @@ function Summer27LessonsInner() {
   const [paying, setPaying] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const selectedId = searchParams.get("pro");
   const pro = pros.find((p) => p.id === selectedId) || null;
   const requestMode = proUsesLessonRequests(pro);
 

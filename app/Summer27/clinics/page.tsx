@@ -119,6 +119,7 @@ function Summer27ClinicsInner() {
   const searchParams = useSearchParams();
   const queryClinic = searchParams.get("clinic") || "";
   const queryDate = searchParams.get("date") || "";
+  const queryChild = searchParams.get("child") || "";
 
   const [bookings, setBookings] = useState<S27ClinicBooking[]>([]);
   const [clinics, setClinics] = useState<ClinicDef[]>(s27Clinics);
@@ -137,7 +138,7 @@ function Summer27ClinicsInner() {
   const [date, setDate] = useState(queryDate);
   const [guestName, setGuestName] = useState("");
   const [guestEmail, setGuestEmail] = useState("");
-  const [childName, setChildName] = useState("");
+  const [childName, setChildName] = useState(queryChild);
   const [familyChildren, setFamilyChildren] = useState<S27MemberChild[]>([]);
   const [msg, setMsg] = useState<string | null>(null);
   const [paying, setPaying] = useState(false);
@@ -179,7 +180,7 @@ function Summer27ClinicsInner() {
     const account = findMemberAccount(session.memberNumber);
     const kids = Array.isArray(account?.children) ? account!.children! : [];
     setFamilyChildren(kids);
-    if (kids.length && !childName) setChildName(kids[0].name);
+    if (kids.length && !childName) setChildName(queryChild || kids[0].name);
   }, [session]); // eslint-disable-line react-hooks/exhaustive-deps — refresh kids when session changes
 
   useEffect(() => {

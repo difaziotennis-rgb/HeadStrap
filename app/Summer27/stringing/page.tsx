@@ -21,8 +21,11 @@ function Summer27StringingInner() {
   const session = useS27Session();
   const searchParams = useSearchParams();
   const [racket, setRacket] = useState("");
-  const [stringId, setStringId] = useState(STRING_OPTIONS[0].id);
-  const [tension, setTension] = useState("52");
+  const [tension, setTension] = useState(() => searchParams.get("tension") || "52");
+  const [stringId, setStringId] = useState(() => {
+    const s = searchParams.get("string") || "";
+    return STRING_OPTIONS.some((o) => o.id === s) ? s : STRING_OPTIONS[0].id;
+  });
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [orders, setOrders] = useState<S27StringingOrder[]>([]);

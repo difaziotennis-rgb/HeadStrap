@@ -2,21 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import {
-  BOOKING_HOURS,
-  COURTS,
-  clinicTimeLabel,
-  clinicsSuspendedOnDate,
-  formatDateInput,
-  formatHour,
-  formatPrettyDate,
-  parseDateInput,
-  type ClinicDef,
-  type CourtId,
-} from "./summer27-data";
-import { getLiveClinics, getLiveEvents, getProgramBlock } from "./schedule";
-import { KEYS, courtBookingKey, loadList, loadRecord, type S27ClinicBooking, type S27CourtBooking } from "./storage";
+import { formatDateInput } from "./summer27-data";
+import { useS27Session } from "./use-s27-session";
 import { mergeIntent, parseVoiceFallback, type VoiceIntent } from "./voice-intent";
+import { applyVoiceCancel, resolveVoice, type VoiceResult } from "./voice-resolve";
 
 type SpeechRec = {
   lang: string;
@@ -27,14 +16,6 @@ type SpeechRec = {
   onend: (() => void) | null;
   start: () => void;
   stop: () => void;
-};
-
-type ActionLink = { href: string; label: string };
-
-type Result = {
-  spoken: string;
-  detail: string;
-  links: ActionLink[];
 };
 
 function speechSupported() {
@@ -62,165 +43,13 @@ function speak(text: string) {
   window.speechSynthesis.speak(u);
 }
 
-function hoursFor(intent: VoiceIntent): number[] {
-  if (typeof intent.hour === "number" && BOOKING_HOURS.includes(intent.hour)) return [intent.hour];
-  if (intent.timeOfDay === "morning") return BOOKING_HOURS.filter((h) => h < 12);
-  if (intent.timeOfDay === "afternoon") return BOOKING_HOURS.filter((h) => h >= 12 && h < 17);
-  if (intent.timeOfDay === "evening") return BOOKING_HOURS.filter((h) => h >= 17);
-  return BOOKING_HOURS;
-}
-
-function courtsFor(intent: VoiceIntent) {
-  if (intent.courtId) return COURTS.filter((c) => c.id === intent.courtId);
-  return [...COURTS];
-}
-
-function courtOpen(date: string, courtId: CourtId, hour: number, bookings: Record<string, S27CourtBooking>) {
-  if (!BOOKING_HOURS.includes(hour)) return false;
-  if (getProgramBlock(date, courtId, hour)) return false;
-  const existing = bookings[courtBookingKey(date, courtId, hour)];
-  return existing?.paymentStatus !== "paid";
-}
-
-function clinicHintMatch(clinic: ClinicDef, hint: string | null) {
-  if (!hint) return true;
-  const h = hint.toLowerCase();
-  const blob = `${clinic.name} ${clinic.level} ${clinic.id} ${clinic.kind}`.toLowerCase();
-  const keys = ["101", "cardio", "point play", "ladies", "juniors", "junior", "high performance", "weeknight", "beginner"];
-  const hits = keys.filter((k) => h.includes(k));
-  if (hits.length === 0) return true;
-  return hits.some((k) => blob.includes(k));
-}
-
-function nextClinicDates(clinic: ClinicDef, from: Date, count = 2): string[] {
-  const events = getLiveEvents();
-  const out: string[] = [];
-  for (let i = 0; i < 21 && out.length < count; i++) {
-    const d = new Date(from);
-    d.setHours(0, 0, 0, 0);
-    d.setDate(from.getDate() + i);
-    if (!clinic.days.includes(d.getDay())) continue;
-    const iso = formatDateInput(d);
-    if (clinicsSuspendedOnDate(iso, events)) continue;
-    out.push(iso);
-  }
-  return out;
-}
-
-function resolve(intent: VoiceIntent): Result {
-  const now = new Date();
-  const bookings = loadRecord<S27CourtBooking>(KEYS.courts);
-  const clinicBookings = loadList<S27ClinicBooking>(KEYS.clinics);
-  const clinics = getLiveClinics();
-
-  if (intent.intent === "check_court" || intent.intent === "book_court") {
-    const date = intent.date || formatDateInput(now);
-    const hours = hoursFor(intent);
-    const courts = courtsFor(intent);
-    const open: { courtId: CourtId; name: string; hour: number }[] = [];
-    for (const hour of hours) {
-      for (const court of courts) {
-        if (courtOpen(date, court.id, hour, bookings)) {
-          open.push({ courtId: court.id, name: court.name, hour });
-        }
-      }
-    }
-    const pretty = formatPrettyDate(date);
-    if (open.length === 0) {
-      return {
-        spoken: `Nothing open ${intent.hour != null ? `at ${formatHour(intent.hour)} ` : ""}on ${pretty}.`,
-        detail: `No open court time ${intent.hour != null ? `at ${formatHour(intent.hour)} ` : ""}on ${pretty}. Clinics and lessons hold some hours.`,
-        links: [{ href: `/Summer27/book?date=${date}`, label: "See the court grid" }],
-      };
-    }
-    const first = open[0];
-    const names = [...new Set(open.map((o) => `${o.name} ${formatHour(o.hour)}`))].slice(0, 6);
-    const spoken =
-      intent.intent === "book_court"
-        ? `${first.name} is open at ${formatHour(first.hour)} on ${pretty}. I’ll take you there to confirm.`
-        : `Open on ${pretty}: ${names.join(", ")}.`;
-    return {
-      spoken,
-      detail: names.join(" · "),
-      links: [
-        {
-          href: `/Summer27/book?date=${date}&hour=${first.hour}&court=${first.courtId}`,
-          label: intent.intent === "book_court" ? `Book ${first.name} ${formatHour(first.hour)}` : `Open ${first.name}`,
-        },
-        { href: `/Summer27/book?date=${date}`, label: "Full court grid" },
-      ],
-    };
-  }
-
-  if (intent.intent === "check_clinic" || intent.intent === "book_clinic") {
-    const date = intent.date;
-    let list = clinics.filter((c) => clinicHintMatch(c, intent.clinicHint));
-    if (intent.timeOfDay === "morning") list = list.filter((c) => c.startHour < 12);
-    if (intent.timeOfDay === "afternoon") list = list.filter((c) => c.startHour >= 12 && c.startHour < 17);
-    if (intent.timeOfDay === "evening") list = list.filter((c) => c.startHour >= 17);
-    if (date) {
-      const day = parseDateInput(date).getDay();
-      list = list.filter((c) => c.days.includes(day));
-    }
-    if (list.length === 0) list = clinics.filter((c) => clinicHintMatch(c, intent.clinicHint));
-
-    const rows: { clinic: ClinicDef; date: string; open: number }[] = [];
-    for (const clinic of list) {
-      const dates = date ? [date] : nextClinicDates(clinic, now, 1);
-      for (const d of dates) {
-        if (!clinic.days.includes(parseDateInput(d).getDay())) continue;
-        const taken = clinicBookings.filter(
-          (b) => b.clinicId === clinic.id && b.date === d && b.paymentStatus === "paid"
-        ).length;
-        rows.push({ clinic, date: d, open: Math.max(0, clinic.capacity - taken) });
-      }
-    }
-    if (rows.length === 0) {
-      return {
-        spoken: "I couldn’t match that clinic. You can browse the week on the clinics page.",
-        detail: "No matching clinic found.",
-        links: [{ href: "/Summer27/clinics", label: "All clinics" }],
-      };
-    }
-    const first = rows[0];
-    const lines = rows
-      .slice(0, 4)
-      .map(
-        (r) =>
-          `${r.clinic.name} · ${formatPrettyDate(r.date)} ${clinicTimeLabel(r.clinic)} · ${r.open} open`
-      );
-    const spoken = `${first.clinic.name} on ${formatPrettyDate(first.date)} has ${first.open} ${
-      first.open === 1 ? "spot" : "spots"
-    } left.`;
-    return {
-      spoken,
-      detail: lines.join("\n"),
-      links: [
-        {
-          href: `/Summer27/clinics?clinic=${encodeURIComponent(first.clinic.id)}&date=${first.date}`,
-          label: intent.intent === "book_clinic" ? "Join this clinic" : "View clinic",
-        },
-        { href: "/Summer27/clinics", label: "All clinics" },
-      ],
-    };
-  }
-
-  return {
-    spoken: "Try asking about court time, or a clinic — for example, open courts at 4 tomorrow.",
-    detail: "I can check court time, clinic openings, and take you to book.",
-    links: [
-      { href: "/Summer27/book", label: "Courts" },
-      { href: "/Summer27/clinics", label: "Clinics" },
-    ],
-  };
-}
-
 export default function VoiceAsk() {
+  const session = useS27Session();
   const [open, setOpen] = useState(false);
   const [phase, setPhase] = useState<"idle" | "listen" | "think" | "done">("idle");
   const [transcript, setTranscript] = useState("");
   const [typed, setTyped] = useState("");
-  const [result, setResult] = useState<Result | null>(null);
+  const [result, setResult] = useState<VoiceResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const recRef = useRef<SpeechRec | null>(null);
   const canTalk = speechSupported();
@@ -260,9 +89,16 @@ export default function VoiceAsk() {
     } catch {
       intent = fallback;
     }
-    const next = resolve(intent);
+    const next = resolveVoice(intent, session);
     setResult(next);
     setPhase("done");
+    speak(next.spoken);
+  }
+
+  function confirmCancel() {
+    if (!result?.cancel) return;
+    const next = applyVoiceCancel(result.cancel);
+    setResult(next);
     speak(next.spoken);
   }
 
@@ -347,7 +183,7 @@ export default function VoiceAsk() {
             </div>
             <div className="space-y-3 px-4 py-4">
               <p className="text-[13px] leading-relaxed text-[#6b665e]">
-                “Any courts at 4 tomorrow?” · “Openings for Saturday morning clinic?” · “Book a court at 9am.”
+                Courts, clinics, your day, cancel, lessons, stringing, events, play, prices — or “put Emma in Tuesday juniors.”
               </p>
               {canTalk && (
                 <button
@@ -366,6 +202,15 @@ export default function VoiceAsk() {
                 <div className="rounded-xl bg-[#faf9f7] px-3 py-3">
                   <p className="whitespace-pre-wrap text-[14px] leading-relaxed text-[#1a1a1a]">{result.detail}</p>
                   <div className="mt-3 flex flex-wrap gap-2">
+                    {result.cancel && (
+                      <button
+                        type="button"
+                        onClick={confirmCancel}
+                        className="rounded-full bg-[#991b1b] px-3.5 py-2 text-[12px] font-medium text-white"
+                      >
+                        Confirm cancel
+                      </button>
+                    )}
                     {result.links.map((l) => (
                       <Link
                         key={l.href}
