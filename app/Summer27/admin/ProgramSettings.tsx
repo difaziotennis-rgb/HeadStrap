@@ -766,7 +766,7 @@ export default function ProgramSettings({ catalog, onSave, onReset }: Props) {
                 value={editingEvent.capacity}
                 onChange={(e) => updateEvent(editingEvent.id, { capacity: Number(e.target.value) || 0 })}
               >
-                {[8, 12, 16, 20, 24, editingEvent.capacity]
+                {[8, 10, 12, 16, 20, 24, editingEvent.capacity]
                   .filter((n, i, arr) => arr.indexOf(n) === i)
                   .map((n) => (
                     <option key={n} value={n}>

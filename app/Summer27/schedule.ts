@@ -17,7 +17,7 @@ import {
   type SlotBlockReason,
 } from "./summer27-data";
 
-export const S27_CATALOG_KEY = "s27_catalog_v43";
+export const S27_CATALOG_KEY = "s27_catalog_v44";
 export const S27_BLOCKS_KEY = "s27_admin_blocks_v1";
 export const S27_NOTES_KEY = "s27_member_notes_v1";
 
@@ -184,6 +184,7 @@ function usableEvents(events: unknown, fallback: EventDef[]): EventDef[] {
         // Keep default art in sync when we ship new event images.
         image: eventImagePath(base?.image || e.image, fallback[0]?.image),
         theme: e.theme || base?.theme || fallback[0]?.theme,
+        capacity: typeof base?.capacity === "number" ? base.capacity : e.capacity,
         highlights: Array.isArray(e.highlights) && e.highlights.length ? e.highlights : base?.highlights || [],
       } as EventDef;
     });

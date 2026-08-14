@@ -353,7 +353,7 @@ export const s27Events: EventDef[] = [
     date: "2027-05-15",
     timeLabel: "Saturday · 4:00–6:30 PM",
     category: "Tennis Social",
-    capacity: 16,
+    capacity: 10,
     memberPrice: 45,
     guestPrice: 60,
     description:
@@ -368,7 +368,7 @@ export const s27Events: EventDef[] = [
     date: "2027-07-11",
     timeLabel: "Sunday · 12:00–6:00 PM",
     category: "Tournament · Viewing",
-    capacity: 20,
+    capacity: 10,
     memberPrice: 55,
     guestPrice: 70,
     description:
@@ -383,7 +383,7 @@ export const s27Events: EventDef[] = [
     date: "2027-07-25",
     timeLabel: "Sunday · 11:00 AM–1:00 PM",
     category: "Family",
-    capacity: 16,
+    capacity: 10,
     memberPrice: 30,
     guestPrice: 40,
     description: "Parent–child games and easy round robins across both courts. Casual and welcoming.",
@@ -397,7 +397,7 @@ export const s27Events: EventDef[] = [
     date: "2027-08-14",
     timeLabel: "Saturday · 4:00–6:30 PM",
     category: "Tournament",
-    capacity: 16,
+    capacity: 10,
     memberPrice: 45,
     guestPrice: 60,
     description:
@@ -413,7 +413,7 @@ export const s27Events: EventDef[] = [
     endDate: "2027-09-06",
     timeLabel: "Labor Day weekend · Sat–Mon",
     category: "Championship",
-    capacity: 32,
+    capacity: 10,
     memberPrice: 50,
     guestPrice: 65,
     description:
@@ -429,7 +429,7 @@ export const s27Events: EventDef[] = [
     date: "2027-09-11",
     timeLabel: "Saturday · 5:00–8:00 PM",
     category: "Social",
-    capacity: 20,
+    capacity: 10,
     memberPrice: 55,
     guestPrice: 75,
     description:
