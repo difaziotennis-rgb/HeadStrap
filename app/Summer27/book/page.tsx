@@ -16,6 +16,7 @@ import {
   formatHour,
   formatDateInput,
   formatPrettyDate,
+  hoursOverlap,
   parseDateInput,
   type CourtId,
 } from "../summer27-data";
@@ -149,7 +150,13 @@ function Summer27BookInner() {
         b.hour < hour + COURT_SLOT_HOURS
     );
     if (existing) {
-      return { type: "booked" as const, label: existing.clientName, booking: existing };
+      return {
+        type: "booked" as const,
+        label: existing.clientName,
+        booking: existing,
+        startHour: existing.hour,
+        durationHours: existing.durationHours,
+      };
     }
     return null;
   }
@@ -389,60 +396,78 @@ function Summer27BookInner() {
     return parts.length > 1 ? parts[parts.length - 1] : parts[0];
   }
 
-  function renderSlot(courtId: CourtId, hour: number) {
+  function blockHours(startHour: number, durationHours: number) {
+    return COURT_SHEET_HOURS.filter((h) => hoursOverlap(startHour, durationHours, h));
+  }
+
+  function renderOccupied(courtId: CourtId, hour: number) {
     const occ = occupancy(date, courtId, hour);
-    const open = canBook(date, courtId, hour);
-    if (occ) {
-      if (occ.type === "clinic") {
-        return (
-          <Link
-            href={`/Summer27/clinics?clinic=${encodeURIComponent(occ.clinicId)}&date=${date}`}
-            className={`block truncate rounded-md px-1 py-2 text-center text-[11px] font-medium leading-tight sm:px-2 sm:py-2 sm:text-[11px] ${slotClass(occ.type)}`}
-          >
-            {shortOccLabel(occ.label, occ.type)}
-          </Link>
-        );
-      }
-      if (occ.type === "booked" && "booking" in occ && occ.booking && isMine(occ.booking)) {
-        const mine = occ.booking;
-        const cancellable = canChangeBooking(mine.date, mine.hour);
-        return (
-          <button
-            type="button"
-            onClick={() => {
-              setPendingSlot(null);
-              setCancelTarget(mine);
-              setMsg(null);
-            }}
-            className={`w-full truncate rounded-md px-1 py-2 text-center text-[11px] font-medium leading-tight sm:px-2 sm:py-2 sm:text-[11px] ${slotClass("mine")}`}
-            title={cancellable ? "Tap to cancel" : `Locked within ${CANCEL_WINDOW_HOURS} hours`}
-          >
-            {cancellable ? "Yours · Cancel" : "Yours"}
-          </button>
-        );
-      }
+    if (!occ) return null;
+    const start = "startHour" in occ ? Number(occ.startHour) : hour;
+    const dur = "durationHours" in occ ? Number(occ.durationHours) : COURT_SLOT_HOURS;
+    if (blockHours(start, dur)[0] !== hour) return null;
+    const compact = dur <= 0.51;
+    const pad = compact
+      ? "px-1 py-0.5 text-[10px] sm:px-2"
+      : "px-1 py-2 text-[11px] sm:px-2 sm:text-[11px]";
+    const cls = `flex h-full w-full items-center justify-center truncate rounded-md text-center font-medium leading-tight ${pad}`;
+
+    if (occ.type === "clinic") {
       return (
-        <span
-          className={`block truncate rounded-md px-1 py-2 text-center text-[11px] leading-tight sm:px-2 sm:py-2 sm:text-[11px] ${slotClass(occ.type)}`}
-          title={occ.type === "booked" && "booking" in occ && occ.booking ? occ.booking.clientName : occ.label}
+        <Link
+          href={`/Summer27/clinics?clinic=${encodeURIComponent(occ.clinicId)}&date=${date}`}
+          className={`${cls} ${slotClass(occ.type)}`}
         >
-          {occ.type === "booked" && "booking" in occ && occ.booking
-            ? courtSlotName(occ.booking)
-            : shortOccLabel(occ.label, occ.type)}
-        </span>
+          {shortOccLabel(occ.label, occ.type)}
+        </Link>
       );
     }
+    if (occ.type === "booked" && "booking" in occ && occ.booking && isMine(occ.booking)) {
+      const mine = occ.booking;
+      const cancellable = canChangeBooking(mine.date, mine.hour);
+      return (
+        <button
+          type="button"
+          onClick={() => {
+            setPendingSlot(null);
+            setCancelTarget(mine);
+            setMsg(null);
+          }}
+          className={`${cls} ${slotClass("mine")}`}
+          title={cancellable ? "Tap to cancel" : `Locked within ${CANCEL_WINDOW_HOURS} hours`}
+        >
+          {cancellable ? "Yours · Cancel" : "Yours"}
+        </button>
+      );
+    }
+    return (
+      <span
+        className={`${cls} ${slotClass(occ.type)}`}
+        title={occ.type === "booked" && "booking" in occ && occ.booking ? occ.booking.clientName : occ.label}
+      >
+        {occ.type === "booked" && "booking" in occ && occ.booking
+          ? courtSlotName(occ.booking)
+          : shortOccLabel(occ.label, occ.type)}
+      </span>
+    );
+  }
+
+  function renderOpen(courtId: CourtId, hour: number) {
+    if (occupancy(date, courtId, hour)) return null;
+    const open = canBook(date, courtId, hour);
     return (
       <button
         type="button"
         disabled={!open || paying}
         onClick={() => requestSlot(courtId, hour)}
-        className="w-full rounded-md border border-[#e8e5df] bg-[#faf9f7] px-1 py-2 text-[11px] font-medium text-[#1a1a1a] hover:bg-white disabled:opacity-35 sm:px-2 sm:py-2 sm:text-[11px]"
+        className="h-full w-full rounded-md border border-[#e8e5df] bg-[#faf9f7] px-1 py-0.5 text-[10px] font-medium text-[#1a1a1a] hover:bg-white disabled:opacity-35 sm:px-2 sm:text-[11px]"
       >
-        ${rate * duration}
+        {open ? `$${rate * duration}` : ""}
       </button>
     );
   }
+
+  const sheetRows = `repeat(${COURT_SHEET_HOURS.length}, 1.5rem)`;
 
   const pendingCourtName = pendingSlot
     ? COURTS.find((c) => c.id === pendingSlot.courtId)?.name || pendingSlot.courtId
@@ -505,21 +530,49 @@ function Summer27BookInner() {
             </div>
           ))}
         </div>
-        {COURT_SHEET_HOURS.map((hour) => (
-          <div
-            key={hour}
-            className="grid grid-cols-[4.25rem_1fr_1fr] border-b border-[#f0ede8] last:border-b-0 sm:grid-cols-[5rem_1fr_1fr]"
-          >
-            <div className="flex items-center px-2 py-1.5 text-[11px] tabular-nums text-[#6b665e] sm:px-3 sm:text-[12px]">
-              {formatHour(hour).replace(":00 ", " ")}
-            </div>
-            {COURTS.map((court) => (
-              <div key={court.id} className="border-l border-[#f0ede8] p-1 sm:p-1.5">
-                {renderSlot(court.id, hour)}
+        <div className="grid grid-cols-[4.25rem_1fr_1fr] sm:grid-cols-[5rem_1fr_1fr]">
+          <div className="grid" style={{ gridTemplateRows: sheetRows }}>
+            {COURT_SHEET_HOURS.map((hour) => (
+              <div
+                key={hour}
+                className="flex items-start border-b border-[#f0ede8] px-2 pt-0.5 text-[10px] tabular-nums text-[#6b665e] last:border-b-0 sm:px-3 sm:text-[11px]"
+              >
+                {formatHour(hour).replace(":00 ", " ")}
               </div>
             ))}
           </div>
-        ))}
+          {COURTS.map((court) => (
+            <div
+              key={court.id}
+              className="grid border-l border-[#f0ede8]"
+              style={{ gridTemplateRows: sheetRows }}
+            >
+              {COURT_SHEET_HOURS.map((hour, i) => {
+                const occ = occupancy(date, court.id, hour);
+                if (occ) {
+                  const start = Number(occ.startHour);
+                  const dur = Number(occ.durationHours) || COURT_SLOT_HOURS;
+                  const span = blockHours(start, dur);
+                  if (span[0] !== hour) return null;
+                  return (
+                    <div
+                      key={`${court.id}-${hour}`}
+                      className="z-[1] p-0.5"
+                      style={{ gridRow: `${i + 1} / span ${span.length}` }}
+                    >
+                      {renderOccupied(court.id, hour)}
+                    </div>
+                  );
+                }
+                return (
+                  <div key={`${court.id}-${hour}`} className="p-0.5" style={{ gridRow: i + 1 }}>
+                    {renderOpen(court.id, hour)}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
       </div>
 
       {pendingSlot && (

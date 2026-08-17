@@ -1,5 +1,6 @@
 import {
   COURT_RATES,
+  COURT_SLOT_HOURS,
   LESSON_RATES,
   PRIME_TEACHING,
   STRINGING_LABOR,
@@ -357,7 +358,12 @@ export function getProgramBlock(
       hoursOverlap(b.startHour, b.durationHours, hour)
   );
   if (weatherHold) {
-    return { type: "hold", label: weatherHold.reason || "Weather" };
+    return {
+      type: "hold",
+      label: weatherHold.reason || "Weather",
+      startHour: weatherHold.startHour,
+      durationHours: weatherHold.durationHours,
+    };
   }
 
   const clinicsOff = clinicsSuspendedOnDate(dateStr, catalog.events);
@@ -369,7 +375,14 @@ export function getProgramBlock(
         clinic.blockCourts.includes(courtId) &&
         hoursOverlap(clinic.startHour, clinic.durationHours, hour)
       ) {
-        return { type: "clinic", label: clinic.name, clinicId: clinic.id, kind: clinic.kind };
+        return {
+          type: "clinic",
+          label: clinic.name,
+          clinicId: clinic.id,
+          kind: clinic.kind,
+          startHour: clinic.startHour,
+          durationHours: clinic.durationHours,
+        };
       }
     }
   }
@@ -396,7 +409,7 @@ export function getProgramBlock(
       }
     }
     if (hoursOverlap(start, duration, hour)) {
-      return { type: "event", label: event.title };
+      return { type: "event", label: event.title, startHour: start, durationHours: duration };
     }
   }
 
@@ -411,13 +424,23 @@ export function getProgramBlock(
   }
   const hold = matchingBlocks.find((b) => b.kind !== "open");
   if (hold) {
-    return { type: "hold", label: hold.reason || "Reserved" };
+    return {
+      type: "hold",
+      label: hold.reason || "Reserved",
+      startHour: hold.startHour,
+      durationHours: hold.durationHours,
+    };
   }
 
   if (PRIME_TEACHING.weekdays.includes(day) && courtId === PRIME_TEACHING.courtId) {
     for (const window of catalog.primeTeaching.windows) {
       if (hour >= window.start && hour < window.end) {
-        return { type: "lesson", label: window.label || "Private lesson" };
+        return {
+          type: "lesson",
+          label: window.label || "Private lesson",
+          startHour: window.start,
+          durationHours: Math.max(COURT_SLOT_HOURS, window.end - window.start),
+        };
       }
     }
   }

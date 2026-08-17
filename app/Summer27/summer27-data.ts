@@ -665,11 +665,11 @@ export function proUsesLessonRequests(pro: Pick<ProDef, "lessonMode"> | null | u
 }
 
 export type SlotBlockReason =
-  | { type: "clinic"; label: string; clinicId: string; kind: ClinicKind }
-  | { type: "lesson"; label: string }
-  | { type: "event"; label: string }
-  | { type: "hold"; label: string }
-  | { type: "booked"; label: string };
+  | { type: "clinic"; label: string; clinicId: string; kind: ClinicKind; startHour: number; durationHours: number }
+  | { type: "lesson"; label: string; startHour: number; durationHours: number }
+  | { type: "event"; label: string; startHour: number; durationHours: number }
+  | { type: "hold"; label: string; startHour: number; durationHours: number }
+  | { type: "booked"; label: string; startHour: number; durationHours: number };
 
 /** True if a court slot starting at `hour` overlaps [startA, startA + durA). */
 export function hoursOverlap(startA: number, durA: number, hour: number, slotDur = COURT_SLOT_HOURS): boolean {
