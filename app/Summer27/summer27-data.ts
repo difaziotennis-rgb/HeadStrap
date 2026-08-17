@@ -108,8 +108,8 @@ export const s27Pros: ProDef[] = [
       "Maya works with recreational adults and doubles partners who want clearer patterns, better communication, and more enjoyable match play. Sessions emphasize live-ball feeding, court positioning, and the habits that make club doubles click.",
     quote: "Good doubles is a conversation.",
     courtId: "court-2",
-    memberRate: 160,
-    guestRate: 175,
+    memberRate: 150,
+    guestRate: 165,
     days: [1, 2, 3, 4],
     windows: [
       { start: 9, end: 12 },
@@ -126,8 +126,8 @@ export const s27Pros: ProDef[] = [
       "Hudson Valley native with years of experience coaching players of all ages. Jonah went undefeated in match play at FDR High School and competed at Brown University. His coaching is technique-first — clear cues, repeatable strokes, and steady progress for juniors and adults who want cleaner mechanics.",
     quote: "Clean mechanics. Repeatable strokes.",
     courtId: "court-2",
-    memberRate: 140,
-    guestRate: 155,
+    memberRate: 160,
+    guestRate: 175,
     days: [2, 4, 6],
     windows: [
       { start: 9, end: 12 },
