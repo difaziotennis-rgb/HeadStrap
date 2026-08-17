@@ -642,18 +642,16 @@ export function proScheduleLabel(pro: ProDef): string {
   return hoursBit;
 }
 
-export function findProByLogin(pros: ProDef[], email: string, password: string): ProDef | null {
-  const key = email.trim().toLowerCase().replace(/^#/, "");
-  const pass = password.trim();
+export function findProByLogin(pros: ProDef[], nameOrEmail: string): ProDef | null {
+  const key = nameOrEmail.trim().toLowerCase().replace(/^#/, "");
   if (!key) return null;
   return (
     pros.find((p) => {
       const em = (p.email || "").trim().toLowerCase();
-      const name = (p.name || "").trim().toLowerCase();
-      if (em !== key && name !== key && p.id !== key) return false;
-      const expected = String(p.password || "").trim();
-      if (!expected) return true;
-      return expected === pass;
+      const full = (p.name || "").trim().toLowerCase();
+      const first = full.split(/\s+/)[0] || "";
+      const id = (p.id || "").toLowerCase();
+      return em === key || full === key || first === key || id === key || id.replace(/-/g, " ") === key;
     }) || null
   );
 }

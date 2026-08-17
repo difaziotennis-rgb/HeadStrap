@@ -75,8 +75,7 @@ type DayItem = {
 
 export default function ProPortalPage() {
   const session = useS27ProSession();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
   const [pros, setPros] = useState<ProDef[]>(s27Pros);
   const [lessons, setLessons] = useState<S27LessonBooking[]>([]);
@@ -112,19 +111,19 @@ export default function ProPortalPage() {
 
   function signIn(e: React.FormEvent) {
     e.preventDefault();
-    const match = findProByLogin(pros.length ? pros : s27Pros, email, password);
+    const match = findProByLogin(pros.length ? pros : s27Pros, name);
     if (!match) {
-      setMsg("Check email and password.");
+      setMsg("Try your first name — Jonah, Maya, Derek.");
       return;
     }
     writeS27ProSession({
       proId: match.id,
-      proEmail: match.email || email.trim(),
+      proEmail: match.email || name.trim(),
       proName: match.name,
       signedInAt: new Date().toISOString(),
     });
     setMsg(null);
-    setPassword("");
+    setName("");
   }
 
   const mine = useMemo(
@@ -258,22 +257,15 @@ export default function ProPortalPage() {
       <main className="mx-auto max-w-md px-4 py-16">
         <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Pro desk</p>
         <h2 className="mt-1 text-2xl font-semibold tracking-tight">Sign in</h2>
-        <p className="mt-2 text-[13px] text-[#6b665e]">Use the portal email and password from Program Settings.</p>
+        <p className="mt-2 text-[13px] text-[#6b665e]">Type your first name.</p>
         <form onSubmit={signIn} className="mt-5 space-y-3 rounded-2xl border border-[#e8e5df] bg-white p-5">
           <input
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="Email"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Jonah"
             className="w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]"
             autoComplete="username"
-          />
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Password"
-            className="w-full rounded-xl border border-[#e8e5df] px-3 py-3 text-[15px]"
-            autoComplete="current-password"
+            autoFocus
           />
           {msg ? <p className="text-[13px] text-[#991b1b]">{msg}</p> : null}
           <button type="submit" className="w-full rounded-xl bg-[#1a1a1a] py-3 text-[13px] font-medium text-white">

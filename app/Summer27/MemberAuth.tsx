@@ -86,7 +86,7 @@ export default function MemberAuth() {
         return s27Pros;
       }
     })();
-    const pro = findProByLogin(pros, email, password);
+    const pro = findProByLogin(pros, email);
 
     if (!match && !pro) {
       setMsg("Check email and password.");
