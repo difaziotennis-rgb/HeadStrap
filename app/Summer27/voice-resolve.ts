@@ -247,7 +247,7 @@ export function resolveVoice(intent: VoiceIntent, session: S27MemberSession | nu
       lines.push(`Stringing $${labor || STRINGING_LABOR} labor plus string (poly +$${STRING_OPTIONS.find((s) => s.id === "poly")?.extra || 32}).`);
     }
     if (topic === "all" || topic === "event") {
-      lines.push("Events are usually $45–$55 members, 10 players max.");
+      lines.push("Events run with clinic rates: about $80–$95 for a couple of hours, more for all-day or championship weekends. 10 players max.");
     }
     return {
       spoken: lines[0],
