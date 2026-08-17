@@ -452,19 +452,46 @@ function Summer27BookInner() {
     );
   }
 
-  function renderOpen(courtId: CourtId, hour: number) {
-    if (occupancy(date, courtId, hour)) return null;
+  function renderOpen(courtId: CourtId, hour: number, compact: boolean) {
     const open = canBook(date, courtId, hour);
+    if (!open) return null;
+    const pad = compact
+      ? "px-1 py-0.5 text-[10px] sm:px-2"
+      : "px-1 py-2 text-[11px] sm:px-2 sm:text-[11px]";
     return (
       <button
         type="button"
-        disabled={!open || paying}
+        disabled={paying}
         onClick={() => requestSlot(courtId, hour)}
-        className="h-full w-full rounded-md border border-[#e8e5df] bg-[#faf9f7] px-1 py-0.5 text-[10px] font-medium text-[#1a1a1a] hover:bg-white disabled:opacity-35 sm:px-2 sm:text-[11px]"
+        className={`h-full w-full rounded-md border border-[#e8e5df] bg-[#faf9f7] font-medium text-[#1a1a1a] hover:bg-white disabled:opacity-35 ${pad}`}
       >
-        {open ? `$${rate * duration}` : ""}
+        ${rate * duration}
       </button>
     );
+  }
+
+  function courtCells(courtId: CourtId) {
+    const covered = new Set<number>();
+    const cells: Array<{ hour: number; index: number; span: number; kind: "occ" | "open" }> = [];
+    COURT_SHEET_HOURS.forEach((hour, i) => {
+      if (covered.has(hour)) return;
+      const occ = occupancy(date, courtId, hour);
+      if (occ) {
+        const start = Number(occ.startHour);
+        const dur = Number(occ.durationHours) || COURT_SLOT_HOURS;
+        const span = blockHours(start, dur);
+        if (span[0] !== hour) return;
+        span.forEach((h) => covered.add(h));
+        cells.push({ hour, index: i, span: span.length, kind: "occ" });
+        return;
+      }
+      if (canBook(date, courtId, hour)) {
+        const span = blockHours(hour, duration);
+        span.forEach((h) => covered.add(h));
+        cells.push({ hour, index: i, span: Math.max(1, span.length), kind: "open" });
+      }
+    });
+    return cells;
   }
 
   const sheetRows = `repeat(${COURT_SHEET_HOURS.length}, 1.5rem)`;
@@ -547,29 +574,17 @@ function Summer27BookInner() {
               className="grid border-l border-[#f0ede8]"
               style={{ gridTemplateRows: sheetRows }}
             >
-              {COURT_SHEET_HOURS.map((hour, i) => {
-                const occ = occupancy(date, court.id, hour);
-                if (occ) {
-                  const start = Number(occ.startHour);
-                  const dur = Number(occ.durationHours) || COURT_SLOT_HOURS;
-                  const span = blockHours(start, dur);
-                  if (span[0] !== hour) return null;
-                  return (
-                    <div
-                      key={`${court.id}-${hour}`}
-                      className="z-[1] p-0.5"
-                      style={{ gridRow: `${i + 1} / span ${span.length}` }}
-                    >
-                      {renderOccupied(court.id, hour)}
-                    </div>
-                  );
-                }
-                return (
-                  <div key={`${court.id}-${hour}`} className="p-0.5" style={{ gridRow: i + 1 }}>
-                    {renderOpen(court.id, hour)}
-                  </div>
-                );
-              })}
+              {courtCells(court.id).map((cell) => (
+                <div
+                  key={`${court.id}-${cell.hour}`}
+                  className="z-[1] p-0.5"
+                  style={{ gridRow: `${cell.index + 1} / span ${cell.span}` }}
+                >
+                  {cell.kind === "occ"
+                    ? renderOccupied(court.id, cell.hour)
+                    : renderOpen(court.id, cell.hour, cell.span <= 1)}
+                </div>
+              ))}
             </div>
           ))}
         </div>
