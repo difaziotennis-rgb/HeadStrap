@@ -340,9 +340,10 @@ export function persistCourts(list: S27CourtBooking[]) {
   const rec: Record<string, S27CourtBooking> = {};
   for (const booking of list) {
     if (!booking?.id || !booking.date || !booking.courtId) continue;
+    const start = Number(booking.hour);
     const hours = Number(booking.durationHours) || 1;
-    for (let i = 0; i < hours; i++) {
-      rec[courtBookingKey(booking.date, booking.courtId, Number(booking.hour) + i)] = booking;
+    for (let t = 0; t < hours - 1e-9; t += 0.5) {
+      rec[courtBookingKey(booking.date, booking.courtId, start + t)] = booking;
     }
   }
   saveRecord(KEYS.courts, rec);

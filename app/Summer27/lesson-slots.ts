@@ -33,8 +33,8 @@ export function lessonConflict(opts: {
   const available = proHoursOnDate(opts.pro, opts.date);
   if (available.length === 0) return "This pro does not teach on that day.";
 
-  for (let h = opts.hour; h < opts.hour + span; h += 1) {
-    if (!available.includes(h)) return "That time isn’t on this pro’s schedule.";
+  for (let h = opts.hour; h < opts.hour + span; h += 0.5) {
+    if (!available.includes(Math.floor(h))) return "That time isn’t on this pro’s schedule.";
     const program = getProgramBlock(opts.date, opts.pro.courtId, h);
     if (program?.type === "clinic" || program?.type === "event") return `Court reserved (${program.label}).`;
     if (program?.type === "hold") return `Court on hold (${program.label}).`;

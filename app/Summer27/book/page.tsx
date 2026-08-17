@@ -9,8 +9,10 @@ import { getSummer27StripeConfig } from "../stripe-config";
 import { PayChooser } from "../PayChooser";
 import { MemberPicker } from "../MemberPicker";
 import {
-  BOOKING_HOURS,
+  COURT_SHEET_HOURS,
+  COURT_SLOT_HOURS,
   COURTS,
+  courtSheetLabel,
   formatHour,
   formatDateInput,
   formatPrettyDate,
@@ -28,6 +30,7 @@ import {
   loadRecord,
   memberOnCourt,
   saveRecord,
+  uniqueCourts,
   type S27CourtBooking,
   type S27CourtPlayer,
   type S27MemberAccount,
@@ -90,7 +93,7 @@ function Summer27BookInner() {
     if (!queryDate && !queryHour) return;
     if (queryDate && /^\d{4}-\d{2}-\d{2}$/.test(queryDate)) setDate(queryDate);
     const courtOk = queryCourt === "court-1" || queryCourt === "court-2";
-    if (courtOk && BOOKING_HOURS.includes(queryHour)) {
+    if (courtOk && COURT_SHEET_HOURS.includes(queryHour)) {
       setPendingSlot({ courtId: queryCourt, hour: queryHour });
     }
   }, [queryDate, queryHour, queryCourt]);
@@ -131,18 +134,31 @@ function Summer27BookInner() {
 
   function occupancy(dateStr: string, courtId: CourtId, hour: number) {
     const program = getProgramBlock(dateStr, courtId, hour);
-    if (program) return program;
-    const existing = bookings[courtBookingKey(dateStr, courtId, hour)];
-    if (existing?.paymentStatus === "paid") {
+    if (program) {
+      if (program.type === "clinic") {
+        return { ...program, label: courtSheetLabel({ id: program.clinicId, name: program.label }) };
+      }
+      return program;
+    }
+    const existing = uniqueCourts(bookings).find(
+      (b) =>
+        b.date === dateStr &&
+        b.courtId === courtId &&
+        b.paymentStatus === "paid" &&
+        hour < b.hour + b.durationHours &&
+        b.hour < hour + COURT_SLOT_HOURS
+    );
+    if (existing) {
       return { type: "booked" as const, label: existing.clientName, booking: existing };
     }
     return null;
   }
 
   function canBook(dateStr: string, courtId: CourtId, hour: number) {
-    for (let i = 0; i < duration; i++) {
-      if (occupancy(dateStr, courtId, hour + i)) return false;
-      if (!BOOKING_HOURS.includes(hour + i)) return false;
+    for (let t = 0; t < duration - 1e-9; t += COURT_SLOT_HOURS) {
+      const slot = hour + t;
+      if (occupancy(dateStr, courtId, slot)) return false;
+      if (!COURT_SHEET_HOURS.includes(slot)) return false;
     }
     return true;
   }
@@ -230,8 +246,8 @@ function Summer27BookInner() {
     };
 
     const next = { ...bookings };
-    for (let i = 0; i < duration; i++) {
-      next[courtBookingKey(date, courtId, hour + i)] = booking;
+    for (let t = 0; t < duration - 1e-9; t += COURT_SLOT_HOURS) {
+      next[courtBookingKey(date, courtId, hour + t)] = booking;
     }
 
     setPaying(true);
@@ -350,15 +366,7 @@ function Summer27BookInner() {
     if (type === "hold") return "Held";
     if (type === "mine") return "Yours";
     if (type === "booked") return lastNameFromFull(label) || "Booked";
-    return (
-      label
-        .replace(/^Weekend\s+/i, "")
-        .replace(/^Midweek\s+/i, "")
-        .replace(/^Weeknight\s+/i, "")
-        .replace(/\s+Clinic$/i, "")
-        .replace(/\s+&\s+Drills$/i, "")
-        .trim() || label
-    );
+    return label;
   }
 
   function courtSlotName(booking: S27CourtBooking) {
@@ -389,7 +397,7 @@ function Summer27BookInner() {
         return (
           <Link
             href={`/Summer27/clinics?clinic=${encodeURIComponent(occ.clinicId)}&date=${date}`}
-            className={`block truncate rounded-md px-1.5 py-2.5 text-center text-[11px] font-medium leading-tight sm:px-2 sm:py-2 sm:text-[11px] ${slotClass(occ.type)}`}
+            className={`block truncate rounded-md px-1 py-2 text-center text-[11px] font-medium leading-tight sm:px-2 sm:py-2 sm:text-[11px] ${slotClass(occ.type)}`}
           >
             {shortOccLabel(occ.label, occ.type)}
           </Link>
@@ -406,7 +414,7 @@ function Summer27BookInner() {
               setCancelTarget(mine);
               setMsg(null);
             }}
-            className={`w-full truncate rounded-md px-1.5 py-2.5 text-center text-[11px] font-medium leading-tight sm:px-2 sm:py-2 sm:text-[11px] ${slotClass("mine")}`}
+            className={`w-full truncate rounded-md px-1 py-2 text-center text-[11px] font-medium leading-tight sm:px-2 sm:py-2 sm:text-[11px] ${slotClass("mine")}`}
             title={cancellable ? "Tap to cancel" : `Locked within ${CANCEL_WINDOW_HOURS} hours`}
           >
             {cancellable ? "Yours · Cancel" : "Yours"}
@@ -415,7 +423,7 @@ function Summer27BookInner() {
       }
       return (
         <span
-          className={`block truncate rounded-md px-1.5 py-2.5 text-center text-[11px] leading-tight sm:px-2 sm:py-2 sm:text-[11px] ${slotClass(occ.type)}`}
+          className={`block truncate rounded-md px-1 py-2 text-center text-[11px] leading-tight sm:px-2 sm:py-2 sm:text-[11px] ${slotClass(occ.type)}`}
           title={occ.type === "booked" && "booking" in occ && occ.booking ? occ.booking.clientName : occ.label}
         >
           {occ.type === "booked" && "booking" in occ && occ.booking
@@ -429,7 +437,7 @@ function Summer27BookInner() {
         type="button"
         disabled={!open || paying}
         onClick={() => requestSlot(courtId, hour)}
-        className="w-full rounded-md border border-[#e8e5df] bg-[#faf9f7] px-1.5 py-2.5 text-[11px] font-medium text-[#1a1a1a] hover:bg-white disabled:opacity-35 sm:px-2 sm:py-2 sm:text-[11px]"
+        className="w-full rounded-md border border-[#e8e5df] bg-[#faf9f7] px-1 py-2 text-[11px] font-medium text-[#1a1a1a] hover:bg-white disabled:opacity-35 sm:px-2 sm:py-2 sm:text-[11px]"
       >
         ${rate * duration}
       </button>
@@ -475,26 +483,8 @@ function Summer27BookInner() {
           })}
           <span className="font-normal text-[#8a8477]">
             {" · "}${rate}/hour
-            {savedCard ? ` · ${savedCard.brand} •••• ${savedCard.last4}` : ""}
           </span>
         </p>
-        {!isMember && (
-          <div className="mt-3 rounded-xl border border-[#ead9c2] bg-[#fbf6ee] px-3 py-3 text-[13px] text-[#6b665e]">
-            Guests can book and pay by card. Or{" "}
-            <Link href="/Summer27/member" className="font-medium text-[#1a1a1a] underline-offset-2 hover:underline">
-              join / sign in
-            </Link>{" "}
-            to save a card.
-          </div>
-        )}
-        {isMember && !savedCard && (
-          <div className="mt-3 rounded-xl border border-[#ead9c2] bg-[#fbf6ee] px-3 py-3 text-[13px] text-[#6b665e]">
-            Add a card on file to book.{" "}
-            <Link href="/Summer27/member/portal?tab=card" className="font-medium text-[#1a1a1a] underline-offset-2 hover:underline">
-              My Account
-            </Link>
-          </div>
-        )}
       </div>
 
       {msg && (
@@ -502,7 +492,7 @@ function Summer27BookInner() {
       )}
 
       <div className="mt-4 overflow-hidden rounded-2xl border border-[#e8e5df] bg-white">
-        <div className="grid grid-cols-[3.75rem_1fr_1fr] border-b border-[#ece8e2] bg-[#faf9f7] sm:grid-cols-[4.5rem_1fr_1fr]">
+        <div className="grid grid-cols-[4.25rem_1fr_1fr] border-b border-[#ece8e2] bg-[#faf9f7] sm:grid-cols-[5rem_1fr_1fr]">
           <div className="px-2 py-2.5 text-[11px] font-medium uppercase tracking-[0.1em] text-[#8a8477] sm:px-3 sm:text-[11px]">
             Time
           </div>
@@ -515,16 +505,16 @@ function Summer27BookInner() {
             </div>
           ))}
         </div>
-        {BOOKING_HOURS.map((hour) => (
+        {COURT_SHEET_HOURS.map((hour) => (
           <div
             key={hour}
-            className="grid grid-cols-[3.75rem_1fr_1fr] border-b border-[#f0ede8] last:border-b-0 sm:grid-cols-[4.5rem_1fr_1fr]"
+            className="grid grid-cols-[4.25rem_1fr_1fr] border-b border-[#f0ede8] last:border-b-0 sm:grid-cols-[5rem_1fr_1fr]"
           >
-            <div className="flex items-center px-2 py-2 text-[12px] text-[#6b665e] sm:px-3 sm:py-1.5 sm:text-[12px]">
+            <div className="flex items-center px-2 py-1.5 text-[11px] tabular-nums text-[#6b665e] sm:px-3 sm:text-[12px]">
               {formatHour(hour).replace(":00 ", " ")}
             </div>
             {COURTS.map((court) => (
-              <div key={court.id} className="border-l border-[#f0ede8] p-1.5 sm:p-1.5">
+              <div key={court.id} className="border-l border-[#f0ede8] p-1 sm:p-1.5">
                 {renderSlot(court.id, hour)}
               </div>
             ))}
@@ -611,8 +601,8 @@ function Summer27BookInner() {
                 <div>
                   <p className="mb-2 text-[12px] text-[#6b665e]">
                     {splitMode === "singles"
-                      ? "Add 1 partner — both cards charged equally."
-                      : "Add 3 partners — all four cards charged equally."}
+                      ? "Add 1 partner — split equally."
+                      : "Add 3 partners — split equally."}
                   </p>
                   <MemberPicker
                     members={members}
@@ -637,6 +627,7 @@ function Summer27BookInner() {
                 primaryLabel={splitMode === "solo" ? "Confirm" : "Confirm split"}
                 allowGuestCheckout={!savedCard}
                 stripeReady={stripeReady}
+                hideCardDetails
                 onPay={(method) => bookSlot(pendingSlot.courtId, pendingSlot.hour, method)}
               />
               {splitMode !== "solo" && partners.length === partnerSlots && (

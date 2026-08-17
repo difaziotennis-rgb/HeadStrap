@@ -21,6 +21,9 @@ export const COURTS = [
 export type CourtId = (typeof COURTS)[number]["id"];
 
 export const BOOKING_HOURS = Array.from({ length: 14 }, (_, i) => i + 7); // 7 AM – 8 PM
+/** Court sheet rows: 7:00 AM through 8:00 PM in half hours. */
+export const COURT_SHEET_HOURS = Array.from({ length: 27 }, (_, i) => 7 + i * 0.5);
+export const COURT_SLOT_HOURS = 0.5;
 
 export const COURT_RATES = {
   member: 50,
@@ -560,10 +563,29 @@ export type SlotBlockReason =
   | { type: "hold"; label: string }
   | { type: "booked"; label: string };
 
-/** True if a 1-hour court slot starting at `hour` overlaps [startA, startA + durA). */
-export function hoursOverlap(startA: number, durA: number, hour: number): boolean {
-  const slotEnd = hour + 1;
+/** True if a court slot starting at `hour` overlaps [startA, startA + durA). */
+export function hoursOverlap(startA: number, durA: number, hour: number, slotDur = COURT_SLOT_HOURS): boolean {
+  const slotEnd = hour + slotDur;
   const endA = startA + durA;
   return startA < slotEnd && hour < endA;
+}
+
+/** Short label that fits a court-sheet slot button. */
+export function courtSheetLabel(clinic: { id: string; name: string }) {
+  const byId: Record<string, string> = {
+    "sat-sun-cardio": "Cardio",
+    "sat-sun-point-play": "Intermediate/Advanced",
+    "wed-am-beginner": "Men's Cardio",
+    "tue-am-beginner-fundamentals": "Tennis 101",
+    "thu-am-ladies-doubles": "Ladies Doubles",
+    "mon-fri-beginner": "2.5–3.0",
+    "mon-fri-advanced": "High Performance",
+    "mon-fri-int-adv": "3.5+",
+    "tue-am-juniors": "Juniors",
+    "thu-hs-juniors": "High School",
+    "wed-am-tots": "Tots",
+    "wed-am-toddlers": "Toddlers",
+  };
+  return byId[clinic.id] || clinic.name;
 }
 
