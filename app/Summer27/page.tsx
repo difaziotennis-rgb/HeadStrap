@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { useS27Session } from "./use-s27-session";
 import {
+  clinicProFirstNames,
   clinicTimeLabel,
   clinicsSuspendedOnDate,
   formatDateInput,
@@ -111,6 +112,10 @@ export default function Summer27Home() {
                     <p className="truncate text-[12px] text-[#6b665e]">
                       {clinicTimeLabel(clinic)} · {clinic.level} · ${clinic.memberPrice}
                     </p>
+                    <span className="mt-1 inline-flex max-w-full items-center gap-1 rounded-full border border-[#ece8e2] bg-[#faf9f7] px-1.5 py-0.5 text-[10px] leading-none text-[#6b665e]">
+                      <span className="uppercase tracking-[0.08em] text-[#8a8477]">Pro</span>
+                      <span className="truncate font-medium">{clinicProFirstNames(clinic)}</span>
+                    </span>
                   </div>
                 </Link>
               </li>

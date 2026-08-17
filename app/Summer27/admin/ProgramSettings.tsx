@@ -6,6 +6,8 @@ import {
   COURTS,
   clinicDayLabel,
   clinicTimeLabel,
+  clinicProIds,
+  clinicProFirstNames,
   formatHour,
   formatPrettyDate,
   proScheduleLabel,
@@ -342,7 +344,7 @@ export default function ProgramSettings({ catalog, onSave, onReset }: Props) {
                       {clinicDayLabel(c.days)} · {clinicTimeLabel(c)} · ${c.memberPrice} / ${c.guestPrice}
                     </p>
                     <p className="mt-0.5 text-[11px] capitalize text-[#8a8477]">
-                      {c.kind} · cap {c.capacity}
+                      {c.kind} · cap {c.capacity} · {clinicProFirstNames(c, draft.pros)}
                     </p>
                   </div>
                   <span className="shrink-0 text-[12px] text-[#8a8477]">Edit →</span>
@@ -693,6 +695,45 @@ export default function ProgramSettings({ catalog, onSave, onReset }: Props) {
                     >
                       {c.name}
                     </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="sm:col-span-2">
+              <p className="mb-1 text-[11px] text-[#8a8477]">Pros on court</p>
+              <div className="grid grid-cols-2 gap-2">
+                {([0, 1] as const).map((slot) => {
+                  const ids = clinicProIds(editingClinic);
+                  const value = ids[slot] || "";
+                  const other = ids[slot === 0 ? 1 : 0] || "";
+                  return (
+                    <label key={slot} className="block text-[11px] text-[#8a8477]">
+                      Pro {slot + 1}
+                      <select
+                        className={`${inputClass} mt-1`}
+                        value={value}
+                        onChange={(e) => {
+                          const next = [...ids];
+                          const picked = e.target.value;
+                          if (slot === 0) {
+                            next[0] = picked || "derek";
+                            if (next[1] === next[0]) next.splice(1, 1);
+                          } else if (!picked) {
+                            next.splice(1, 1);
+                          } else if (picked !== next[0]) {
+                            next[1] = picked;
+                          }
+                          updateClinic(editingClinic.id, { proIds: next.filter(Boolean).slice(0, 2) });
+                        }}
+                      >
+                        {slot === 1 ? <option value="">None</option> : null}
+                        {(draft.pros || []).map((p) => (
+                          <option key={p.id} value={p.id} disabled={p.id === other}>
+                            {p.name.split(" ")[0]}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
                   );
                 })}
               </div>

@@ -148,6 +148,7 @@ function usableClinics(clinics: unknown, fallback: ClinicDef[]): ClinicDef[] {
         memberPrice: base.memberPrice,
         guestPrice: base.guestPrice,
         capacity: base.capacity,
+        proIds: Array.isArray(c.proIds) && c.proIds.length ? c.proIds.slice(0, 2) : base.proIds || ["derek"],
       };
     });
   const ids = new Set(ok.map((c) => c.id));

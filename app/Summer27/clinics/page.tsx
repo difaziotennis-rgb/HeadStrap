@@ -7,6 +7,7 @@ import { useS27Session } from "../use-s27-session";
 import { canOneClick, startGuestCheckout, startMemberPayment, storageMethodFor, type S27PayMethod } from "../payments";
 import { PayChooser } from "../PayChooser";
 import {
+  clinicProFirstNames,
   clinicTimeLabel,
   clinicsSuspendedOnDate,
   formatDateInput,
@@ -14,10 +15,12 @@ import {
   parseDateInput,
   s27Clinics,
   s27Events,
+  s27Pros,
   type ClinicDef,
   type EventDef,
+  type ProDef,
 } from "../summer27-data";
-import { getLiveClinics, getLiveEvents, weatherClosedForWindow } from "../schedule";
+import { getLiveClinics, getLiveEvents, getLivePros, weatherClosedForWindow } from "../schedule";
 import { KEYS, findMemberAccount, loadList, saveList, type S27ClinicBooking, type S27MemberChild } from "../storage";
 import { DateChips, dateChipFromIso } from "../DateChips";
 import { canChangeBooking, CANCEL_WINDOW_HOURS } from "../booking-policy";
@@ -59,6 +62,15 @@ function weekRangeLabel(weekStart: Date): string {
     year: weekStart.getFullYear() !== end.getFullYear() ? "numeric" : undefined,
   });
   return `${a} – ${b}`;
+}
+
+function ClinicProSlot({ clinic, pros }: { clinic: ClinicDef; pros: ProDef[] }) {
+  return (
+    <span className="inline-flex max-w-full items-center gap-1 rounded-full border border-[#ece8e2] bg-[#faf9f7] px-1.5 py-0.5 text-[10px] leading-none text-[#6b665e]">
+      <span className="uppercase tracking-[0.08em] text-[#8a8477]">Pro</span>
+      <span className="truncate font-medium">{clinicProFirstNames(clinic, pros)}</span>
+    </span>
+  );
 }
 
 function nextDatesForClinic(
@@ -125,6 +137,7 @@ function Summer27ClinicsInner() {
   const [bookings, setBookings] = useState<S27ClinicBooking[]>([]);
   const [clinics, setClinics] = useState<ClinicDef[]>(s27Clinics);
   const [events, setEvents] = useState<EventDef[]>(s27Events);
+  const [pros, setPros] = useState<ProDef[]>(s27Pros);
   const [audience, setAudience] = useState<"adult" | "junior">(() => {
     const q = s27Clinics.find((c) => c.id === queryClinic);
     if (queryChild) return "junior";
@@ -205,6 +218,8 @@ function Summer27ClinicsInner() {
       }
       const liveEvents = getLiveEvents();
       if (liveEvents.length) setEvents(liveEvents);
+      const livePros = getLivePros();
+      if (livePros.length) setPros(livePros);
     } catch {
       // keep defaults
     }
@@ -618,9 +633,12 @@ function Summer27ClinicsInner() {
                             <span className="block break-words text-[14px] font-medium leading-snug text-[#1a1a1a] [overflow-wrap:anywhere] sm:text-[16px]">
                               {o.clinic.name}
                             </span>
-                            <span className="mt-0.5 block text-[12px] leading-snug text-[#8a8477] sm:text-[13px]">
-                              {o.clinic.level}
-                              {mine ? " · You’re in" : open > 0 ? ` · ${open} open` : " · Full"}
+                            <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] leading-snug text-[#8a8477] sm:text-[13px]">
+                              <span>
+                                {o.clinic.level}
+                                {mine ? " · You’re in" : open > 0 ? ` · ${open} open` : " · Full"}
+                              </span>
+                              <ClinicProSlot clinic={o.clinic} pros={pros} />
                             </span>
                           </span>
                           <span className="shrink-0 pt-0.5 text-right sm:pt-0">
@@ -663,6 +681,9 @@ function Summer27ClinicsInner() {
                   {clinic.name}
                 </h3>
                 <p className="mt-0.5 text-[12px] text-[#6b665e] sm:mt-1 sm:text-[13px]">{clinic.level}</p>
+                <div className="mt-1.5">
+                  <ClinicProSlot clinic={clinic} pros={pros} />
+                </div>
               </div>
               <button
                 type="button"

@@ -2,7 +2,10 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
+  clinicProFirstNames,
+  clinicProIds,
   clinicTimeLabel,
+  eventSpansDate,
   formatDateInput,
   formatHour,
   formatPrettyDate,
@@ -80,9 +83,13 @@ type DayChip = {
   kind: "court" | "lesson" | "clinic" | "event" | "hold" | "request";
   label: string;
   sub?: string;
+  prosLabel?: string;
+  proIds?: string[];
   courts: CourtLane[];
   ref: ChipRef;
 };
+
+type WeekView = "board" | "clinics" | "court";
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 
@@ -210,6 +217,28 @@ function clinicStartHour(catalog: S27Catalog, clinicId?: string, clinicName?: st
   return Number.isFinite(h) ? h : 8;
 }
 
+function visibleWeekChips(chips: DayChip[], view: WeekView, today: string): DayChip[] {
+  if (view === "clinics") return chips.filter((c) => c.kind === "clinic");
+  if (view === "court") {
+    return chips.filter((c) => {
+      if (c.kind === "event") return true;
+      if (c.kind === "clinic" || c.kind === "lesson" || c.kind === "request") {
+        return (c.proIds || []).includes("derek");
+      }
+      return false;
+    });
+  }
+  return chips.filter((c) => {
+    if (c.kind === "clinic" && c.ref.date < today && c.sub === "0 in") return false;
+    return true;
+  });
+}
+
+function chipForView(chip: DayChip, view: WeekView): DayChip {
+  if (chip.kind !== "clinic" || view === "board" || !chip.prosLabel) return chip;
+  return { ...chip, sub: chip.prosLabel };
+}
+
 /** Keep both-court + single-court chips in true time order (not both dumped at top). */
 function dayChipBands(chips: DayChip[]) {
   const times = Array.from(new Set(chips.map((c) => c.time))).sort((a, b) => a - b);
@@ -251,6 +280,7 @@ export default function TodayBoard({
   const thisWeekStart = useMemo(() => startOfWeekMonday(parseDateInput(today)), [today]);
   const [weekStart, setWeekStart] = useState(thisWeekStart);
   const [selectedDate, setSelectedDate] = useState(today);
+  const [weekView, setWeekView] = useState<WeekView>("board");
   const [detail, setDetail] = useState<ChipRef | null>(null);
 
   useEffect(() => {
@@ -304,6 +334,7 @@ export default function TodayBoard({
           kind: "request",
           label: "Request",
           sub: b.clientName.split(" ")[0],
+          proIds: [bookingProId(b)],
           courts: [lane],
           ref: { type: "request", id: b.id, date: b.date },
         });
@@ -315,6 +346,7 @@ export default function TodayBoard({
         kind: "lesson",
         label: "Lesson",
         sub: b.clientName.split(" ")[0],
+        proIds: [bookingProId(b)],
         courts: [lane],
         ref: { type: "lesson", id: b.id, date: b.date },
       });
@@ -337,14 +369,15 @@ export default function TodayBoard({
         kind: "clinic",
         label: shortClinicName(b.clinicName),
         sub: `${count} in`,
+        proIds: clinicProIds(def),
+        prosLabel: clinicProFirstNames(def, catalog.pros),
         courts: courtsForClinic.length ? courtsForClinic : ["court-1", "court-2"],
         ref: { type: "clinic", clinicId: b.clinicId || def?.id || b.clinicName, date: b.date },
       });
     }
 
-    // Upcoming schedule only — past weeks keep real signups, not empty shells.
+    // Recurring clinic shells for every weekday this week (glance schedule).
     for (const iso of days) {
-      if (iso < today) continue;
       const jsDay = parseDateInput(iso).getDay();
       for (const def of catalog.clinics) {
         if (!def.days.includes(jsDay)) continue;
@@ -361,6 +394,8 @@ export default function TodayBoard({
           kind: "clinic",
           label: shortClinicName(def.name),
           sub: "0 in",
+          proIds: clinicProIds(def),
+          prosLabel: clinicProFirstNames(def, catalog.pros),
           courts: courtsForClinic.length ? courtsForClinic : ["court-1", "court-2"],
           ref: { type: "clinic", clinicId: def.id, date: iso },
         });
@@ -368,33 +403,41 @@ export default function TodayBoard({
     }
 
     for (const b of events) {
-      if (!map[b.eventDate]) continue;
-      const already = map[b.eventDate].some((c) => c.kind === "event" && c.key.includes(b.eventId));
-      if (already) continue;
-      const count = events.filter((x) => x.eventDate === b.eventDate && x.eventId === b.eventId).length;
-      map[b.eventDate].push({
-        key: `event-${b.eventId}-${b.eventDate}`,
-        time: 16,
-        kind: "event",
-        label: b.eventTitle.length > 18 ? `${b.eventTitle.slice(0, 16)}…` : b.eventTitle,
-        sub: `${count} RSVP`,
-        courts: ["court-1", "court-2"],
-        ref: { type: "event", eventId: b.eventId, date: b.eventDate },
-      });
+      const def = catalog.events.find((e) => e.id === b.eventId);
+      for (const iso of days) {
+        const onDay = def ? eventSpansDate(def, iso) : iso === b.eventDate;
+        if (!onDay || !map[iso]) continue;
+        const already = map[iso].some((c) => c.kind === "event" && c.key.includes(b.eventId));
+        if (already) continue;
+        const count = events.filter((x) => x.eventDate === b.eventDate && x.eventId === b.eventId).length;
+        map[iso].push({
+          key: `event-${b.eventId}-${iso}`,
+          time: 16,
+          kind: "event",
+          label: b.eventTitle.length > 18 ? `${b.eventTitle.slice(0, 16)}…` : b.eventTitle,
+          sub: `${count} RSVP`,
+          proIds: ["derek"],
+          courts: ["court-1", "court-2"],
+          ref: { type: "event", eventId: b.eventId, date: iso },
+        });
+      }
     }
 
     for (const def of catalog.events) {
-      if (!map[def.date]) continue;
-      if (map[def.date].some((c) => c.kind === "event" && c.key.includes(def.id))) continue;
-      map[def.date].push({
-        key: `event-${def.id}-${def.date}`,
-        time: 16,
-        kind: "event",
-        label: def.title.length > 18 ? `${def.title.slice(0, 16)}…` : def.title,
-        sub: "Event",
-        courts: ["court-1", "court-2"],
-        ref: { type: "event", eventId: def.id, date: def.date },
-      });
+      for (const iso of days) {
+        if (!eventSpansDate(def, iso) || !map[iso]) continue;
+        if (map[iso].some((c) => c.kind === "event" && c.key.includes(def.id))) continue;
+        map[iso].push({
+          key: `event-${def.id}-${iso}`,
+          time: 16,
+          kind: "event",
+          label: def.title.length > 18 ? `${def.title.slice(0, 16)}…` : def.title,
+          sub: "Event",
+          proIds: ["derek"],
+          courts: ["court-1", "court-2"],
+          ref: { type: "event", eventId: def.id, date: iso },
+        });
+      }
     }
 
     for (const b of blocks) {
@@ -416,7 +459,7 @@ export default function TodayBoard({
       map[iso].sort((a, b) => a.time - b.time || a.label.localeCompare(b.label));
     }
     return map;
-  }, [days, today, courts, lessons, clinics, events, blocks, catalog]);
+  }, [days, courts, lessons, clinics, events, blocks, catalog]);
 
   const courtItems: GlanceItem[] = courts
     .filter((b) => b.date === selectedDate)
@@ -533,6 +576,27 @@ export default function TodayBoard({
         </button>
       </div>
 
+      <div className="flex rounded-full border border-[#e8e5df] bg-white p-1">
+        {(
+          [
+            { id: "board" as const, label: "Board" },
+            { id: "clinics" as const, label: "Clinics" },
+            { id: "court" as const, label: "On court" },
+          ] as const
+        ).map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setWeekView(tab.id)}
+            className={`flex-1 rounded-full px-3 py-2 text-[13px] font-medium transition ${
+              weekView === tab.id ? "bg-[#1a1a1a] text-white" : "text-[#6b665e] hover:text-[#1a1a1a]"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       <div className="-mx-4 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:overflow-visible sm:px-0">
         <div className="min-w-[52rem] overflow-hidden rounded-2xl border border-[#e8e5df] bg-white sm:min-w-0">
           <div className="grid grid-cols-7 border-b border-[#ece8e2] bg-[#faf9f7]">
@@ -573,7 +637,9 @@ export default function TodayBoard({
           </div>
           <div className="grid grid-cols-7">
             {days.map((iso) => {
-              const chips = chipsByDay[iso] || [];
+              const chips = visibleWeekChips(chipsByDay[iso] || [], weekView, today).map((c) =>
+                chipForView(c, weekView)
+              );
               const isToday = iso === today;
               const selected = iso === selectedDate;
               const bands = dayChipBands(chips);
@@ -780,7 +846,9 @@ export default function TodayBoard({
           <div className="border-b border-[#f0ede8] px-4 py-3">
             <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Clinic · {formatHour(group.time)}</p>
             <p className="text-[18px] font-semibold tracking-tight">{group.name}</p>
-            <p className="text-[13px] text-[#6b665e]">{group.rows.length} signed up</p>
+            <p className="text-[13px] text-[#6b665e]">
+              {clinicProFirstNames(clinicDefFor(catalog, group.clinicId, group.name), catalog.pros)} · {group.rows.length} signed up
+            </p>
           </div>
           <ul className="divide-y divide-[#f0ede8]">
             {group.rows.map((row) => (
@@ -1107,6 +1175,7 @@ function CalendarDetailSheet({
       <DetailSheet eyebrow="Clinic" title={name} onClose={onClose}>
         <div className="divide-y divide-[#f0ede8] border-b border-[#f0ede8] pb-2">
           <DetailRow label="When" value={`${formatPrettyDate(detail.date)} · ${timeLabel}`} />
+          <DetailRow label="Pros" value={clinicProFirstNames(def, catalog.pros)} />
           <DetailRow label="Level" value={def?.level || "—"} />
           <DetailRow
             label="Signed up"

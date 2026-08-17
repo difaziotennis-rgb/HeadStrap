@@ -151,6 +151,8 @@ export type ClinicDef = {
   guestPrice: number;
   description: string;
   blockCourts: CourtId[];
+  /** Up to two pros on court. Defaults to Derek. */
+  proIds?: string[];
 };
 
 export const s27Clinics: ClinicDef[] = [
@@ -166,6 +168,7 @@ export const s27Clinics: ClinicDef[] = [
     memberPrice: 55,
     guestPrice: 70,
     description: "Footwork, live-ball feeding, and cooperative drills.",
+    proIds: ["derek"],
     blockCourts: ["court-1", "court-2"],
   },
   {
@@ -180,6 +183,7 @@ export const s27Clinics: ClinicDef[] = [
     memberPrice: 80,
     guestPrice: 100,
     description: "Match-tempo points, serve + 1 patterns, and competitive games.",
+    proIds: ["derek"],
     blockCourts: ["court-1", "court-2"],
   },
   {
@@ -194,6 +198,7 @@ export const s27Clinics: ClinicDef[] = [
     memberPrice: 55,
     guestPrice: 70,
     description: "Rally, serve, and court positioning. New players welcome.",
+    proIds: ["derek"],
     blockCourts: ["court-1", "court-2"],
   },
   {
@@ -208,6 +213,7 @@ export const s27Clinics: ClinicDef[] = [
     memberPrice: 55,
     guestPrice: 70,
     description: "Rally fundamentals, serve, and easy live-ball games for newer players.",
+    proIds: ["derek"],
     blockCourts: ["court-1", "court-2"],
   },
   {
@@ -222,6 +228,7 @@ export const s27Clinics: ClinicDef[] = [
     memberPrice: 55,
     guestPrice: 70,
     description: "Positioning, poaching, and patterns for ladies’ doubles.",
+    proIds: ["derek"],
     blockCourts: ["court-1", "court-2"],
   },
   {
@@ -236,6 +243,7 @@ export const s27Clinics: ClinicDef[] = [
     memberPrice: 55,
     guestPrice: 70,
     description: "Rally fundamentals and easy live-ball games.",
+    proIds: ["derek"],
     blockCourts: ["court-1", "court-2"],
   },
   {
@@ -250,6 +258,7 @@ export const s27Clinics: ClinicDef[] = [
     memberPrice: 55,
     guestPrice: 70,
     description: "High-level live ball, serve + 1, and competitive point play.",
+    proIds: ["derek"],
     blockCourts: ["court-1", "court-2"],
   },
   {
@@ -264,6 +273,7 @@ export const s27Clinics: ClinicDef[] = [
     memberPrice: 80,
     guestPrice: 100,
     description: "Drills into competitive points. Rotating partners, doubles focus.",
+    proIds: ["derek"],
     blockCourts: ["court-1", "court-2"],
   },
   {
@@ -278,6 +288,7 @@ export const s27Clinics: ClinicDef[] = [
     memberPrice: 55,
     guestPrice: 70,
     description: "Movement, consistency, and point play.",
+    proIds: ["derek"],
     blockCourts: ["court-2"],
   },
   {
@@ -292,6 +303,7 @@ export const s27Clinics: ClinicDef[] = [
     memberPrice: 55,
     guestPrice: 70,
     description: "After-school training for high school players — movement, patterns, and competitive points.",
+    proIds: ["derek"],
     blockCourts: ["court-2"],
   },
   {
@@ -306,6 +318,7 @@ export const s27Clinics: ClinicDef[] = [
     memberPrice: 35,
     guestPrice: 45,
     description: "First racquets, games, and fun on court.",
+    proIds: ["derek"],
     blockCourts: ["court-2"],
   },
   {
@@ -320,6 +333,7 @@ export const s27Clinics: ClinicDef[] = [
     memberPrice: 35,
     guestPrice: 45,
     description: "Rally games and early fundamentals.",
+    proIds: ["derek"],
     blockCourts: ["court-2"],
   },
 ];
@@ -587,5 +601,21 @@ export function courtSheetLabel(clinic: { id: string; name: string }) {
     "wed-am-toddlers": "Toddlers",
   };
   return byId[clinic.id] || clinic.name;
+}
+
+export const DEFAULT_CLINIC_PRO = "derek";
+
+export function clinicProIds(clinic: Pick<ClinicDef, "proIds"> | null | undefined): string[] {
+  const ids = (clinic?.proIds || []).filter((id) => typeof id === "string" && id.trim()).slice(0, 2);
+  return ids.length ? ids : [DEFAULT_CLINIC_PRO];
+}
+
+export function clinicProFirstNames(clinic: Pick<ClinicDef, "proIds"> | null | undefined, pros: ProDef[] = s27Pros): string {
+  return clinicProIds(clinic)
+    .map((id) => {
+      const pro = pros.find((p) => p.id === id);
+      return (pro?.name || "Pro").split(/\s+/)[0];
+    })
+    .join(" · ");
 }
 
