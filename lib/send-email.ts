@@ -50,10 +50,16 @@ export async function sendEmail({
     return { success: false, error: "Email not configured" };
   }
 
+  const toList = Array.isArray(to) ? to : [to];
+  const deliverable = toList.filter((addr) => !/@(example\.com|test\.com|example\.org)$/i.test(String(addr).trim()));
+  if (deliverable.length === 0) {
+    return { success: true };
+  }
+
   try {
     const info = await transporter.sendMail({
       from: `"DiFazio Tennis" <${process.env.GMAIL_USER}>`,
-      to: Array.isArray(to) ? to.join(", ") : to,
+      to: deliverable.join(", "),
       subject,
       html,
       text,

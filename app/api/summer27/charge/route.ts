@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getStripe, isStripeConfigured } from "@/lib/summer27/stripe-server";
+import { getStripe, isStripeConfigured, canSendS27MemberEmail } from "@/lib/summer27/stripe-server";
 
 type Body = {
   amount?: number;
@@ -37,7 +37,7 @@ export async function POST(request: Request) {
       off_session: true,
       confirm: true,
       description: body.description || "DiFazio Tennis Summer ’27",
-      receipt_email: body.email || undefined,
+      receipt_email: canSendS27MemberEmail() ? body.email || undefined : undefined,
       metadata: {
         source: "summer27",
         bookingId: String(body.bookingId || ""),

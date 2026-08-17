@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isStripeConfigured, stripePublishableKey } from "@/lib/summer27/stripe-server";
+import { isStripeConfigured, stripePublishableKey, canSendS27MemberEmail } from "@/lib/summer27/stripe-server";
 
 /** Public config so the client knows whether live payments are available. */
 export async function GET() {
@@ -8,5 +8,6 @@ export async function GET() {
     configured,
     publishableKey: configured ? stripePublishableKey() : null,
     mode: "charge_immediately",
+    emailLive: canSendS27MemberEmail(),
   });
 }

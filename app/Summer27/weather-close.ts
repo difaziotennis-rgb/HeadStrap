@@ -254,7 +254,8 @@ export async function applyWeatherClose(opts: {
           items: rows.map((r) => ({ kind: r.kind, label: r.label, amount: r.amount })),
         }),
       });
-      if (res.ok) emailed += 1;
+      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; emailed?: boolean };
+      if (res.ok && data.emailed) emailed += 1;
     }
   }
 

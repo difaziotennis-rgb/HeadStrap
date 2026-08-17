@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getStripe, isStripeConfigured, summer27BaseUrl } from "@/lib/summer27/stripe-server";
+import { getStripe, isStripeConfigured, summer27BaseUrl, canSendS27MemberEmail } from "@/lib/summer27/stripe-server";
 
 type CheckoutBody = {
   amount?: number;
@@ -61,6 +61,7 @@ export async function POST(request: Request) {
         ...(body.metadata || {}),
       },
       payment_intent_data: {
+        ...(canSendS27MemberEmail() && body.email ? { receipt_email: body.email } : {}),
         metadata: {
           source: "summer27",
           bookingId: String(body.bookingId || ""),

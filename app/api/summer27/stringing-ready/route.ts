@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { sendEmail } from "@/lib/send-email";
+import { sendS27MemberEmail } from "@/lib/summer27/member-email";
 
 type Body = {
   orderId?: string;
@@ -28,35 +28,34 @@ export async function POST(request: Request) {
       : "";
     const detail = [racket, stringName, tension].filter(Boolean).join(" · ");
 
-    const subject = "Your racket is ready for pickup — DiFazio Tennis";
+    const subject = "Racket ready for pickup";
     const text = [
       `Hi ${name},`,
       "",
-      `Your restring is ready at the Rhinebeck Tennis Club pro shop.`,
+      "Your restring is ready at the Rhinebeck pro shop.",
       detail,
       "",
-      "You can pick it up during shop hours.",
+      "Pickup during shop hours.",
       "",
-      "— Derek DiFazio",
+      "— Derek",
       "DiFazio Tennis · (631) 901-5220",
     ].join("\n");
 
     const html = `
       <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1a1a1a;line-height:1.5;max-width:520px;">
         <p style="margin:0 0 12px;">Hi ${escapeHtml(name)},</p>
-        <p style="margin:0 0 12px;">Your restring is <strong>ready for pickup</strong> at the Rhinebeck Tennis Club pro shop.</p>
+        <p style="margin:0 0 12px;">Your restring is ready at the Rhinebeck pro shop.</p>
         <p style="margin:0 0 16px;padding:12px 14px;background:#f7f7f5;border-radius:10px;">${escapeHtml(detail)}</p>
-        <p style="margin:0 0 20px;">See you at the shop.</p>
-        <p style="margin:0;color:#6b665e;font-size:13px;">Derek DiFazio · DiFazio Tennis · <a href="tel:6319015220" style="color:#6b665e;">(631) 901-5220</a></p>
+        <p style="margin:0 0 16px;">Pickup during shop hours.</p>
+        <p style="margin:0;color:#6b665e;font-size:13px;">Derek · DiFazio Tennis · <a href="tel:6319015220" style="color:#6b665e;">(631) 901-5220</a></p>
       </div>
     `;
 
-    const result = await sendEmail({
+    const result = await sendS27MemberEmail({
       to: email,
       subject,
       html,
       text,
-      replyTo: "difaziotennis@gmail.com",
     });
 
     if (!result.success) {
@@ -66,7 +65,12 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json({ ok: true, emailed: true, orderId: body.orderId || null });
+    return NextResponse.json({
+      ok: true,
+      emailed: !!result.emailed,
+      skipped: result.skipped || null,
+      orderId: body.orderId || null,
+    });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to notify member.";
     return NextResponse.json({ error: message, emailed: false }, { status: 500 });

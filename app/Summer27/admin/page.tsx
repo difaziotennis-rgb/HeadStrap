@@ -161,10 +161,17 @@ export default function Summer27DirectorPage() {
           tension: order.tension,
         }),
       });
-      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; emailed?: boolean; error?: string };
-      if (res.ok && data.emailed !== false) {
+      const data = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        emailed?: boolean;
+        skipped?: string;
+        error?: string;
+      };
+      if (res.ok && data.emailed) {
         notifiedAt = readyAt;
         ping(`Ready — emailed ${order.clientName}.`);
+      } else if (res.ok && (data.skipped === "preview" || data.skipped === "fake-address")) {
+        ping("Ready. Emails are off until we go live — text them if needed.");
       } else {
         ping(data.error ? `Marked ready. Email failed: ${data.error}` : "Marked ready. Email failed — text them.");
       }
