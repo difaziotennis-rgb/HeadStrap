@@ -49,6 +49,10 @@ const nextConfig = {
           source: '/admin',
           destination: '/Summer27/admin',
         },
+        {
+          source: '/pro',
+          destination: '/Summer27/pro',
+        },
       ],
     }
   },

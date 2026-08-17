@@ -13,6 +13,7 @@ export default function Summer27Layout({ children }: { children: React.ReactNode
   const pathname = usePathname();
   const session = useS27Session();
   const isAdmin = pathname === "/Summer27/admin" || pathname?.startsWith("/Summer27/admin/");
+  const isProDesk = pathname === "/Summer27/pro" || pathname?.startsWith("/Summer27/pro/");
   const nav = s27Nav.filter((item) => !item.memberOnly || session);
 
   useEffect(() => {
@@ -46,7 +47,7 @@ export default function Summer27Layout({ children }: { children: React.ReactNode
           </Link>
           <MemberAuth />
         </div>
-        {!isAdmin && (
+        {!isAdmin && !isProDesk && (
           <div className="mx-auto w-full max-w-6xl px-3 pb-3 sm:px-6">
             <nav className="-mx-0.5 flex gap-1 overflow-x-auto px-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {nav.map((item, index) => {
@@ -102,9 +103,14 @@ export default function Summer27Layout({ children }: { children: React.ReactNode
         <div className="border-t border-[#e8e5df]">
           <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-2 px-4 py-3 sm:px-6">
             <p className="text-[11px] text-[#8a8477]">Summer 2027</p>
-            <Link href="/Summer27/admin" className="text-[10px] uppercase tracking-[0.1em] text-[#b0a99f] hover:text-[#6b665e]">
-              Director desk
-            </Link>
+            <div className="flex items-center gap-3">
+              <Link href="/Summer27/pro" className="text-[10px] uppercase tracking-[0.1em] text-[#b0a99f] hover:text-[#6b665e]">
+                Pro desk
+              </Link>
+              <Link href="/Summer27/admin" className="text-[10px] uppercase tracking-[0.1em] text-[#b0a99f] hover:text-[#6b665e]">
+                Director desk
+              </Link>
+            </div>
           </div>
         </div>
       </footer>

@@ -10,7 +10,9 @@ import {
   clinicProFirstNames,
   formatHour,
   formatPrettyDate,
+  proDayHours,
   proScheduleLabel,
+  syncProSchedule,
   type ClinicDef,
   type CourtId,
   type EventDef,
@@ -19,6 +21,7 @@ import {
 import type { S27Catalog } from "../schedule";
 import { normalizePrimeTeaching } from "../schedule";
 import { Field, inputClass, uid } from "./ui";
+import ProHoursEditor from "../ProHoursEditor";
 
 type Props = {
   catalog: S27Catalog;
@@ -121,6 +124,15 @@ export default function ProgramSettings({ catalog, onSave, onReset }: Props) {
         { start: 9, end: 12 },
         { start: 16, end: 18 },
       ],
+      dayHours: [1, 2, 3, 4, 5].map((day) => ({
+        day,
+        windows: [
+          { start: 9, end: 12 },
+          { start: 16, end: 18 },
+        ],
+      })),
+      email: "",
+      password: "",
     };
     touch({ ...draft, pros: [...(draft.pros || []), next] });
     setEditor({ kind: "pro", id: next.id });
@@ -197,7 +209,10 @@ export default function ProgramSettings({ catalog, onSave, onReset }: Props) {
       {category === "pros" && (
         <section className="overflow-hidden rounded-2xl border border-[#e8e5df] bg-white">
           <div className="flex items-center justify-between gap-2 border-b border-[#f0ede8] px-4 py-3">
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Teaching staff</p>
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Teaching staff</p>
+              <p className="mt-0.5 text-[11px] text-[#8a8477]">Each pro gets a portal login and their own hours</p>
+            </div>
             <button type="button" onClick={addPro} className="text-[12px] font-medium text-[#1a1a1a]">
               + Add pro
             </button>
@@ -215,7 +230,10 @@ export default function ProgramSettings({ catalog, onSave, onReset }: Props) {
                     <p className="mt-0.5 text-[12px] text-[#6b665e]">
                       {pro.title} · {COURTS.find((c) => c.id === pro.courtId)?.name} · ${pro.memberRate}/hr
                     </p>
-                    <p className="mt-0.5 truncate text-[11px] text-[#8a8477]">{proScheduleLabel(pro)}</p>
+                    <p className="mt-0.5 truncate text-[11px] text-[#8a8477]">
+                      {proScheduleLabel(pro)}
+                      {pro.email ? ` · ${pro.email}` : ""}
+                    </p>
                   </div>
                   <span className="shrink-0 text-[12px] text-[#8a8477]">Edit →</span>
                 </button>
@@ -480,73 +498,30 @@ export default function ProgramSettings({ catalog, onSave, onReset }: Props) {
                 onChange={(e) => updatePro(editingPro.id, { guestRate: Number(e.target.value) || 0 })}
               />
             </Field>
+            <Field label="Portal email">
+              <input
+                className={inputClass}
+                type="email"
+                value={editingPro.email || ""}
+                onChange={(e) => updatePro(editingPro.id, { email: e.target.value })}
+                placeholder="pro@difaziotennis.com"
+              />
+            </Field>
+            <Field label="Portal password">
+              <input
+                className={inputClass}
+                type="text"
+                value={editingPro.password || ""}
+                onChange={(e) => updatePro(editingPro.id, { password: e.target.value })}
+                placeholder="They use this at /pro"
+              />
+            </Field>
             <div className="sm:col-span-2">
-              <p className="mb-1 text-[11px] text-[#8a8477]">Days</p>
-              <div className="flex flex-wrap gap-1">
-                {DAY_NAMES.map((label, day) => {
-                  const on = editingPro.days.includes(day);
-                  return (
-                    <button
-                      key={label}
-                      type="button"
-                      onClick={() =>
-                        updatePro(editingPro.id, {
-                          days: on
-                            ? editingPro.days.filter((d) => d !== day)
-                            : [...editingPro.days, day].sort((a, b) => a - b),
-                        })
-                      }
-                      className={`rounded-lg px-2.5 py-1.5 text-[12px] ${
-                        on ? "bg-[#1a1a1a] text-white" : "border border-[#e8e5df] bg-white text-[#6b665e]"
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
+              <ProHoursEditor
+                value={proDayHours(editingPro)}
+                onChange={(dayHours) => updatePro(editingPro.id, syncProSchedule({ ...editingPro, dayHours }))}
+              />
             </div>
-            {(editingPro.windows[0] ? [0, 1] : [0]).map((index) => {
-              const window = editingPro.windows[index] || { start: 9, end: 12 };
-              return (
-                <div key={index} className="grid grid-cols-2 gap-2 sm:col-span-2 sm:grid-cols-2">
-                  <Field label={`Window ${index + 1} start`}>
-                    <select
-                      className={inputClass}
-                      value={window.start}
-                      onChange={(e) => {
-                        const next = [...editingPro.windows];
-                        next[index] = { ...(next[index] || window), start: Number(e.target.value) };
-                        updatePro(editingPro.id, { windows: next });
-                      }}
-                    >
-                      {BOOKING_HOURS.map((h) => (
-                        <option key={h} value={h}>
-                          {formatHour(h)}
-                        </option>
-                      ))}
-                    </select>
-                  </Field>
-                  <Field label="End">
-                    <select
-                      className={inputClass}
-                      value={window.end}
-                      onChange={(e) => {
-                        const next = [...editingPro.windows];
-                        next[index] = { ...(next[index] || window), end: Number(e.target.value) };
-                        updatePro(editingPro.id, { windows: next });
-                      }}
-                    >
-                      {BOOKING_HOURS.map((h) => (
-                        <option key={h} value={h}>
-                          {formatHour(h)}
-                        </option>
-                      ))}
-                    </select>
-                  </Field>
-                </div>
-              );
-            })}
             <Field label="Short bio">
               <textarea
                 className={inputClass}
@@ -848,7 +823,7 @@ function Sheet({
       <div
         role="dialog"
         aria-modal="true"
-        className="relative z-10 flex max-h-[78dvh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-[#e8e5df] bg-white shadow-xl sm:max-h-[85vh]"
+        className="relative z-10 flex max-h-[78dvh] w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-[#e8e5df] bg-white shadow-xl sm:max-h-[85vh]"
       >
         <div className="flex items-start justify-between gap-3 border-b border-[#ece8e2] px-4 py-3.5 sm:px-5">
           <div className="min-w-0">

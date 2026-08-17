@@ -11,10 +11,14 @@ import {
   writeS27Session,
   type S27MemberSession,
 } from "./member-session";
+import { clearS27ProSession, readS27ProSession, writeS27ProSession, type S27ProSession } from "./pro-session";
 import { KEYS, ensureDerekMember, loadList, type S27MemberAccount } from "./storage";
+import { findProByLogin, s27Pros } from "./summer27-data";
+import { getLivePros } from "./schedule";
 
 export default function MemberAuth() {
   const [session, setSession] = useState<S27MemberSession | null>(null);
+  const [proSession, setProSession] = useState<S27ProSession | null>(null);
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -27,6 +31,7 @@ export default function MemberAuth() {
     try {
       ensureDerekMember();
       setSession(readS27Session());
+      setProSession(readS27ProSession());
       const remembered = readRememberedSignIn();
       if (remembered) {
         setEmail(remembered.email);
@@ -35,12 +40,15 @@ export default function MemberAuth() {
       }
     } catch {
       setSession(null);
+      setProSession(null);
     }
   }, []);
 
   function signOut() {
     clearS27Session();
+    clearS27ProSession();
     setSession(null);
+    setProSession(null);
     setOpen(false);
     const remembered = readRememberedSignIn();
     if (remembered) {
@@ -67,39 +75,70 @@ export default function MemberAuth() {
         String(m.memberNumber) === key ||
         String(m.name || "").trim().toLowerCase() === key;
       if (!idMatch) return false;
-      // Member #100 (director) can sign in with no password.
       if (String(m.memberNumber) === "100") return true;
       return String(m.password || "") === pass;
     });
-    if (!match) {
+    const pros = (() => {
+      try {
+        const live = getLivePros();
+        return live.length ? live : s27Pros;
+      } catch {
+        return s27Pros;
+      }
+    })();
+    const pro = findProByLogin(pros, email, password);
+
+    if (!match && !pro) {
       setMsg("Check email and password.");
       return;
     }
-    const next: S27MemberSession = {
-      memberNumber: match.memberNumber,
-      memberEmail: match.email,
-      memberName: match.name,
-      memberPhone: match.phone,
-      signedInAt: new Date().toISOString(),
-    };
-    writeS27Session(next, staySignedIn);
+    if (match) {
+      const next: S27MemberSession = {
+        memberNumber: match.memberNumber,
+        memberEmail: match.email,
+        memberName: match.name,
+        memberPhone: match.phone,
+        signedInAt: new Date().toISOString(),
+      };
+      writeS27Session(next, staySignedIn);
+      setSession(next);
+    }
+    if (pro) {
+      const next: S27ProSession = {
+        proId: pro.id,
+        proEmail: pro.email || email.trim(),
+        proName: pro.name,
+        signedInAt: new Date().toISOString(),
+      };
+      writeS27ProSession(next);
+      setProSession(next);
+    }
     if (rememberSignIn) writeRememberedSignIn(email.trim(), password);
     else clearRememberedSignIn();
-    setSession(next);
     setOpen(false);
     if (!rememberSignIn) setPassword("");
     setMsg(null);
   }
 
-  if (session) {
+  if (session || proSession) {
     return (
       <div className="flex items-center gap-2">
-        <Link
-          href="/Summer27/member/portal"
-          className="rounded-lg border border-[#e8e5df] bg-white px-2.5 py-1.5 text-[11px] font-medium text-[#4a4a4a] hover:bg-[#faf9f7]"
-        >
-          My Account
-        </Link>
+        {proSession ? (
+          <Link
+            href="/Summer27/pro"
+            className="rounded-lg border border-[#e8e5df] bg-white px-2.5 py-1.5 text-[11px] font-medium text-[#4a4a4a] hover:bg-[#faf9f7]"
+          >
+            Pro desk
+          </Link>
+        ) : null}
+        {session ? (
+          <Link
+            href="/Summer27/member/portal"
+            className="rounded-lg border border-[#e8e5df] bg-white px-2.5 py-1.5 text-[11px] font-medium text-[#4a4a4a] hover:bg-[#faf9f7]"
+          >
+            My Account
+          </Link>
+        ) : null}
         <button type="button" onClick={signOut} className="text-[11px] text-[#8a8477] hover:text-[#1a1a1a]">
           Sign out
         </button>

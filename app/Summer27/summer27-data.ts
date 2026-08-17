@@ -44,7 +44,13 @@ export const PRIME_TEACHING = {
   afternoon: { start: 15, end: 17 },
 };
 
+export const DAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+export const WEEKDAY_ORDER = [1, 2, 3, 4, 5, 6, 0] as const;
+
 export type ProWindow = { start: number; end: number };
+
+/** Teaching windows for one weekday (0 = Sun … 6 = Sat). */
+export type ProDayHours = { day: number; windows: ProWindow[] };
 
 export type ProDef = {
   id: string;
@@ -58,6 +64,11 @@ export type ProDef = {
   courtId: CourtId;
   days: number[];
   windows: ProWindow[];
+  /** Per-weekday hours. When set, used instead of the shared `windows` on every teaching day. */
+  dayHours?: ProDayHours[];
+  /** Portal login. */
+  email?: string;
+  password?: string;
   memberRate: number;
   guestRate: number;
   /** Optional headshot under /public. */
@@ -92,11 +103,20 @@ export const s27Pros: ProDef[] = [
     memberRate: 180,
     guestRate: 195,
     lessonMode: "request",
+    email: "difaziotennis@gmail.com",
+    password: "",
     days: [1, 2, 3, 4, 5],
     windows: [
       { start: 8, end: 12 },
       { start: 15, end: 17 },
     ],
+    dayHours: [1, 2, 3, 4, 5].map((day) => ({
+      day,
+      windows: [
+        { start: 8, end: 12 },
+        { start: 15, end: 17 },
+      ],
+    })),
   },
   {
     id: "maya-ellison",
@@ -110,11 +130,20 @@ export const s27Pros: ProDef[] = [
     courtId: "court-2",
     memberRate: 150,
     guestRate: 165,
+    email: "maya@difaziotennis.com",
+    password: "maya",
     days: [1, 2, 3, 4],
     windows: [
       { start: 9, end: 12 },
       { start: 16, end: 19 },
     ],
+    dayHours: [1, 2, 3, 4].map((day) => ({
+      day,
+      windows: [
+        { start: 9, end: 12 },
+        { start: 16, end: 19 },
+      ],
+    })),
   },
   {
     id: "jonah-berkowitz",
@@ -128,11 +157,20 @@ export const s27Pros: ProDef[] = [
     courtId: "court-2",
     memberRate: 160,
     guestRate: 175,
+    email: "jonah@difaziotennis.com",
+    password: "jonah",
     days: [2, 4, 6],
     windows: [
       { start: 9, end: 12 },
       { start: 15, end: 18 },
     ],
+    dayHours: [2, 4, 6].map((day) => ({
+      day,
+      windows: [
+        { start: 9, end: 12 },
+        { start: 15, end: 18 },
+      ],
+    })),
   },
 ];
 
@@ -541,25 +579,83 @@ export function clinicTimeLabel(clinic: Pick<ClinicDef, "startHour" | "durationH
   return `${formatHour(start)}–${formatHour(start + duration)}`;
 }
 
+export function proDayHours(pro: Pick<ProDef, "days" | "windows" | "dayHours">): ProDayHours[] {
+  const specified = (pro.dayHours || []).filter(
+    (row) => Number.isFinite(row.day) && Array.isArray(row.windows) && row.windows.length > 0
+  );
+  if (specified.length) return specified.slice().sort((a, b) => a.day - b.day);
+  const windows = (pro.windows || []).filter((w) => Number(w.end) > Number(w.start));
+  if (!windows.length) return [];
+  return (pro.days || []).map((day) => ({ day, windows }));
+}
+
+export function proWindowsOnDay(pro: Pick<ProDef, "days" | "windows" | "dayHours">, day: number): ProWindow[] {
+  return proDayHours(pro).find((row) => row.day === day)?.windows || [];
+}
+
+export function syncProSchedule(pro: ProDef): ProDef {
+  const dayHours = proDayHours(pro);
+  return {
+    ...pro,
+    dayHours,
+    days: dayHours.map((row) => row.day),
+    windows: dayHours[0]?.windows?.length ? dayHours[0].windows : pro.windows || [],
+  };
+}
+
 export function proHoursOnDate(pro: ProDef, dateStr: string): number[] {
   const day = parseDateInput(dateStr).getDay();
-  if (!Array.isArray(pro.days) || !pro.days.includes(day)) return [];
-  const hours: number[] = [];
-  for (const window of pro.windows || []) {
-    const start = Number(window.start);
-    const end = Number(window.end);
-    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) continue;
-    for (let h = start; h < end; h += 1) hours.push(h);
-  }
-  return hours;
+  const windows = proWindowsOnDay(pro, day);
+  if (!windows.length) return [];
+  return BOOKING_HOURS.filter((h) =>
+    windows.some((w) => {
+      const start = Number(w.start);
+      const end = Number(w.end);
+      return Number.isFinite(start) && Number.isFinite(end) && h < end && h + 1 > start;
+    })
+  );
 }
 
 export function proScheduleLabel(pro: ProDef): string {
-  if (pro.lessonMode === "request") return "By request";
-  const times = (pro.windows || [])
-    .map((w) => `${formatHour(Number(w.start) || 0)}–${formatHour(Number(w.end) || 0)}`)
-    .join(" & ");
-  return `${clinicDayLabel(pro.days)}${times ? ` · ${times}` : ""}`;
+  const dh = proDayHours(pro);
+  const hoursBit = (() => {
+    if (!dh.length) return "No hours set";
+    const groups = new Map<string, number[]>();
+    for (const row of dh) {
+      const sig = row.windows.map((w) => `${Number(w.start)}-${Number(w.end)}`).join(",");
+      groups.set(sig, [...(groups.get(sig) || []), row.day]);
+    }
+    return [...groups.entries()]
+      .map(([sig, days]) => {
+        const times = sig
+          .split(",")
+          .map((part) => {
+            const [a, b] = part.split("-");
+            return `${formatHour(Number(a))}–${formatHour(Number(b))}`;
+          })
+          .join(", ");
+        return `${clinicDayLabel(days)} ${times}`;
+      })
+      .join(" · ");
+  })();
+  if (pro.lessonMode === "request") return `By request · ${hoursBit}`;
+  return hoursBit;
+}
+
+export function findProByLogin(pros: ProDef[], email: string, password: string): ProDef | null {
+  const key = email.trim().toLowerCase().replace(/^#/, "");
+  const pass = password.trim();
+  if (!key) return null;
+  return (
+    pros.find((p) => {
+      const em = (p.email || "").trim().toLowerCase();
+      const name = (p.name || "").trim().toLowerCase();
+      if (em !== key && name !== key && p.id !== key) return false;
+      const expected = String(p.password || "").trim();
+      if (!expected) return true;
+      return expected === pass;
+    }) || null
+  );
 }
 
 export function lessonProLabel(booking: { proName?: string }) {
