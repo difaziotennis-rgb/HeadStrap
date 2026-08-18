@@ -101,7 +101,7 @@ export function SheetTimeColumn() {
           style={rowStyle(i)}
         >
           {isOnTheHour(hour) ? (
-            <span className="absolute left-1 top-0 -translate-y-1/2 text-[10px] tabular-nums leading-none text-[#6b665e] sm:left-1.5 sm:text-[11px]">
+            <span className="absolute left-1 top-[3px] text-[10px] tabular-nums leading-none text-[#6b665e] sm:left-1.5 sm:text-[11px]">
               {formatHour(hour).replace(":00 ", " ")}
             </span>
           ) : null}
@@ -111,7 +111,7 @@ export function SheetTimeColumn() {
   );
 }
 
-/** Half-hour row lines — hour labels sit on the hour line they mark. */
+/** Half-hour row lines — hour labels sit just below the hour line they mark. */
 export function SheetHourLines() {
   return (
     <>
