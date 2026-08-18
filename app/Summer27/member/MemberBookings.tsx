@@ -13,7 +13,7 @@ import {
   lessonRateForPro,
   type CourtId,
 } from "../summer27-data";
-import { getLiveClinics, getLiveCourtRates, getLiveEvents, getLivePros, getProgramBlock } from "../schedule";
+import { courtSlotConflict, getLiveClinics, getLiveCourtRates, getLiveEvents, getLivePros } from "../schedule";
 import { lessonConflict } from "../lesson-slots";
 import { canChangeBooking, CANCEL_WINDOW_HOURS, eventStartHour } from "../booking-policy";
 import {
@@ -32,6 +32,7 @@ import {
   type S27LessonBooking,
   type S27StringingOrder,
 } from "../storage";
+import { persistLessons } from "../pro-clients";
 
 const inputClass = "rounded-lg border border-[#e8e5df] bg-white px-2.5 py-1.5 text-[13px]";
 
@@ -268,24 +269,19 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
       return;
     }
     const all = uniqueCourts(loadRecord<S27CourtBooking>(KEYS.courts));
-    for (let i = 0; i < durationHours; i++) {
-      const program = getProgramBlock(courtDraft.date, courtDraft.courtId, hour + i);
-      if (program) {
-        setMsg(`That hour is reserved (${program.label}).`);
-        return;
-      }
-      const taken = all.find(
-        (b) =>
-          b.id !== row.id &&
-          b.date === courtDraft.date &&
-          b.courtId === courtDraft.courtId &&
-          hour + i >= b.hour &&
-          hour + i < b.hour + b.durationHours
-      );
-      if (taken) {
-        setMsg("That court time is already booked.");
-        return;
-      }
+    const lessons = loadList<S27LessonBooking>(KEYS.lessons);
+    const conflict = courtSlotConflict({
+      date: courtDraft.date,
+      courtId: courtDraft.courtId,
+      hour,
+      durationHours,
+      bookings: all,
+      lessons,
+      ignoreBookingId: row.id,
+    });
+    if (conflict) {
+      setMsg(conflict);
+      return;
     }
     persistCourts(
       all.map((b) =>
@@ -332,8 +328,7 @@ export default function MemberBookings({ courts, clinics, lessons, events, strin
     }
     const all = loadList<S27LessonBooking>(KEYS.lessons);
     const hours = 1;
-    saveList(
-      KEYS.lessons,
+    persistLessons(
       all.map((b) =>
         b.id === row.id
           ? {

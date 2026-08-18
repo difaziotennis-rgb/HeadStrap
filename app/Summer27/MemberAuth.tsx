@@ -16,7 +16,12 @@ import { KEYS, ensureDerekMember, loadList, type S27MemberAccount } from "./stor
 import { findProByLogin, s27Pros } from "./summer27-data";
 import { getLivePros } from "./schedule";
 
-export default function MemberAuth() {
+export default function MemberAuth({ tone = "light" }: { tone?: "light" | "dark" }) {
+  const dark = tone === "dark";
+  const chip = dark
+    ? "rounded-lg border border-white/20 bg-white/10 px-2.5 py-1.5 text-[11px] font-medium text-white/80 hover:bg-white/15 hover:text-white"
+    : "rounded-lg border border-[#e8e5df] bg-white px-2.5 py-1.5 text-[11px] font-medium text-[#4a4a4a] hover:bg-[#faf9f7]";
+  const mute = dark ? "text-[11px] text-white/50 hover:text-white" : "text-[11px] text-[#8a8477] hover:text-[#1a1a1a]";
   const [session, setSession] = useState<S27MemberSession | null>(null);
   const [proSession, setProSession] = useState<S27ProSession | null>(null);
   const [open, setOpen] = useState(false);
@@ -126,7 +131,7 @@ export default function MemberAuth() {
         {proSession ? (
           <Link
             href="/Summer27/pro"
-            className="rounded-lg border border-[#e8e5df] bg-white px-2.5 py-1.5 text-[11px] font-medium text-[#4a4a4a] hover:bg-[#faf9f7]"
+            className={chip}
           >
             Pro desk
           </Link>
@@ -134,12 +139,12 @@ export default function MemberAuth() {
         {session ? (
           <Link
             href="/Summer27/member/portal"
-            className="rounded-lg border border-[#e8e5df] bg-white px-2.5 py-1.5 text-[11px] font-medium text-[#4a4a4a] hover:bg-[#faf9f7]"
+            className={chip}
           >
             My Account
           </Link>
         ) : null}
-        <button type="button" onClick={signOut} className="text-[11px] text-[#8a8477] hover:text-[#1a1a1a]">
+        <button type="button" onClick={signOut} className={mute}>
           Sign out
         </button>
       </div>
@@ -151,7 +156,7 @@ export default function MemberAuth() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="rounded-lg border border-[#e8e5df] bg-white px-2.5 py-1.5 text-[11px] font-medium text-[#4a4a4a] hover:bg-[#faf9f7]"
+        className={chip}
       >
         Sign in
       </button>

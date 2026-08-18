@@ -40,14 +40,20 @@ export function lessonConflict(opts: {
     if (program?.type === "hold") return `Court on hold (${program.label}).`;
   }
 
-  const taken = opts.lessons.some((lesson) => {
+  const taken = opts.lessons.find((lesson) => {
     if (opts.ignoreId && lesson.id === opts.ignoreId) return false;
     if (lesson.date !== opts.date) return false;
-    if (bookingProId(lesson) !== opts.pro.id) return false;
+    if (lesson.requestStatus === "declined") return false;
     const otherSpan = lessonSpan(lesson.duration);
-    return opts.hour < lesson.hour + otherSpan && lesson.hour < opts.hour + span;
+    if (!(opts.hour < lesson.hour + otherSpan && lesson.hour < opts.hour + span)) return false;
+    if (bookingProId(lesson) === opts.pro.id) return true;
+    return !!lesson.courtId && lesson.courtId === opts.pro.courtId;
   });
-  if (taken) return "That hour is already booked with this pro.";
+  if (taken) {
+    return bookingProId(taken) === opts.pro.id
+      ? "That hour is already booked with this pro."
+      : "That court is already booked.";
+  }
 
   if (opts.courts) {
     const courtBusy = opts.courts.some((booking) => {

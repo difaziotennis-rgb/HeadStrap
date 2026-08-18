@@ -14,6 +14,7 @@ export default function Summer27Layout({ children }: { children: React.ReactNode
   const session = useS27Session();
   const isAdmin = pathname === "/Summer27/admin" || pathname?.startsWith("/Summer27/admin/");
   const isProDesk = pathname === "/Summer27/pro" || pathname?.startsWith("/Summer27/pro/");
+  const isBio = pathname?.startsWith("/Summer27/pros/");
   const nav = s27Nav.filter((item) => !item.memberOnly || session);
 
   useEffect(() => {
@@ -38,14 +39,24 @@ export default function Summer27Layout({ children }: { children: React.ReactNode
   }
 
   return (
-    <div className="min-h-screen bg-[#f7f7f5] text-[#1a1a1a]">
-      <header className="sticky top-0 z-40 border-b border-[#ece8e2]/80 bg-[#faf9f7]/95 backdrop-blur">
+    <div className={isBio ? "relative min-h-screen bg-black text-white" : "min-h-screen bg-[#f7f7f5] text-[#1a1a1a]"}>
+      <header
+        className={
+          isBio
+            ? "sticky top-0 z-40 border-b border-white/10 bg-black/30 backdrop-blur-sm"
+            : "sticky top-0 z-40 border-b border-[#ece8e2]/80 bg-[#faf9f7]/95 backdrop-blur"
+        }
+      >
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-3.5">
           <Link href="/Summer27" className="min-w-0">
-            <p className="text-[10px] uppercase tracking-[0.22em] text-[#b0a99f]">DiFazio Tennis</p>
-            <h1 className="truncate text-[15px] font-semibold tracking-tight">Rhinebeck Tennis Club</h1>
+            <p className={`text-[10px] uppercase tracking-[0.22em] ${isBio ? "text-white/50" : "text-[#b0a99f]"}`}>
+              DiFazio Tennis
+            </p>
+            <h1 className={`truncate text-[15px] font-semibold tracking-tight ${isBio ? "text-white" : ""}`}>
+              Rhinebeck Tennis Club
+            </h1>
           </Link>
-          <MemberAuth />
+          <MemberAuth tone={isBio ? "dark" : "light"} />
         </div>
         {!isAdmin && !isProDesk && (
           <div className="mx-auto w-full max-w-6xl px-3 pb-3 sm:px-6">
@@ -63,9 +74,13 @@ export default function Summer27Layout({ children }: { children: React.ReactNode
                     className={`shrink-0 rounded-full px-3.5 py-2 text-[12px] font-medium transition-colors ${
                       pushEnd ? "ml-3 sm:ml-4" : ""
                     } ${
-                      active
-                        ? "bg-[#1a1a1a] text-white"
-                        : "bg-white text-[#6f695f] ring-1 ring-[#e8e5df] hover:text-[#1a1a1a]"
+                      isBio
+                        ? active
+                          ? "bg-white text-black"
+                          : "bg-white/10 text-white/75 ring-1 ring-white/15 hover:bg-white/15 hover:text-white"
+                        : active
+                          ? "bg-[#1a1a1a] text-white"
+                          : "bg-white text-[#6f695f] ring-1 ring-[#e8e5df] hover:text-[#1a1a1a]"
                     }`}
                   >
                     {item.label}
@@ -77,6 +92,7 @@ export default function Summer27Layout({ children }: { children: React.ReactNode
         )}
       </header>
       <div>{children}</div>
+      {isBio ? null : (
       <footer className="border-t border-[#e8e5df] bg-[#f6f4f0]">
         <div className="mx-auto grid w-full max-w-6xl gap-4 px-4 py-7 sm:grid-cols-2 sm:px-6 sm:py-8">
           <div>
@@ -114,6 +130,7 @@ export default function Summer27Layout({ children }: { children: React.ReactNode
           </div>
         </div>
       </footer>
+      )}
     </div>
   );
 }

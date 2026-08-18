@@ -12,28 +12,31 @@ import {
   COURT_SHEET_HOURS,
   COURT_SLOT_HOURS,
   COURTS,
+  courtFee,
   courtSheetLabel,
   formatHour,
   formatDateInput,
   formatPrettyDate,
   hoursOverlap,
+  lessonDurationHours,
   parseDateInput,
   type CourtId,
 } from "../summer27-data";
-import { getLiveCourtRates, getProgramBlock } from "../schedule";
+import { courtSlotConflict, getLiveCourtRates, getProgramBlock } from "../schedule";
 import { canChangeBooking, CANCEL_WINDOW_HOURS } from "../booking-policy";
 import { BookingPolicies } from "../BookingPolicies";
 import {
   KEYS,
-  courtBookingKey,
   courtShareForMember,
   loadList,
   loadRecord,
   memberOnCourt,
+  putCourtBooking,
   saveRecord,
   uniqueCourts,
   type S27CourtBooking,
   type S27CourtPlayer,
+  type S27LessonBooking,
   type S27MemberAccount,
 } from "../storage";
 import { DateChips, dateChipFromIso } from "../DateChips";
@@ -64,10 +67,10 @@ function Summer27BookInner() {
     queryDate && /^\d{4}-\d{2}-\d{2}$/.test(queryDate) ? queryDate : formatDateInput(new Date())
   );
   const [bookings, setBookings] = useState<Record<string, S27CourtBooking>>({});
-  const duration = 1;
+  const [lessons, setLessons] = useState<S27LessonBooking[]>([]);
   const [msg, setMsg] = useState<string | null>(null);
   const [paying, setPaying] = useState(false);
-  const [pendingSlot, setPendingSlot] = useState<{ courtId: CourtId; hour: number } | null>(null);
+  const [pendingSlot, setPendingSlot] = useState<{ courtId: CourtId; hour: number; durationHours: number } | null>(null);
   const [cancelTarget, setCancelTarget] = useState<S27CourtBooking | null>(null);
   const [splitMode, setSplitMode] = useState<SplitMode>("solo");
   const [partners, setPartners] = useState<S27MemberAccount[]>([]);
@@ -82,10 +85,14 @@ function Summer27BookInner() {
 
   const partnerSlots = splitMode === "solo" ? 0 : splitMode === "singles" ? 1 : 3;
   const playerCount = 1 + partners.length;
-  const shareEach = Math.round((rate * duration * 100) / Math.max(playerCount, 1)) / 100;
+  const pendingDuration = pendingSlot?.durationHours ?? 1;
+  const pendingAmount = courtFee(pendingDuration, isMember);
+  const shareEach = Math.round((pendingAmount * 100) / Math.max(playerCount, 1)) / 100;
+  const halfHour = pendingDuration <= 0.51;
 
   useEffect(() => {
     setBookings(loadRecord<S27CourtBooking>(KEYS.courts));
+    setLessons(loadList<S27LessonBooking>(KEYS.lessons));
     setMembers(loadList<S27MemberAccount>(KEYS.members));
     getSummer27StripeConfig().then((c) => setStripeReady(c.configured));
   }, []);
@@ -95,7 +102,7 @@ function Summer27BookInner() {
     if (queryDate && /^\d{4}-\d{2}-\d{2}$/.test(queryDate)) setDate(queryDate);
     const courtOk = queryCourt === "court-1" || queryCourt === "court-2";
     if (courtOk && COURT_SHEET_HOURS.includes(queryHour)) {
-      setPendingSlot({ courtId: queryCourt, hour: queryHour });
+      setPendingSlot({ courtId: queryCourt, hour: queryHour, durationHours: 1 });
     }
   }, [queryDate, queryHour, queryCourt]);
 
@@ -145,7 +152,7 @@ function Summer27BookInner() {
       (b) =>
         b.date === dateStr &&
         b.courtId === courtId &&
-        b.paymentStatus === "paid" &&
+        (b.paymentStatus === "paid" || b.paymentStatus === "pending") &&
         hour < b.hour + b.durationHours &&
         b.hour < hour + COURT_SLOT_HOURS
     );
@@ -158,21 +165,66 @@ function Summer27BookInner() {
         durationHours: existing.durationHours,
       };
     }
+    const lesson = lessons.find(
+      (row) =>
+        row.date === dateStr &&
+        row.courtId === courtId &&
+        row.requestStatus !== "declined" &&
+        row.requestStatus !== "requested" &&
+        hour < row.hour + lessonDurationHours(row.duration) &&
+        row.hour < hour + COURT_SLOT_HOURS
+    );
+    if (lesson) {
+      return {
+        type: "lesson" as const,
+        label: lesson.clientName,
+        startHour: lesson.hour,
+        durationHours: lessonDurationHours(lesson.duration),
+        lessonId: lesson.id,
+      };
+    }
     return null;
   }
 
-  function canBook(dateStr: string, courtId: CourtId, hour: number) {
-    for (let t = 0; t < duration - 1e-9; t += COURT_SLOT_HOURS) {
-      const slot = hour + t;
-      if (occupancy(dateStr, courtId, slot)) return false;
-      if (!COURT_SHEET_HOURS.includes(slot)) return false;
+  function occupancyKey(occ: NonNullable<ReturnType<typeof occupancy>>) {
+    if (occ.type === "clinic" && "clinicId" in occ) return `clinic:${occ.clinicId}`;
+    if (occ.type === "booked" && "booking" in occ && occ.booking) return `booked:${occ.booking.id}`;
+    if (occ.type === "lesson" && "lessonId" in occ) return `lesson:${occ.lessonId}`;
+    return `${occ.type}:${occ.label}:${occ.startHour}:${occ.durationHours}`;
+  }
+
+  function visibleBlockHours(courtId: CourtId, hour: number, occ: NonNullable<ReturnType<typeof occupancy>>) {
+    const key = occupancyKey(occ);
+    const matching = COURT_SHEET_HOURS.filter((h) => {
+      const other = occupancy(date, courtId, h);
+      return other && occupancyKey(other) === key;
+    });
+    const groups: number[][] = [];
+    for (const h of matching) {
+      const last = groups[groups.length - 1];
+      if (last && Math.abs(h - last[last.length - 1] - COURT_SLOT_HOURS) < 0.01) last.push(h);
+      else groups.push([h]);
     }
-    return true;
+    return groups.find((g) => g.some((h) => Math.abs(h - hour) < 0.01)) || null;
+  }
+
+  function canBook(dateStr: string, courtId: CourtId, hour: number, durationHours: number) {
+    for (let t = 0; t < durationHours - 1e-9; t += COURT_SLOT_HOURS) {
+      if (!COURT_SHEET_HOURS.includes(hour + t)) return false;
+    }
+    return !courtSlotConflict({
+      date: dateStr,
+      courtId,
+      hour,
+      durationHours,
+      bookings: uniqueCourts(bookings),
+      lessons,
+    });
   }
 
   function buildPlayers(): S27CourtPlayer[] | undefined {
     if (!session || splitMode === "solo") return undefined;
-    const total = rate * duration;
+    const total = courtFee(pendingDuration, true);
     const n = 1 + partners.length;
     const base = Math.round((total / n) * 100) / 100;
     const hostShare = Math.round((total - base * (n - 1)) * 100) / 100;
@@ -223,12 +275,17 @@ function Summer27BookInner() {
       }
     }
 
-    if (!canBook(date, courtId, hour)) {
+    if (pendingDuration <= 0.51) {
+      setSplitMode("solo");
+      setPartners([]);
+    }
+
+    if (!canBook(date, courtId, hour, pendingDuration)) {
       setMsg("That window is no longer open.");
       return;
     }
 
-    const total = rate * duration;
+    const total = courtFee(pendingDuration, isMember);
     const players = isMember ? buildPlayers() : undefined;
     const hostAmount = players?.[0]?.amount ?? total;
     const id = `court-${Date.now()}`;
@@ -237,7 +294,7 @@ function Summer27BookInner() {
       id,
       date,
       hour,
-      durationHours: duration,
+      durationHours: pendingDuration,
       courtId,
       courtName,
       clientName: session?.memberName || guestName.trim(),
@@ -252,10 +309,7 @@ function Summer27BookInner() {
       format: splitMode,
     };
 
-    const next = { ...bookings };
-    for (let t = 0; t < duration - 1e-9; t += COURT_SLOT_HOURS) {
-      next[courtBookingKey(date, courtId, hour + t)] = booking;
-    }
+    const next = putCourtBooking({ ...bookings }, booking);
 
     setPaying(true);
 
@@ -281,11 +335,9 @@ function Summer27BookInner() {
         return;
       }
       booking.paymentStatus = "paid";
-      for (let i = 0; i < duration; i++) {
-        next[courtBookingKey(date, courtId, hour + i)] = booking;
-      }
-      saveRecord(KEYS.courts, next);
-      setBookings(next);
+      const paid = putCourtBooking(next, booking);
+      saveRecord(KEYS.courts, paid);
+      setBookings(paid);
       setPaying(false);
       setPendingSlot(null);
       setMsg(`Booked ${courtName} ${formatHour(hour)} (demo). $${total}.`);
@@ -316,11 +368,9 @@ function Summer27BookInner() {
     }
 
     booking.paymentIntentId = result.paymentIntentId;
-    for (let i = 0; i < duration; i++) {
-      next[courtBookingKey(date, courtId, hour + i)] = { ...booking };
-    }
-    saveRecord(KEYS.courts, next);
-    setBookings(next);
+    const paid = putCourtBooking(next, { ...booking });
+    saveRecord(KEYS.courts, paid);
+    setBookings(paid);
     setPendingSlot(null);
     setSplitMode("solo");
     setPartners([]);
@@ -334,11 +384,11 @@ function Summer27BookInner() {
     }
   }
 
-  function requestSlot(courtId: CourtId, hour: number) {
+  function requestSlot(courtId: CourtId, hour: number, durationHours: number) {
     setCancelTarget(null);
     setSplitMode("solo");
     setPartners([]);
-    setPendingSlot({ courtId, hour });
+    setPendingSlot({ courtId, hour, durationHours });
     setMsg(null);
   }
 
@@ -403,9 +453,9 @@ function Summer27BookInner() {
   function renderOccupied(courtId: CourtId, hour: number) {
     const occ = occupancy(date, courtId, hour);
     if (!occ) return null;
-    const start = "startHour" in occ ? Number(occ.startHour) : hour;
-    const dur = "durationHours" in occ ? Number(occ.durationHours) : COURT_SLOT_HOURS;
-    if (blockHours(start, dur)[0] !== hour) return null;
+    const spanHours = visibleBlockHours(courtId, hour, occ);
+    if (!spanHours || spanHours[0] !== hour) return null;
+    const dur = spanHours.length * COURT_SLOT_HOURS;
     const compact = dur <= 0.51;
     const pad = compact
       ? "px-1 py-0.5 text-[10px] sm:px-2"
@@ -452,9 +502,26 @@ function Summer27BookInner() {
     );
   }
 
-  function renderOpen(courtId: CourtId, hour: number, compact: boolean) {
-    const open = canBook(date, courtId, hour);
+  function durationLabel(hours: number) {
+    if (hours <= 0.51) return "30 min";
+    if (hours === 1) return "1 hour";
+    return `${hours} hours`;
+  }
+
+  function isOnTheHour(hour: number) {
+    return Math.round(hour * 60) % 60 === 0;
+  }
+
+  function sheetTimeLabel(hour: number) {
+    if (!isOnTheHour(hour)) return "";
+    return formatHour(hour).replace(":00 ", " ");
+  }
+
+  function renderOpen(courtId: CourtId, hour: number, durationHours: number) {
+    const open = canBook(date, courtId, hour, durationHours);
     if (!open) return null;
+    const compact = durationHours <= 0.51;
+    const price = courtFee(durationHours, isMember);
     const pad = compact
       ? "px-1 py-0.5 text-[10px] sm:px-2"
       : "px-1 py-2 text-[11px] sm:px-2 sm:text-[11px]";
@@ -462,39 +529,47 @@ function Summer27BookInner() {
       <button
         type="button"
         disabled={paying}
-        onClick={() => requestSlot(courtId, hour)}
+        onClick={() => requestSlot(courtId, hour, durationHours)}
+        title={`${formatHour(hour)} · ${durationLabel(durationHours)} · $${price}`}
+        aria-label={`Book ${durationLabel(durationHours)} at ${formatHour(hour)} for $${price}`}
         className={`h-full w-full rounded-md border border-[#e8e5df] bg-[#faf9f7] font-medium text-[#1a1a1a] hover:bg-white disabled:opacity-35 ${pad}`}
       >
-        ${rate * duration}
+        {compact ? null : `$${price}`}
       </button>
     );
   }
 
   function courtCells(courtId: CourtId) {
     const covered = new Set<number>();
-    const cells: Array<{ hour: number; index: number; span: number; kind: "occ" | "open" }> = [];
+    const cells: Array<{ hour: number; index: number; span: number; kind: "occ" | "open"; durationHours: number }> = [];
     COURT_SHEET_HOURS.forEach((hour, i) => {
       if (covered.has(hour)) return;
       const occ = occupancy(date, courtId, hour);
       if (occ) {
-        const start = Number(occ.startHour);
-        const dur = Number(occ.durationHours) || COURT_SLOT_HOURS;
-        const span = blockHours(start, dur);
-        if (span[0] !== hour) return;
+        const span = visibleBlockHours(courtId, hour, occ);
+        if (!span || span[0] !== hour) return;
         span.forEach((h) => covered.add(h));
-        cells.push({ hour, index: i, span: span.length, kind: "occ" });
+        cells.push({ hour, index: i, span: span.length, kind: "occ", durationHours: span.length * COURT_SLOT_HOURS });
         return;
       }
-      if (canBook(date, courtId, hour)) {
-        const span = blockHours(hour, duration);
+      if (isOnTheHour(hour) && canBook(date, courtId, hour, 1)) {
+        const span = blockHours(hour, 1);
         span.forEach((h) => covered.add(h));
-        cells.push({ hour, index: i, span: Math.max(1, span.length), kind: "open" });
+        cells.push({ hour, index: i, span: Math.max(1, span.length), kind: "open", durationHours: 1 });
+        return;
+      }
+      if (canBook(date, courtId, hour, COURT_SLOT_HOURS)) {
+        covered.add(hour);
+        cells.push({ hour, index: i, span: 1, kind: "open", durationHours: COURT_SLOT_HOURS });
       }
     });
     return cells;
   }
 
   const sheetRows = `repeat(${COURT_SHEET_HOURS.length}, 1.5rem)`;
+  function sheetLineClass(hour: number) {
+    return isOnTheHour(hour) ? "border-[#e4dfd6]" : "border-[#f3f0ea]";
+  }
 
   const pendingCourtName = pendingSlot
     ? COURTS.find((c) => c.id === pendingSlot.courtId)?.name || pendingSlot.courtId
@@ -506,7 +581,7 @@ function Summer27BookInner() {
       <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Courts</p>
       <h2 className="mt-1 text-2xl font-semibold tracking-tight">Court 3 &amp; Court 4</h2>
       <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-[#6b665e]">
-        ${rates.member}/hour members · ${rates.guest} guests. Court 3 may be held on weekdays for private lessons —
+        ${rates.member}/hour members · ${rates.guest} guests · leftover 30 minutes ${courtFee(0.5, isMember)}. Court 3 may be held on weekdays for private lessons —
         open times show on the grid.
       </p>
       <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-[#6b665e]">
@@ -562,9 +637,9 @@ function Summer27BookInner() {
             {COURT_SHEET_HOURS.map((hour) => (
               <div
                 key={hour}
-                className="flex items-start border-b border-[#f0ede8] px-2 pt-0.5 text-[10px] tabular-nums text-[#6b665e] last:border-b-0 sm:px-3 sm:text-[11px]"
+                className={`flex items-start border-b px-2 pt-0.5 text-[11px] tabular-nums text-[#6b665e] last:border-b-0 sm:px-3 ${sheetLineClass(hour)}`}
               >
-                {formatHour(hour).replace(":00 ", " ")}
+                {sheetTimeLabel(hour)}
               </div>
             ))}
           </div>
@@ -574,6 +649,12 @@ function Summer27BookInner() {
               className="grid border-l border-[#f0ede8]"
               style={{ gridTemplateRows: sheetRows }}
             >
+              {COURT_SHEET_HOURS.map((hour) => (
+                <div
+                  key={`${court.id}-line-${hour}`}
+                  className={`border-b last:border-b-0 ${sheetLineClass(hour)}`}
+                />
+              ))}
               {courtCells(court.id).map((cell) => (
                 <div
                   key={`${court.id}-${cell.hour}`}
@@ -582,7 +663,7 @@ function Summer27BookInner() {
                 >
                   {cell.kind === "occ"
                     ? renderOccupied(court.id, cell.hour)
-                    : renderOpen(court.id, cell.hour, cell.span <= 1)}
+                    : renderOpen(court.id, cell.hour, cell.durationHours)}
                 </div>
               ))}
             </div>
@@ -608,7 +689,7 @@ function Summer27BookInner() {
                   {pendingCourtName} · {formatHour(pendingSlot.hour)}
                 </p>
                 <p className="mt-0.5 text-[12px] text-[#6b665e]">
-                  {formatPrettyDate(date)} · {duration} hour{duration === 1 ? "" : "s"} · ${rate * duration}
+                  {formatPrettyDate(date)} · {durationLabel(pendingDuration)} · ${pendingAmount}
                 </p>
               </div>
               <button type="button" onClick={() => setPendingSlot(null)} className="text-[12px] text-[#8a8477]">
@@ -634,7 +715,7 @@ function Summer27BookInner() {
                 </div>
               )}
 
-              {isMember && (
+              {isMember && !halfHour && (
               <div>
                 <p className="mb-2 text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">Who’s playing</p>
                 <div className="grid grid-cols-3 gap-1.5">
@@ -665,7 +746,7 @@ function Summer27BookInner() {
               </div>
               )}
 
-              {isMember && splitMode !== "solo" && session && (
+              {isMember && !halfHour && splitMode !== "solo" && session && (
                 <div>
                   <p className="mb-2 text-[12px] text-[#6b665e]">
                     {splitMode === "singles"
@@ -686,8 +767,8 @@ function Summer27BookInner() {
               <PayChooser
                 amount={
                   splitMode === "solo" || partners.length !== partnerSlots
-                    ? rate * duration
-                    : Math.round((rate * duration - shareEach * partners.length) * 100) / 100
+                    ? pendingAmount
+                    : Math.round((pendingAmount - shareEach * partners.length) * 100) / 100
                 }
                 savedCard={savedCard}
                 paying={paying}
@@ -700,7 +781,7 @@ function Summer27BookInner() {
               />
               {splitMode !== "solo" && partners.length === partnerSlots && (
                 <p className="text-center text-[11px] text-[#8a8477]">
-                  Court ${rate * duration} · ~${shareEach} each
+                  Court ${pendingAmount} · ~${shareEach} each
                 </p>
               )}
             </div>
@@ -723,8 +804,7 @@ function Summer27BookInner() {
                 {cancelTarget.courtName} · {formatHour(cancelTarget.hour)}
               </p>
               <p className="mt-0.5 text-[12px] text-[#6b665e]">
-                {formatPrettyDate(cancelTarget.date)} · {cancelTarget.durationHours} hour
-                {cancelTarget.durationHours === 1 ? "" : "s"} · $
+                {formatPrettyDate(cancelTarget.date)} · {durationLabel(cancelTarget.durationHours)} · $
                 {session
                   ? courtShareForMember(cancelTarget, session.memberNumber)
                   : cancelTarget.amount}

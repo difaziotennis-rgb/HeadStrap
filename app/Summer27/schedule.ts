@@ -7,7 +7,9 @@ import {
   clinicsSuspendedOnDate,
   eventSpansDate,
   hoursOverlap,
+  lessonDurationHours,
   parseDateInput,
+  rangesOverlap,
   s27Clinics,
   s27Events,
   s27Pros,
@@ -18,7 +20,7 @@ import {
   type SlotBlockReason,
 } from "./summer27-data";
 
-export const S27_CATALOG_KEY = "s27_catalog_v46";
+export const S27_CATALOG_KEY = "s27_catalog_v48";
 export const S27_BLOCKS_KEY = "s27_admin_blocks_v1";
 export const S27_NOTES_KEY = "s27_member_notes_v1";
 
@@ -74,13 +76,12 @@ export function defaultCatalog(): S27Catalog {
     clinics: s27Clinics,
     events: s27Events,
     pros: s27Pros,
-    courtRates: { ...COURT_RATES },
+    courtRates: { member: COURT_RATES.member, guest: COURT_RATES.guest },
     lessonRates: { ...LESSON_RATES },
     stringingLabor: STRINGING_LABOR,
     primeTeaching: {
       windows: [
         { start: PRIME_TEACHING.morning.start, end: PRIME_TEACHING.morning.end, label: "Morning lessons" },
-        { start: PRIME_TEACHING.afternoon.start, end: PRIME_TEACHING.afternoon.end, label: "Afternoon lessons" },
       ],
     },
   };
@@ -445,5 +446,63 @@ export function getProgramBlock(
     }
   }
 
+  return null;
+}
+
+function lessonOccupiesCourt(lesson: {
+  courtId?: CourtId;
+  paymentStatus?: string;
+  requestStatus?: string;
+}) {
+  if (lesson.requestStatus === "declined" || lesson.requestStatus === "requested") return false;
+  return true;
+}
+
+/** Shared guard: program holds, paid court bookings, and confirmed lessons cannot overlap. */
+export function courtSlotConflict(opts: {
+  date: string;
+  courtId: CourtId;
+  hour: number;
+  durationHours: number;
+  bookings: Array<{
+    id: string;
+    date: string;
+    courtId: CourtId;
+    hour: number;
+    durationHours: number;
+    paymentStatus?: string;
+  }>;
+  lessons?: Array<{
+    id: string;
+    date: string;
+    hour: number;
+    duration: string | number;
+    courtId?: CourtId;
+    paymentStatus?: string;
+    requestStatus?: string;
+  }>;
+  ignoreBookingId?: string;
+  ignoreLessonId?: string;
+}): string | null {
+  const { date, courtId, hour, durationHours } = opts;
+  for (let t = 0; t < durationHours - 1e-9; t += COURT_SLOT_HOURS) {
+    const program = getProgramBlock(date, courtId, hour + t);
+    if (program) return `Court reserved (${program.label}).`;
+  }
+  const taken = opts.bookings.find((b) => {
+    if (opts.ignoreBookingId && b.id === opts.ignoreBookingId) return false;
+    if (b.date !== date || b.courtId !== courtId) return false;
+    if (b.paymentStatus && b.paymentStatus !== "paid" && b.paymentStatus !== "pending") return false;
+    return rangesOverlap(hour, durationHours, b.hour, b.durationHours || 1);
+  });
+  if (taken) return "That court time is already booked.";
+  const lessonTaken = (opts.lessons || []).find((lesson) => {
+    if (opts.ignoreLessonId && lesson.id === opts.ignoreLessonId) return false;
+    if (lesson.date !== date) return false;
+    if (!lesson.courtId || lesson.courtId !== courtId) return false;
+    if (!lessonOccupiesCourt(lesson)) return false;
+    return rangesOverlap(hour, durationHours, lesson.hour, lessonDurationHours(lesson.duration));
+  });
+  if (lessonTaken) return "That court time is already booked for a lesson.";
   return null;
 }

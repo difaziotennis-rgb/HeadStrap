@@ -66,7 +66,7 @@ export type S27CourtBooking = {
   id: string;
   date: string;
   hour: number;
-  durationHours: 1 | 2;
+  durationHours: number;
   courtId: CourtId;
   courtName: string;
   clientName: string;
@@ -336,15 +336,31 @@ export function uniqueCourts(map: Record<string, S27CourtBooking>): S27CourtBook
   return values.filter((b, i, arr) => arr.findIndex((x) => x.id === b.id) === i);
 }
 
+export function courtSlotKeys(date: string, courtId: string, hour: number, durationHours: number) {
+  const keys: string[] = [];
+  const start = Number(hour);
+  const hours = Number(durationHours) || 1;
+  for (let t = 0; t < hours - 1e-9; t += 0.5) {
+    keys.push(courtBookingKey(date, courtId, start + t));
+  }
+  return keys;
+}
+
+export function putCourtBooking(map: Record<string, S27CourtBooking>, booking: S27CourtBooking) {
+  const next = { ...map };
+  for (const key of courtSlotKeys(booking.date, booking.courtId, booking.hour, booking.durationHours)) {
+    next[key] = booking;
+  }
+  return next;
+}
+
 export function persistCourts(list: S27CourtBooking[]) {
   const rec: Record<string, S27CourtBooking> = {};
   for (const booking of list) {
     if (!booking?.id || !booking.date || !booking.courtId) continue;
-    const start = Number(booking.hour);
-    const hours = Number(booking.durationHours) || 1;
-    for (let t = 0; t < hours - 1e-9; t += 0.5) {
-      rec[courtBookingKey(booking.date, booking.courtId, start + t)] = booking;
-    }
+    const keys = courtSlotKeys(booking.date, booking.courtId, booking.hour, booking.durationHours);
+    if (keys.some((key) => rec[key] && rec[key].id !== booking.id)) continue;
+    for (const key of keys) rec[key] = booking;
   }
   saveRecord(KEYS.courts, rec);
 }

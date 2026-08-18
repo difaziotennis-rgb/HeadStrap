@@ -8,6 +8,8 @@ import {
   s27Pros,
   type CourtId,
 } from "./summer27-data";
+import { courtSlotConflict, getCatalog, getProgramBlock, saveCatalog } from "./schedule";
+import { persistLessons } from "./pro-clients";
 import {
   DEREK_MEMBER,
   KEYS,
@@ -28,7 +30,7 @@ import {
   type S27StringingOrder,
 } from "./storage";
 
-const MOCK_FLAG = "s27_mock_bookings_v6";
+const MOCK_FLAG = "s27_mock_bookings_v8";
 
 type Person = {
   name: string;
@@ -231,6 +233,17 @@ function seedCourts(): S27CourtBooking[] {
   let n = 0;
 
   function add(date: string, hour: number, durationHours: 1 | 2, courtId: CourtId, who: Person, i: number) {
+    if (
+      courtSlotConflict({
+        date,
+        courtId,
+        hour,
+        durationHours,
+        bookings: out,
+      })
+    ) {
+      return;
+    }
     const member = !!who.memberNumber;
     out.push({
       id: `mock-court-${++n}`,
@@ -297,6 +310,14 @@ function seedCourts(): S27CourtBooking[] {
   return out;
 }
 
+function clinicBlocksCourt(date: string, courtId: CourtId, hour: number, durationHours = 1) {
+  for (let t = 0; t < durationHours - 1e-9; t += 0.5) {
+    const program = getProgramBlock(date, courtId, hour + t);
+    if (program && program.type !== "lesson") return true;
+  }
+  return false;
+}
+
 function seedLessons(): S27LessonBooking[] {
   const out: S27LessonBooking[] = [];
   let n = 0;
@@ -308,11 +329,11 @@ function seedLessons(): S27LessonBooking[] {
     const day = d.getDay();
     const date = formatDateInput(d);
     if (day >= 1 && day <= 5) {
-      const hours = [8, 9, 10, 11, 15, 16];
+      const hours = day === 2 || day === 4 ? [15] : [10];
       hours.forEach((hour, hi) => {
         const who = personAt(offset * 6 + hi + 3);
         const duration = "60" as const;
-        if ((hour === 9 && offset % 3 === 0) || (hour === 16 && offset % 3 === 1)) return;
+        if (clinicBlocksCourt(date, derek.courtId, hour)) return;
         out.push({
           id: `mock-lesson-${++n}`,
           date,
@@ -334,7 +355,7 @@ function seedLessons(): S27LessonBooking[] {
         });
       });
     }
-    if (maya && [1, 2, 3, 4].includes(day) && offset % 2 === 0) {
+    if (maya && [1, 3].includes(day) && offset % 2 === 0 && !clinicBlocksCourt(date, maya.courtId, 16)) {
       const who = personAt(offset + 11);
       out.push({
         id: `mock-lesson-${++n}`,
@@ -355,25 +376,30 @@ function seedLessons(): S27LessonBooking[] {
         createdAt: new Date().toISOString(),
       });
     }
-    if (jonah && [2, 4, 6].includes(day) && offset % 2 === 1) {
-      const kid = JUNIORS[Math.abs(offset) % JUNIORS.length];
-      out.push({
-        id: `mock-lesson-${++n}`,
-        date,
-        hour: 15,
-        duration: "60",
-        clientName: kid.name,
-        clientEmail: kid.email,
-        clientPhone: "",
-        memberNumber: kid.memberNumber,
-        proId: jonah.id,
-        proName: jonah.name,
-        courtId: jonah.courtId,
-        focus: "Junior fundamentals",
-        amount: lessonRateForPro(jonah, !!kid.memberNumber),
-        paymentStatus: paid(offset + 4),
-        paymentMethod: method(offset + 4),
-        createdAt: new Date().toISOString(),
+    if (jonah && [2, 4, 6].includes(day)) {
+      const hours = day === 6 ? [11, 16] : [11, 15];
+      hours.forEach((hour, hi) => {
+        if (clinicBlocksCourt(date, jonah.courtId, hour)) return;
+        const kid = JUNIORS[Math.abs(offset * 2 + hi) % JUNIORS.length];
+        out.push({
+          id: `mock-lesson-${++n}`,
+          date,
+          hour,
+          duration: "60",
+          clientName: kid.name,
+          clientEmail: kid.email,
+          clientPhone: "",
+          memberNumber: kid.memberNumber,
+          proId: jonah.id,
+          proName: jonah.name,
+          courtId: jonah.courtId,
+          focus: hi === 0 ? "Junior fundamentals" : "Match play",
+          amount: lessonRateForPro(jonah, !!kid.memberNumber),
+          paymentStatus: paid(offset + hi),
+          paymentMethod: method(offset + hi),
+          requestStatus: "accepted",
+          createdAt: new Date().toISOString(),
+        });
       });
     }
   }
@@ -399,6 +425,31 @@ function seedLessons(): S27LessonBooking[] {
       paymentMethod: "saved-card",
       requestStatus: "requested",
       createdAt: new Date().toISOString(),
+    });
+  }
+  if (jonah) {
+    nextDatesForDays([4], 2).forEach((date, i) => {
+      const kid = JUNIORS[(i + 3) % JUNIORS.length];
+      const hour = i === 0 ? 10 : 16;
+      out.push({
+        id: `mock-lesson-req-jonah-${i + 1}`,
+        date,
+        hour,
+        duration: "60",
+        clientName: kid.name,
+        clientEmail: kid.email,
+        clientPhone: "",
+        memberNumber: kid.memberNumber,
+        proId: jonah.id,
+        proName: jonah.name,
+        courtId: jonah.courtId,
+        focus: "Junior fundamentals",
+        amount: lessonRateForPro(jonah, true),
+        paymentStatus: "paid",
+        paymentMethod: "saved-card",
+        requestStatus: "requested",
+        createdAt: new Date().toISOString(),
+      });
     });
   }
   return out;
@@ -516,6 +567,17 @@ function seedStringing(): S27StringingOrder[] {
   });
 }
 
+function assignJonahClinics() {
+  const jonahClinics = new Set(["tue-am-juniors", "thu-hs-juniors", "wed-am-tots", "wed-am-toddlers"]);
+  const catalog = getCatalog();
+  saveCatalog({
+    ...catalog,
+    clinics: catalog.clinics.map((c) =>
+      jonahClinics.has(c.id) ? { ...c, proIds: ["jonah-berkowitz"] } : c
+    ),
+  });
+}
+
 export function seedMockBookings() {
   if (typeof window === "undefined") return;
   // Production flag — set NEXT_PUBLIC_S27_LIVE=1 in Vercel when you go live.
@@ -527,7 +589,8 @@ export function seedMockBookings() {
     seedMembers();
     persistCourts(keepReal(uniqueCourts(loadRecord<S27CourtBooking>(KEYS.courts)), seedCourts()));
     saveList(KEYS.clinics, keepReal(loadList<S27ClinicBooking>(KEYS.clinics), seedClinics()));
-    saveList(KEYS.lessons, keepReal(loadList<S27LessonBooking>(KEYS.lessons), seedLessons()));
+    persistLessons(keepReal(loadList<S27LessonBooking>(KEYS.lessons), seedLessons()));
+    assignJonahClinics();
     saveList(KEYS.events, keepReal(loadList<S27EventBooking>(KEYS.events), seedEvents()));
     const stringOrders = keepReal(loadList<S27StringingOrder>(KEYS.stringing), seedStringing());
     saveList(KEYS.stringing, stringOrders);

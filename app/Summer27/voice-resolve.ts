@@ -18,11 +18,10 @@ import {
   type CourtId,
   type ProDef,
 } from "./summer27-data";
-import { getLiveClinics, getLiveCourtRates, getLiveEvents, getLivePros, getLiveStringingLabor, getProgramBlock } from "./schedule";
+import { courtSlotConflict, getLiveClinics, getLiveCourtRates, getLiveEvents, getLivePros, getLiveStringingLabor } from "./schedule";
 import { canChangeBooking, CANCEL_WINDOW_HOURS } from "./booking-policy";
 import {
   KEYS,
-  courtBookingKey,
   lfgCapacity,
   loadList,
   loadRecord,
@@ -70,11 +69,22 @@ function courtsFor(intent: VoiceIntent) {
   return [...COURTS];
 }
 
-function courtOpen(date: string, courtId: CourtId, hour: number, bookings: Record<string, S27CourtBooking>) {
+function courtOpen(
+  date: string,
+  courtId: CourtId,
+  hour: number,
+  bookings: Record<string, S27CourtBooking>,
+  lessons: S27LessonBooking[]
+) {
   if (!BOOKING_HOURS.includes(hour)) return false;
-  if (getProgramBlock(date, courtId, hour)) return false;
-  const existing = bookings[courtBookingKey(date, courtId, hour)];
-  return existing?.paymentStatus !== "paid";
+  return !courtSlotConflict({
+    date,
+    courtId,
+    hour,
+    durationHours: 1,
+    bookings: uniqueCourts(bookings),
+    lessons,
+  });
 }
 
 function clinicHintMatch(clinic: ClinicDef, hint: string | null) {
@@ -351,7 +361,7 @@ export function resolveVoice(intent: VoiceIntent, session: S27MemberSession | nu
       const newHour = intent.hourTo;
       const newDate = intent.dateTo || date;
       if (target.kind === "court" && typeof newHour === "number") {
-        const open = courtsFor(intent).filter((c) => courtOpen(newDate, c.id, newHour, bookings));
+        const open = courtsFor(intent).filter((c) => courtOpen(newDate, c.id, newHour, bookings, lessons));
         if (!open.length) {
           return {
             spoken: `${formatHour(newHour)} on ${formatPrettyDate(newDate)} isn’t open.`,
@@ -401,7 +411,7 @@ export function resolveVoice(intent: VoiceIntent, session: S27MemberSession | nu
     const open: { courtId: CourtId; name: string; hour: number }[] = [];
     for (const hour of hours) {
       for (const court of courts) {
-        if (courtOpen(date, court.id, hour, bookings)) open.push({ courtId: court.id, name: court.name, hour });
+        if (courtOpen(date, court.id, hour, bookings, lessons)) open.push({ courtId: court.id, name: court.name, hour });
       }
     }
     const pretty = formatPrettyDate(date);

@@ -28,7 +28,13 @@ export const COURT_SLOT_HOURS = 0.5;
 export const COURT_RATES = {
   member: 50,
   guest: 60,
+  halfHour: 30,
 } as const;
+
+export function courtFee(durationHours: number, member: boolean) {
+  if (durationHours <= 0.51) return COURT_RATES.halfHour;
+  return (member ? COURT_RATES.member : COURT_RATES.guest) * durationHours;
+}
 
 export const LESSON_RATES = {
   member: 180,
@@ -40,8 +46,7 @@ export const STRINGING_LABOR = 50;
 export const PRIME_TEACHING = {
   weekdays: [1, 2, 3, 4, 5],
   courtId: "court-1" as CourtId,
-  morning: { start: 8, end: 12 },
-  afternoon: { start: 15, end: 17 },
+  morning: { start: 9, end: 11 },
 };
 
 export const DAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
@@ -326,7 +331,7 @@ export const s27Clinics: ClinicDef[] = [
     memberPrice: 55,
     guestPrice: 70,
     description: "Movement, consistency, and point play.",
-    proIds: ["derek"],
+    proIds: ["jonah-berkowitz"],
     blockCourts: ["court-2"],
   },
   {
@@ -341,7 +346,7 @@ export const s27Clinics: ClinicDef[] = [
     memberPrice: 55,
     guestPrice: 70,
     description: "After-school training for high school players — movement, patterns, and competitive points.",
-    proIds: ["derek"],
+    proIds: ["jonah-berkowitz"],
     blockCourts: ["court-2"],
   },
   {
@@ -356,7 +361,7 @@ export const s27Clinics: ClinicDef[] = [
     memberPrice: 35,
     guestPrice: 45,
     description: "First racquets, games, and fun on court.",
-    proIds: ["derek"],
+    proIds: ["jonah-berkowitz"],
     blockCourts: ["court-2"],
   },
   {
@@ -371,7 +376,7 @@ export const s27Clinics: ClinicDef[] = [
     memberPrice: 35,
     guestPrice: 45,
     description: "Rally games and early fundamentals.",
-    proIds: ["derek"],
+    proIds: ["jonah-berkowitz"],
     blockCourts: ["court-2"],
   },
 ];
@@ -676,6 +681,18 @@ export function hoursOverlap(startA: number, durA: number, hour: number, slotDur
   const slotEnd = hour + slotDur;
   const endA = startA + durA;
   return startA < slotEnd && hour < endA;
+}
+
+/** True if [startA, startA + durA) overlaps [startB, startB + durB). */
+export function rangesOverlap(startA: number, durA: number, startB: number, durB: number): boolean {
+  return startA < startB + durB && startB < startA + durA;
+}
+
+export function lessonDurationHours(duration: string | number | undefined) {
+  if (duration === "90" || duration === 1.5) return 1.5;
+  const n = Number(duration);
+  if (Number.isFinite(n) && n > 0 && n < 10) return n;
+  return 1;
 }
 
 /** Short label that fits a court-sheet slot button. */

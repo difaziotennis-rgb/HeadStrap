@@ -12,7 +12,7 @@ import {
   lessonRateForPro,
   type CourtId,
 } from "../summer27-data";
-import { getLiveClinics, getLiveEvents, getLiveCourtRates, getLiveStringingLabor, getLivePros, getProgramBlock } from "../schedule";
+import { courtSlotConflict, getLiveClinics, getLiveEvents, getLiveCourtRates, getLiveStringingLabor, getLivePros } from "../schedule";
 import {
   rememberStringing,
   stringPrefForMember,
@@ -101,14 +101,16 @@ export default function BookDesk(props: Props) {
 
 function CourtsBlock({
   courts,
+  lessons,
   onCourts,
   range,
   member,
-}: Pick<Props, "courts" | "onCourts"> & { range: Range; member: S27MemberAccount | null }) {
+}: Pick<Props, "courts" | "lessons" | "onCourts"> & { range: Range; member: S27MemberAccount | null }) {
   const [date, setDate] = useState(today());
   const [hour, setHour] = useState("8");
   const [courtId, setCourtId] = useState<CourtId>("court-2");
   const [guestName, setGuestName] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const list = useMemo(
     () =>
       courts
@@ -123,6 +125,19 @@ function CourtsBlock({
     const name = member?.name || guestName.trim();
     if (!name) return;
     const hours = 1 as const;
+    const conflict = courtSlotConflict({
+      date,
+      courtId,
+      hour: Number(hour),
+      durationHours: hours,
+      bookings: courts,
+      lessons,
+    });
+    if (conflict) {
+      setError(conflict);
+      return;
+    }
+    setError(null);
     const rates = getLiveCourtRates();
     onCourts([
       ...courts,
@@ -159,12 +174,13 @@ function CourtsBlock({
         {!member && <input className={`${inputClass} sm:col-span-2`} placeholder="Walk-up name" value={guestName} onChange={(e) => setGuestName(e.target.value)} />}
         <button className="rounded-lg bg-[#1a1a1a] px-3 py-2 text-[12px] font-medium text-white">Add court</button>
       </form>
+      {error && <p className="text-[12px] text-[#991b1b]">{error}</p>}
       <SimpleList
         empty="No court bookings in this view."
         rows={list.map((b) => ({
           id: b.id,
           title: `${b.courtName} · ${formatPrettyDate(b.date)} ${formatHour(b.hour)}`,
-          detail: `${b.clientName} · ${b.durationHours}h · $${b.amount}${getProgramBlock(b.date, b.courtId, b.hour)?.type === "clinic" ? " · overlaps clinic" : ""}`,
+          detail: `${b.clientName} · ${b.durationHours}h · $${b.amount}`,
           status: b.paymentStatus,
           onDelete: () => onCourts(courts.filter((x) => x.id !== b.id)),
         }))}

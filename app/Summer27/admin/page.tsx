@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import {
   KEYS,
@@ -32,6 +32,7 @@ import {
   type S27Catalog,
   type S27MemberNote,
 } from "../schedule";
+import { persistLessons } from "../pro-clients";
 import TodayBoard from "./TodayBoard";
 import MemberFile from "./MemberFile";
 import BookDesk from "./BookDesk";
@@ -57,6 +58,11 @@ const TABS: { id: Tab; label: string }[] = [
 ];
 
 export default function Summer27DirectorPage() {
+  const [authed, setAuthed] = useState(false);
+  const [gateReady, setGateReady] = useState(false);
+  const [password, setPassword] = useState("");
+  const [gateError, setGateError] = useState<string | null>(null);
+  const [unlocking, setUnlocking] = useState(false);
   const [tab, setTab] = useState<Tab>("today");
   const [flash, setFlash] = useState<string | null>(null);
   const [selectedMember, setSelectedMember] = useState<string | null>(null);
@@ -97,14 +103,42 @@ export default function Summer27DirectorPage() {
   }
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
     try {
-      sessionStorage.setItem("s27_admin", "1");
+      if (sessionStorage.getItem("s27_admin") === "1") setAuthed(true);
     } catch {
       // ignore
     }
-    reload();
+    setGateReady(true);
   }, []);
+
+  useEffect(() => {
+    if (authed) reload();
+  }, [authed]);
+
+  async function unlock(e: FormEvent) {
+    e.preventDefault();
+    setUnlocking(true);
+    setGateError(null);
+    try {
+      const res = await fetch("/api/summer27/admin-auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+      if (!res.ok || !data.ok) {
+        setGateError(data.error || "Incorrect password.");
+        setUnlocking(false);
+        return;
+      }
+      sessionStorage.setItem("s27_admin", "1");
+      setAuthed(true);
+      setPassword("");
+    } catch {
+      setGateError("Could not sign in.");
+    }
+    setUnlocking(false);
+  }
 
   function ping(message: string) {
     setFlash(message);
@@ -113,14 +147,14 @@ export default function Summer27DirectorPage() {
 
   function saveCourts(next: S27CourtBooking[]) {
     persistCourts(next);
-    setCourts(next);
+    setCourts(uniqueCourts(loadRecord<S27CourtBooking>(KEYS.courts)));
   }
   function saveClinics(next: S27ClinicBooking[]) {
     saveList(KEYS.clinics, next);
     setClinics(next);
   }
   function saveLessons(next: S27LessonBooking[]) {
-    saveList(KEYS.lessons, next);
+    persistLessons(next);
     setLessons(next);
   }
   function saveEvents(next: S27EventBooking[]) {
@@ -207,6 +241,43 @@ export default function Summer27DirectorPage() {
   }
 
   const today = formatDateInput(new Date());
+
+  if (!gateReady) {
+    return (
+      <main className="mx-auto max-w-sm px-4 py-16 text-center">
+        <p className="text-[13px] text-[#8a8477]">Opening director desk…</p>
+      </main>
+    );
+  }
+
+  if (!authed) {
+    return (
+      <main className="mx-auto max-w-sm px-4 py-16 sm:px-6">
+        <p className="text-[10px] uppercase tracking-[0.14em] text-[#8a8477]">Director desk</p>
+        <h2 className="mt-1 text-2xl font-semibold tracking-tight">Sign in</h2>
+        <p className="mt-2 text-[13px] text-[#6b665e]">Password required to open the desk.</p>
+        <form onSubmit={unlock} className="mt-6 space-y-3">
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Password"
+            autoComplete="current-password"
+            autoFocus
+            className="w-full rounded-xl border border-[#e8e5df] bg-white px-3 py-3 text-[15px]"
+          />
+          {gateError ? <p className="text-[13px] text-[#9a3b2f]">{gateError}</p> : null}
+          <button
+            type="submit"
+            disabled={unlocking || !password.trim()}
+            className="w-full rounded-full bg-[#1a1a1a] px-4 py-2.5 text-[13px] font-medium text-white disabled:opacity-50"
+          >
+            {unlocking ? "Checking…" : "Enter"}
+          </button>
+        </form>
+      </main>
+    );
+  }
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6">

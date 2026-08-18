@@ -12,17 +12,19 @@ import {
   formatPrettyDate,
   type CourtId,
 } from "../summer27-data";
-import { getLiveCourtRates, getProgramBlock } from "../schedule";
+import { courtSlotConflict, getLiveCourtRates } from "../schedule";
 import {
   KEYS,
-  courtBookingKey,
   lfgCapacity,
   loadList,
   loadRecord,
+  persistCourts,
+  putCourtBooking,
   saveList,
-  saveRecord,
+  uniqueCourts,
   type S27CourtBooking,
   type S27CourtPlayer,
+  type S27LessonBooking,
   type S27LfgFormat,
   type S27LfgPost,
   type S27MemberAccount,
@@ -44,6 +46,7 @@ export default function Summer27PlayPage() {
   const [posts, setPosts] = useState<S27LfgPost[]>([]);
   const [members, setMembers] = useState<S27MemberAccount[]>([]);
   const [bookings, setBookings] = useState<Record<string, S27CourtBooking>>({});
+  const [lessons, setLessons] = useState<S27LessonBooking[]>([]);
   const [msg, setMsg] = useState<string | null>(null);
   const [composing, setComposing] = useState(false);
   const [bookingPost, setBookingPost] = useState<S27LfgPost | null>(null);
@@ -69,6 +72,7 @@ export default function Summer27PlayPage() {
     setPosts(loadList<S27LfgPost>(KEYS.lfg));
     setMembers(loadList<S27MemberAccount>(KEYS.members));
     setBookings(loadRecord<S27CourtBooking>(KEYS.courts));
+    setLessons(loadList<S27LessonBooking>(KEYS.lessons));
   }
 
   useEffect(() => {
@@ -172,10 +176,15 @@ export default function Summer27PlayPage() {
   }
 
   function courtOpen(courtId: CourtId, post: S27LfgPost) {
-    if (getProgramBlock(post.date, courtId, post.hour)) return false;
-    const existing = bookings[courtBookingKey(post.date, courtId, post.hour)];
-    if (existing?.paymentStatus === "paid") return false;
-    return BOOKING_HOURS.includes(post.hour);
+    if (!BOOKING_HOURS.includes(post.hour)) return false;
+    return !courtSlotConflict({
+      date: post.date,
+      courtId,
+      hour: post.hour,
+      durationHours: 1,
+      bookings: uniqueCourts(bookings),
+      lessons,
+    });
   }
 
   async function bookFromPost(post: S27LfgPost) {
@@ -234,8 +243,8 @@ export default function Summer27PlayPage() {
     };
 
     setPaying(true);
-    const nextBookings = { ...bookings, [courtBookingKey(post.date, bookCourtId, post.hour)]: booking };
-    saveRecord(KEYS.courts, nextBookings);
+    const nextBookings = putCourtBooking(bookings, booking);
+    persistCourts(uniqueCourts(nextBookings));
     setBookings(nextBookings);
     savePosts(
       posts.map((p) =>

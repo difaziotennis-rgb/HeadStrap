@@ -27,10 +27,10 @@ import {
   loadList,
   uniqueCourts,
   loadRecord,
-  saveList,
   type S27CourtBooking,
   type S27LessonBooking,
 } from "../storage";
+import { persistLessons } from "../pro-clients";
 
 export default function Summer27LessonsPage() {
   return (
@@ -90,7 +90,7 @@ function Summer27LessonsInner() {
       const all = loadList<S27LessonBooking>(KEYS.lessons).map((b) =>
         b.id === bookingId ? { ...b, paymentStatus: "paid" as const, paymentMethod: "stripe" as const } : b
       );
-      saveList(KEYS.lessons, all);
+      persistLessons(all);
       setLessons(all);
       setMsg("Lesson confirmed.");
     }
@@ -144,7 +144,7 @@ function Summer27LessonsInner() {
       createdAt: new Date().toISOString(),
     };
     const next = [...lessons, booking];
-    saveList(KEYS.lessons, next);
+    persistLessons(next);
     setLessons(next);
     setSubmitting(false);
     setFocus("");
@@ -211,7 +211,7 @@ function Summer27LessonsInner() {
     }
 
     const next = [...lessons, booking];
-    saveList(KEYS.lessons, next);
+    persistLessons(next);
     setLessons(next);
     setPaying(false);
     setMsg(`Lesson booked · ${formatPrettyDate(date)} ${formatHour(hour)}. $${amount} charged.`);
@@ -240,7 +240,10 @@ function Summer27LessonsInner() {
                   {COURTS.find((c) => c.id === item.courtId)?.name || item.courtId} · {proScheduleLabel(item)}
                 </p>
                 <p className="mt-2 text-[13px] font-medium text-[#1a1a1a]">
-                  ${lessonRateForPro(item, isMember)}/hour{isMember ? "" : " guest"}
+                  ${lessonRateForPro(item, isMember)}/hr
+                  {isMember ? "" : (
+                    <span className="font-normal text-[#8a8477]"> guest (log in for member rates)</span>
+                  )}
                 </p>
                 <div className="mt-4 flex flex-wrap gap-3">
                   <Link
@@ -274,7 +277,8 @@ function Summer27LessonsInner() {
       <p className="mt-2 text-[14px] leading-relaxed text-[#6b665e]">{pro.bio}</p>
       <p className="mt-2 text-[13px] text-[#6b665e]">
         {courtName}
-        {requestMode ? "" : ` · ${proScheduleLabel(pro)}`} · ${hourly}/hour
+        {requestMode ? "" : ` · ${proScheduleLabel(pro)}`} · ${hourly}/hr
+        {isMember ? "" : " guest (log in for member rates)"}
       </p>
       <Link
         href={`/Summer27/pros/${encodeURIComponent(pro.id)}`}
