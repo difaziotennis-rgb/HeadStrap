@@ -9,6 +9,10 @@ export function isOnTheHour(hour: number) {
   return Math.round(hour * 60) % 60 === 0;
 }
 
+export function sheetLineClass(hour: number) {
+  return isOnTheHour(hour) ? "border-[#e4dfd6]" : "border-[#f3f0ea]";
+}
+
 export function sheetRowIndex(hour: number) {
   const exact = COURT_SHEET_HOURS.findIndex((h) => Math.abs(h - hour) < 0.01);
   if (exact >= 0) return exact;
@@ -32,41 +36,30 @@ export function SheetTimeColumn() {
       {COURT_SHEET_HOURS.map((hour, i) => (
         <div
           key={hour}
-          className={`relative box-border ${isOnTheHour(hour) ? "border-b border-[#c4bdb0]" : "border-b border-[#ddd8ce]"}`}
+          className={`relative box-border border-b px-1 pt-0.5 last:border-b-0 sm:px-1.5 ${sheetLineClass(hour)}`}
           style={rowStyle(i)}
         >
           {isOnTheHour(hour) ? (
-            <span className="absolute left-1 top-0 text-[10px] tabular-nums leading-none text-[#6b665e] sm:left-1.5 sm:text-[11px]">
+            <span className="text-[10px] tabular-nums leading-none text-[#6b665e] sm:text-[11px]">
               {formatHour(hour).replace(":00 ", " ")}
             </span>
-          ) : (
-            <span className="absolute bottom-0 right-1 block h-0 w-3 border-b border-[#8a8477]" aria-hidden />
-          )}
+          ) : null}
         </div>
       ))}
     </div>
   );
 }
 
-/** Hour rules + half-hour ticks. Rows always render so empty days keep the full 7 AM–8 PM grid. */
+/** Half-hour row lines — same weight as the public court sheet. */
 export function SheetHourLines() {
   return (
     <>
       {COURT_SHEET_HOURS.map((hour, i) => (
         <div
           key={hour}
-          className={`pointer-events-none relative z-0 box-border ${
-            isOnTheHour(hour) ? "border-b border-[#c4bdb0]" : "border-b border-[#ddd8ce]"
-          }`}
+          className={`pointer-events-none relative z-0 box-border border-b last:border-b-0 ${sheetLineClass(hour)}`}
           style={{ ...rowStyle(i), gridColumn: "1 / -1" }}
-        >
-          {!isOnTheHour(hour) ? (
-            <span
-              className="absolute bottom-0 left-[10%] right-[10%] block h-0 border-b border-[#8a8477]"
-              aria-hidden
-            />
-          ) : null}
-        </div>
+        />
       ))}
     </>
   );
