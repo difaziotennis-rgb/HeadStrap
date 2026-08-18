@@ -36,11 +36,11 @@ export function SheetTimeColumn() {
       {COURT_SHEET_HOURS.map((hour, i) => (
         <div
           key={hour}
-          className={`relative box-border border-b px-1 pt-0.5 last:border-b-0 sm:px-1.5 ${sheetLineClass(hour)}`}
+          className={`relative box-border border-t ${sheetLineClass(hour)}`}
           style={rowStyle(i)}
         >
           {isOnTheHour(hour) ? (
-            <span className="text-[10px] tabular-nums leading-none text-[#6b665e] sm:text-[11px]">
+            <span className="absolute left-1 top-0 -translate-y-1/2 text-[10px] tabular-nums leading-none text-[#6b665e] sm:left-1.5 sm:text-[11px]">
               {formatHour(hour).replace(":00 ", " ")}
             </span>
           ) : null}
@@ -50,14 +50,14 @@ export function SheetTimeColumn() {
   );
 }
 
-/** Half-hour row lines — same weight as the public court sheet. */
+/** Half-hour row lines — hour labels sit on the hour line they mark. */
 export function SheetHourLines() {
   return (
     <>
       {COURT_SHEET_HOURS.map((hour, i) => (
         <div
           key={hour}
-          className={`pointer-events-none relative z-0 box-border border-b last:border-b-0 ${sheetLineClass(hour)}`}
+          className={`pointer-events-none relative z-0 box-border border-t ${sheetLineClass(hour)}`}
           style={{ ...rowStyle(i), gridColumn: "1 / -1" }}
         />
       ))}
