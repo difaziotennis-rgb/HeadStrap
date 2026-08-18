@@ -204,9 +204,19 @@ type PlacedChip = {
   lane: 0 | 1;
   col: number;
   cols: number;
+  lanes: 1 | 2;
 };
 
-function placeDayChips(chips: DayChip[]): PlacedChip[] {
+function placeDayChips(chips: DayChip[], lanes: 1 | 2): PlacedChip[] {
+  if (lanes === 1) {
+    return packOverlaps(chips).map((packed) => ({
+      chip: packed.item,
+      lane: 0 as const,
+      col: packed.col,
+      cols: packed.cols,
+      lanes: 1 as const,
+    }));
+  }
   const out: PlacedChip[] = [];
   (["court-1", "court-2"] as const).forEach((laneId, lane) => {
     const inLane = chips.filter((c) => c.courts.includes(laneId));
@@ -216,6 +226,7 @@ function placeDayChips(chips: DayChip[]): PlacedChip[] {
         lane: lane === 0 ? 0 : 1,
         col: packed.col,
         cols: packed.cols,
+        lanes: 2,
       });
     }
   });
@@ -243,15 +254,7 @@ function clinicStartHour(catalog: S27Catalog, clinicId?: string, clinicName?: st
 function visibleWeekChips(chips: DayChip[], view: WeekView, today: string): DayChip[] {
   if (view === "clinics") return chips.filter((c) => c.kind === "clinic");
   if (view === "court") {
-    return chips.filter((c) => {
-      if (c.kind === "court") return c.courts.includes("court-1");
-      if (c.kind === "hold") return c.courts.includes("court-1");
-      if (c.kind === "event") return true;
-      if (c.kind === "clinic" || c.kind === "lesson" || c.kind === "request") {
-        return (c.proIds || []).includes("derek");
-      }
-      return false;
-    });
+    return chips.filter((c) => c.kind === "court" || c.kind === "hold" || c.kind === "clinic" || c.kind === "event" || c.kind === "lesson");
   }
   return chips.filter((c) => {
     if (c.kind === "clinic" && c.ref.date < today && c.sub === "0 in") return false;
@@ -652,12 +655,20 @@ export default function TodayBoard({
                     {d.getDate()}
                   </p>
                   <div className="mt-1 grid grid-cols-2 gap-0">
-                    <p className={`text-[8px] font-semibold uppercase tracking-[0.08em] ${selected ? "text-white/70" : "text-[#8a8477]"}`}>
-                      Ct 3
-                    </p>
-                    <p className={`text-[8px] font-semibold uppercase tracking-[0.08em] ${selected ? "text-white/70" : "text-[#8a8477]"}`}>
-                      Ct 4
-                    </p>
+                    {weekView === "clinics" ? (
+                      <p className={`col-span-2 text-[8px] font-semibold uppercase tracking-[0.08em] ${selected ? "text-white/70" : "text-[#8a8477]"}`}>
+                        Clinics
+                      </p>
+                    ) : (
+                      <>
+                        <p className={`text-[8px] font-semibold uppercase tracking-[0.08em] ${selected ? "text-white/70" : "text-[#8a8477]"}`}>
+                          Ct 3
+                        </p>
+                        <p className={`text-[8px] font-semibold uppercase tracking-[0.08em] ${selected ? "text-white/70" : "text-[#8a8477]"}`}>
+                          Ct 4
+                        </p>
+                      </>
+                    )}
                   </div>
                 </button>
               );
@@ -672,7 +683,8 @@ export default function TodayBoard({
               const chips = visibleWeekChips(chipsByDay[iso] || [], weekView, today).map((c) =>
                 chipForView(c, weekView)
               );
-              const placed = placeDayChips(chips);
+              const laneCount = weekView === "clinics" ? 1 : 2;
+              const placed = placeDayChips(chips, laneCount);
               const isToday = iso === today;
               const selected = iso === selectedDate;
               return (
@@ -699,10 +711,10 @@ export default function TodayBoard({
                   <div className="pointer-events-none absolute inset-0 grid" style={{ gridTemplateRows: SHEET_ROWS }}>
                     <SheetHourLines />
                   </div>
-                  <div className="pointer-events-none absolute inset-y-0 left-1/2 z-[1] w-px bg-[#ece8e2]" />
+                  <div className={`pointer-events-none absolute inset-y-0 left-1/2 z-[1] w-px bg-[#ece8e2] ${weekView === "clinics" ? "hidden" : ""}`} />
                   {placed.map((slot) => {
                     const span = sheetRowSpan(slot.chip.time, slot.chip.durationHours);
-                    const laneWidth = 50;
+                    const laneWidth = 100 / slot.lanes;
                     const widthPct = laneWidth / slot.cols;
                     const leftPct = slot.lane * laneWidth + (slot.col / slot.cols) * laneWidth;
                     return (
