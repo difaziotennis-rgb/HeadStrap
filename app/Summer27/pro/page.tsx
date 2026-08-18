@@ -3,12 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
+  BOOKING_HOURS,
   clinicProIds,
   clinicTimeLabel,
   findProByLogin,
   formatDateInput,
   formatHour,
   formatPrettyDate,
+  lessonRateForPro,
   parseDateInput,
   proDayHours,
   s27Pros,
@@ -16,20 +18,25 @@ import {
   type ProDef,
 } from "../summer27-data";
 import { getCatalog, getLivePros, saveCatalog } from "../schedule";
-import { bookingProId, lessonSpan } from "../lesson-slots";
+import { bookingProId, lessonConflict, lessonSpan } from "../lesson-slots";
 import {
   KEYS,
   loadList,
-  saveList,
+  loadRecord,
+  uniqueCourts,
   type S27ClinicBooking,
+  type S27CourtBooking,
   type S27LessonBooking,
+  type S27MemberAccount,
 } from "../storage";
+import { clientsForPro, persistLessons, type S27ProClient } from "../pro-clients";
 import {
   clearS27ProSession,
   writeS27ProSession,
 } from "../pro-session";
 import { useS27ProSession } from "../use-s27-pro-session";
 import ProHoursEditor from "../ProHoursEditor";
+import { SHEET_HEIGHT, SHEET_ROWS, SheetHourLines, SheetTimeColumn, sheetRowIndex, sheetRowSpan } from "../sheet-grid";
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 
@@ -68,6 +75,7 @@ function lessonHours(b: S27LessonBooking) {
 type DayItem = {
   key: string;
   time: number;
+  durationHours: number;
   kind: "lesson" | "clinic" | "request";
   title: string;
   sub: string;
@@ -80,10 +88,17 @@ export default function ProPortalPage() {
   const [pros, setPros] = useState<ProDef[]>(s27Pros);
   const [lessons, setLessons] = useState<S27LessonBooking[]>([]);
   const [clinics, setClinics] = useState<S27ClinicBooking[]>([]);
+  const [members, setMembers] = useState<S27MemberAccount[]>([]);
+  const [courts, setCourts] = useState<S27CourtBooking[]>([]);
+  const [savedClients, setSavedClients] = useState<S27ProClient[]>([]);
   const [tab, setTab] = useState<Tab>("week");
   const [weekStart, setWeekStart] = useState(() => startOfWeekMonday(new Date()));
   const [hoursDraft, setHoursDraft] = useState(proDayHours(s27Pros[0]));
   const [savedNote, setSavedNote] = useState<string | null>(null);
+  const [bookMember, setBookMember] = useState("");
+  const [bookDate, setBookDate] = useState(() => formatDateInput(new Date()));
+  const [bookHour, setBookHour] = useState("9");
+  const [bookMsg, setBookMsg] = useState<string | null>(null);
 
   const today = formatDateInput(new Date());
   const thisWeekStart = useMemo(() => startOfWeekMonday(parseDateInput(today)), [today]);
@@ -97,6 +112,8 @@ export default function ProPortalPage() {
     }
     setLessons(loadList<S27LessonBooking>(KEYS.lessons));
     setClinics(loadList<S27ClinicBooking>(KEYS.clinics));
+    setMembers(loadList<S27MemberAccount>(KEYS.members));
+    setCourts(uniqueCourts(loadRecord<S27CourtBooking>(KEYS.courts)));
   }
 
   useEffect(() => {
@@ -107,6 +124,12 @@ export default function ProPortalPage() {
 
   useEffect(() => {
     if (pro) setHoursDraft(proDayHours(pro));
+  }, [pro?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!pro) return;
+    persistLessons(loadList<S27LessonBooking>(KEYS.lessons));
+    setSavedClients(clientsForPro(pro.id));
   }, [pro?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function signIn(e: React.FormEvent) {
@@ -159,6 +182,7 @@ export default function ProPortalPage() {
       map[b.date].push({
         key: `lesson-${b.id}`,
         time: b.hour,
+        durationHours: lessonHours(b),
         kind: requested ? "request" : "lesson",
         title: requested ? "Request" : "Lesson",
         sub: `${b.clientName.split(" ")[0]} · ${b.duration}m`,
@@ -173,6 +197,7 @@ export default function ProPortalPage() {
         map[iso].push({
           key: `clinic-${clinic.id}-${iso}`,
           time: Number(clinic.startHour) || 8,
+          durationHours: Number(clinic.durationHours) || 1,
           kind: "clinic",
           title: clinic.name.replace(/\s+Clinic$/i, ""),
           sub: `${clinicTimeLabel(clinic)} · ${count} in`,
@@ -210,33 +235,104 @@ export default function ProPortalPage() {
   const lessonHrsAll = confirmed.reduce((sum, b) => sum + lessonHours(b), 0);
 
   const clients = useMemo(() => {
-    const map = new Map<
-      string,
-      { name: string; email: string; count: number; hours: number; amount: number; last: string }
-    >();
+    const stats = new Map<string, { count: number; hours: number; last: string }>();
+    const keyFor = (memberNumber?: string, email?: string, name?: string) =>
+      memberNumber ? `m:${memberNumber}` : email?.trim() ? `e:${email.trim().toLowerCase()}` : `n:${(name || "").trim().toLowerCase()}`;
     for (const b of confirmed) {
-      const key = (b.clientEmail || b.clientName).trim().toLowerCase();
-      const row = map.get(key) || {
-        name: b.clientName,
-        email: b.clientEmail,
-        count: 0,
-        hours: 0,
-        amount: 0,
-        last: b.date,
-      };
+      const key = keyFor(b.memberNumber, b.clientEmail, b.clientName);
+      const row = stats.get(key) || { count: 0, hours: 0, last: b.date };
       row.count += 1;
       row.hours += lessonHours(b);
-      row.amount += Number(b.amount) || 0;
       if (b.date > row.last) row.last = b.date;
-      map.set(key, row);
+      stats.set(key, row);
     }
-    return [...map.values()].sort((a, b) => b.last.localeCompare(a.last) || a.name.localeCompare(b.name));
-  }, [confirmed]);
+    const fromSaved = savedClients.map((c) => {
+      const key = keyFor(c.memberNumber, c.email, c.name);
+      const s = stats.get(key);
+      return {
+        key: c.id,
+        name: c.name,
+        email: c.email,
+        phone: c.phone,
+        memberNumber: c.memberNumber,
+        count: s?.count || 0,
+        hours: s?.hours || 0,
+        last: s?.last || "",
+      };
+    });
+    const seen = new Set(fromSaved.map((c) => keyFor(c.memberNumber, c.email, c.name)));
+    for (const b of confirmed) {
+      const key = keyFor(b.memberNumber, b.clientEmail, b.clientName);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const s = stats.get(key);
+      fromSaved.push({
+        key,
+        name: b.clientName,
+        email: b.clientEmail,
+        phone: b.clientPhone || "",
+        memberNumber: b.memberNumber,
+        count: s?.count || 1,
+        hours: s?.hours || lessonHours(b),
+        last: s?.last || b.date,
+      });
+    }
+    return fromSaved.sort((a, b) => (b.last || "").localeCompare(a.last || "") || a.name.localeCompare(b.name));
+  }, [confirmed, savedClients]);
 
   function setLessonStatus(id: string, status: "accepted" | "declined") {
     const next = lessons.map((x) => (x.id === id ? { ...x, requestStatus: status } : x));
-    saveList(KEYS.lessons, next);
+    persistLessons(next);
     setLessons(next);
+    if (pro) setSavedClients(clientsForPro(pro.id));
+  }
+
+  function scheduleLesson(e: React.FormEvent) {
+    e.preventDefault();
+    if (!pro) return;
+    const member = members.find((m) => m.memberNumber === bookMember);
+    if (!member) {
+      setBookMsg("Pick a member.");
+      return;
+    }
+    const hour = Number(bookHour);
+    const conflict = lessonConflict({
+      pro,
+      date: bookDate,
+      hour,
+      duration: "60",
+      lessons,
+      courts,
+    });
+    if (conflict) {
+      setBookMsg(conflict);
+      return;
+    }
+    const booking: S27LessonBooking = {
+      id: `lesson-${Date.now()}`,
+      date: bookDate,
+      hour,
+      duration: "60",
+      clientName: member.name,
+      clientEmail: member.email,
+      clientPhone: member.phone || "",
+      memberNumber: member.memberNumber,
+      proId: pro.id,
+      proName: pro.name,
+      courtId: pro.courtId,
+      focus: "",
+      amount: lessonRateForPro(pro, true),
+      paymentStatus: "paid",
+      paymentMethod: "manual",
+      requestStatus: "accepted",
+      createdAt: new Date().toISOString(),
+    };
+    const next = [...lessons, booking];
+    persistLessons(next);
+    setLessons(next);
+    setSavedClients(clientsForPro(pro.id));
+    setBookMember("");
+    setBookMsg(`Saved ${member.name} · ${formatPrettyDate(bookDate)} ${formatHour(hour)}.`);
   }
 
   function saveHours() {
@@ -393,14 +489,22 @@ export default function ProPortalPage() {
               →
             </button>
           </div>
-          <div className="-mx-4 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:overflow-visible sm:px-0">
-            <div className="min-w-[52rem] overflow-hidden rounded-2xl border border-[#e8e5df] bg-white sm:min-w-0">
-              <div className="grid grid-cols-7 border-b border-[#ece8e2] bg-[#faf9f7]">
+          <div className="-mx-4 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:overflow-x-auto sm:px-0">
+            <div className="min-w-[52rem] overflow-hidden rounded-2xl border border-[#e8e5df] bg-white">
+              <div className="grid grid-cols-[3.25rem_repeat(7,minmax(0,1fr))] border-b border-[#ece8e2] bg-[#faf9f7] sm:grid-cols-[3.75rem_repeat(7,minmax(0,1fr))]">
+                <div className="sticky left-0 z-10 border-r border-[#ece8e2] bg-[#faf9f7] px-1 py-2 text-[10px] font-medium uppercase tracking-[0.1em] text-[#8a8477] sm:px-2 sm:py-2.5">
+                  Time
+                </div>
                 {days.map((iso, i) => {
                   const d = parseDateInput(iso);
                   const isToday = iso === today;
                   return (
-                    <div key={iso} className={`border-r border-[#ece8e2] px-1 py-2 text-center last:border-r-0 ${isToday ? "bg-[#dbeafe]" : ""}`}>
+                    <div
+                      key={iso}
+                      className={`border-r border-[#ece8e2] px-1 py-2 text-center last:border-r-0 sm:px-2 sm:py-2.5 ${
+                        isToday ? "bg-[#dbeafe]" : ""
+                      }`}
+                    >
                       <p className="text-[9px] uppercase tracking-[0.1em] text-[#64748b]">{DAY_LABELS[i]}</p>
                       <p className={`mt-0.5 text-[13px] font-semibold ${isToday ? "text-[#1e3a8a]" : "text-[#0f172a]"}`}>
                         {d.getDate()}
@@ -409,19 +513,34 @@ export default function ProPortalPage() {
                   );
                 })}
               </div>
-              <div className="grid grid-cols-7">
+              <div
+                className="grid grid-cols-[3.25rem_repeat(7,minmax(0,1fr))] sm:grid-cols-[3.75rem_repeat(7,minmax(0,1fr))]"
+                style={{ minHeight: SHEET_HEIGHT }}
+              >
+                <SheetTimeColumn />
                 {days.map((iso) => {
                   const items = itemsByDay[iso] || [];
+                  const isToday = iso === today;
                   return (
-                    <div key={iso} className="min-h-[14rem] border-r border-[#ece8e2] p-1.5 last:border-r-0">
-                      {items.length === 0 ? (
-                        <p className="px-0.5 py-2 text-center text-[11px] text-[#d0cbc3]">—</p>
-                      ) : (
-                        <div className="space-y-1">
-                          {items.map((item) => (
+                    <div
+                      key={iso}
+                      className={`relative grid border-r border-[#ece8e2] last:border-r-0 ${
+                        isToday ? "bg-[#f0f9ff]" : "bg-white"
+                      }`}
+                      style={{ gridTemplateRows: SHEET_ROWS, height: SHEET_HEIGHT, minHeight: SHEET_HEIGHT }}
+                    >
+                      <SheetHourLines />
+                      {items.map((item) => {
+                        const row = sheetRowIndex(item.time);
+                        const span = sheetRowSpan(item.time, item.durationHours);
+                        return (
+                          <div
+                            key={item.key}
+                            className="z-[2] min-h-0 p-px"
+                            style={{ gridRow: `${row + 1} / span ${span}` }}
+                          >
                             <div
-                              key={item.key}
-                              className={`rounded-md px-1.5 py-1.5 text-white ${
+                              className={`flex h-full w-full flex-col justify-center overflow-hidden rounded-md px-1 py-0.5 text-white sm:px-1.5 ${
                                 item.kind === "clinic"
                                   ? "bg-[#16a34a]"
                                   : item.kind === "request"
@@ -429,13 +548,14 @@ export default function ProPortalPage() {
                                     : "bg-[#3b82f6]"
                               }`}
                             >
-                              <p className="text-[9px] font-semibold tabular-nums text-white/85">{formatHour(item.time)}</p>
-                              <p className="mt-0.5 truncate text-[10px] font-semibold leading-snug">{item.title}</p>
-                              <p className="truncate text-[9px] text-white/80">{item.sub}</p>
+                              <p className="truncate text-[10px] font-semibold leading-tight sm:text-[11px]">{item.title}</p>
+                              {span > 1 ? (
+                                <p className="mt-0.5 truncate text-[9px] text-white/80 sm:text-[10px]">{item.sub}</p>
+                              ) : null}
                             </div>
-                          ))}
-                        </div>
-                      )}
+                          </div>
+                        );
+                      })}
                     </div>
                   );
                 })}
@@ -446,27 +566,77 @@ export default function ProPortalPage() {
       ) : null}
 
       {tab === "clients" ? (
-        <section className="mt-4 overflow-hidden rounded-2xl border border-[#e8e5df] bg-white">
-          <p className="border-b border-[#f0ede8] px-4 py-3 text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">
-            {clients.length} client{clients.length === 1 ? "" : "s"}
-          </p>
-          {clients.length === 0 ? (
-            <p className="px-4 py-5 text-[14px] text-[#8a8477]">No lessons on the book yet.</p>
-          ) : (
-            <ul className="divide-y divide-[#f0ede8]">
-              {clients.map((c) => (
-                <li key={c.email || c.name} className="flex flex-wrap items-baseline justify-between gap-2 px-4 py-3">
-                  <div>
-                    <p className="text-[15px] font-medium">{c.name}</p>
-                    <p className="text-[12px] text-[#8a8477]">Last {formatPrettyDate(c.last)}</p>
-                  </div>
-                  <p className="text-[13px] text-[#6b665e]">
-                    {c.count} lesson{c.count === 1 ? "" : "s"} · {formatHrs(c.hours)}
-                  </p>
-                </li>
+        <section className="mt-4 space-y-3">
+          <form onSubmit={scheduleLesson} className="grid gap-2 rounded-2xl border border-[#e8e5df] bg-white p-4 sm:grid-cols-4">
+            <select
+              className="rounded-lg border border-[#e8e5df] bg-white px-2.5 py-2 text-[13px]"
+              value={bookMember}
+              onChange={(e) => setBookMember(e.target.value)}
+            >
+              <option value="">Member</option>
+              {members
+                .slice()
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map((m) => (
+                  <option key={m.memberNumber} value={m.memberNumber}>
+                    {m.name} · #{m.memberNumber}
+                  </option>
+                ))}
+            </select>
+            <input
+              type="date"
+              className="rounded-lg border border-[#e8e5df] bg-white px-2.5 py-2 text-[13px]"
+              value={bookDate}
+              onChange={(e) => setBookDate(e.target.value)}
+            />
+            <select
+              className="rounded-lg border border-[#e8e5df] bg-white px-2.5 py-2 text-[13px]"
+              value={bookHour}
+              onChange={(e) => setBookHour(e.target.value)}
+            >
+              {BOOKING_HOURS.map((h) => (
+                <option key={h} value={h}>
+                  {formatHour(h)}
+                </option>
               ))}
-            </ul>
-          )}
+            </select>
+            <button type="submit" className="rounded-lg bg-[#1a1a1a] px-3 py-2 text-[12px] font-medium text-white">
+              Schedule lesson
+            </button>
+            {bookMsg ? (
+              <p className={`sm:col-span-4 text-[13px] ${bookMsg.startsWith("Saved") ? "text-[#3d5c34]" : "text-[#991b1b]"}`}>
+                {bookMsg}
+              </p>
+            ) : null}
+          </form>
+          <div className="overflow-hidden rounded-2xl border border-[#e8e5df] bg-white">
+            <p className="border-b border-[#f0ede8] px-4 py-3 text-[11px] uppercase tracking-[0.12em] text-[#8a8477]">
+              {clients.length} client{clients.length === 1 ? "" : "s"}
+            </p>
+            {clients.length === 0 ? (
+              <p className="px-4 py-5 text-[14px] text-[#8a8477]">No clients yet — schedule a lesson to add one.</p>
+            ) : (
+              <ul className="divide-y divide-[#f0ede8]">
+                {clients.map((c) => (
+                  <li key={c.key} className="flex flex-wrap items-baseline justify-between gap-2 px-4 py-3">
+                    <div>
+                      <p className="text-[15px] font-medium">{c.name}</p>
+                      <p className="text-[12px] text-[#8a8477]">
+                        {c.memberNumber ? `#${c.memberNumber}` : "Guest"}
+                        {c.phone ? ` · ${c.phone}` : ""}
+                        {c.email ? ` · ${c.email}` : ""}
+                      </p>
+                    </div>
+                    <p className="text-[13px] text-[#6b665e]">
+                      {c.count
+                        ? `${c.count} lesson${c.count === 1 ? "" : "s"} · ${formatHrs(c.hours)}${c.last ? ` · last ${formatPrettyDate(c.last)}` : ""}`
+                        : "Saved"}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </section>
       ) : null}
 

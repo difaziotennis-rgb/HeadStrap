@@ -9,6 +9,7 @@ import {
   formatDateInput,
   formatHour,
   formatPrettyDate,
+  lessonDurationHours,
   lessonProLabel,
   parseDateInput,
 } from "../summer27-data";
@@ -26,6 +27,7 @@ import {
 import { bookingProId } from "../lesson-slots";
 import { PaidPill } from "./ui";
 import WeatherClosePanel from "./WeatherClosePanel";
+import { SHEET_HEIGHT, SHEET_ROWS, SheetHourLines, SheetTimeColumn, sheetRowIndex, sheetRowSpan } from "../sheet-grid";
 
 type Props = {
   today: string;
@@ -80,6 +82,7 @@ type ChipRef =
 type DayChip = {
   key: string;
   time: number;
+  durationHours: number;
   kind: "court" | "lesson" | "clinic" | "event" | "hold" | "request";
   label: string;
   sub?: string;
@@ -155,8 +158,9 @@ function chipClass(kind: DayChip["kind"]): string {
   }
 }
 
-function ChipCard({ chip, onOpen }: { chip: DayChip; onOpen: (chip: DayChip) => void }) {
+function ChipCard({ chip, onOpen, compact }: { chip: DayChip; onOpen: (chip: DayChip) => void; compact?: boolean }) {
   const solid = chip.kind !== "court";
+  const pad = compact ? "px-0.5 py-0 sm:px-1" : "px-1 py-0.5 sm:px-1.5 sm:py-1";
   return (
     <button
       type="button"
@@ -164,25 +168,19 @@ function ChipCard({ chip, onOpen }: { chip: DayChip; onOpen: (chip: DayChip) => 
         e.stopPropagation();
         onOpen(chip);
       }}
-      className={`w-full rounded-md border px-1 py-1 text-left sm:rounded-lg sm:px-1.5 sm:py-1.5 ${chipClass(chip.kind)}`}
+      title={`${formatHour(chip.time)} · ${chip.label}${chip.sub ? ` · ${chip.sub}` : ""}`}
+      className={`flex h-full w-full flex-col justify-center overflow-hidden rounded-md border text-left ${pad} ${chipClass(chip.kind)}`}
     >
       <span
-        className={`block text-[9px] font-semibold tabular-nums sm:text-[10px] ${
-          solid ? "text-white/85" : "text-[#713f12]"
-        }`}
-      >
-        {formatHour(chip.time)}
-      </span>
-      <span
-        className={`mt-0.5 block truncate text-[10px] font-semibold leading-snug sm:text-[11px] ${
+        className={`truncate text-[10px] font-semibold leading-tight sm:text-[11px] ${
           solid ? "text-white" : "text-[#1a1a1a]"
         }`}
       >
         {chip.label}
       </span>
-      {chip.sub ? (
+      {!compact && chip.sub ? (
         <span
-          className={`mt-0.5 block truncate text-[9px] sm:text-[10px] ${
+          className={`mt-0.5 truncate text-[9px] sm:text-[10px] ${
             solid ? "text-white/80" : "text-[#713f12]"
           }`}
         >
@@ -197,6 +195,13 @@ function lanesForChip(chip: DayChip): { both: boolean; c1: boolean; c2: boolean 
   const c1 = chip.courts.includes("court-1");
   const c2 = chip.courts.includes("court-2");
   return { both: c1 && c2, c1, c2 };
+}
+
+function chipColumn(chip: DayChip) {
+  const lanes = lanesForChip(chip);
+  if (lanes.both || (lanes.c1 && lanes.c2)) return "1 / -1";
+  if (lanes.c2 && !lanes.c1) return "2";
+  return "1";
 }
 
 function clinicDefFor(
@@ -237,24 +242,6 @@ function visibleWeekChips(chips: DayChip[], view: WeekView, today: string): DayC
 function chipForView(chip: DayChip, view: WeekView): DayChip {
   if (chip.kind !== "clinic" || view === "board" || !chip.prosLabel) return chip;
   return { ...chip, sub: chip.prosLabel };
-}
-
-/** Keep both-court + single-court chips in true time order (not both dumped at top). */
-function dayChipBands(chips: DayChip[]) {
-  const times = Array.from(new Set(chips.map((c) => c.time))).sort((a, b) => a - b);
-  return times.map((time) => {
-    const at = chips.filter((c) => c.time === time);
-    const both = at.filter((c) => lanesForChip(c).both);
-    const c1 = at.filter((c) => {
-      const l = lanesForChip(c);
-      return l.c1 && !l.both;
-    });
-    const c2 = at.filter((c) => {
-      const l = lanesForChip(c);
-      return l.c2 && !l.both;
-    });
-    return { time, both, c1, c2 };
-  });
 }
 
 export default function TodayBoard({
@@ -314,6 +301,7 @@ export default function TodayBoard({
       map[b.date].push({
         key: `court-${b.id}`,
         time: b.hour,
+        durationHours: Number(b.durationHours) || 1,
         kind: "court",
         label: b.clientName.split(" ")[0],
         sub: `${b.durationHours}h`,
@@ -331,6 +319,7 @@ export default function TodayBoard({
         map[b.date].push({
           key: `req-${b.id}`,
           time: b.hour,
+          durationHours: lessonDurationHours(b.duration),
           kind: "request",
           label: "Request",
           sub: b.clientName.split(" ")[0],
@@ -343,6 +332,7 @@ export default function TodayBoard({
       map[b.date].push({
         key: `lesson-${b.id}`,
         time: b.hour,
+        durationHours: lessonDurationHours(b.duration),
         kind: "lesson",
         label: "Lesson",
         sub: b.clientName.split(" ")[0],
@@ -366,6 +356,7 @@ export default function TodayBoard({
       map[b.date].push({
         key: `clinic-${key}`,
         time: clinicStartHour(catalog, b.clinicId, b.clinicName),
+        durationHours: Number(def?.durationHours) || 1,
         kind: "clinic",
         label: shortClinicName(b.clinicName),
         sub: `${count} in`,
@@ -391,6 +382,7 @@ export default function TodayBoard({
         map[iso].push({
           key: `clinic-${key}`,
           time: Number.isFinite(start) ? start : 8,
+          durationHours: Number(def.durationHours) || 1,
           kind: "clinic",
           label: shortClinicName(def.name),
           sub: "0 in",
@@ -413,6 +405,7 @@ export default function TodayBoard({
         map[iso].push({
           key: `event-${b.eventId}-${iso}`,
           time: 16,
+          durationHours: 3,
           kind: "event",
           label: b.eventTitle.length > 18 ? `${b.eventTitle.slice(0, 16)}…` : b.eventTitle,
           sub: `${count} RSVP`,
@@ -430,6 +423,7 @@ export default function TodayBoard({
         map[iso].push({
           key: `event-${def.id}-${iso}`,
           time: 16,
+          durationHours: 3,
           kind: "event",
           label: def.title.length > 18 ? `${def.title.slice(0, 16)}…` : def.title,
           sub: "Event",
@@ -447,6 +441,7 @@ export default function TodayBoard({
       map[b.date].push({
         key: `hold-${b.id}`,
         time: b.startHour,
+        durationHours: Number(b.durationHours) || 1,
         kind: "hold",
         label: b.kind === "open" ? "Open" : "Hold",
         sub: (b.kind === "open" ? "Released" : b.reason).slice(0, 12),
@@ -597,9 +592,12 @@ export default function TodayBoard({
         ))}
       </div>
 
-      <div className="-mx-4 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:overflow-visible sm:px-0">
-        <div className="min-w-[52rem] overflow-hidden rounded-2xl border border-[#e8e5df] bg-white sm:min-w-0">
-          <div className="grid grid-cols-7 border-b border-[#ece8e2] bg-[#faf9f7]">
+      <div className="-mx-4 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:overflow-x-auto sm:px-0">
+        <div className="min-w-[56rem] overflow-hidden rounded-2xl border border-[#e8e5df] bg-white">
+          <div className="grid grid-cols-[3.25rem_repeat(7,minmax(0,1fr))] border-b border-[#ece8e2] bg-[#faf9f7] sm:grid-cols-[3.75rem_repeat(7,minmax(0,1fr))]">
+            <div className="sticky left-0 z-10 border-r border-[#ece8e2] bg-[#faf9f7] px-1 py-2 text-[10px] font-medium uppercase tracking-[0.1em] text-[#8a8477] sm:px-2 sm:py-2.5">
+              Time
+            </div>
             {days.map((iso, i) => {
               const d = parseDateInput(iso);
               const isToday = iso === today;
@@ -631,19 +629,29 @@ export default function TodayBoard({
                   >
                     {d.getDate()}
                   </p>
+                  <div className="mt-1 grid grid-cols-2 gap-0">
+                    <p className={`text-[8px] font-semibold uppercase tracking-[0.08em] ${selected ? "text-white/70" : "text-[#8a8477]"}`}>
+                      Ct 3
+                    </p>
+                    <p className={`text-[8px] font-semibold uppercase tracking-[0.08em] ${selected ? "text-white/70" : "text-[#8a8477]"}`}>
+                      Ct 4
+                    </p>
+                  </div>
                 </button>
               );
             })}
           </div>
-          <div className="grid grid-cols-7">
+          <div
+            className="grid grid-cols-[3.25rem_repeat(7,minmax(0,1fr))] sm:grid-cols-[3.75rem_repeat(7,minmax(0,1fr))]"
+            style={{ minHeight: SHEET_HEIGHT }}
+          >
+            <SheetTimeColumn />
             {days.map((iso) => {
               const chips = visibleWeekChips(chipsByDay[iso] || [], weekView, today).map((c) =>
                 chipForView(c, weekView)
               );
               const isToday = iso === today;
               const selected = iso === selectedDate;
-              const bands = dayChipBands(chips);
-              const empty = chips.length === 0;
               return (
                 <div
                   key={iso}
@@ -656,49 +664,38 @@ export default function TodayBoard({
                       setSelectedDate(iso);
                     }
                   }}
-                  className={`min-h-[14rem] cursor-pointer border-r border-[#ece8e2] p-1 text-left last:border-r-0 sm:min-h-[16rem] sm:p-1.5 ${
+                  className={`relative grid cursor-pointer border-r border-[#ece8e2] last:border-r-0 ${
                     selected
                       ? "bg-[#eff6ff] ring-2 ring-inset ring-[#3b82f6]"
                       : isToday
                         ? "bg-[#f0f9ff]"
-                        : "bg-white hover:bg-[#f8fafc]"
+                        : "bg-white"
                   }`}
+                  style={{
+                    gridTemplateRows: SHEET_ROWS,
+                    gridTemplateColumns: "1fr 1fr",
+                    height: SHEET_HEIGHT,
+                    minHeight: SHEET_HEIGHT,
+                  }}
                 >
-                  {empty ? (
-                    <p className="px-0.5 py-2 text-center text-[10px] text-[#d0cbc3] sm:text-[11px]">—</p>
-                  ) : (
-                    <div className="space-y-1">
-                      <div className="grid grid-cols-2 gap-1">
-                        <p className="text-center text-[8px] font-semibold uppercase tracking-[0.12em] text-[#8a8477] sm:text-[9px]">
-                          Ct 1
-                        </p>
-                        <p className="border-l border-[#ece8e2] pl-1 text-center text-[8px] font-semibold uppercase tracking-[0.12em] text-[#8a8477] sm:text-[9px]">
-                          Ct 2
-                        </p>
+                  <SheetHourLines />
+                  <div className="pointer-events-none absolute inset-y-0 left-1/2 z-[1] w-px bg-[#ece8e2]" />
+                  {chips.map((chip) => {
+                    const row = sheetRowIndex(chip.time);
+                    const span = sheetRowSpan(chip.time, chip.durationHours);
+                    return (
+                      <div
+                        key={chip.key}
+                        className="z-[2] min-h-0 p-px"
+                        style={{
+                          gridRow: `${row + 1} / span ${span}`,
+                          gridColumn: chipColumn(chip),
+                        }}
+                      >
+                        <ChipCard chip={chip} onOpen={openChip} compact={span <= 1} />
                       </div>
-                      {bands.map((band) => (
-                        <div key={`${iso}-${band.time}`} className="space-y-1">
-                          {band.both.map((chip) => (
-                            <ChipCard key={chip.key} chip={chip} onOpen={openChip} />
-                          ))}
-                          {(band.c1.length > 0 || band.c2.length > 0) && (
-                            <div className="grid grid-cols-2 gap-1">
-                              <div className="min-w-0 space-y-1">
-                                {band.c1.map((chip) => (
-                                  <ChipCard key={chip.key} chip={chip} onOpen={openChip} />
-                                ))}
-                              </div>
-                              <div className="min-w-0 space-y-1 border-l border-[#ece8e2] pl-1">
-                                {band.c2.map((chip) => (
-                                  <ChipCard key={chip.key} chip={chip} onOpen={openChip} />
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                    );
+                  })}
                 </div>
               );
             })}
