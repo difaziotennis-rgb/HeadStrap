@@ -27,7 +27,15 @@ import {
 import { bookingProId } from "../lesson-slots";
 import { PaidPill } from "./ui";
 import WeatherClosePanel from "./WeatherClosePanel";
-import { SHEET_HEIGHT, SHEET_ROWS, SheetHourLines, SheetTimeColumn, sheetRowIndex, sheetRowSpan } from "../sheet-grid";
+import {
+  SHEET_HEIGHT,
+  SHEET_ROWS,
+  SheetHourLines,
+  SheetTimeColumn,
+  packOverlaps,
+  sheetBlockStyle,
+  sheetRowSpan,
+} from "../sheet-grid";
 
 type Props = {
   today: string;
@@ -191,17 +199,27 @@ function ChipCard({ chip, onOpen, compact }: { chip: DayChip; onOpen: (chip: Day
   );
 }
 
-function lanesForChip(chip: DayChip): { both: boolean; c1: boolean; c2: boolean } {
-  const c1 = chip.courts.includes("court-1");
-  const c2 = chip.courts.includes("court-2");
-  return { both: c1 && c2, c1, c2 };
-}
+type PlacedChip = {
+  chip: DayChip;
+  lane: 0 | 1;
+  col: number;
+  cols: number;
+};
 
-function chipColumn(chip: DayChip) {
-  const lanes = lanesForChip(chip);
-  if (lanes.both || (lanes.c1 && lanes.c2)) return "1 / -1";
-  if (lanes.c2 && !lanes.c1) return "2";
-  return "1";
+function placeDayChips(chips: DayChip[]): PlacedChip[] {
+  const out: PlacedChip[] = [];
+  (["court-1", "court-2"] as const).forEach((laneId, lane) => {
+    const inLane = chips.filter((c) => c.courts.includes(laneId));
+    for (const packed of packOverlaps(inLane)) {
+      out.push({
+        chip: packed.item,
+        lane: lane === 0 ? 0 : 1,
+        col: packed.col,
+        cols: packed.cols,
+      });
+    }
+  });
+  return out;
 }
 
 function clinicDefFor(
@@ -226,6 +244,8 @@ function visibleWeekChips(chips: DayChip[], view: WeekView, today: string): DayC
   if (view === "clinics") return chips.filter((c) => c.kind === "clinic");
   if (view === "court") {
     return chips.filter((c) => {
+      if (c.kind === "court") return c.courts.includes("court-1");
+      if (c.kind === "hold") return c.courts.includes("court-1");
       if (c.kind === "event") return true;
       if (c.kind === "clinic" || c.kind === "lesson" || c.kind === "request") {
         return (c.proIds || []).includes("derek");
@@ -296,8 +316,10 @@ export default function TodayBoard({
     const map: Record<string, DayChip[]> = {};
     for (const iso of days) map[iso] = [];
 
+    const seenCourt = new Set<string>();
     for (const b of courts) {
-      if (!map[b.date]) continue;
+      if (!map[b.date] || seenCourt.has(b.id)) continue;
+      seenCourt.add(b.id);
       map[b.date].push({
         key: `court-${b.id}`,
         time: b.hour,
@@ -650,6 +672,7 @@ export default function TodayBoard({
               const chips = visibleWeekChips(chipsByDay[iso] || [], weekView, today).map((c) =>
                 chipForView(c, weekView)
               );
+              const placed = placeDayChips(chips);
               const isToday = iso === today;
               const selected = iso === selectedDate;
               return (
@@ -664,35 +687,31 @@ export default function TodayBoard({
                       setSelectedDate(iso);
                     }
                   }}
-                  className={`relative grid cursor-pointer border-r border-[#ece8e2] last:border-r-0 ${
+                  className={`relative cursor-pointer border-r border-[#ece8e2] last:border-r-0 ${
                     selected
                       ? "bg-[#eff6ff] ring-2 ring-inset ring-[#3b82f6]"
                       : isToday
                         ? "bg-[#f0f9ff]"
                         : "bg-white"
                   }`}
-                  style={{
-                    gridTemplateRows: SHEET_ROWS,
-                    gridTemplateColumns: "1fr 1fr",
-                    height: SHEET_HEIGHT,
-                    minHeight: SHEET_HEIGHT,
-                  }}
+                  style={{ height: SHEET_HEIGHT, minHeight: SHEET_HEIGHT }}
                 >
-                  <SheetHourLines />
+                  <div className="pointer-events-none absolute inset-0 grid" style={{ gridTemplateRows: SHEET_ROWS }}>
+                    <SheetHourLines />
+                  </div>
                   <div className="pointer-events-none absolute inset-y-0 left-1/2 z-[1] w-px bg-[#ece8e2]" />
-                  {chips.map((chip) => {
-                    const row = sheetRowIndex(chip.time);
-                    const span = sheetRowSpan(chip.time, chip.durationHours);
+                  {placed.map((slot) => {
+                    const span = sheetRowSpan(slot.chip.time, slot.chip.durationHours);
+                    const laneWidth = 50;
+                    const widthPct = laneWidth / slot.cols;
+                    const leftPct = slot.lane * laneWidth + (slot.col / slot.cols) * laneWidth;
                     return (
                       <div
-                        key={chip.key}
-                        className="z-[2] min-h-0 p-px"
-                        style={{
-                          gridRow: `${row + 1} / span ${span}`,
-                          gridColumn: chipColumn(chip),
-                        }}
+                        key={`${slot.chip.key}-${slot.lane}`}
+                        className="absolute z-[2] box-border py-px"
+                        style={sheetBlockStyle(slot.chip.time, slot.chip.durationHours, leftPct, widthPct)}
                       >
-                        <ChipCard chip={chip} onOpen={openChip} compact={span <= 1} />
+                        <ChipCard chip={slot.chip} onOpen={openChip} compact={span <= 1 || slot.cols > 1} />
                       </div>
                     );
                   })}

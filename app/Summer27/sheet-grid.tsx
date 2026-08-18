@@ -25,6 +25,67 @@ export function sheetRowSpan(start: number, durationHours: number) {
   return Math.max(1, COURT_SHEET_HOURS.filter((h) => hoursOverlap(start, dur, h)).length);
 }
 
+export type TimedBlock = { time: number; durationHours: number };
+
+/** Side-by-side columns for overlapping blocks in one lane. */
+export function packOverlaps<T extends TimedBlock>(items: T[]): Array<{ item: T; col: number; cols: number }> {
+  const sorted = items
+    .map((item, i) => ({
+      item,
+      i,
+      start: Number(item.time) || 0,
+      end: (Number(item.time) || 0) + Math.max(COURT_SLOT_HOURS, Number(item.durationHours) || COURT_SLOT_HOURS),
+    }))
+    .sort((a, b) => a.start - b.start || b.end - a.end || a.i - b.i);
+
+  const colEnd: number[] = [];
+  const colOf: number[] = sorted.map(() => 0);
+
+  sorted.forEach((row, idx) => {
+    let col = 0;
+    while (col < colEnd.length && colEnd[col] > row.start + 1e-9) col += 1;
+    if (col === colEnd.length) colEnd.push(row.end);
+    else colEnd[col] = row.end;
+    colOf[idx] = col;
+  });
+
+  const parent = sorted.map((_, i) => i);
+  const find = (x: number): number => (parent[x] === x ? x : (parent[x] = find(parent[x])));
+  sorted.forEach((a, i) => {
+    for (let j = i + 1; j < sorted.length; j++) {
+      const b = sorted[j];
+      if (b.start >= a.end - 1e-9) break;
+      if (a.start < b.end && b.start < a.end) {
+        parent[find(i)] = find(j);
+      }
+    }
+  });
+
+  const clusterCols = new Map<number, number>();
+  sorted.forEach((_, i) => {
+    const root = find(i);
+    clusterCols.set(root, Math.max(clusterCols.get(root) || 1, colOf[i] + 1));
+  });
+
+  return sorted.map((row, i) => ({
+    item: row.item,
+    col: colOf[i],
+    cols: Math.max(1, clusterCols.get(find(i)) || 1),
+  }));
+}
+
+export function sheetBlockStyle(time: number, durationHours: number, leftPct: number, widthPct: number) {
+  const row = sheetRowIndex(time);
+  const span = sheetRowSpan(time, durationHours);
+  const gap = 1;
+  return {
+    top: `calc(${row} * ${SHEET_ROW_SIZE})`,
+    height: `calc(${span} * ${SHEET_ROW_SIZE})`,
+    left: `calc(${leftPct}% + ${gap}px)`,
+    width: `calc(${widthPct}% - ${gap * 2}px)`,
+  };
+}
+
 const rowStyle = (i: number) => ({ gridRow: i + 1, minHeight: SHEET_ROW_SIZE, height: SHEET_ROW_SIZE });
 
 export function SheetTimeColumn() {

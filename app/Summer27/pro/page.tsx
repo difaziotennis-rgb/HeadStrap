@@ -36,7 +36,7 @@ import {
 } from "../pro-session";
 import { useS27ProSession } from "../use-s27-pro-session";
 import ProHoursEditor from "../ProHoursEditor";
-import { SHEET_HEIGHT, SHEET_ROWS, SheetHourLines, SheetTimeColumn, sheetRowIndex, sheetRowSpan } from "../sheet-grid";
+import { SHEET_HEIGHT, SHEET_ROWS, SheetHourLines, SheetTimeColumn, packOverlaps, sheetBlockStyle, sheetRowSpan } from "../sheet-grid";
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 
@@ -520,37 +520,41 @@ export default function ProPortalPage() {
                 <SheetTimeColumn />
                 {days.map((iso) => {
                   const items = itemsByDay[iso] || [];
+                  const placed = packOverlaps(items);
                   const isToday = iso === today;
                   return (
                     <div
                       key={iso}
-                      className={`relative grid border-r border-[#ece8e2] last:border-r-0 ${
+                      className={`relative border-r border-[#ece8e2] last:border-r-0 ${
                         isToday ? "bg-[#f0f9ff]" : "bg-white"
                       }`}
-                      style={{ gridTemplateRows: SHEET_ROWS, height: SHEET_HEIGHT, minHeight: SHEET_HEIGHT }}
+                      style={{ height: SHEET_HEIGHT, minHeight: SHEET_HEIGHT }}
                     >
-                      <SheetHourLines />
-                      {items.map((item) => {
-                        const row = sheetRowIndex(item.time);
-                        const span = sheetRowSpan(item.time, item.durationHours);
+                      <div className="pointer-events-none absolute inset-0 grid" style={{ gridTemplateRows: SHEET_ROWS }}>
+                        <SheetHourLines />
+                      </div>
+                      {placed.map((slot) => {
+                        const span = sheetRowSpan(slot.item.time, slot.item.durationHours);
+                        const widthPct = 100 / slot.cols;
+                        const leftPct = (slot.col / slot.cols) * 100;
                         return (
                           <div
-                            key={item.key}
-                            className="z-[2] min-h-0 p-px"
-                            style={{ gridRow: `${row + 1} / span ${span}` }}
+                            key={slot.item.key}
+                            className="absolute z-[2] box-border py-px"
+                            style={sheetBlockStyle(slot.item.time, slot.item.durationHours, leftPct, widthPct)}
                           >
                             <div
                               className={`flex h-full w-full flex-col justify-center overflow-hidden rounded-md px-1 py-0.5 text-white sm:px-1.5 ${
-                                item.kind === "clinic"
+                                slot.item.kind === "clinic"
                                   ? "bg-[#16a34a]"
-                                  : item.kind === "request"
+                                  : slot.item.kind === "request"
                                     ? "bg-[#ea580c]"
                                     : "bg-[#3b82f6]"
                               }`}
                             >
-                              <p className="truncate text-[10px] font-semibold leading-tight sm:text-[11px]">{item.title}</p>
-                              {span > 1 ? (
-                                <p className="mt-0.5 truncate text-[9px] text-white/80 sm:text-[10px]">{item.sub}</p>
+                              <p className="truncate text-[10px] font-semibold leading-tight sm:text-[11px]">{slot.item.title}</p>
+                              {span > 1 && slot.cols === 1 ? (
+                                <p className="mt-0.5 truncate text-[9px] text-white/80 sm:text-[10px]">{slot.item.sub}</p>
                               ) : null}
                             </div>
                           </div>
