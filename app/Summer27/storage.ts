@@ -1,4 +1,4 @@
-import { type CourtId } from "./summer27-data";
+import { rangesOverlap, type CourtId } from "./summer27-data";
 
 export const KEYS = {
   members: "s27_members_v1",
@@ -333,7 +333,33 @@ export function uniqueCourts(map: Record<string, S27CourtBooking>): S27CourtBook
   const values = Object.values(map || {}).filter(
     (b): b is S27CourtBooking => !!b && typeof b.id === "string"
   );
-  return values.filter((b, i, arr) => arr.findIndex((x) => x.id === b.id) === i);
+  const unique = values.filter((b, i, arr) => arr.findIndex((x) => x.id === b.id) === i);
+  return exclusiveCourtList(unique);
+}
+
+/** One court, one time — later overlapping bookings are dropped. */
+export function exclusiveCourtList(list: S27CourtBooking[]): S27CourtBooking[] {
+  const sorted = list
+    .filter((b) => b && typeof b.id === "string" && b.date && b.courtId)
+    .slice()
+    .sort((a, b) => {
+      const t = (a.createdAt || "").localeCompare(b.createdAt || "");
+      if (t) return t;
+      return a.hour - b.hour || a.id.localeCompare(b.id);
+    });
+  const kept: S27CourtBooking[] = [];
+  for (const booking of sorted) {
+    const hours = Number(booking.durationHours) || 1;
+    const clash = kept.some(
+      (row) =>
+        row.date === booking.date &&
+        row.courtId === booking.courtId &&
+        rangesOverlap(row.hour, Number(row.durationHours) || 1, booking.hour, hours)
+    );
+    if (clash) continue;
+    kept.push(booking);
+  }
+  return kept;
 }
 
 export function courtSlotKeys(date: string, courtId: string, hour: number, durationHours: number) {
@@ -356,7 +382,7 @@ export function putCourtBooking(map: Record<string, S27CourtBooking>, booking: S
 
 export function persistCourts(list: S27CourtBooking[]) {
   const rec: Record<string, S27CourtBooking> = {};
-  for (const booking of list) {
+  for (const booking of exclusiveCourtList(list)) {
     if (!booking?.id || !booking.date || !booking.courtId) continue;
     const keys = courtSlotKeys(booking.date, booking.courtId, booking.hour, booking.durationHours);
     if (keys.some((key) => rec[key] && rec[key].id !== booking.id)) continue;

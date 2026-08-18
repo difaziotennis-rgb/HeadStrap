@@ -91,6 +91,8 @@ export default function Summer27DirectorPage() {
       // keep going
     }
     setMembers(loadList<S27MemberAccount>(KEYS.members));
+    const nextCourts = uniqueCourts(loadRecord<S27CourtBooking>(KEYS.courts));
+    persistCourts(nextCourts);
     setCourts(uniqueCourts(loadRecord<S27CourtBooking>(KEYS.courts)));
     setClinics(loadList<S27ClinicBooking>(KEYS.clinics));
     setLessons(loadList<S27LessonBooking>(KEYS.lessons));

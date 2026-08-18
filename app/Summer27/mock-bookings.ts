@@ -30,7 +30,7 @@ import {
   type S27StringingOrder,
 } from "./storage";
 
-const MOCK_FLAG = "s27_mock_bookings_v8";
+const MOCK_FLAG = "s27_mock_bookings_v9";
 
 type Person = {
   name: string;
@@ -318,12 +318,24 @@ function clinicBlocksCourt(date: string, courtId: CourtId, hour: number, duratio
   return false;
 }
 
-function seedLessons(): S27LessonBooking[] {
+function seedLessons(courts: S27CourtBooking[]): S27LessonBooking[] {
   const out: S27LessonBooking[] = [];
   let n = 0;
   const derek = s27Pros.find((p) => p.id === "derek") || s27Pros[0];
   const maya = s27Pros.find((p) => p.id === "maya-ellison");
   const jonah = s27Pros.find((p) => p.id === "jonah-berkowitz");
+
+  function fits(courtId: CourtId, date: string, hour: number, durationHours = 1) {
+    if (clinicBlocksCourt(date, courtId, hour, durationHours)) return false;
+    return !courtSlotConflict({
+      date,
+      courtId,
+      hour,
+      durationHours,
+      bookings: courts,
+      lessons: out,
+    });
+  }
   for (let offset = -21; offset <= 14; offset++) {
     const d = dayOffset(offset);
     const day = d.getDay();
@@ -333,7 +345,7 @@ function seedLessons(): S27LessonBooking[] {
       hours.forEach((hour, hi) => {
         const who = personAt(offset * 6 + hi + 3);
         const duration = "60" as const;
-        if (clinicBlocksCourt(date, derek.courtId, hour)) return;
+        if (!fits(derek.courtId, date, hour)) return;
         out.push({
           id: `mock-lesson-${++n}`,
           date,
@@ -355,7 +367,7 @@ function seedLessons(): S27LessonBooking[] {
         });
       });
     }
-    if (maya && [1, 3].includes(day) && offset % 2 === 0 && !clinicBlocksCourt(date, maya.courtId, 16)) {
+    if (maya && [1, 3].includes(day) && offset % 2 === 0 && fits(maya.courtId, date, 16)) {
       const who = personAt(offset + 11);
       out.push({
         id: `mock-lesson-${++n}`,
@@ -379,7 +391,7 @@ function seedLessons(): S27LessonBooking[] {
     if (jonah && [2, 4, 6].includes(day)) {
       const hours = day === 6 ? [11, 16] : [11, 15];
       hours.forEach((hour, hi) => {
-        if (clinicBlocksCourt(date, jonah.courtId, hour)) return;
+        if (!fits(jonah.courtId, date, hour)) return;
         const kid = JUNIORS[Math.abs(offset * 2 + hi) % JUNIORS.length];
         out.push({
           id: `mock-lesson-${++n}`,
@@ -589,7 +601,7 @@ export function seedMockBookings() {
     seedMembers();
     persistCourts(keepReal(uniqueCourts(loadRecord<S27CourtBooking>(KEYS.courts)), seedCourts()));
     saveList(KEYS.clinics, keepReal(loadList<S27ClinicBooking>(KEYS.clinics), seedClinics()));
-    persistLessons(keepReal(loadList<S27LessonBooking>(KEYS.lessons), seedLessons()));
+    persistLessons(keepReal(loadList<S27LessonBooking>(KEYS.lessons), seedLessons(uniqueCourts(loadRecord<S27CourtBooking>(KEYS.courts)))));
     assignJonahClinics();
     saveList(KEYS.events, keepReal(loadList<S27EventBooking>(KEYS.events), seedEvents()));
     const stringOrders = keepReal(loadList<S27StringingOrder>(KEYS.stringing), seedStringing());

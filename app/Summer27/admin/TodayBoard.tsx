@@ -12,6 +12,7 @@ import {
   lessonDurationHours,
   lessonProLabel,
   parseDateInput,
+  rangesOverlap,
 } from "../summer27-data";
 import type { S27Catalog } from "../schedule";
 import type { S27AdminBlock } from "../schedule";
@@ -206,6 +207,30 @@ type PlacedChip = {
   cols: number;
   lanes: 1 | 2;
 };
+
+const CHIP_PRIORITY: Record<DayChip["kind"], number> = {
+  hold: 50,
+  event: 40,
+  clinic: 30,
+  lesson: 20,
+  request: 10,
+  court: 0,
+};
+
+function exclusiveChips(chips: DayChip[]): DayChip[] {
+  const sorted = chips.slice().sort((a, b) => CHIP_PRIORITY[b.kind] - CHIP_PRIORITY[a.kind] || a.time - b.time);
+  const kept: DayChip[] = [];
+  for (const chip of sorted) {
+    const clash = kept.some(
+      (row) =>
+        row.courts.some((court) => chip.courts.includes(court)) &&
+        rangesOverlap(row.time, row.durationHours, chip.time, chip.durationHours)
+    );
+    if (clash) continue;
+    kept.push(chip);
+  }
+  return kept.sort((a, b) => a.time - b.time || a.label.localeCompare(b.label));
+}
 
 function placeDayChips(chips: DayChip[], lanes: 1 | 2): PlacedChip[] {
   if (lanes === 1) {
@@ -680,8 +705,8 @@ export default function TodayBoard({
           >
             <SheetTimeColumn />
             {days.map((iso) => {
-              const chips = visibleWeekChips(chipsByDay[iso] || [], weekView, today).map((c) =>
-                chipForView(c, weekView)
+              const chips = exclusiveChips(
+                visibleWeekChips(chipsByDay[iso] || [], weekView, today).map((c) => chipForView(c, weekView))
               );
               const laneCount = weekView === "clinics" ? 1 : 2;
               const placed = placeDayChips(chips, laneCount);
